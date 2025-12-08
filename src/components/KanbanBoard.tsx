@@ -5,14 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragStartEvent,
   DragEndEvent,
+  DragOverEvent,
   useDroppable,
+  CollisionDetection,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -226,20 +229,23 @@ interface DroppableColumnProps {
   children: React.ReactNode;
   color: string;
   isActive: boolean;
+  isCurrentOver: boolean;
 }
 
-function DroppableColumn({ id, children, color, isActive }: DroppableColumnProps) {
+function DroppableColumn({ id, children, color, isActive, isCurrentOver }: DroppableColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const showHighlight = isOver || isCurrentOver;
 
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 p-3 min-h-[250px] space-y-3 transition-all ${
-        isOver ? 'bg-slate-100' : isActive ? 'bg-slate-50' : 'bg-slate-50/50'
+      className={`flex-1 p-3 min-h-[250px] space-y-3 transition-all rounded-lg ${
+        showHighlight ? 'bg-slate-100' : isActive ? 'bg-slate-50' : 'bg-slate-50/50'
       }`}
       style={{
-        borderLeft: isOver ? `3px solid ${color}` : isActive ? `3px solid ${color}40` : '3px solid transparent',
-        borderRight: isOver ? `3px solid ${color}` : isActive ? `3px solid ${color}40` : '3px solid transparent',
+        borderLeft: showHighlight ? `4px solid ${color}` : isActive ? `4px solid ${color}40` : '4px solid transparent',
+        borderRight: showHighlight ? `4px solid ${color}` : isActive ? `4px solid ${color}40` : '4px solid transparent',
+        boxShadow: showHighlight ? `inset 0 0 0 2px ${color}` : 'none',
       }}
     >
       {children}
@@ -291,6 +297,7 @@ export default function KanbanBoard({
   onSetPriority
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState(false);
 
   const sensors = useSensors(
@@ -302,6 +309,25 @@ export default function KanbanBoard({
     useSensor(KeyboardSensor)
   );
 
+  // Custom collision detection that prioritizes columns
+  const collisionDetection: CollisionDetection = (args) => {
+    // First check if we're over any droppable columns
+    const pointerCollisions = pointerWithin(args);
+
+    // If pointer is within a column, use that
+    const columnIds = columns.map(c => c.id);
+    const columnCollision = pointerCollisions.find(
+      collision => columnIds.includes(collision.id as TodoStatus)
+    );
+
+    if (columnCollision) {
+      return [columnCollision];
+    }
+
+    // Fall back to rect intersection for cards
+    return rectIntersection(args);
+  };
+
   const getTodosByStatus = (status: TodoStatus) => {
     return todos.filter((todo) => (todo.status || 'todo') === status);
   };
@@ -310,37 +336,48 @@ export default function KanbanBoard({
     setActiveId(event.active.id as string);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    setOverId(event.over?.id as string | null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setOverId(null);
 
     if (!over) return;
 
     const todoId = active.id as string;
-    const overId = over.id as string;
+    const targetId = over.id as string;
     const draggedTodo = todos.find((t) => t.id === todoId);
     const previousStatus = draggedTodo?.status || 'todo';
 
     // Check if dropped on a column
-    const column = columns.find((c) => c.id === overId);
+    const column = columns.find((c) => c.id === targetId);
     if (column) {
-      // Celebrate if moving to done column and wasn't already done
-      if (column.id === 'done' && previousStatus !== 'done') {
-        setCelebrating(true);
+      // Only change if different column
+      if (previousStatus !== column.id) {
+        // Celebrate if moving to done column
+        if (column.id === 'done') {
+          setCelebrating(true);
+        }
+        onStatusChange(todoId, column.id);
       }
-      onStatusChange(todoId, column.id);
       return;
     }
 
     // Check if dropped on another card
-    const overTodo = todos.find((t) => t.id === overId);
+    const overTodo = todos.find((t) => t.id === targetId);
     if (overTodo) {
       const targetStatus = overTodo.status || 'todo';
-      // Celebrate if moving to done column and wasn't already done
-      if (targetStatus === 'done' && previousStatus !== 'done') {
-        setCelebrating(true);
+      // Only change if different column
+      if (previousStatus !== targetStatus) {
+        // Celebrate if moving to done column
+        if (targetStatus === 'done') {
+          setCelebrating(true);
+        }
+        onStatusChange(todoId, targetStatus);
       }
-      onStatusChange(todoId, targetStatus);
     }
   };
 
@@ -351,8 +388,9 @@ export default function KanbanBoard({
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetection}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -389,7 +427,7 @@ export default function KanbanBoard({
                 items={columnTodos.map((t) => t.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <DroppableColumn id={column.id} color={column.color} isActive={!!activeId}>
+                <DroppableColumn id={column.id} color={column.color} isActive={!!activeId} isCurrentOver={overId === column.id}>
                   <AnimatePresence mode="popLayout">
                     {columnTodos.map((todo) => (
                       <SortableCard
