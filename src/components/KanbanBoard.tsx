@@ -12,6 +12,7 @@ import {
   useSensors,
   DragStartEvent,
   DragEndEvent,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -24,8 +25,7 @@ import {
   User,
   Trash2,
   Clock,
-  AlertCircle,
-  GripVertical
+  AlertCircle
 } from 'lucide-react';
 import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG } from '@/types/todo';
 
@@ -100,11 +100,13 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
     <motion.div
       ref={setNodeRef}
       style={style}
+      {...attributes}
+      {...listeners}
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`group bg-white rounded-xl border-2 overflow-hidden transition-all ${
+      className={`group bg-white rounded-xl border-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing ${
         isDragging
           ? 'shadow-2xl ring-2 ring-[#0033A0] border-[#0033A0]'
           : 'shadow-sm border-slate-100 hover:shadow-md hover:border-slate-200'
@@ -119,63 +121,53 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
       />
 
       <div className="p-3">
-        {/* Drag handle and content */}
-        <div className="flex gap-2">
-          <div
-            {...attributes}
-            {...listeners}
-            className="flex-shrink-0 pt-0.5 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <GripVertical className="w-4 h-4 text-slate-300" />
+        {/* Card content */}
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium leading-snug ${
+            todo.completed ? 'line-through text-slate-400' : 'text-slate-800'
+          }`}>
+            {todo.text}
+          </p>
+
+          {/* Metadata row */}
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            {/* Priority */}
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium"
+              style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}
+            >
+              <Flag className="w-2.5 h-2.5" />
+              {priorityConfig.label}
+            </span>
+
+            {/* Due date */}
+            {todo.due_date && (
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium ${
+                todo.completed
+                  ? 'bg-slate-100 text-slate-400'
+                  : overdue
+                    ? 'bg-red-100 text-red-600'
+                    : 'bg-[#0033A0]/10 text-[#0033A0]'
+              }`}>
+                {overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                {formatDueDate(todo.due_date)}
+              </span>
+            )}
           </div>
 
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm font-medium leading-snug ${
-              todo.completed ? 'line-through text-slate-400' : 'text-slate-800'
-            }`}>
-              {todo.text}
-            </p>
-
-            {/* Metadata row */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {/* Priority */}
-              <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium"
-                style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}
-              >
-                <Flag className="w-2.5 h-2.5" />
-                {priorityConfig.label}
+          {/* Assignee & Creator */}
+          <div className="flex items-center justify-between mt-2">
+            {todo.assigned_to ? (
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-[#D4A853]">
+                <User className="w-3 h-3" />
+                {todo.assigned_to}
               </span>
-
-              {/* Due date */}
-              {todo.due_date && (
-                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium ${
-                  todo.completed
-                    ? 'bg-slate-100 text-slate-400'
-                    : overdue
-                      ? 'bg-red-100 text-red-600'
-                      : 'bg-[#0033A0]/10 text-[#0033A0]'
-                }`}>
-                  {overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                  {formatDueDate(todo.due_date)}
-                </span>
-              )}
-            </div>
-
-            {/* Assignee & Creator */}
-            <div className="flex items-center justify-between mt-2">
-              {todo.assigned_to ? (
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-[#D4A853]">
-                  <User className="w-3 h-3" />
-                  {todo.assigned_to}
-                </span>
-              ) : (
-                <span className="text-xs text-slate-400">Unassigned</span>
-              )}
-              <span className="text-xs text-slate-400">
-                by {todo.created_by}
-              </span>
-            </div>
+            ) : (
+              <span className="text-xs text-slate-400">Unassigned</span>
+            )}
+            <span className="text-xs text-slate-400">
+              by {todo.created_by}
+            </span>
           </div>
         </div>
 
@@ -193,14 +185,14 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
                 />
                 <select
                   value={todo.assigned_to || ''}
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="flex-1 text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
                 >
                   <option value="">Unassigned</option>
                   {users.map((user) => (
@@ -208,6 +200,7 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
                   ))}
                 </select>
                 <motion.button
+                  onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(todo.id);
@@ -224,6 +217,32 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
         </AnimatePresence>
       </div>
     </motion.div>
+  );
+}
+
+interface DroppableColumnProps {
+  id: TodoStatus;
+  children: React.ReactNode;
+  color: string;
+  isActive: boolean;
+}
+
+function DroppableColumn({ id, children, color, isActive }: DroppableColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 p-3 min-h-[250px] space-y-3 transition-all ${
+        isOver ? 'bg-slate-100' : isActive ? 'bg-slate-50' : 'bg-slate-50/50'
+      }`}
+      style={{
+        borderLeft: isOver ? `3px solid ${color}` : isActive ? `3px solid ${color}40` : '3px solid transparent',
+        borderRight: isOver ? `3px solid ${color}` : isActive ? `3px solid ${color}40` : '3px solid transparent',
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -354,17 +373,8 @@ export default function KanbanBoard({
               <SortableContext
                 items={columnTodos.map((t) => t.id)}
                 strategy={verticalListSortingStrategy}
-                id={column.id}
               >
-                <div
-                  className={`flex-1 p-3 min-h-[250px] space-y-3 transition-all ${
-                    activeId ? 'bg-slate-50' : 'bg-slate-50/50'
-                  }`}
-                  style={{
-                    borderLeft: activeId ? `3px solid ${column.color}40` : '3px solid transparent',
-                    borderRight: activeId ? `3px solid ${column.color}40` : '3px solid transparent',
-                  }}
-                >
+                <DroppableColumn id={column.id} color={column.color} isActive={!!activeId}>
                   <AnimatePresence mode="popLayout">
                     {columnTodos.map((todo) => (
                       <SortableCard
@@ -394,7 +404,7 @@ export default function KanbanBoard({
                       <p className="text-sm font-medium">Drop tasks here</p>
                     </motion.div>
                   )}
-                </div>
+                </DroppableColumn>
               </SortableContext>
             </motion.div>
           );
