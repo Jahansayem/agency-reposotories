@@ -93,9 +93,10 @@ Respond with ONLY the JSON object, no other text.`;
       draft: validatedDraft,
     });
   } catch (error) {
-    console.error('Error parsing email:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error parsing email:', errorMessage, error);
     return NextResponse.json(
-      { success: false, error: 'Failed to parse email' },
+      { success: false, error: 'Failed to parse email', details: errorMessage },
       { status: 500 }
     );
   }
