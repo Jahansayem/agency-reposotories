@@ -377,24 +377,43 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-warm-cream via-white to-warm-gold/10 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div className="min-h-screen bg-gradient-to-br from-warm-cream via-white to-warm-gold/10 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 relative">
+      {/* Artsy Background Elements */}
+      <div className="artsy-background" />
+      <div className="floating-shapes">
+        <div className="floating-shape shape-1" />
+        <div className="floating-shape shape-2" />
+        <div className="floating-shape shape-3" />
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/95 dark:bg-slate-900/90 border-b border-warm-gold/20 dark:border-slate-800/50 shadow-sm">
-        {/* Warm Gold Top Bar */}
-        <div className="h-1.5 bg-gradient-to-r from-warm-gold via-warm-amber to-warm-gold" />
+        {/* Artistic Wavy Top Bar */}
+        <div className="h-2 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-warm-gold via-warm-amber to-warm-gold" />
+          <svg className="absolute bottom-0 left-0 w-full h-1" viewBox="0 0 1200 4" preserveAspectRatio="none">
+            <path d="M0 2 Q150 0 300 2 T600 2 T900 2 T1200 2" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none"/>
+          </svg>
+        </div>
         <div className={`mx-auto px-4 sm:px-6 py-4 ${viewMode === 'kanban' ? 'max-w-7xl' : 'max-w-3xl'}`}>
           <div className="flex items-center justify-between">
             {/* Logo & User */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-[16px] bg-gradient-to-br from-warm-gold to-warm-amber flex items-center justify-center shadow-lg shadow-warm-gold/30">
-                  <span className="text-white font-bold text-xl">B</span>
+                {/* Artistic Logo with Hand-Drawn Feel */}
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-[16px] bg-gradient-to-br from-warm-gold to-warm-amber flex items-center justify-center shadow-lg shadow-warm-gold/30 btn-organic">
+                    {/* Stylized "B" with subtle hand-drawn quality */}
+                    <span className="text-white font-bold text-xl" style={{ fontFamily: 'Georgia, serif' }}>B</span>
+                  </div>
+                  {/* Decorative accent dot */}
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#0033A0] rounded-full border-2 border-white dark:border-slate-900" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-warm-brown dark:text-slate-100">
+                  <h1 className="text-xl font-bold text-warm-brown dark:text-slate-100 squiggle-underline">
                     Bealer Agency
                   </h1>
-                  <p className="text-xs text-warm-brown/60 dark:text-slate-400">
+                  <p className="text-xs text-warm-brown/60 dark:text-slate-400 mt-1">
                     Welcome, <span className="font-semibold text-warm-gold dark:text-amber-400">{userName}</span>
                   </p>
                 </div>
@@ -403,12 +422,12 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
             {/* Actions */}
             <div className="flex items-center gap-3">
-              {/* Progress Summary Button */}
+              {/* Progress Summary Button - with organic shape */}
               <motion.button
                 onClick={() => setShowProgressSummary(true)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-warm-gold to-warm-amber text-white rounded-[12px] shadow-md shadow-warm-gold/30 hover:shadow-lg hover:shadow-warm-gold/40 transition-all font-medium"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-warm-gold to-warm-amber text-white btn-organic shadow-md shadow-warm-gold/30 hover:shadow-lg hover:shadow-warm-gold/40 transition-all font-medium warm-glow"
               >
                 <Trophy className="w-4 h-4" />
                 <span className="text-sm hidden sm:inline">Progress</span>
@@ -474,15 +493,16 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
       {/* Main Content */}
       <main className={`mx-auto px-4 sm:px-6 py-8 ${viewMode === 'kanban' ? 'max-w-7xl' : 'max-w-3xl'}`}>
-        {/* Stats */}
+        {/* Stats - with artistic accents */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-3 gap-4 mb-8"
         >
-          <div className="bg-white dark:bg-slate-900 rounded-[20px] p-5 border border-warm-gold/20 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-warm-gold/40 transition-all">
+          {/* Total Tasks Card - with signature corners */}
+          <div className="bg-white dark:bg-slate-900 rounded-[20px] p-5 border border-warm-gold/20 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-warm-gold/40 transition-all signature-corners relative overflow-visible">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-warm-gold/20 to-warm-amber/20 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-warm-gold/20 to-warm-amber/20 flex items-center justify-center relative">
                 <Clock className="w-6 h-6 text-warm-gold" />
               </div>
               <div>
@@ -491,8 +511,12 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-900 rounded-[20px] p-5 border border-emerald-200/50 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all">
-            <div className="flex items-center gap-3">
+
+          {/* Completed Card - with watercolor accent */}
+          <div className="bg-white dark:bg-slate-900 rounded-[20px] p-5 border border-emerald-200/50 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-emerald-300 transition-all relative overflow-hidden">
+            {/* Decorative blob */}
+            <div className="absolute -top-6 -right-6 w-20 h-20 bg-gradient-to-br from-emerald-200/30 to-emerald-100/10 rounded-full blur-xl pointer-events-none" />
+            <div className="flex items-center gap-3 relative">
               <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-emerald-100 to-emerald-200/50 dark:from-emerald-900/50 dark:to-emerald-900/30 flex items-center justify-center">
                 <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
@@ -502,7 +526,9 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               </div>
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-900 rounded-[20px] p-5 border border-red-200/50 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-red-300 transition-all">
+
+          {/* Overdue Card - with dots pattern */}
+          <div className="bg-white dark:bg-slate-900 rounded-[20px] p-5 border border-red-200/50 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-red-300 transition-all dots-pattern relative">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-[12px] bg-gradient-to-br from-red-100 to-red-200/50 dark:from-red-900/50 dark:to-red-900/30 flex items-center justify-center">
                 <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
