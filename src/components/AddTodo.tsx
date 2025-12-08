@@ -60,7 +60,7 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as TodoPriority)}
-              className="text-sm px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] text-slate-600"
+              className="text-sm px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] text-slate-700"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -76,7 +76,7 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="text-sm px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] text-slate-600"
+              className="text-sm px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] text-slate-700"
             />
           </div>
 
@@ -86,7 +86,7 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
             <select
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
-              className="text-sm px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] text-slate-600"
+              className="text-sm px-2 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] text-slate-700"
             >
               <option value="">Unassigned</option>
               {users.map((user) => (

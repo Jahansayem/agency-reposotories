@@ -140,7 +140,7 @@ export default function TodoItem({
           <select
             value={priority}
             onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-            className="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+            className="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
           >
             <option value="low">Low Priority</option>
             <option value="medium">Medium Priority</option>
@@ -153,14 +153,14 @@ export default function TodoItem({
             type="date"
             value={todo.due_date ? todo.due_date.split('T')[0] : ''}
             onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-            className="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+            className="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
           />
 
           {/* Assign to */}
           <select
             value={todo.assigned_to || ''}
             onChange={(e) => onAssign(todo.id, e.target.value || null)}
-            className="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+            className="text-sm px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
           >
             <option value="">Unassigned</option>
             {users.map((user) => (
