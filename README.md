@@ -151,6 +151,86 @@ The app is configured for Railway deployment:
 | `ANTHROPIC_API_KEY` | Anthropic API key for Claude |
 | `OUTLOOK_ADDON_API_KEY` | Shared secret for Outlook add-in |
 
+## Developer Notes (for Claude Code)
+
+This section provides context for AI assistants working on this codebase.
+
+### Current State (December 2024)
+
+- **Production URL**: https://shared-todo-list-production.up.railway.app
+- **Users**: Derrick (PIN: 8008) and Sefra (PIN: 7734) - only these two users in production
+- **Database**: Supabase with `todos` and `users` tables
+- **Deployment**: Railway auto-deploys from `main` branch
+
+### Key Files to Know
+
+| File | Purpose |
+|------|---------|
+| `src/app/page.tsx` | Main app - handles auth state, fetches users/todos from Supabase |
+| `src/components/TodoList.tsx` | Core UI - list/kanban views, filters, search, bulk actions, dark mode |
+| `src/components/TodoItem.tsx` | Individual task - notes, recurrence, duplication, priority badges |
+| `src/components/AddTodo.tsx` | Task creation - has AI enhance button (purple) and regular Add button |
+| `src/components/KanbanBoard.tsx` | Drag-and-drop board with dnd-kit |
+| `src/components/LoginScreen.tsx` | PIN entry with user cards |
+| `src/lib/auth.ts` | SHA-256 PIN hashing (client-side) |
+| `src/app/api/ai/enhance-task/route.ts` | AI task enhancement endpoint using Claude |
+| `src/app/api/outlook/` | Outlook add-in APIs (parse-email, create-task, users) |
+| `src/app/outlook-setup/page.tsx` | Installation instructions for Outlook add-in |
+
+### Features Implemented
+
+- Task CRUD with real-time Supabase subscriptions
+- PIN-based auth with user switching
+- List view with search, sort (created/due date/priority/A-Z), quick filters (My Tasks, Due Today, Overdue, Urgent)
+- Kanban board with drag-and-drop between columns
+- Task notes, recurring tasks (daily/weekly/monthly), bulk actions
+- AI task enhancement (cleans up text, extracts dates/priority/assignee)
+- Outlook add-in for email-to-task conversion
+- Dark mode toggle
+- Celebration animation on task completion
+- Login streaks
+
+### Database Schema
+
+```sql
+-- Users table
+users (id UUID, name TEXT UNIQUE, pin_hash TEXT, color TEXT, created_at, last_login, streak_count, streak_last_date, welcome_shown_at)
+
+-- Todos table
+todos (id UUID, text TEXT, completed BOOLEAN, status TEXT, priority TEXT, created_at, created_by TEXT, assigned_to TEXT, due_date TEXT, notes TEXT, recurrence TEXT, updated_at, updated_by TEXT)
+```
+
+### Common Tasks
+
+**Update a user's PIN:**
+```sql
+-- Generate hash: echo -n "1234" | shasum -a 256
+UPDATE users SET pin_hash = 'hash_here' WHERE name = 'Username';
+```
+
+**Add a new user:**
+```sql
+INSERT INTO users (name, pin_hash, color) VALUES ('Name', 'sha256_hash', '#0033A0');
+```
+
+**Deploy changes:**
+```bash
+git add -A && git commit -m "message" && git push
+# Railway auto-deploys from main
+```
+
+### Brand Colors
+
+- Primary blue: `#0033A0`
+- Gold accent: `#D4A853`
+
+### Things to Watch Out For
+
+1. **Supabase real-time**: TodoList uses `supabase.channel()` for live updates - don't break the subscription
+2. **PIN hashing**: Done client-side with SHA-256, stored as hex string
+3. **Outlook manifests**: Two versions - `manifest.xml` for web/new and `manifest-desktop.xml` for classic
+4. **AI API key**: `ANTHROPIC_API_KEY` needed for task enhancement and email parsing
+
 ## License
 
 Private - Bealer Agency
