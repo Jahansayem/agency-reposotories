@@ -7,7 +7,7 @@
   xsi:type="MailApp">
 
   <Id>a44deb28-92f5-4974-98bb-123447daeb33</Id>
-  <Version>1.0.0.0</Version>
+  <Version>1.0.0.1</Version>
   <ProviderName>Bealer Agency</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Bealer Todo"/>
