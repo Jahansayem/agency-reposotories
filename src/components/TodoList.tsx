@@ -837,11 +837,11 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
         {/* Quick Filters */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
-            { id: 'all' as QuickFilter, label: 'All Tasks', icon: LayoutList, key: '1' },
-            { id: 'my_tasks' as QuickFilter, label: 'My Tasks', icon: User, key: '2' },
-            { id: 'due_today' as QuickFilter, label: 'Due Today', icon: Calendar, key: '3', count: stats.dueToday },
-            { id: 'overdue' as QuickFilter, label: 'Overdue', icon: AlertTriangle, key: '4', count: stats.overdue },
-            { id: 'urgent' as QuickFilter, label: 'Urgent', icon: AlertTriangle, key: '' },
+            { id: 'all' as QuickFilter, label: 'All Tasks', icon: LayoutList },
+            { id: 'my_tasks' as QuickFilter, label: 'My Tasks', icon: User },
+            { id: 'due_today' as QuickFilter, label: 'Due Today', icon: Calendar, count: stats.dueToday },
+            { id: 'overdue' as QuickFilter, label: 'Overdue', icon: AlertTriangle, count: stats.overdue },
+            { id: 'urgent' as QuickFilter, label: 'Urgent', icon: AlertTriangle },
           ].map((f) => (
             <button
               key={f.id}
@@ -863,7 +863,6 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                   {f.count}
                 </span>
               )}
-              {f.key && <kbd className={`hidden sm:inline text-xs px-1.5 py-0.5 rounded ${quickFilter === f.id ? 'bg-white/20' : darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>{f.key}</kbd>}
             </button>
           ))}
         </div>
