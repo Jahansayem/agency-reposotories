@@ -1,12 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Calendar, Flag, User } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Plus, Calendar, Flag, User, Sparkles, Loader2 } from 'lucide-react';
 import { TodoPriority } from '@/types/todo';
 
 interface AddTodoProps {
   onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string) => void;
   users: string[];
+}
+
+interface EnhancedTask {
+  text: string;
+  priority: TodoPriority;
+  dueDate: string;
+  assignedTo: string;
+  wasEnhanced: boolean;
 }
 
 export default function AddTodo({ onAdd, users }: AddTodoProps) {
@@ -15,16 +23,80 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
   const [dueDate, setDueDate] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [showOptions, setShowOptions] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [showEnhanced, setShowEnhanced] = useState(false);
+  const [enhancedTask, setEnhancedTask] = useState<EnhancedTask | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const enhanceTask = useCallback(async (taskText: string): Promise<EnhancedTask | null> => {
+    try {
+      const response = await fetch('/api/ai/enhance-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: taskText, users }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to enhance task');
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.success && data.enhanced) {
+        return data.enhanced as EnhancedTask;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error enhancing task:', error);
+      return null;
+    }
+  }, [users]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!text.trim()) return;
+
+    // If AI is enabled and we have text, enhance it first
+    if (aiEnabled && !showEnhanced) {
+      setIsEnhancing(true);
+      const enhanced = await enhanceTask(text.trim());
+      setIsEnhancing(false);
+
+      if (enhanced) {
+        setEnhancedTask(enhanced);
+        setText(enhanced.text);
+        setPriority(enhanced.priority);
+        if (enhanced.dueDate) setDueDate(enhanced.dueDate);
+        if (enhanced.assignedTo) setAssignedTo(enhanced.assignedTo);
+        setShowEnhanced(true);
+        setShowOptions(true);
+        return; // Show enhanced version for user review
+      }
+    }
+
+    // Submit the task (either enhanced or original)
+    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined);
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setText('');
+    setPriority('medium');
+    setDueDate('');
+    setAssignedTo('');
+    setShowOptions(false);
+    setShowEnhanced(false);
+    setEnhancedTask(null);
+  };
+
+  const handleCancel = () => {
+    resetForm();
+  };
+
+  const handleConfirm = () => {
     if (text.trim()) {
       onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined);
-      setText('');
-      setPriority('medium');
-      setDueDate('');
-      setAssignedTo('');
-      setShowOptions(false);
+      resetForm();
     }
   };
 
@@ -32,24 +104,81 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
     <form onSubmit={handleSubmit} className="bg-white rounded-xl border-2 border-slate-100 overflow-hidden shadow-sm">
       <div className="flex items-center gap-3 p-3">
         <div className="w-6 h-6 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
-          <Plus className="w-4 h-4 text-slate-400" />
+          {isEnhancing ? (
+            <Loader2 className="w-4 h-4 text-[#D4A853] animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4 text-slate-400" />
+          )}
         </div>
         <input
           type="text"
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            setText(e.target.value);
+            if (showEnhanced) setShowEnhanced(false);
+          }}
           onFocus={() => setShowOptions(true)}
-          placeholder="Add a new task..."
+          placeholder={aiEnabled ? "Add a task... AI will enhance it" : "Add a new task..."}
           className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none text-base"
+          disabled={isEnhancing}
         />
+
+        {/* AI Toggle */}
         <button
-          type="submit"
-          disabled={!text.trim()}
-          className="px-4 py-2 bg-[#D4A853] hover:bg-[#c49943] disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
+          type="button"
+          onClick={() => setAiEnabled(!aiEnabled)}
+          className={`p-2 rounded-lg transition-all ${
+            aiEnabled
+              ? 'bg-[#D4A853]/10 text-[#D4A853] hover:bg-[#D4A853]/20'
+              : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+          }`}
+          title={aiEnabled ? 'AI enhancement enabled' : 'AI enhancement disabled'}
         >
-          Add
+          <Sparkles className="w-4 h-4" />
         </button>
+
+        {showEnhanced ? (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-3 py-2 text-slate-500 hover:text-slate-700 rounded-lg font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirm}
+              className="px-4 py-2 bg-[#D4A853] hover:bg-[#c49943] text-white rounded-lg font-medium transition-colors"
+            >
+              Confirm
+            </button>
+          </div>
+        ) : (
+          <button
+            type="submit"
+            disabled={!text.trim() || isEnhancing}
+            className="px-4 py-2 bg-[#D4A853] hover:bg-[#c49943] disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg font-medium transition-colors disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {isEnhancing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="hidden sm:inline">Enhancing...</span>
+              </>
+            ) : (
+              'Add'
+            )}
+          </button>
+        )}
       </div>
+
+      {/* Enhanced task indicator */}
+      {showEnhanced && enhancedTask?.wasEnhanced && (
+        <div className="mx-3 mb-2 px-3 py-2 bg-[#D4A853]/10 rounded-lg text-sm text-[#D4A853] flex items-center gap-2">
+          <Sparkles className="w-4 h-4" />
+          <span>AI enhanced your task. Review and confirm or edit below.</span>
+        </div>
+      )}
 
       {/* Options row */}
       {showOptions && (
