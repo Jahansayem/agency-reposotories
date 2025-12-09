@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:type="MailApp">
+
+  <Id>a44deb28-92f5-4974-98bb-123447daeb33</Id>
+  <Version>1.0.0.1</Version>
+  <ProviderName>Bealer Agency</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Bealer Todo"/>
+  <Description DefaultValue="Convert emails to todo items for your team using AI"/>
+
+  <IconUrl DefaultValue="https://shared-todo-list-production.up.railway.app/outlook/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://shared-todo-list-production.up.railway.app/outlook/icon-128.png"/>
+
+  <SupportUrl DefaultValue="https://shared-todo-list-production.up.railway.app"/>
+
+  <AppDomains>
+    <AppDomain>https://shared-todo-list-production.up.railway.app</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.1"/>
+    </Sets>
+  </Requirements>
+
+  <FormSettings>
+    <Form xsi:type="ItemRead">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://shared-todo-list-production.up.railway.app/outlook/taskpane.html"/>
+        <RequestedHeight>250</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+
+  <Permissions>ReadItem</Permissions>
+
+  <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
+
+</OfficeApp>
