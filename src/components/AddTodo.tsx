@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Plus, Calendar, Flag, User, Sparkles, Loader2 } from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, FileAudio } from 'lucide-react';
+import VoicemailImporter from './VoicemailImporter';
 import { TodoPriority } from '@/types/todo';
 
 interface AddTodoProps {
@@ -17,6 +18,56 @@ interface EnhancedTask {
   wasEnhanced: boolean;
 }
 
+// SpeechRecognition types for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: SpeechRecognitionConstructor;
+    webkitSpeechRecognition: SpeechRecognitionConstructor;
+  }
+}
+
 export default function AddTodo({ onAdd, users }: AddTodoProps) {
   const [text, setText] = useState('');
   const [priority, setPriority] = useState<TodoPriority>('medium');
@@ -26,6 +77,11 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [showEnhanced, setShowEnhanced] = useState(false);
   const [enhancedTask, setEnhancedTask] = useState<EnhancedTask | null>(null);
+
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [showVoicemailImporter, setShowVoicemailImporter] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const enhanceTask = useCallback(async (taskText: string): Promise<EnhancedTask | null> => {
     try {
@@ -50,6 +106,78 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
       return null;
     }
   }, [users]);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          if (finalTranscript) {
+            setText(prev => prev + (prev ? ' ' : '') + finalTranscript);
+          }
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+        };
+
+        recognitionRef.current = recognition;
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Toggle voice recording
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      alert('Speech recognition is not supported in your browser. Try Chrome or Edge.');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      recognitionRef.current.start();
+      setIsRecording(true);
+      setShowOptions(true);
+    }
+  };
+
+  // Handle adding multiple tasks from voicemail importer
+  const handleAddMultipleTasks = (tasks: Array<{ text: string; priority: TodoPriority; dueDate?: string; assignedTo?: string }>) => {
+    tasks.forEach(task => {
+      onAdd(task.text, task.priority, task.dueDate, task.assignedTo);
+    });
+  };
 
   // Quick add without AI
   const handleQuickAdd = (e: React.FormEvent) => {
@@ -105,6 +233,8 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
         <div className="w-6 h-6 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
           {isEnhancing ? (
             <Loader2 className="w-4 h-4 text-[#D4A853] animate-spin" />
+          ) : isRecording ? (
+            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
           ) : (
             <Plus className="w-4 h-4 text-slate-400" />
           )}
@@ -117,10 +247,39 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
             if (showEnhanced) setShowEnhanced(false);
           }}
           onFocus={() => setShowOptions(true)}
-          placeholder="What needs to be done?"
+          placeholder={isRecording ? "Listening... speak your task" : "What needs to be done?"}
           className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none text-base"
           disabled={isEnhancing}
         />
+
+        {/* Voice input buttons */}
+        <div className="flex items-center gap-1">
+          {/* Mic button for live recording */}
+          <button
+            type="button"
+            onClick={toggleRecording}
+            disabled={isEnhancing}
+            className={`p-2 rounded-lg transition-colors ${
+              isRecording
+                ? 'bg-red-500 hover:bg-red-600 text-white'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={isRecording ? "Stop recording" : "Start voice input"}
+          >
+            {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+
+          {/* Import voicemails button */}
+          <button
+            type="button"
+            onClick={() => setShowVoicemailImporter(true)}
+            disabled={isEnhancing || isRecording}
+            className="p-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Import voicemails - upload multiple audio files and extract tasks"
+          >
+            <FileAudio className="w-4 h-4" />
+          </button>
+        </div>
 
         {showEnhanced ? (
           <div className="flex gap-2">
@@ -222,6 +381,15 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
             </select>
           </div>
         </div>
+      )}
+
+      {/* Voicemail Importer Modal */}
+      {showVoicemailImporter && (
+        <VoicemailImporter
+          onClose={() => setShowVoicemailImporter(false)}
+          onAddTasks={handleAddMultipleTasks}
+          users={users}
+        />
       )}
     </form>
   );
