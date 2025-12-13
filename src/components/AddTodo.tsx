@@ -82,6 +82,18 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [showVoicemailImporter, setShowVoicemailImporter] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to auto to get the correct scrollHeight
+      textareaRef.current.style.height = 'auto';
+      // Set height to scrollHeight, but cap at max
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
+      textareaRef.current.style.height = `${newHeight}px`;
+    }
+  }, [text]);
 
   const enhanceTask = useCallback(async (taskText: string): Promise<EnhancedTask | null> => {
     try {
@@ -227,10 +239,21 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
     }
   };
 
+  // Handle form submission on Enter (but allow Shift+Enter for newlines)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (text.trim() && !isEnhancing) {
+        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined);
+        resetForm();
+      }
+    }
+  };
+
   return (
     <form onSubmit={handleQuickAdd} className="bg-white rounded-xl border-2 border-slate-100 overflow-hidden shadow-sm">
-      <div className="flex items-center gap-3 p-3">
-        <div className="w-6 h-6 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0">
+      <div className="flex items-start gap-3 p-3">
+        <div className="w-6 h-6 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center flex-shrink-0 mt-1">
           {isEnhancing ? (
             <Loader2 className="w-4 h-4 text-[#D4A853] animate-spin" />
           ) : isRecording ? (
@@ -239,17 +262,20 @@ export default function AddTodo({ onAdd, users }: AddTodoProps) {
             <Plus className="w-4 h-4 text-slate-400" />
           )}
         </div>
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => {
             setText(e.target.value);
             if (showEnhanced) setShowEnhanced(false);
           }}
           onFocus={() => setShowOptions(true)}
+          onKeyDown={handleKeyDown}
           placeholder={isRecording ? "Listening... speak your task" : "What needs to be done?"}
-          className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none text-base"
+          className="flex-1 bg-transparent text-slate-800 placeholder-slate-400 focus:outline-none text-base resize-none overflow-y-auto min-h-[24px]"
+          style={{ maxHeight: '120px' }}
           disabled={isEnhancing}
+          rows={1}
         />
 
         {/* Voice input buttons */}
