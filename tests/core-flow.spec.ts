@@ -40,7 +40,7 @@ async function registerUser(page: Page, userName: string, pin: string = '1234') 
   await createBtn.click();
 
   // Wait for main app to load
-  const todoInput = page.locator('input[placeholder="What needs to be done?"]');
+  const todoInput = page.locator('textarea[placeholder="What needs to be done?"]');
   await expect(todoInput).toBeVisible({ timeout: 15000 });
 
   return todoInput;
@@ -110,7 +110,7 @@ test.describe('Core Functionality Tests', () => {
     await page.reload();
 
     // Wait for app to load again
-    await expect(page.locator('input[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 15000 });
 
     // Wait for data to load
     await page.waitForTimeout(2000);

@@ -4,9 +4,9 @@ import { test, expect, Page } from '@playwright/test';
 async function registerAndLogin(page: Page, userName: string = 'Test User', pin: string = '1234') {
   await page.goto('/');
 
-  // Wait for login screen to load (shows "Bealer Agency" and "Task Management System")
+  // Wait for login screen to load (shows "Bealer Agency" and "Task Management")
   await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('text=Task Management System')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('text=Task Management')).toBeVisible({ timeout: 5000 });
 
   // Click "Add New User" button
   await page.locator('button:has-text("Add New User")').click();
@@ -32,7 +32,7 @@ async function registerAndLogin(page: Page, userName: string = 'Test User', pin:
   await page.getByRole('button', { name: 'Create Account' }).click();
 
   // Wait for app to load (shows main header with Bealer Agency)
-  await expect(page.locator('input[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
 }
 
 // Helper to login with existing user
@@ -52,12 +52,12 @@ async function loginExistingUser(page: Page, userName: string, pin: string = '12
   }
 
   // Wait for app to load
-  await expect(page.locator('input[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
 }
 
 // Helper to check if app is loaded (task input visible)
 async function isAppLoaded(page: Page): Promise<boolean> {
-  const taskInput = page.locator('input[placeholder="What needs to be done?"]');
+  const taskInput = page.locator('textarea[placeholder="What needs to be done?"]');
   const configError = page.locator('text=Configuration Required');
 
   try {
@@ -81,7 +81,7 @@ test.describe('PIN Authentication', () => {
     await page.goto('/');
     // Should show Bealer Agency title on login screen
     await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('text=Task Management System')).toBeVisible();
+    await expect(page.locator('text=Task Management')).toBeVisible();
   });
 
   test('should show Add New User button', async ({ page }) => {
@@ -93,7 +93,7 @@ test.describe('PIN Authentication', () => {
     const userName = uniqueUserName();
     await registerAndLogin(page, userName);
     // After login, should see the task input
-    await expect(page.locator('input[placeholder="What needs to be done?"]')).toBeVisible();
+    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible();
   });
 });
 
@@ -109,7 +109,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
 
     // Create a task with unique name
     const taskName = `Celebration_${Date.now()}`;
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
     await input.click();
     await input.fill(taskName);
     await page.keyboard.press('Enter');
@@ -139,7 +139,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
 
     // Create a task with unique name
     const taskName = `AutoDismiss_${Date.now()}`;
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
     await input.click();
     await input.fill(taskName);
     await page.keyboard.press('Enter');
@@ -256,7 +256,7 @@ test.describe('Cloud Storage Integration', () => {
 
     // Create a task
     const uniqueTask = `Persistence_${Date.now()}`;
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
     await input.fill(uniqueTask);
     await page.keyboard.press('Enter');
     await expect(page.locator(`text=${uniqueTask}`)).toBeVisible({ timeout: 5000 });
@@ -265,7 +265,7 @@ test.describe('Cloud Storage Integration', () => {
     await page.reload();
 
     // Should still be logged in and see task
-    await expect(page.locator('input[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator(`text=${uniqueTask}`)).toBeVisible({ timeout: 5000 });
   });
 
@@ -282,7 +282,7 @@ test.describe('Cloud Storage Integration', () => {
     await page.reload();
 
     // Should still be logged in (see task input, not login screen)
-    await expect(page.locator('input[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -321,7 +321,7 @@ test.describe('User Switcher', () => {
     await page.locator('button:has-text("Log Out")').click();
 
     // Should return to login screen
-    await expect(page.locator('text=Task Management System')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=Task Management')).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -372,7 +372,7 @@ test.describe('Stats Dashboard', () => {
     const initialCount = parseInt(await totalStat.textContent() || '0');
 
     // Add a task
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
     await input.fill('Stats test task');
     await page.keyboard.press('Enter');
     await expect(page.locator('text=Stats test task')).toBeVisible({ timeout: 5000 });
@@ -439,7 +439,7 @@ test.describe('Task Filters', () => {
     }
 
     // Create two tasks
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
 
     const activeTask = `Active_${Date.now()}`;
     await input.fill(activeTask);
@@ -474,7 +474,7 @@ test.describe('Task Filters', () => {
     }
 
     // Create and complete a task
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
     const taskName = `FilterComplete_${Date.now()}`;
     await input.fill(taskName);
     await page.keyboard.press('Enter');
@@ -503,7 +503,7 @@ test.describe('Task CRUD Operations', () => {
     }
 
     const taskName = `Create_${Date.now()}`;
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
     await input.fill(taskName);
     await page.keyboard.press('Enter');
 
@@ -521,7 +521,7 @@ test.describe('Task CRUD Operations', () => {
 
     // Create a task
     const taskName = `Delete_${Date.now()}`;
-    const input = page.locator('input[placeholder="What needs to be done?"]');
+    const input = page.locator('textarea[placeholder="What needs to be done?"]');
     await input.fill(taskName);
     await page.keyboard.press('Enter');
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 5000 });

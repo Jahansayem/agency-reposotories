@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask } from '@/types/todo';
 import TodoItem from './TodoItem';
 import AddTodo from './AddTodo';
 import KanbanBoard from './KanbanBoard';
@@ -510,6 +510,26 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     }
   };
 
+  const updateSubtasks = async (id: string, subtasks: Subtask[]) => {
+    const oldTodo = todos.find((t) => t.id === id);
+
+    setTodos((prev) =>
+      prev.map((todo) => (todo.id === id ? { ...todo, subtasks } : todo))
+    );
+
+    const { error: updateError } = await supabase
+      .from('todos')
+      .update({ subtasks })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error updating subtasks:', updateError);
+      if (oldTodo) {
+        setTodos((prev) => prev.map((todo) => (todo.id === id ? oldTodo : todo)));
+      }
+    }
+  };
+
   // Bulk actions
   const bulkDelete = async () => {
     const idsToDelete = Array.from(selectedTodos);
@@ -984,6 +1004,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                   onDuplicate={duplicateTodo}
                   onUpdateNotes={updateNotes}
                   onSetRecurrence={setRecurrence}
+                  onUpdateSubtasks={updateSubtasks}
                 />
               ))
             )}

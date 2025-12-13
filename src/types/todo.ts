@@ -4,6 +4,14 @@ export type TodoPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export type RecurrencePattern = 'daily' | 'weekly' | 'monthly' | null;
 
+export interface Subtask {
+  id: string;
+  text: string;
+  completed: boolean;
+  priority: TodoPriority;
+  estimatedMinutes?: number;
+}
+
 export interface Todo {
   id: string;
   text: string;
@@ -18,6 +26,7 @@ export interface Todo {
   recurrence?: RecurrencePattern;
   updated_at?: string;
   updated_by?: string;
+  subtasks?: Subtask[];
 }
 
 export type SortOption = 'created' | 'due_date' | 'priority' | 'alphabetical';

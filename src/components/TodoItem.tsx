@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat } from 'lucide-react';
-import { Todo, TodoPriority, PRIORITY_CONFIG, RecurrencePattern } from '@/types/todo';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Loader2, Plus } from 'lucide-react';
+import { Todo, TodoPriority, PRIORITY_CONFIG, RecurrencePattern, Subtask } from '@/types/todo';
 import Celebration from './Celebration';
 
 interface TodoItemProps {
@@ -18,6 +18,7 @@ interface TodoItemProps {
   onDuplicate?: (todo: Todo) => void;
   onUpdateNotes?: (id: string, notes: string) => void;
   onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
+  onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
 }
 
 const formatDueDate = (date: string) => {
@@ -71,11 +72,15 @@ export default function TodoItem({
   onDuplicate,
   onUpdateNotes,
   onSetRecurrence,
+  onUpdateSubtasks,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [notes, setNotes] = useState(todo.notes || '');
   const [showNotes, setShowNotes] = useState(false);
+  const [showSubtasks, setShowSubtasks] = useState(false);
+  const [isBreakingDown, setIsBreakingDown] = useState(false);
+  const [newSubtaskText, setNewSubtaskText] = useState('');
   const priority = todo.priority || 'medium';
   const priorityConfig = PRIORITY_CONFIG[priority];
   const dueDateStatus = todo.due_date ? getDueDateStatus(todo.due_date, todo.completed) : null;
@@ -91,6 +96,68 @@ export default function TodoItem({
     if (onUpdateNotes && notes !== todo.notes) {
       onUpdateNotes(todo.id, notes);
     }
+  };
+
+  // Subtask functions
+  const subtasks = todo.subtasks || [];
+  const completedSubtasks = subtasks.filter(s => s.completed).length;
+  const subtaskProgress = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
+
+  const handleBreakdownTask = async () => {
+    if (!onUpdateSubtasks) return;
+    setIsBreakingDown(true);
+    try {
+      const response = await fetch('/api/ai/breakdown-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskText: todo.text, priority: todo.priority }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.subtasks) {
+          const newSubtasks: Subtask[] = data.subtasks.map((s: { text: string; priority: TodoPriority; estimatedMinutes?: number }, idx: number) => ({
+            id: `${todo.id}-sub-${Date.now()}-${idx}`,
+            text: s.text,
+            completed: false,
+            priority: s.priority,
+            estimatedMinutes: s.estimatedMinutes,
+          }));
+          onUpdateSubtasks(todo.id, newSubtasks);
+          setShowSubtasks(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error breaking down task:', error);
+    } finally {
+      setIsBreakingDown(false);
+    }
+  };
+
+  const toggleSubtask = (subtaskId: string) => {
+    if (!onUpdateSubtasks) return;
+    const updated = subtasks.map(s =>
+      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+    );
+    onUpdateSubtasks(todo.id, updated);
+  };
+
+  const deleteSubtask = (subtaskId: string) => {
+    if (!onUpdateSubtasks) return;
+    const updated = subtasks.filter(s => s.id !== subtaskId);
+    onUpdateSubtasks(todo.id, updated);
+  };
+
+  const addManualSubtask = () => {
+    if (!onUpdateSubtasks || !newSubtaskText.trim()) return;
+    const newSubtask: Subtask = {
+      id: `${todo.id}-sub-${Date.now()}`,
+      text: newSubtaskText.trim(),
+      completed: false,
+      priority: 'medium',
+    };
+    onUpdateSubtasks(todo.id, [...subtasks, newSubtask]);
+    setNewSubtaskText('');
   };
 
   return (
@@ -180,6 +247,18 @@ export default function TodoItem({
               </button>
             )}
 
+            {/* Subtasks indicator */}
+            {subtasks.length > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSubtasks(!showSubtasks); }}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-600 hover:bg-indigo-200"
+              >
+                <ListTree className="w-3 h-3" />
+                {completedSubtasks}/{subtasks.length}
+                {subtaskProgress === 100 && <Check className="w-3 h-3 ml-0.5" />}
+              </button>
+            )}
+
             {/* Assigned to */}
             {todo.assigned_to && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#D4A853]/10 text-[#D4A853]">
@@ -233,6 +312,81 @@ export default function TodoItem({
         </div>
       )}
 
+      {/* Subtasks display */}
+      {showSubtasks && subtasks.length > 0 && (
+        <div className="mx-4 mb-3 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
+          {/* Progress bar */}
+          <div className="mb-3">
+            <div className="flex justify-between text-xs text-indigo-600 mb-1">
+              <span>Progress</span>
+              <span>{subtaskProgress}%</span>
+            </div>
+            <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-indigo-500 transition-all duration-300"
+                style={{ width: `${subtaskProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Subtask list */}
+          <div className="space-y-2">
+            {subtasks.map((subtask) => (
+              <div
+                key={subtask.id}
+                className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
+                  subtask.completed ? 'bg-slate-50 opacity-60' : 'bg-white'
+                }`}
+              >
+                <button
+                  onClick={() => toggleSubtask(subtask.id)}
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    subtask.completed
+                      ? 'bg-indigo-500 border-indigo-500'
+                      : 'border-slate-300 hover:border-indigo-400'
+                  }`}
+                >
+                  {subtask.completed && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                </button>
+                <span className={`flex-1 text-sm ${subtask.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                  {subtask.text}
+                </span>
+                {subtask.estimatedMinutes && (
+                  <span className="text-xs text-slate-400">{subtask.estimatedMinutes}m</span>
+                )}
+                <button
+                  onClick={() => deleteSubtask(subtask.id)}
+                  className="p-1 text-slate-400 hover:text-red-500 rounded transition-colors"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add manual subtask */}
+          {onUpdateSubtasks && (
+            <div className="mt-3 flex gap-2">
+              <input
+                type="text"
+                value={newSubtaskText}
+                onChange={(e) => setNewSubtaskText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addManualSubtask()}
+                placeholder="Add a subtask..."
+                className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+              />
+              <button
+                onClick={addManualSubtask}
+                disabled={!newSubtaskText.trim()}
+                className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Expanded actions */}
       {expanded && !todo.completed && (
         <div className="px-4 pb-4 pt-2 border-t border-slate-100 space-y-3">
@@ -282,6 +436,27 @@ export default function TodoItem({
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
               </select>
+            )}
+
+            {/* Break down into subtasks button */}
+            {onUpdateSubtasks && subtasks.length === 0 && (
+              <button
+                onClick={handleBreakdownTask}
+                disabled={isBreakingDown}
+                className="text-sm px-3 py-2 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isBreakingDown ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Breaking down...
+                  </>
+                ) : (
+                  <>
+                    <ListTree className="w-4 h-4" />
+                    Break into subtasks
+                  </>
+                )}
+              </button>
             )}
           </div>
 

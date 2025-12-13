@@ -17,7 +17,7 @@ async function waitForAppLoad(page: Page) {
 // Helper to check if Supabase is configured (app is showing main interface)
 async function isSupabaseConfigured(page: Page): Promise<boolean> {
   // Check if we see the main app interface (input field for adding tasks)
-  const addTaskInput = page.locator('input[placeholder="What needs to be done?"]');
+  const addTaskInput = page.locator('textarea[placeholder="What needs to be done?"]');
   const configRequired = page.locator('text=Configuration Required');
 
   // Wait a bit for page to settle
@@ -47,7 +47,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await expect(input).toBeVisible();
       await input.fill('Test task creation');
       await page.keyboard.press('Enter');
@@ -65,7 +65,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('High priority task');
 
@@ -91,7 +91,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('Task with due date');
 
@@ -125,7 +125,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await expect(submitButton).toBeDisabled();
 
       // Try submitting empty input via keyboard
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await page.keyboard.press('Enter');
 
@@ -148,7 +148,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const priorities = ['Urgent', 'High', 'Medium', 'Low'];
 
       for (const priority of priorities) {
-        const input = page.locator('input[placeholder="What needs to be done?"]');
+        const input = page.locator('textarea[placeholder="What needs to be done?"]');
         await input.click();
         await input.fill(`${priority} priority task`);
 
@@ -173,7 +173,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task first
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Task to complete');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Task to complete')).toBeVisible({ timeout: 5000 });
@@ -200,7 +200,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const initialCompleted = await completedStat.textContent();
 
       // Create and complete a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Task for stats test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Task for stats test')).toBeVisible({ timeout: 5000 });
@@ -229,7 +229,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Task to delete');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Task to delete')).toBeVisible({ timeout: 5000 });
@@ -256,7 +256,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Another task to delete');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Another task to delete')).toBeVisible({ timeout: 5000 });
@@ -331,7 +331,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task in list view
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Persistent task');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Persistent task')).toBeVisible({ timeout: 5000 });
@@ -363,7 +363,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create and complete a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Completed filter test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Completed filter test')).toBeVisible({ timeout: 5000 });
@@ -397,7 +397,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create two tasks
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Will be completed');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Will be completed')).toBeVisible({ timeout: 5000 });
@@ -490,7 +490,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Kanban count test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Kanban count test')).toBeVisible({ timeout: 5000 });
@@ -532,7 +532,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Drag handle test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Drag handle test')).toBeVisible({ timeout: 5000 });
@@ -559,7 +559,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task with urgent priority
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('Priority badge test');
 
@@ -600,7 +600,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Priority update test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Priority update test')).toBeVisible({ timeout: 5000 });
@@ -628,7 +628,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('Due today task');
 
@@ -651,7 +651,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('Due tomorrow task');
 
@@ -676,7 +676,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('Overdue task');
 
@@ -709,7 +709,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const initialOverdue = parseInt(await overdueStat.textContent() || '0');
 
       // Create overdue task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('Stats overdue task');
 
@@ -739,7 +739,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Unassigned task test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Unassigned task test')).toBeVisible({ timeout: 5000 });
@@ -763,7 +763,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Assignee selector test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Assignee selector test')).toBeVisible({ timeout: 5000 });
@@ -880,7 +880,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const initialTotal = parseInt(await totalStat.textContent() || '0');
 
       // Add a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Stats update test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Stats update test')).toBeVisible({ timeout: 5000 });
@@ -903,7 +903,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       const specialText = 'Task with <special> & "characters" \'test\'';
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill(specialText);
       await page.keyboard.press('Enter');
 
@@ -920,7 +920,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       const longText = 'This is a very long task description that should be handled properly by the UI and not break the layout or cause any issues with rendering or storage. '.repeat(3);
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill(longText);
       await page.keyboard.press('Enter');
 
@@ -938,7 +938,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       const emojiText = 'Task with emoji 🎉 👍 ✅';
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill(emojiText);
       await page.keyboard.press('Enter');
 
@@ -954,7 +954,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('   ');
 
       // Submit button should be disabled for whitespace-only
@@ -971,7 +971,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
 
       // Create multiple tasks quickly
       for (let i = 1; i <= 3; i++) {
@@ -995,7 +995,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Toggle stress test');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Toggle stress test')).toBeVisible({ timeout: 5000 });
@@ -1067,7 +1067,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
 
       // Should show expanded options (priority, date)
@@ -1083,7 +1083,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
 
       // Verify expanded
@@ -1105,7 +1105,7 @@ test.describe('Comprehensive Feature Tests', () => {
         return;
       }
 
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.click();
       await input.fill('Some text');
 
@@ -1128,7 +1128,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create a task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Expandable task');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Expandable task')).toBeVisible({ timeout: 5000 });
@@ -1155,7 +1155,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Create and expand task
-      const input = page.locator('input[placeholder="What needs to be done?"]');
+      const input = page.locator('textarea[placeholder="What needs to be done?"]');
       await input.fill('Collapsible task');
       await page.keyboard.press('Enter');
       await expect(page.locator('text=Collapsible task')).toBeVisible({ timeout: 5000 });
@@ -1220,7 +1220,7 @@ test.describe('Responsive Design', () => {
 
     // Core elements should be visible
     await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible();
-    await expect(page.locator('input[placeholder="What needs to be done?"]')).toBeVisible();
+    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible();
   });
 
   test('should work on tablet viewport', async ({ page }) => {
