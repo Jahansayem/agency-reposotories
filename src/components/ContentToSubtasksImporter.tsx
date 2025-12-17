@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   X,
   Loader2,
@@ -12,7 +12,9 @@ import {
   Flag,
   Clock,
   Upload,
-  FileText
+  FileText,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import { Subtask, TodoPriority } from '@/types/todo';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,8 +32,58 @@ interface ContentToSubtasksImporterProps {
   parentTaskText: string;
 }
 
-type ImportMode = 'email' | 'voicemail' | null;
-type ProcessingStatus = 'idle' | 'transcribing' | 'parsing' | 'ready' | 'error';
+type ImportMode = 'email' | 'voicemail' | 'live-mic' | null;
+type ProcessingStatus = 'idle' | 'recording' | 'transcribing' | 'parsing' | 'ready' | 'error';
+
+// SpeechRecognition types for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: SpeechRecognitionConstructor;
+    webkitSpeechRecognition: SpeechRecognitionConstructor;
+  }
+}
 
 export default function ContentToSubtasksImporter({
   onClose,
@@ -46,6 +98,124 @@ export default function ContentToSubtasksImporter({
   const [error, setError] = useState('');
   const [summary, setSummary] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Live mic recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState('');
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognitionClass) {
+        const recognition = new SpeechRecognitionClass();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event) => {
+          let finalTranscript = '';
+          let interimTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          if (finalTranscript) {
+            setLiveTranscript(prev => prev + (prev ? ' ' : '') + finalTranscript);
+          }
+        };
+
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          setError('Speech recognition error: ' + event.error);
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+        };
+
+        recognitionRef.current = recognition;
+      }
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    };
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      setError('Speech recognition is not supported in your browser. Try Chrome or Edge.');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      setLiveTranscript('');
+      setError('');
+      recognitionRef.current.start();
+      setIsRecording(true);
+      setStatus('recording');
+    }
+  };
+
+  const handleLiveMicParse = async () => {
+    if (!liveTranscript.trim()) {
+      setError('Please record some audio first');
+      return;
+    }
+
+    setStatus('parsing');
+    setError('');
+    setTranscription(liveTranscript);
+
+    try {
+      const response = await fetch('/api/ai/parse-content-to-subtasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: liveTranscript,
+          contentType: 'voicemail',
+          parentTaskText,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to parse audio');
+      }
+
+      const parsedSubtasks: ParsedSubtask[] = data.subtasks.map((st: {
+        text: string;
+        priority: string;
+        estimatedMinutes?: number;
+      }) => ({
+        ...st,
+        priority: st.priority as TodoPriority,
+        selected: true,
+      }));
+
+      setSubtasks(parsedSubtasks);
+      setSummary(data.summary || '');
+      setStatus('ready');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse audio');
+      setStatus('error');
+    }
+  };
 
   const handleEmailParse = async () => {
     if (!emailContent.trim()) {
@@ -112,46 +282,30 @@ export default function ContentToSubtasksImporter({
     setError('');
 
     try {
-      // Step 1: Transcribe the audio
+      // Single API call: transcribe + extract subtasks
       const formData = new FormData();
       formData.append('audio', file);
+      formData.append('mode', 'subtasks');
+      formData.append('parentTaskText', parentTaskText);
 
-      const transcribeResponse = await fetch('/api/ai/transcribe', {
+      const response = await fetch('/api/ai/transcribe', {
         method: 'POST',
         body: formData,
       });
 
-      if (!transcribeResponse.ok) {
-        const errorData = await transcribeResponse.json();
-        throw new Error(errorData.error || 'Failed to transcribe audio');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to process audio');
       }
 
-      const transcribeData = await transcribeResponse.json();
-      if (!transcribeData.success || !transcribeData.text) {
-        throw new Error(transcribeData.error || 'No transcription returned');
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to process audio');
       }
 
-      setTranscription(transcribeData.text);
-      setStatus('parsing');
+      setTranscription(data.text || '');
 
-      // Step 2: Parse the transcription into subtasks
-      const parseResponse = await fetch('/api/ai/parse-content-to-subtasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: transcribeData.text,
-          contentType: 'voicemail',
-          parentTaskText,
-        }),
-      });
-
-      const parseData = await parseResponse.json();
-
-      if (!parseData.success) {
-        throw new Error(parseData.error || 'Failed to parse voicemail');
-      }
-
-      const parsedSubtasks: ParsedSubtask[] = parseData.subtasks.map((st: {
+      const parsedSubtasks: ParsedSubtask[] = (data.subtasks || []).map((st: {
         text: string;
         priority: string;
         estimatedMinutes?: number;
@@ -162,7 +316,7 @@ export default function ContentToSubtasksImporter({
       }));
 
       setSubtasks(parsedSubtasks);
-      setSummary(parseData.summary || '');
+      setSummary(data.summary || '');
       setStatus('ready');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process audio');
@@ -221,6 +375,11 @@ export default function ContentToSubtasksImporter({
     setStatus('idle');
     setError('');
     setSummary('');
+    setLiveTranscript('');
+    if (isRecording && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    }
   };
 
   return (
@@ -255,14 +414,14 @@ export default function ContentToSubtasksImporter({
 
           {/* Mode selection */}
           {!mode && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <button
                 onClick={() => setMode('email')}
                 className="p-6 border-2 border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group"
               >
                 <Mail className="w-10 h-10 text-slate-400 group-hover:text-indigo-500 mx-auto mb-3 transition-colors" />
                 <p className="font-medium text-slate-700 group-hover:text-indigo-700">Paste Email</p>
-                <p className="text-sm text-slate-500 mt-1">Paste email or message text</p>
+                <p className="text-sm text-slate-500 mt-1">Paste text content</p>
               </button>
               <button
                 onClick={() => setMode('voicemail')}
@@ -270,7 +429,15 @@ export default function ContentToSubtasksImporter({
               >
                 <FileAudio className="w-10 h-10 text-slate-400 group-hover:text-purple-500 mx-auto mb-3 transition-colors" />
                 <p className="font-medium text-slate-700 group-hover:text-purple-700">Upload Audio</p>
-                <p className="text-sm text-slate-500 mt-1">Upload voicemail or recording</p>
+                <p className="text-sm text-slate-500 mt-1">Upload audio file</p>
+              </button>
+              <button
+                onClick={() => setMode('live-mic')}
+                className="p-6 border-2 border-slate-200 rounded-xl hover:border-red-300 hover:bg-red-50/50 transition-all group"
+              >
+                <Mic className="w-10 h-10 text-slate-400 group-hover:text-red-500 mx-auto mb-3 transition-colors" />
+                <p className="font-medium text-slate-700 group-hover:text-red-700">Live Mic</p>
+                <p className="text-sm text-slate-500 mt-1">Speak directly</p>
               </button>
             </div>
           )}
@@ -374,6 +541,78 @@ export default function ContentToSubtasksImporter({
                   <p className="text-xs text-slate-500 mb-1">Transcription:</p>
                   <p className="text-sm text-slate-600 italic line-clamp-3">&ldquo;{transcription}&rdquo;</p>
                 </div>
+              )}
+
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  {error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Live mic mode */}
+          {mode === 'live-mic' && status !== 'ready' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={resetToModeSelection}
+                  className="text-sm text-slate-500 hover:text-slate-700"
+                >
+                  &larr; Back
+                </button>
+              </div>
+
+              {/* Recording controls */}
+              <div className="p-6 bg-slate-50 rounded-xl text-center">
+                <button
+                  onClick={toggleRecording}
+                  disabled={status === 'parsing'}
+                  className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 transition-all ${
+                    isRecording
+                      ? 'bg-red-500 hover:bg-red-600 animate-pulse'
+                      : 'bg-slate-200 hover:bg-slate-300'
+                  } disabled:opacity-50`}
+                >
+                  {isRecording ? (
+                    <MicOff className="w-8 h-8 text-white" />
+                  ) : (
+                    <Mic className="w-8 h-8 text-slate-600" />
+                  )}
+                </button>
+                <p className="font-medium text-slate-700">
+                  {isRecording ? 'Recording... Click to stop' : 'Click to start recording'}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">
+                  {isRecording ? 'Speak clearly into your microphone' : 'Dictate action items for this task'}
+                </p>
+              </div>
+
+              {/* Live transcript display */}
+              {liveTranscript && (
+                <div className="p-4 bg-white border border-slate-200 rounded-xl">
+                  <p className="text-xs text-slate-500 mb-2">Live Transcript:</p>
+                  <p className="text-sm text-slate-700">{liveTranscript}</p>
+                </div>
+              )}
+
+              {/* Processing indicator */}
+              {status === 'parsing' && (
+                <div className="p-4 bg-indigo-50 rounded-xl text-center">
+                  <Loader2 className="w-6 h-6 text-indigo-500 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-indigo-700">Extracting action items...</p>
+                </div>
+              )}
+
+              {/* Extract button */}
+              {liveTranscript && !isRecording && status !== 'parsing' && (
+                <button
+                  onClick={handleLiveMicParse}
+                  className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Extract Subtasks
+                </button>
               )}
 
               {error && (

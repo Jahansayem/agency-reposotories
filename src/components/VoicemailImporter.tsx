@@ -63,50 +63,33 @@ export default function VoicemailImporter({ onClose, onAddTasks, users }: Voicem
       const fileIndex = files.length + i;
 
       try {
-        // Update status to transcribing
+        // Update status to transcribing (now does both transcription + task extraction in one call)
         setFiles(prev => prev.map((f, idx) =>
           idx === fileIndex ? { ...f, status: 'transcribing' as const } : f
         ));
 
-        // Transcribe the audio
+        // Transcribe and extract tasks in a single API call
         const formData = new FormData();
         formData.append('audio', file);
+        formData.append('users', JSON.stringify(users));
 
-        const transcribeResponse = await fetch('/api/ai/transcribe', {
+        const response = await fetch('/api/ai/transcribe', {
           method: 'POST',
           body: formData,
         });
 
-        if (!transcribeResponse.ok) {
-          const errorData = await transcribeResponse.json();
-          throw new Error(errorData.error || 'Failed to transcribe audio');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to process audio');
         }
 
-        const transcribeData = await transcribeResponse.json();
-        if (!transcribeData.success || !transcribeData.text) {
-          throw new Error(transcribeData.error || 'No transcription returned');
+        const data = await response.json();
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to process audio');
         }
 
-        const transcription = transcribeData.text;
-
-        // Update status to parsing
-        setFiles(prev => prev.map((f, idx) =>
-          idx === fileIndex ? { ...f, status: 'parsing' as const, transcription } : f
-        ));
-
-        // Parse the transcription for tasks
-        const parseResponse = await fetch('/api/ai/parse-voicemail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcription, users }),
-        });
-
-        if (!parseResponse.ok) {
-          throw new Error('Failed to parse voicemail');
-        }
-
-        const parseData = await parseResponse.json();
-        const tasks: ExtractedTask[] = (parseData.tasks || []).map((task: {
+        const transcription = data.text || '';
+        const tasks: ExtractedTask[] = (data.tasks || []).map((task: {
           text: string;
           priority: string;
           dueDate: string;
@@ -117,9 +100,9 @@ export default function VoicemailImporter({ onClose, onAddTasks, users }: Voicem
           selected: true,
         }));
 
-        // Update with parsed tasks
+        // Update with transcription and parsed tasks
         setFiles(prev => prev.map((f, idx) =>
-          idx === fileIndex ? { ...f, status: 'ready' as const, tasks } : f
+          idx === fileIndex ? { ...f, status: 'ready' as const, transcription, tasks } : f
         ));
 
       } catch (error) {
@@ -259,14 +242,9 @@ export default function VoicemailImporter({ onClose, onAddTasks, users }: Voicem
                 <div className="flex items-center gap-2">
                   <FileAudio className="w-4 h-4 text-slate-500" />
                   <span className="font-medium text-slate-700 text-sm">{file.fileName}</span>
-                  {file.status === 'transcribing' && (
-                    <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Transcribing...
-                    </span>
-                  )}
-                  {file.status === 'parsing' && (
+                  {(file.status === 'transcribing' || file.status === 'parsing') && (
                     <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" /> Extracting tasks...
+                      <Loader2 className="w-3 h-3 animate-spin" /> Processing...
                     </span>
                   )}
                   {file.status === 'ready' && (
