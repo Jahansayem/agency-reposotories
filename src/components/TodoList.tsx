@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   LayoutList, LayoutGrid, Wifi, WifiOff, Mail, Search,
   ArrowUpDown, User, Calendar, AlertTriangle, CheckSquare,
-  Trash2, UserPlus, Moon, Sun, X
+  Trash2, UserPlus, X
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import UserSwitcher from './UserSwitcher';
@@ -66,7 +66,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
   const [sortOption, setSortOption] = useState<SortOption>('created');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
   const [selectedTodos, setSelectedTodos] = useState<Set<string>>(new Set());
-  const [darkMode, setDarkMode] = useState(false);
+  const darkMode = true; // Always dark mode
   const [showBulkActions, setShowBulkActions] = useState(false);
 
   const [showCelebration, setShowCelebration] = useState(false);
@@ -102,12 +102,6 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
         setSearchQuery('');
       }
 
-      // 'd' - toggle dark mode
-      if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setDarkMode(prev => !prev);
-      }
-
       // '1-4' - quick filter shortcuts
       if (e.key === '1') { e.preventDefault(); setQuickFilter('all'); }
       if (e.key === '2') { e.preventDefault(); setQuickFilter('my_tasks'); }
@@ -119,14 +113,10 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Apply dark mode class
+  // Apply dark mode class on mount
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
+    document.documentElement.classList.add('dark');
+  }, []);
 
   const fetchTodos = useCallback(async () => {
     if (!isSupabaseConfigured()) {
@@ -719,15 +709,6 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Dark mode toggle */}
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all"
-                title={darkMode ? 'Light mode (D)' : 'Dark mode (D)'}
-              >
-                {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-
               {/* View toggle */}
               <div className="flex bg-white/10 rounded-lg p-1">
                 <button
@@ -1013,15 +994,13 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
         )}
 
         {/* Keyboard shortcuts hint */}
-        <div className={`mt-8 text-center text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+        <div className="mt-8 text-center text-xs text-slate-500">
           <span className="hidden sm:inline">
-            Shortcuts: <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>N</kbd> new task
+            Shortcuts: <kbd className="px-1.5 py-0.5 rounded bg-slate-800">N</kbd> new task
             <span className="mx-2">|</span>
-            <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>/</kbd> search
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800">/</kbd> search
             <span className="mx-2">|</span>
-            <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>D</kbd> dark mode
-            <span className="mx-2">|</span>
-            <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>1-4</kbd> filters
+            <kbd className="px-1.5 py-0.5 rounded bg-slate-800">1-4</kbd> filters
           </span>
         </div>
       </main>
