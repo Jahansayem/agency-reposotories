@@ -628,9 +628,21 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     setSelectedTodos(new Set());
   };
 
+  // Filter todos based on user role visibility
+  // Admin can see all tasks, members can only see their own or assigned to them
+  const visibleTodos = useMemo(() => {
+    if (currentUser.role === 'admin') {
+      return todos;
+    }
+    // Members can only see tasks they created or are assigned to them
+    return todos.filter(
+      (todo) => todo.created_by === userName || todo.assigned_to === userName
+    );
+  }, [todos, currentUser.role, userName]);
+
   // Filter and sort todos
   const filteredAndSortedTodos = useMemo(() => {
-    let result = [...todos];
+    let result = [...visibleTodos];
 
     // Apply search filter
     if (searchQuery) {
@@ -688,14 +700,15 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     }
 
     return result;
-  }, [todos, searchQuery, quickFilter, showCompleted, sortOption, userName]);
+  }, [visibleTodos, searchQuery, quickFilter, showCompleted, sortOption, userName]);
 
+  // Stats should be based on visible todos only
   const stats = {
-    total: todos.length,
-    completed: todos.filter((t) => t.completed).length,
-    active: todos.filter((t) => !t.completed).length,
-    dueToday: todos.filter((t) => isDueToday(t.due_date) && !t.completed).length,
-    overdue: todos.filter((t) => isOverdue(t.due_date, t.completed)).length,
+    total: visibleTodos.length,
+    completed: visibleTodos.filter((t) => t.completed).length,
+    active: visibleTodos.filter((t) => !t.completed).length,
+    dueToday: visibleTodos.filter((t) => isDueToday(t.due_date) && !t.completed).length,
+    overdue: visibleTodos.filter((t) => isOverdue(t.due_date, t.completed)).length,
   };
 
   if (loading) {
@@ -1064,7 +1077,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
           </div>
         ) : (
           <KanbanBoard
-            todos={todos}
+            todos={visibleTodos}
             users={users}
             darkMode={darkMode}
             onStatusChange={updateStatus}

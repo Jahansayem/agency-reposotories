@@ -44,9 +44,12 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
     const fetchUsers = async () => {
       const { data } = await supabase
         .from('users')
-        .select('id, name, color, created_at, last_login')
+        .select('id, name, color, role, created_at, last_login')
         .order('name');
-      if (data) setUsers(data);
+      if (data) {
+        // Default role to 'member' if not set
+        setUsers(data.map(u => ({ ...u, role: u.role || 'member' })));
+      }
     };
     fetchUsers();
   }, [modalState]);
@@ -186,8 +189,8 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
 
       const { data, error: insertError } = await supabase
         .from('users')
-        .insert({ name, pin_hash: pinHash, color })
-        .select('id, name, color, created_at, last_login')
+        .insert({ name, pin_hash: pinHash, color, role: 'member' })
+        .select('id, name, color, role, created_at, last_login')
         .single();
 
       if (insertError) {
@@ -201,7 +204,8 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
       }
 
       if (data) {
-        onUserChange(data);
+        const userData = { ...data, role: data.role || 'member' };
+        onUserChange(userData);
         setModalState('closed');
       }
     } catch {

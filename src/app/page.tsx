@@ -20,12 +20,13 @@ export default function Home() {
         // Verify user still exists
         const { data } = await supabase
           .from('users')
-          .select('id, name, color, created_at, last_login, streak_count, streak_last_date, welcome_shown_at')
+          .select('id, name, color, role, created_at, last_login, streak_count, streak_last_date, welcome_shown_at')
           .eq('id', session.userId)
           .single();
 
         if (data) {
-          setCurrentUser(data);
+          // Default role to 'member' if not set
+          setCurrentUser({ ...data, role: data.role || 'member' });
         } else {
           // User no longer exists, clear session
           clearStoredSession();

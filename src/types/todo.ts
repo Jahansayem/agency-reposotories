@@ -43,10 +43,13 @@ export interface User {
   last_login?: string;
 }
 
+export type UserRole = 'admin' | 'member';
+
 export interface AuthUser {
   id: string;
   name: string;
   color: string;
+  role: UserRole;
   created_at: string;
   last_login?: string;
   streak_count?: number;
