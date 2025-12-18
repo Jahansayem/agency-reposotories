@@ -1,56 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Audio file transcription endpoint using Claude
+// Audio file transcription endpoint using OpenAI Whisper + Claude for task parsing
 // Supports three modes:
-// 1. Transcription only (default): Just returns the text
-// 2. Tasks mode: If 'users' is provided, extracts top-level tasks in a single API call
+// 1. Transcription only (default): Just returns the text from Whisper
+// 2. Tasks mode: If 'users' is provided, transcribes then extracts tasks with Claude
 // 3. Subtasks mode: If 'mode=subtasks' is provided, extracts subtasks for a parent task
 // The live microphone feature uses the browser's built-in Web Speech API and doesn't need this endpoint.
 
-// Supported audio formats by Claude
+// Supported audio formats by Whisper
 const SUPPORTED_FORMATS = ['mp3', 'mp4', 'mpeg', 'mpga', 'm4a', 'wav', 'webm', 'ogg', 'flac'];
-
-type AudioMediaType = 'audio/mp3' | 'audio/mp4' | 'audio/mpeg' | 'audio/wav' | 'audio/webm' | 'audio/ogg' | 'audio/flac';
-
-// Map file extensions/mime types to Claude's supported media types
-function getMediaType(filename: string, mimeType: string): AudioMediaType {
-  const extension = filename.split('.').pop()?.toLowerCase();
-
-  // Map common extensions to media types
-  const extensionMap: Record<string, AudioMediaType> = {
-    'mp3': 'audio/mp3',
-    'mp4': 'audio/mp4',
-    'm4a': 'audio/mp4',
-    'mpeg': 'audio/mpeg',
-    'mpga': 'audio/mpeg',
-    'wav': 'audio/wav',
-    'webm': 'audio/webm',
-    'ogg': 'audio/ogg',
-    'flac': 'audio/flac',
-  };
-
-  if (extension && extensionMap[extension]) {
-    return extensionMap[extension];
-  }
-
-  // Fallback to mime type mapping
-  const mimeMap: Record<string, AudioMediaType> = {
-    'audio/mp3': 'audio/mp3',
-    'audio/mpeg': 'audio/mpeg',
-    'audio/mp4': 'audio/mp4',
-    'audio/m4a': 'audio/mp4',
-    'audio/x-m4a': 'audio/mp4',
-    'audio/wav': 'audio/wav',
-    'audio/wave': 'audio/wav',
-    'audio/x-wav': 'audio/wav',
-    'audio/webm': 'audio/webm',
-    'audio/ogg': 'audio/ogg',
-    'audio/flac': 'audio/flac',
-    'audio/x-flac': 'audio/flac',
-  };
-
-  return mimeMap[mimeType] || 'audio/mp3';
-}
 
 type ProcessingMode = 'transcribe' | 'tasks' | 'subtasks';
 
@@ -102,20 +60,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.error('ANTHROPIC_API_KEY not configured');
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY not configured');
       return NextResponse.json({
         success: false,
-        error: 'Audio file upload is not available. Please use the microphone button to speak your task directly.',
+        error: 'Audio transcription requires OpenAI API key. Please add OPENAI_API_KEY to your environment variables.',
       }, { status: 501 });
     }
 
-    // Convert file to base64
-    const arrayBuffer = await audioFile.arrayBuffer();
-    const base64Audio = Buffer.from(arrayBuffer).toString('base64');
-    const mediaType = getMediaType(audioFile.name, audioFile.type);
+    // Step 1: Transcribe audio using OpenAI Whisper
+    console.log('Sending to OpenAI Whisper for transcription...');
 
-    console.log('Sending to Claude API with media type:', mediaType);
+    const whisperFormData = new FormData();
+    whisperFormData.append('file', audioFile);
+    whisperFormData.append('model', 'whisper-1');
+    whisperFormData.append('response_format', 'text');
+
+    const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: whisperFormData,
+    });
+
+    if (!whisperResponse.ok) {
+      const errorData = await whisperResponse.json().catch(() => ({}));
+      console.error('Whisper API error:', whisperResponse.status, errorData);
+      return NextResponse.json({
+        success: false,
+        error: errorData?.error?.message || 'Failed to transcribe audio',
+      }, { status: whisperResponse.status });
+    }
+
+    const transcription = await whisperResponse.text();
+    console.log('Transcription successful, length:', transcription.length);
+
+    // For simple transcription mode, return here
+    if (mode === 'transcribe') {
+      return NextResponse.json({
+        success: true,
+        text: transcription.trim(),
+      });
+    }
+
+    // Step 2: Use Claude to extract tasks from the transcription
+    if (!process.env.ANTHROPIC_API_KEY) {
+      // If no Claude API key, return just the transcription
+      console.log('ANTHROPIC_API_KEY not configured, returning transcription only');
+      return NextResponse.json({
+        success: true,
+        text: transcription.trim(),
+        tasks: mode === 'tasks' ? [{
+          text: transcription.trim().slice(0, 200),
+          priority: 'medium',
+          dueDate: '',
+          assignedTo: '',
+        }] : undefined,
+        subtasks: mode === 'subtasks' ? [{
+          text: transcription.trim().slice(0, 200),
+          priority: 'medium',
+        }] : undefined,
+      });
+    }
 
     // Build the prompt based on mode
     const today = new Date().toISOString().split('T')[0];
@@ -124,7 +131,10 @@ export async function POST(request: NextRequest) {
     let prompt: string;
 
     if (mode === 'tasks') {
-      prompt = `Listen to this voicemail and extract ALL distinct action items or tasks mentioned.
+      prompt = `Analyze this voicemail transcription and extract ALL distinct action items or tasks mentioned.
+
+TRANSCRIPTION:
+"${transcription}"
 
 Available team members: ${userList}
 Today's date: ${today}
@@ -135,13 +145,10 @@ For each task found, provide:
 3. Due date if mentioned (YYYY-MM-DD format) - interpret phrases like "by Friday", "next week", "tomorrow", "end of month"
 4. Suggested assignee from the team list if mentioned or implied
 
-Also include the full transcription of the audio.
-
 IMPORTANT: Extract ALL separate tasks. A single voicemail might contain multiple unrelated action items.
 
 Respond ONLY with valid JSON in this exact format:
 {
-  "transcription": "The full transcription of the audio",
   "tasks": [
     {
       "text": "Task description here",
@@ -152,16 +159,19 @@ Respond ONLY with valid JSON in this exact format:
   ]
 }
 
-If the audio doesn't contain any clear tasks, still return one task with the cleaned-up text.
+If the transcription doesn't contain any clear tasks, still return one task with the cleaned-up text.
 Leave dueDate as empty string "" if no date is mentioned.
 Leave assignedTo as empty string "" if no person is mentioned.`;
-    } else if (mode === 'subtasks') {
-      prompt = `Listen to this audio and extract ALL distinct action items as subtasks.
+    } else {
+      prompt = `Analyze this audio transcription and extract ALL distinct action items as subtasks.
+
+TRANSCRIPTION:
+"${transcription}"
 
 ${parentTaskText ? `Parent task context: "${parentTaskText}"` : ''}
 Today's date: ${today}
 
-Extract actionable items from this audio as subtasks. Look for:
+Extract actionable items from this transcription as subtasks. Look for:
 - Explicit requests or instructions
 - Questions that need answers (turn into "Respond to..." tasks)
 - Deadlines or follow-ups mentioned
@@ -173,11 +183,8 @@ For each subtask provide:
 2. Priority (low, medium, high, urgent) - infer from language urgency
 3. Estimated minutes to complete (5, 10, 15, 30, 45, 60, 90, 120)
 
-Also include the full transcription of the audio.
-
 Respond ONLY with valid JSON in this exact format:
 {
-  "transcription": "The full transcription of the audio",
   "subtasks": [
     {
       "text": "Action item description",
@@ -195,12 +202,10 @@ Rules:
 - Order by logical sequence or priority
 - If content mentions specific deadlines, note urgency in priority
 - Don't create redundant or overly granular subtasks`;
-    } else {
-      prompt = 'Please transcribe this audio exactly as spoken. Return only the transcription text, nothing else. Do not add any commentary, introduction, or explanation.';
     }
 
-    // Use fetch directly since the SDK doesn't have audio types yet
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Use Claude to extract tasks from the transcription
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -213,37 +218,34 @@ Rules:
         messages: [
           {
             role: 'user',
-            content: [
-              {
-                type: 'audio',
-                source: {
-                  type: 'base64',
-                  media_type: mediaType,
-                  data: base64Audio,
-                },
-              },
-              {
-                type: 'text',
-                text: prompt,
-              },
-            ],
+            content: prompt,
           },
         ],
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('Claude API error:', response.status, errorData);
+    if (!claudeResponse.ok) {
+      const errorData = await claudeResponse.json().catch(() => ({}));
+      console.error('Claude API error:', claudeResponse.status, errorData);
 
-      const errorMessage = errorData?.error?.message || 'Failed to transcribe audio';
+      // Still return the transcription even if Claude fails
       return NextResponse.json({
-        success: false,
-        error: errorMessage,
-      }, { status: response.status });
+        success: true,
+        text: transcription.trim(),
+        tasks: mode === 'tasks' ? [{
+          text: transcription.trim().slice(0, 200),
+          priority: 'medium',
+          dueDate: '',
+          assignedTo: '',
+        }] : undefined,
+        subtasks: mode === 'subtasks' ? [{
+          text: transcription.trim().slice(0, 200),
+          priority: 'medium',
+        }] : undefined,
+      });
     }
 
-    const data = await response.json();
+    const data = await claudeResponse.json();
     const responseText = data.content?.[0]?.type === 'text' ? data.content[0].text : '';
 
     // Handle tasks mode
@@ -259,7 +261,7 @@ Rules:
             dueDate?: string;
             assignedTo?: string;
           }) => ({
-            text: task.text || parsed.transcription || '',
+            text: task.text || transcription.trim().slice(0, 200),
             priority: ['low', 'medium', 'high', 'urgent'].includes(task.priority || '')
               ? task.priority
               : 'medium',
@@ -271,7 +273,7 @@ Rules:
 
           return NextResponse.json({
             success: true,
-            text: parsed.transcription || responseText,
+            text: transcription.trim(),
             tasks,
           });
         }
@@ -282,9 +284,9 @@ Rules:
       // Fallback: return transcription as single task
       return NextResponse.json({
         success: true,
-        text: responseText.trim(),
+        text: transcription.trim(),
         tasks: [{
-          text: responseText.trim(),
+          text: transcription.trim().slice(0, 200),
           priority: 'medium',
           dueDate: '',
           assignedTo: '',
@@ -320,7 +322,7 @@ Rules:
 
           return NextResponse.json({
             success: true,
-            text: parsed.transcription || responseText,
+            text: transcription.trim(),
             subtasks,
             summary: String(parsed.summary || '').slice(0, 300),
           });
@@ -332,20 +334,19 @@ Rules:
       // Fallback: return transcription as single subtask
       return NextResponse.json({
         success: true,
-        text: responseText.trim(),
+        text: transcription.trim(),
         subtasks: [{
-          text: responseText.trim().slice(0, 200),
+          text: transcription.trim().slice(0, 200),
           priority: 'medium',
         }],
         summary: '',
       });
     }
 
-    // Simple transcription mode
-    console.log('Transcription successful, length:', responseText.length);
+    // Shouldn't reach here, but return transcription just in case
     return NextResponse.json({
       success: true,
-      text: responseText.trim(),
+      text: transcription.trim(),
     });
 
   } catch (error) {
