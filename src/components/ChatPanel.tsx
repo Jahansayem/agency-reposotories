@@ -22,11 +22,14 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   const [isMinimized, setIsMinimized] = useState(false);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [tableExists, setTableExists] = useState(true);
-  const [conversation, setConversation] = useState<ChatConversation>({ type: 'team' });
-  const [showConversationList, setShowConversationList] = useState(false);
+  const [conversation, setConversation] = useState<ChatConversation | null>(null);
+  const [showConversationList, setShowConversationList] = useState(true);
+  // Track unread counts per conversation: { 'team': 5, 'userName': 3, ... }
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  // Track last read timestamp per conversation
+  const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, string>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -46,18 +49,32 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
+  // Get conversation key for unread tracking
+  const getConversationKey = useCallback((conv: ChatConversation) => {
+    return conv.type === 'team' ? 'team' : conv.userName;
+  }, []);
+
+  // Total unread count across all conversations
+  const totalUnreadCount = useMemo(() => {
+    return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
+  }, [unreadCounts]);
+
   const handleScroll = useCallback(() => {
     if (!messagesContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
     const isBottom = scrollHeight - scrollTop - clientHeight < 50;
     setIsAtBottom(isBottom);
-    if (isBottom && isOpen) {
-      setUnreadCount(0);
+    if (isBottom && isOpen && conversation) {
+      // Mark current conversation as read
+      const key = getConversationKey(conversation);
+      setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
+      setLastReadTimestamps(prev => ({ ...prev, [key]: new Date().toISOString() }));
     }
-  }, [isOpen]);
+  }, [isOpen, conversation, getConversationKey]);
 
   // Filter messages for current conversation
   const filteredMessages = useMemo(() => {
+    if (!conversation) return [];
     if (conversation.type === 'team') {
       // Team chat: messages with no recipient (null or undefined)
       return messages.filter(m => !m.recipient);
@@ -70,6 +87,50 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
       );
     }
   }, [messages, conversation, currentUser.name]);
+
+  // Get last message for each conversation (for sorting by most recent)
+  const conversationLastMessages = useMemo(() => {
+    const result: Record<string, ChatMessage | null> = { team: null };
+
+    // Team messages
+    const teamMessages = messages.filter(m => !m.recipient);
+    if (teamMessages.length > 0) {
+      result.team = teamMessages[teamMessages.length - 1];
+    }
+
+    // DM messages for each user
+    otherUsers.forEach(user => {
+      const dmMessages = messages.filter(m =>
+        (m.created_by === currentUser.name && m.recipient === user.name) ||
+        (m.created_by === user.name && m.recipient === currentUser.name)
+      );
+      result[user.name] = dmMessages.length > 0 ? dmMessages[dmMessages.length - 1] : null;
+    });
+
+    return result;
+  }, [messages, otherUsers, currentUser.name]);
+
+  // Find the most recent conversation with activity
+  const mostRecentConversation = useMemo((): ChatConversation => {
+    let mostRecentKey: string | null = null;
+    let mostRecentTime: string | null = null;
+
+    Object.entries(conversationLastMessages).forEach(([key, msg]) => {
+      if (msg) {
+        if (!mostRecentTime || msg.created_at > mostRecentTime) {
+          mostRecentKey = key;
+          mostRecentTime = msg.created_at;
+        }
+      }
+    });
+
+    if (mostRecentKey) {
+      return mostRecentKey === 'team'
+        ? { type: 'team' }
+        : { type: 'dm', userName: mostRecentKey };
+    }
+    return { type: 'team' };
+  }, [conversationLastMessages]);
 
   // Fetch all messages
   const fetchMessages = useCallback(async () => {
@@ -98,9 +159,26 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   const isOpenRef = useRef(isOpen);
   const isAtBottomRef = useRef(isAtBottom);
   const conversationRef = useRef(conversation);
+  const showConversationListRef = useRef(showConversationList);
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
   useEffect(() => { conversationRef.current = conversation; }, [conversation]);
+  useEffect(() => { showConversationListRef.current = showConversationList; }, [showConversationList]);
+
+  // Determine which conversation a message belongs to
+  const getMessageConversationKey = useCallback((msg: ChatMessage): string | null => {
+    if (!msg.recipient) {
+      return 'team';
+    }
+    // DM - return the other person's name
+    if (msg.created_by === currentUser.name) {
+      return msg.recipient;
+    }
+    if (msg.recipient === currentUser.name) {
+      return msg.created_by;
+    }
+    return null; // Not relevant to current user
+  }, [currentUser.name]);
 
   // Real-time subscription
   useEffect(() => {
@@ -121,16 +199,28 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
               if (exists) return prev;
               return [...prev, newMsg];
             });
-            // Check if message is relevant to current user
-            const isRelevant = !newMsg.recipient || // team message
-              newMsg.recipient === currentUser.name || // DM to me
-              newMsg.created_by === currentUser.name; // my message
 
-            if (isRelevant && newMsg.created_by !== currentUser.name) {
-              // Increment unread if chat is closed or not at bottom
-              if (!isOpenRef.current || !isAtBottomRef.current) {
-                setUnreadCount((prev) => prev + 1);
-              }
+            // Don't count own messages
+            if (newMsg.created_by === currentUser.name) return;
+
+            // Determine which conversation this message belongs to
+            const msgConvKey = !newMsg.recipient ? 'team' :
+              newMsg.recipient === currentUser.name ? newMsg.created_by : null;
+
+            if (!msgConvKey) return; // Not relevant to current user
+
+            // Check if this conversation is currently being viewed
+            const currentConv = conversationRef.current;
+            const currentKey = currentConv ? (currentConv.type === 'team' ? 'team' : currentConv.userName) : null;
+            const isViewingThis = isOpenRef.current && !showConversationListRef.current &&
+                                  currentKey === msgConvKey && isAtBottomRef.current;
+
+            if (!isViewingThis) {
+              // Increment unread for this conversation
+              setUnreadCounts(prev => ({
+                ...prev,
+                [msgConvKey]: (prev[msgConvKey] || 0) + 1
+              }));
             }
           } else if (payload.eventType === 'DELETE') {
             setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
@@ -144,7 +234,7 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchMessages, currentUser.name]);
+  }, [fetchMessages, currentUser.name, getMessageConversationKey]);
 
   // Auto-scroll on new messages if at bottom
   useEffect(() => {
@@ -155,15 +245,17 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
 
   // Focus input when opening chat or switching conversations
   useEffect(() => {
-    if (isOpen && !isMinimized && !showConversationList) {
+    if (isOpen && !isMinimized && !showConversationList && conversation) {
       setTimeout(() => inputRef.current?.focus(), 100);
-      setUnreadCount(0);
+      // Mark current conversation as read
+      const key = getConversationKey(conversation);
+      setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
     }
-  }, [isOpen, isMinimized, showConversationList]);
+  }, [isOpen, isMinimized, showConversationList, conversation, getConversationKey]);
 
   const sendMessage = async () => {
     const text = newMessage.trim();
-    if (!text) return;
+    if (!text || !conversation) return;
 
     const message: ChatMessage = {
       id: uuidv4(),
@@ -212,9 +304,9 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
 
   // Get unread count per conversation
   const getConversationUnread = useCallback((conv: ChatConversation) => {
-    // For now, we don't track per-conversation unread. Could be added later.
-    return 0;
-  }, []);
+    const key = getConversationKey(conv);
+    return unreadCounts[key] || 0;
+  }, [unreadCounts, getConversationKey]);
 
   // Group consecutive messages by same user
   const groupedMessages = filteredMessages.reduce((acc, msg, idx) => {
@@ -228,9 +320,13 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   const selectConversation = (conv: ChatConversation) => {
     setConversation(conv);
     setShowConversationList(false);
+    // Clear unread count for this conversation
+    const key = getConversationKey(conv);
+    setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
   };
 
   const getConversationTitle = () => {
+    if (!conversation) return 'Messages';
     if (conversation.type === 'team') return 'Team Chat';
     return conversation.userName;
   };
@@ -244,7 +340,16 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            onClick={() => setIsOpen(true)}
+            onClick={() => {
+              setIsOpen(true);
+              // Default to most recent conversation with activity, or show list
+              if (messages.length > 0) {
+                setConversation(mostRecentConversation);
+                setShowConversationList(false);
+              } else {
+                setShowConversationList(true);
+              }
+            }}
             className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full
                        bg-[var(--accent)] hover:bg-[var(--allstate-blue-dark)]
                        text-white shadow-lg hover:shadow-xl
@@ -252,11 +357,11 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                        group"
           >
             <MessageSquare className="w-6 h-6" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500
+            {totalUnreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[1.5rem] h-6 px-1 bg-red-500
                              rounded-full text-xs font-bold flex items-center
                              justify-center animate-pulse">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
               </span>
             )}
           </motion.button>
@@ -297,15 +402,17 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
-                    {conversation.type === 'team' ? (
+                    {conversation?.type === 'team' ? (
                       <Users className="w-5 h-5" />
-                    ) : (
+                    ) : conversation?.type === 'dm' ? (
                       <div
                         className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
                         style={{ backgroundColor: getUserColor(conversation.userName) }}
                       >
                         {getInitials(conversation.userName)}
                       </div>
+                    ) : (
+                      <MessageSquare className="w-5 h-5" />
                     )}
                     <span className="font-semibold">{getConversationTitle()}</span>
                   </>
@@ -338,14 +445,26 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                     <button
                       onClick={() => selectConversation({ type: 'team' })}
                       className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[var(--surface-2)] transition-colors
-                                ${conversation.type === 'team' ? 'bg-[var(--accent-light)]' : ''}`}
+                                ${conversation?.type === 'team' ? 'bg-[var(--accent-light)]' : ''}`}
                     >
-                      <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white">
-                        <Users className="w-5 h-5" />
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white">
+                          <Users className="w-5 h-5" />
+                        </div>
+                        {(unreadCounts['team'] || 0) > 0 && (
+                          <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-red-500
+                                         rounded-full text-xs font-bold flex items-center justify-center text-white">
+                            {unreadCounts['team'] > 99 ? '99+' : unreadCounts['team']}
+                          </span>
+                        )}
                       </div>
                       <div className="flex-1 text-left">
                         <div className="font-medium text-[var(--foreground)]">Team Chat</div>
-                        <div className="text-sm text-[var(--text-muted)]">Message everyone</div>
+                        <div className="text-sm text-[var(--text-muted)]">
+                          {conversationLastMessages.team
+                            ? `${conversationLastMessages.team.created_by}: ${conversationLastMessages.team.text.slice(0, 30)}${conversationLastMessages.team.text.length > 30 ? '...' : ''}`
+                            : 'Message everyone'}
+                        </div>
                       </div>
                     </button>
 
@@ -364,7 +483,9 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                       </div>
                     ) : (
                       otherUsers.map((user) => {
-                        const isSelected = conversation.type === 'dm' && conversation.userName === user.name;
+                        const isSelected = conversation?.type === 'dm' && conversation.userName === user.name;
+                        const userUnread = unreadCounts[user.name] || 0;
+                        const lastMsg = conversationLastMessages[user.name];
                         return (
                           <button
                             key={user.name}
@@ -372,15 +493,32 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                             className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[var(--surface-2)] transition-colors
                                       ${isSelected ? 'bg-[var(--accent-light)]' : ''}`}
                           >
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                              style={{ backgroundColor: user.color }}
-                            >
-                              {getInitials(user.name)}
+                            <div className="relative">
+                              <div
+                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                                style={{ backgroundColor: user.color }}
+                              >
+                                {getInitials(user.name)}
+                              </div>
+                              {userUnread > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-red-500
+                                               rounded-full text-xs font-bold flex items-center justify-center text-white">
+                                  {userUnread > 99 ? '99+' : userUnread}
+                                </span>
+                              )}
                             </div>
                             <div className="flex-1 text-left">
-                              <div className="font-medium text-[var(--foreground)]">{user.name}</div>
-                              <div className="text-sm text-[var(--text-muted)]">Direct message</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-[var(--foreground)]">{user.name}</span>
+                                {userUnread > 0 && (
+                                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                                )}
+                              </div>
+                              <div className="text-sm text-[var(--text-muted)] truncate">
+                                {lastMsg
+                                  ? `${lastMsg.created_by === currentUser.name ? 'You' : lastMsg.created_by}: ${lastMsg.text.slice(0, 25)}${lastMsg.text.length > 25 ? '...' : ''}`
+                                  : 'No messages yet'}
+                              </div>
                             </div>
                           </button>
                         );
@@ -410,9 +548,11 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                           <MessageSquare className="w-12 h-12 opacity-30" />
                           <p>No messages yet</p>
                           <p className="text-sm">
-                            {conversation.type === 'team'
+                            {conversation?.type === 'team'
                               ? 'Start the team conversation!'
-                              : `Start chatting with ${conversation.userName}!`}
+                              : conversation?.type === 'dm'
+                              ? `Start chatting with ${conversation.userName}!`
+                              : 'Select a conversation'}
                           </p>
                         </div>
                       ) : (
@@ -490,7 +630,7 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                                    transition-colors"
                         >
                           <ChevronDown className="w-4 h-4" />
-                          {unreadCount > 0 && `${unreadCount} new`}
+                          {totalUnreadCount > 0 && `${totalUnreadCount} new`}
                         </motion.button>
                       )}
                     </AnimatePresence>
@@ -506,6 +646,8 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                           placeholder={
                             !tableExists
                               ? "Chat not available"
+                              : !conversation
+                              ? "Select a conversation"
                               : conversation.type === 'team'
                               ? "Message the team..."
                               : `Message ${conversation.userName}...`
