@@ -6,7 +6,7 @@ import { ChatMessage, AuthUser, ChatConversation, TapbackType, MessageReaction }
 import { v4 as uuidv4 } from 'uuid';
 import {
   MessageSquare, Send, X, Minimize2, Maximize2, ChevronDown,
-  Users, ChevronLeft, User, Smile, Check, CheckCheck
+  Users, ChevronLeft, User, Smile, Check, CheckCheck, Wifi, WifiOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,12 +20,45 @@ const TAPBACK_EMOJIS: Record<TapbackType, string> = {
   question: '❓',
 };
 
-// Common emojis for quick picker
-const QUICK_EMOJIS = ['😀', '😂', '❤️', '👍', '👎', '🎉', '🔥', '💯', '👏', '🙏', '😊', '🤔'];
+// Expanded emoji picker with categories
+const EMOJI_CATEGORIES = {
+  recent: ['😀', '😂', '❤️', '👍', '🎉', '🔥'],
+  smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '😉', '😌'],
+  gestures: ['👍', '👎', '👏', '🙌', '🤝', '🙏', '💪', '✌️', '🤞', '🤙', '👋', '✋'],
+  symbols: ['❤️', '🧡', '💛', '💚', '💙', '💜', '💯', '✨', '🔥', '⭐', '💫', '🎉'],
+};
 
 interface ChatPanelProps {
   currentUser: AuthUser;
   users: { name: string; color: string }[];
+}
+
+// Typing indicator component
+function TypingIndicator({ userName }: { userName: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="flex items-center gap-2 px-3 py-2"
+    >
+      <span className="text-sm text-[var(--text-muted)]">{userName} is typing</span>
+      <div className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <motion.div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]"
+            animate={{ y: [0, -4, 0] }}
+            transition={{
+              duration: 0.6,
+              repeat: Infinity,
+              delay: i * 0.15,
+            }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
 }
 
 export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
@@ -39,17 +72,18 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   const [tableExists, setTableExists] = useState(true);
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [showConversationList, setShowConversationList] = useState(true);
-  // Track unread counts per conversation: { 'team': 5, 'userName': 3, ... }
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-  // Track last read timestamp per conversation
-  const [lastReadTimestamps, setLastReadTimestamps] = useState<Record<string, string>>({});
-  // Emoji picker and tapback state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState<keyof typeof EMOJI_CATEGORIES>('recent');
   const [tapbackMessageId, setTapbackMessageId] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const lastTypingBroadcastRef = useRef<number>(0);
 
   // Other users (excluding current user)
   const otherUsers = useMemo(() =>
@@ -66,12 +100,10 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
-  // Get conversation key for unread tracking
   const getConversationKey = useCallback((conv: ChatConversation) => {
     return conv.type === 'team' ? 'team' : conv.userName;
   }, []);
 
-  // Total unread count across all conversations
   const totalUnreadCount = useMemo(() => {
     return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
   }, [unreadCounts]);
@@ -82,10 +114,8 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     const isBottom = scrollHeight - scrollTop - clientHeight < 50;
     setIsAtBottom(isBottom);
     if (isBottom && isOpen && conversation) {
-      // Mark current conversation as read
       const key = getConversationKey(conversation);
       setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
-      setLastReadTimestamps(prev => ({ ...prev, [key]: new Date().toISOString() }));
     }
   }, [isOpen, conversation, getConversationKey]);
 
@@ -93,10 +123,8 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   const filteredMessages = useMemo(() => {
     if (!conversation) return [];
     if (conversation.type === 'team') {
-      // Team chat: messages with no recipient (null or undefined)
       return messages.filter(m => !m.recipient);
     } else {
-      // DM: messages between current user and the other user
       const otherUser = conversation.userName;
       return messages.filter(m =>
         (m.created_by === currentUser.name && m.recipient === otherUser) ||
@@ -105,49 +133,49 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     }
   }, [messages, conversation, currentUser.name]);
 
-  // Get last message for each conversation (for sorting by most recent)
-  const conversationLastMessages = useMemo(() => {
-    const result: Record<string, ChatMessage | null> = { team: null };
+  // Get conversations sorted by most recent activity
+  const sortedConversations = useMemo(() => {
+    const conversations: { conv: ChatConversation; lastMessage: ChatMessage | null; lastActivity: number }[] = [];
 
-    // Team messages
+    // Team chat
     const teamMessages = messages.filter(m => !m.recipient);
-    if (teamMessages.length > 0) {
-      result.team = teamMessages[teamMessages.length - 1];
-    }
+    const lastTeamMsg = teamMessages.length > 0 ? teamMessages[teamMessages.length - 1] : null;
+    conversations.push({
+      conv: { type: 'team' },
+      lastMessage: lastTeamMsg,
+      lastActivity: lastTeamMsg ? new Date(lastTeamMsg.created_at).getTime() : 0
+    });
 
-    // DM messages for each user
+    // DMs for each user
     otherUsers.forEach(user => {
       const dmMessages = messages.filter(m =>
         (m.created_by === currentUser.name && m.recipient === user.name) ||
         (m.created_by === user.name && m.recipient === currentUser.name)
       );
-      result[user.name] = dmMessages.length > 0 ? dmMessages[dmMessages.length - 1] : null;
+      const lastMsg = dmMessages.length > 0 ? dmMessages[dmMessages.length - 1] : null;
+      conversations.push({
+        conv: { type: 'dm', userName: user.name },
+        lastMessage: lastMsg,
+        lastActivity: lastMsg ? new Date(lastMsg.created_at).getTime() : 0
+      });
     });
 
-    return result;
+    // Sort by most recent activity (conversations with no messages go to bottom)
+    return conversations.sort((a, b) => {
+      if (a.lastActivity === 0 && b.lastActivity === 0) return 0;
+      if (a.lastActivity === 0) return 1;
+      if (b.lastActivity === 0) return -1;
+      return b.lastActivity - a.lastActivity;
+    });
   }, [messages, otherUsers, currentUser.name]);
 
-  // Find the most recent conversation with activity
+  // Get the most recent conversation
   const mostRecentConversation = useMemo((): ChatConversation => {
-    let mostRecentKey: string | null = null;
-    let mostRecentTime: string | null = null;
-
-    Object.entries(conversationLastMessages).forEach(([key, msg]) => {
-      if (msg) {
-        if (!mostRecentTime || msg.created_at > mostRecentTime) {
-          mostRecentKey = key;
-          mostRecentTime = msg.created_at;
-        }
-      }
-    });
-
-    if (mostRecentKey) {
-      return mostRecentKey === 'team'
-        ? { type: 'team' }
-        : { type: 'dm', userName: mostRecentKey };
+    if (sortedConversations.length > 0 && sortedConversations[0].lastActivity > 0) {
+      return sortedConversations[0].conv;
     }
     return { type: 'team' };
-  }, [conversationLastMessages]);
+  }, [sortedConversations]);
 
   // Fetch all messages
   const fetchMessages = useCallback(async () => {
@@ -182,28 +210,26 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   useEffect(() => { conversationRef.current = conversation; }, [conversation]);
   useEffect(() => { showConversationListRef.current = showConversationList; }, [showConversationList]);
 
-  // Determine which conversation a message belongs to
   const getMessageConversationKey = useCallback((msg: ChatMessage): string | null => {
     if (!msg.recipient) {
       return 'team';
     }
-    // DM - return the other person's name
     if (msg.created_by === currentUser.name) {
       return msg.recipient;
     }
     if (msg.recipient === currentUser.name) {
       return msg.created_by;
     }
-    return null; // Not relevant to current user
+    return null;
   }, [currentUser.name]);
 
-  // Real-time subscription
+  // Real-time subscription for messages and typing
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
     fetchMessages();
 
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('messages-channel')
       .on(
         'postgres_changes',
@@ -217,23 +243,22 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
               return [...prev, newMsg];
             });
 
-            // Don't count own messages
+            // Clear typing indicator for sender
+            setTypingUsers(prev => ({ ...prev, [newMsg.created_by]: false }));
+
             if (newMsg.created_by === currentUser.name) return;
 
-            // Determine which conversation this message belongs to
             const msgConvKey = !newMsg.recipient ? 'team' :
               newMsg.recipient === currentUser.name ? newMsg.created_by : null;
 
-            if (!msgConvKey) return; // Not relevant to current user
+            if (!msgConvKey) return;
 
-            // Check if this conversation is currently being viewed
             const currentConv = conversationRef.current;
             const currentKey = currentConv ? (currentConv.type === 'team' ? 'team' : currentConv.userName) : null;
             const isViewingThis = isOpenRef.current && !showConversationListRef.current &&
                                   currentKey === msgConvKey && isAtBottomRef.current;
 
             if (!isViewingThis) {
-              // Increment unread for this conversation
               setUnreadCounts(prev => ({
                 ...prev,
                 [msgConvKey]: (prev[msgConvKey] || 0) + 1
@@ -253,10 +278,38 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
         setConnected(status === 'SUBSCRIBED');
       });
 
+    // Typing indicator channel
+    const typingChannel = supabase
+      .channel('typing-channel')
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.user !== currentUser.name) {
+          setTypingUsers(prev => ({ ...prev, [payload.user]: true }));
+          // Clear typing after 3 seconds
+          setTimeout(() => {
+            setTypingUsers(prev => ({ ...prev, [payload.user]: false }));
+          }, 3000);
+        }
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(typingChannel);
     };
   }, [fetchMessages, currentUser.name, getMessageConversationKey]);
+
+  // Broadcast typing indicator (throttled)
+  const broadcastTyping = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTypingBroadcastRef.current > 2000) {
+      lastTypingBroadcastRef.current = now;
+      supabase.channel('typing-channel').send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { user: currentUser.name, conversation: conversation ? getConversationKey(conversation) : null }
+      });
+    }
+  }, [currentUser.name, conversation, getConversationKey]);
 
   // Auto-scroll on new messages if at bottom
   useEffect(() => {
@@ -269,7 +322,6 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   useEffect(() => {
     if (isOpen && !isMinimized && !showConversationList && conversation) {
       setTimeout(() => inputRef.current?.focus(), 100);
-      // Mark current conversation as read
       const key = getConversationKey(conversation);
       setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
     }
@@ -287,7 +339,6 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
       recipient: conversation.type === 'dm' ? conversation.userName : null,
     };
 
-    // Optimistic update
     setMessages((prev) => [...prev, message]);
     setNewMessage('');
     scrollToBottom();
@@ -308,14 +359,19 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     }
   };
 
-  // Add emoji to message input
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNewMessage(e.target.value);
+    if (e.target.value.trim()) {
+      broadcastTyping();
+    }
+  };
+
   const addEmoji = (emoji: string) => {
     setNewMessage(prev => prev + emoji);
     setShowEmojiPicker(false);
     inputRef.current?.focus();
   };
 
-  // Add or toggle tapback reaction on a message
   const toggleTapback = async (messageId: string, reaction: TapbackType) => {
     const message = messages.find(m => m.id === messageId);
     if (!message) return;
@@ -326,17 +382,14 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     let newReactions: MessageReaction[];
 
     if (existingReaction?.reaction === reaction) {
-      // Remove reaction if clicking same one
       newReactions = currentReactions.filter(r => r.user !== currentUser.name);
     } else if (existingReaction) {
-      // Replace reaction
       newReactions = currentReactions.map(r =>
         r.user === currentUser.name
           ? { user: currentUser.name, reaction, created_at: new Date().toISOString() }
           : r
       );
     } else {
-      // Add new reaction
       newReactions = [...currentReactions, {
         user: currentUser.name,
         reaction,
@@ -344,13 +397,11 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
       }];
     }
 
-    // Optimistic update
     setMessages(prev => prev.map(m =>
       m.id === messageId ? { ...m, reactions: newReactions } : m
     ));
     setTapbackMessageId(null);
 
-    // Update in database
     const { error } = await supabase
       .from('messages')
       .update({ reactions: newReactions })
@@ -358,18 +409,15 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
 
     if (error) {
       console.error('Error updating reaction:', error);
-      // Revert on error
       setMessages(prev => prev.map(m =>
         m.id === messageId ? { ...m, reactions: currentReactions } : m
       ));
     }
   };
 
-  // Mark messages as read
   const markMessagesAsRead = useCallback(async (messageIds: string[]) => {
     if (messageIds.length === 0) return;
 
-    // Update locally first
     setMessages(prev => prev.map(m => {
       if (messageIds.includes(m.id) && m.created_by !== currentUser.name) {
         const readBy = m.read_by || [];
@@ -380,7 +428,6 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
       return m;
     }));
 
-    // Batch update in database
     for (const messageId of messageIds) {
       const message = messages.find(m => m.id === messageId);
       if (message && message.created_by !== currentUser.name) {
@@ -395,7 +442,6 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     }
   }, [messages, currentUser.name]);
 
-  // Mark visible messages as read when viewing conversation
   useEffect(() => {
     if (isOpen && !showConversationList && conversation && filteredMessages.length > 0) {
       const unreadMessageIds = filteredMessages
@@ -408,13 +454,11 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     }
   }, [isOpen, showConversationList, conversation, filteredMessages, currentUser.name, markMessagesAsRead]);
 
-  // Close emoji picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
       }
-      // Close tapback menu when clicking elsewhere
       if (tapbackMessageId) {
         setTapbackMessageId(null);
       }
@@ -423,6 +467,22 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [tapbackMessageId]);
+
+  // Format relative time for conversation list
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'now';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -440,13 +500,6 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Get unread count per conversation
-  const getConversationUnread = useCallback((conv: ChatConversation) => {
-    const key = getConversationKey(conv);
-    return unreadCounts[key] || 0;
-  }, [unreadCounts, getConversationKey]);
-
-  // Group consecutive messages by same user
   const groupedMessages = filteredMessages.reduce((acc, msg, idx) => {
     const prevMsg = filteredMessages[idx - 1];
     const isGrouped = prevMsg && prevMsg.created_by === msg.created_by &&
@@ -458,7 +511,6 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
   const selectConversation = (conv: ChatConversation) => {
     setConversation(conv);
     setShowConversationList(false);
-    // Clear unread count for this conversation
     const key = getConversationKey(conv);
     setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
   };
@@ -468,6 +520,14 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     if (conversation.type === 'team') return 'Team Chat';
     return conversation.userName;
   };
+
+  // Get typing users for current conversation
+  const activeTypingUsers = useMemo(() => {
+    if (!conversation) return [];
+    return Object.entries(typingUsers)
+      .filter(([user, isTyping]) => isTyping && user !== currentUser.name)
+      .map(([user]) => user);
+  }, [typingUsers, conversation, currentUser.name]);
 
   return (
     <>
@@ -480,7 +540,6 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => {
               setIsOpen(true);
-              // Default to most recent conversation with activity, or show list
               if (messages.length > 0) {
                 setConversation(mostRecentConversation);
                 setShowConversationList(false);
@@ -493,6 +552,7 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                        text-white shadow-lg hover:shadow-xl
                        transition-all duration-200 flex items-center justify-center
                        group"
+            aria-label={`Open chat${totalUnreadCount > 0 ? `, ${totalUnreadCount} unread messages` : ''}`}
           >
             <MessageSquare className="w-6 h-6" />
             {totalUnreadCount > 0 && (
@@ -515,13 +575,15 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
               opacity: 1,
               y: 0,
               scale: 1,
-              height: isMinimized ? 'auto' : '500px'
+              height: isMinimized ? 'auto' : 'min(550px, 80vh)'
             }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-6 right-6 z-50 w-96 max-w-[calc(100vw-3rem)]
+            className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-2rem)]
                        bg-[var(--surface)] border border-[var(--border)]
                        rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            role="dialog"
+            aria-label="Chat panel"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3
@@ -537,6 +599,7 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                     <button
                       onClick={() => setShowConversationList(true)}
                       className="p-1 hover:bg-white/20 rounded-lg transition-colors -ml-1"
+                      aria-label="Back to conversations"
                     >
                       <ChevronLeft className="w-5 h-5" />
                     </button>
@@ -544,7 +607,8 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                       <Users className="w-5 h-5" />
                     ) : conversation?.type === 'dm' ? (
                       <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+                                   ring-2 ring-white/30"
                         style={{ backgroundColor: getUserColor(conversation.userName) }}
                       >
                         {getInitials(conversation.userName)}
@@ -555,18 +619,32 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                     <span className="font-semibold">{getConversationTitle()}</span>
                   </>
                 )}
-                <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
+                {/* Connection status */}
+                <div
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs
+                             ${connected ? 'bg-green-500/20' : 'bg-red-500/20'}`}
+                  title={connected ? 'Connected' : 'Disconnected'}
+                >
+                  {connected ? (
+                    <Wifi className="w-3 h-3" />
+                  ) : (
+                    <WifiOff className="w-3 h-3" />
+                  )}
+                  <span className="hidden sm:inline">{connected ? 'Live' : 'Offline'}</span>
+                </div>
                 <button
                   onClick={() => setIsMinimized(!isMinimized)}
                   className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                  aria-label={isMinimized ? 'Expand chat' : 'Minimize chat'}
                 >
                   {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={() => setIsOpen(false)}
                   className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                  aria-label="Close chat"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -577,90 +655,76 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
             {!isMinimized && (
               <>
                 {showConversationList ? (
-                  /* Conversation List */
+                  /* Conversation List - sorted by recency */
                   <div className="flex-1 overflow-y-auto bg-[var(--background)]">
-                    {/* Team Chat Option */}
-                    <button
-                      onClick={() => selectConversation({ type: 'team' })}
-                      className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[var(--surface-2)] transition-colors
-                                ${conversation?.type === 'team' ? 'bg-[var(--accent-light)]' : ''}`}
-                    >
-                      <div className="relative">
-                        <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white">
-                          <Users className="w-5 h-5" />
-                        </div>
-                        {(unreadCounts['team'] || 0) > 0 && (
-                          <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-red-500
-                                         rounded-full text-xs font-bold flex items-center justify-center text-white">
-                            {unreadCounts['team'] > 99 ? '99+' : unreadCounts['team']}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 text-left">
-                        <div className="font-medium text-[var(--foreground)]">Team Chat</div>
-                        <div className="text-sm text-[var(--text-muted)]">
-                          {conversationLastMessages.team
-                            ? `${conversationLastMessages.team.created_by}: ${conversationLastMessages.team.text.slice(0, 30)}${conversationLastMessages.team.text.length > 30 ? '...' : ''}`
-                            : 'Message everyone'}
-                        </div>
-                      </div>
-                    </button>
+                    {sortedConversations.map(({ conv, lastMessage }) => {
+                      const isTeam = conv.type === 'team';
+                      const userName = conv.type === 'dm' ? conv.userName : '';
+                      const userColor = isTeam ? 'var(--accent)' : getUserColor(userName);
+                      const unreadCount = unreadCounts[isTeam ? 'team' : userName] || 0;
+                      const isSelected = conversation?.type === conv.type &&
+                        (conv.type === 'team' || (conv.type === 'dm' && conversation?.type === 'dm' && conversation.userName === conv.userName));
 
-                    {/* Divider */}
-                    <div className="px-4 py-2">
-                      <div className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                        Direct Messages
-                      </div>
-                    </div>
-
-                    {/* User List for DMs */}
-                    {otherUsers.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-[var(--text-muted)]">
-                        <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No other users yet</p>
-                      </div>
-                    ) : (
-                      otherUsers.map((user) => {
-                        const isSelected = conversation?.type === 'dm' && conversation.userName === user.name;
-                        const userUnread = unreadCounts[user.name] || 0;
-                        const lastMsg = conversationLastMessages[user.name];
-                        return (
-                          <button
-                            key={user.name}
-                            onClick={() => selectConversation({ type: 'dm', userName: user.name })}
-                            className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[var(--surface-2)] transition-colors
-                                      ${isSelected ? 'bg-[var(--accent-light)]' : ''}`}
-                          >
-                            <div className="relative">
-                              <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                                style={{ backgroundColor: user.color }}
-                              >
-                                {getInitials(user.name)}
-                              </div>
-                              {userUnread > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-red-500
-                                               rounded-full text-xs font-bold flex items-center justify-center text-white">
-                                  {userUnread > 99 ? '99+' : userUnread}
+                      return (
+                        <button
+                          key={isTeam ? 'team' : userName}
+                          onClick={() => selectConversation(conv)}
+                          className={`w-full px-4 py-3 flex items-center gap-3
+                                    hover:bg-[var(--surface-2)] transition-colors border-b border-[var(--border)]/50
+                                    ${isSelected ? 'bg-[var(--accent)]/10' : ''}
+                                    ${unreadCount > 0 ? 'bg-[var(--accent)]/5' : ''}`}
+                        >
+                          <div className="relative flex-shrink-0">
+                            <div
+                              className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold shadow-sm
+                                         ${isTeam ? 'bg-[var(--accent)]' : ''}`}
+                              style={!isTeam ? { backgroundColor: userColor } : undefined}
+                            >
+                              {isTeam ? <Users className="w-5 h-5" /> : getInitials(userName)}
+                            </div>
+                            {unreadCount > 0 && (
+                              <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-red-500
+                                             rounded-full text-xs font-bold flex items-center justify-center text-white
+                                             shadow-sm">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className={`font-medium text-[var(--foreground)] truncate
+                                              ${unreadCount > 0 ? 'font-semibold' : ''}`}>
+                                {isTeam ? 'Team Chat' : userName}
+                              </span>
+                              {lastMessage && (
+                                <span className={`text-xs flex-shrink-0
+                                                ${unreadCount > 0 ? 'text-[var(--accent)] font-medium' : 'text-[var(--text-muted)]'}`}>
+                                  {formatRelativeTime(lastMessage.created_at)}
                                 </span>
                               )}
                             </div>
-                            <div className="flex-1 text-left">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-[var(--foreground)]">{user.name}</span>
-                                {userUnread > 0 && (
-                                  <span className="w-2 h-2 rounded-full bg-red-500" />
-                                )}
-                              </div>
-                              <div className="text-sm text-[var(--text-muted)] truncate">
-                                {lastMsg
-                                  ? `${lastMsg.created_by === currentUser.name ? 'You' : lastMsg.created_by}: ${lastMsg.text.slice(0, 25)}${lastMsg.text.length > 25 ? '...' : ''}`
-                                  : 'No messages yet'}
-                              </div>
+                            <div className={`text-sm truncate mt-0.5
+                                          ${unreadCount > 0 ? 'text-[var(--foreground)] font-medium' : 'text-[var(--text-muted)]'}`}>
+                              {lastMessage ? (
+                                <>
+                                  {lastMessage.created_by === currentUser.name ? 'You: ' : `${lastMessage.created_by}: `}
+                                  {lastMessage.text.slice(0, 35)}{lastMessage.text.length > 35 ? '...' : ''}
+                                </>
+                              ) : (
+                                <span className="italic">No messages yet</span>
+                              )}
                             </div>
-                          </button>
-                        );
-                      })
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {otherUsers.length === 0 && (
+                      <div className="px-4 py-8 text-center text-[var(--text-muted)]">
+                        <User className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                        <p className="font-medium">No other users yet</p>
+                        <p className="text-sm mt-1">Invite teammates to start chatting</p>
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -669,172 +733,216 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                     <div
                       ref={messagesContainerRef}
                       onScroll={handleScroll}
-                      className="flex-1 overflow-y-auto p-4 space-y-1 bg-[var(--background)]"
+                      className="flex-1 overflow-y-auto px-4 py-3 space-y-0.5 bg-[var(--background)]"
                     >
                       {loading ? (
                         <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
-                          Loading messages...
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+                            <span>Loading messages...</span>
+                          </div>
                         </div>
                       ) : !tableExists ? (
-                        <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)] gap-2 p-4 text-center">
-                          <MessageSquare className="w-12 h-12 opacity-30" />
-                          <p className="font-medium">Chat Setup Required</p>
-                          <p className="text-sm">Run the messages table migration in Supabase to enable chat.</p>
+                        <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)] gap-3 p-4 text-center">
+                          <div className="w-16 h-16 rounded-full bg-[var(--surface-2)] flex items-center justify-center">
+                            <MessageSquare className="w-8 h-8 opacity-50" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-[var(--foreground)]">Chat Setup Required</p>
+                            <p className="text-sm mt-1">Run the messages migration in Supabase to enable chat.</p>
+                          </div>
                         </div>
                       ) : filteredMessages.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)] gap-2">
-                          <MessageSquare className="w-12 h-12 opacity-30" />
-                          <p>No messages yet</p>
-                          <p className="text-sm">
-                            {conversation?.type === 'team'
-                              ? 'Start the team conversation!'
-                              : conversation?.type === 'dm'
-                              ? `Start chatting with ${conversation.userName}!`
-                              : 'Select a conversation'}
-                          </p>
+                        <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)] gap-3">
+                          <div className="w-16 h-16 rounded-full bg-[var(--surface-2)] flex items-center justify-center">
+                            <MessageSquare className="w-8 h-8 opacity-50" />
+                          </div>
+                          <div className="text-center">
+                            <p className="font-medium text-[var(--foreground)]">No messages yet</p>
+                            <p className="text-sm mt-1">
+                              {conversation?.type === 'team'
+                                ? 'Be the first to say hello!'
+                                : conversation?.type === 'dm'
+                                ? `Start a conversation with ${conversation.userName}`
+                                : 'Select a conversation'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => inputRef.current?.focus()}
+                            className="mt-2 px-4 py-2 bg-[var(--accent)] text-white rounded-full text-sm
+                                     hover:bg-[var(--allstate-blue-dark)] transition-colors"
+                          >
+                            Send a message
+                          </button>
                         </div>
                       ) : (
-                        groupedMessages.map((msg, msgIndex) => {
-                          const isOwn = msg.created_by === currentUser.name;
-                          const userColor = getUserColor(msg.created_by);
-                          const reactions = msg.reactions || [];
-                          const readBy = msg.read_by || [];
-                          const isLastOwnMessage = isOwn && msgIndex === groupedMessages.length - 1;
-                          const showTapbackMenu = tapbackMessageId === msg.id;
+                        <>
+                          {groupedMessages.map((msg, msgIndex) => {
+                            const isOwn = msg.created_by === currentUser.name;
+                            const userColor = getUserColor(msg.created_by);
+                            const reactions = msg.reactions || [];
+                            const readBy = msg.read_by || [];
+                            const isLastOwnMessage = isOwn && msgIndex === groupedMessages.length - 1;
+                            const showTapbackMenu = tapbackMessageId === msg.id;
+                            const isHovered = hoveredMessageId === msg.id;
 
-                          // Group reactions by type
-                          const reactionCounts = reactions.reduce((acc, r) => {
-                            acc[r.reaction] = (acc[r.reaction] || 0) + 1;
-                            return acc;
-                          }, {} as Record<TapbackType, number>);
+                            const reactionCounts = reactions.reduce((acc, r) => {
+                              acc[r.reaction] = (acc[r.reaction] || 0) + 1;
+                              return acc;
+                            }, {} as Record<TapbackType, number>);
 
-                          return (
-                            <motion.div
-                              key={msg.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className={`flex ${isOwn ? 'justify-end' : 'justify-start'}
-                                        ${msg.isGrouped ? 'mt-0.5' : 'mt-3'} group relative`}
-                            >
-                              <div className={`flex items-end gap-2 max-w-[80%] ${isOwn ? 'flex-row-reverse' : ''}`}>
-                                {/* Avatar - only show for first in group */}
-                                {!msg.isGrouped ? (
-                                  <div
-                                    className="w-8 h-8 rounded-full flex items-center justify-center
-                                             text-white text-xs font-bold flex-shrink-0"
-                                    style={{ backgroundColor: userColor }}
-                                  >
-                                    {getInitials(msg.created_by)}
-                                  </div>
-                                ) : (
-                                  <div className="w-8 flex-shrink-0" />
-                                )}
-
-                                <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
-                                  {/* Name and time - only show for first in group */}
-                                  {!msg.isGrouped && (
-                                    <div className={`flex items-center gap-2 mb-1 text-xs
-                                                  ${isOwn ? 'flex-row-reverse' : ''}`}>
-                                      <span className="font-medium text-[var(--foreground)]">
-                                        {isOwn ? 'You' : msg.created_by}
-                                      </span>
-                                      <span className="text-[var(--text-muted)]">
-                                        {formatTime(msg.created_at)}
-                                      </span>
+                            return (
+                              <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.15 }}
+                                className={`flex ${isOwn ? 'justify-end' : 'justify-start'}
+                                          ${msg.isGrouped ? 'mt-0.5' : 'mt-3'} group relative`}
+                                onMouseEnter={() => setHoveredMessageId(msg.id)}
+                                onMouseLeave={() => setHoveredMessageId(null)}
+                              >
+                                <div className={`flex items-end gap-2 max-w-[85%] ${isOwn ? 'flex-row-reverse' : ''}`}>
+                                  {/* Avatar - only show for first in group */}
+                                  {!msg.isGrouped ? (
+                                    <div
+                                      className="w-7 h-7 rounded-full flex items-center justify-center
+                                               text-white text-[10px] font-bold flex-shrink-0 shadow-sm"
+                                      style={{ backgroundColor: userColor }}
+                                    >
+                                      {getInitials(msg.created_by)}
                                     </div>
+                                  ) : (
+                                    <div className="w-7 flex-shrink-0" />
                                   )}
 
-                                  {/* Message bubble with tapback trigger */}
-                                  <div className="relative">
-                                    <div
-                                      onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
-                                      className={`px-3 py-2 rounded-2xl break-words whitespace-pre-wrap cursor-pointer
-                                                transition-transform hover:scale-[1.02]
-                                                ${isOwn
-                                                  ? 'bg-[var(--accent)] text-white rounded-br-md'
-                                                  : 'bg-[var(--surface-2)] text-[var(--foreground)] rounded-bl-md'
-                                                }`}
-                                    >
-                                      {msg.text}
+                                  <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
+                                    {/* Name and time - only show for first in group */}
+                                    {!msg.isGrouped && (
+                                      <div className={`flex items-center gap-2 mb-0.5 text-xs
+                                                    ${isOwn ? 'flex-row-reverse' : ''}`}>
+                                        <span className="font-medium text-[var(--foreground)]">
+                                          {isOwn ? 'You' : msg.created_by}
+                                        </span>
+                                        <span className="text-[var(--text-muted)]">
+                                          {formatTime(msg.created_at)}
+                                        </span>
+                                      </div>
+                                    )}
+
+                                    {/* Message bubble with tapback trigger */}
+                                    <div className="relative">
+                                      <div
+                                        onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
+                                        className={`px-3 py-1.5 rounded-2xl break-words whitespace-pre-wrap cursor-pointer
+                                                  transition-all duration-150 text-[15px] leading-relaxed
+                                                  ${isOwn
+                                                    ? 'bg-[var(--accent)] text-white rounded-br-sm shadow-sm'
+                                                    : 'bg-[var(--surface-2)] text-[var(--foreground)] rounded-bl-sm'
+                                                  }
+                                                  ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''}
+                                                  hover:shadow-md`}
+                                      >
+                                        {msg.text}
+                                      </div>
+
+                                      {/* Show time on hover for grouped messages */}
+                                      {msg.isGrouped && isHovered && (
+                                        <div className={`absolute top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-muted)]
+                                                      pointer-events-none whitespace-nowrap
+                                                      ${isOwn ? 'right-full mr-2' : 'left-full ml-2'}`}>
+                                          {formatTime(msg.created_at)}
+                                        </div>
+                                      )}
+
+                                      {/* Tapback menu */}
+                                      <AnimatePresence>
+                                        {showTapbackMenu && (
+                                          <motion.div
+                                            initial={{ opacity: 0, scale: 0.9, y: 8 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.9, y: 8 }}
+                                            transition={{ duration: 0.15 }}
+                                            className={`absolute ${isOwn ? 'right-0' : 'left-0'} bottom-full mb-2 z-20
+                                                      bg-[var(--surface)] border border-[var(--border)]
+                                                      rounded-2xl shadow-xl px-1.5 py-1 flex gap-0.5`}
+                                          >
+                                            {(Object.keys(TAPBACK_EMOJIS) as TapbackType[]).map((reaction) => {
+                                              const myReaction = reactions.find(r => r.user === currentUser.name);
+                                              const isSelected = myReaction?.reaction === reaction;
+                                              return (
+                                                <button
+                                                  key={reaction}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleTapback(msg.id, reaction);
+                                                  }}
+                                                  className={`w-9 h-9 flex items-center justify-center rounded-full
+                                                            transition-all duration-150 text-xl
+                                                            ${isSelected
+                                                              ? 'bg-[var(--accent)] scale-110 shadow-md'
+                                                              : 'hover:bg-[var(--surface-2)] hover:scale-110'}`}
+                                                  aria-label={`React with ${reaction}`}
+                                                >
+                                                  {TAPBACK_EMOJIS[reaction]}
+                                                </button>
+                                              );
+                                            })}
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+
+                                      {/* Reactions display */}
+                                      {Object.keys(reactionCounts).length > 0 && (
+                                        <div className={`absolute ${isOwn ? '-left-2' : '-right-2'}
+                                                      -bottom-2.5 z-10`}>
+                                          <div className="bg-[var(--surface)] border border-[var(--border)]
+                                                        rounded-full px-1.5 py-0.5 flex items-center gap-0.5 shadow-sm">
+                                            {(Object.entries(reactionCounts) as [TapbackType, number][]).map(([reaction, count]) => (
+                                              <span key={reaction} className="flex items-center text-sm">
+                                                {TAPBACK_EMOJIS[reaction]}
+                                                {count > 1 && (
+                                                  <span className="text-[10px] ml-0.5 text-[var(--text-muted)] font-medium">
+                                                    {count}
+                                                  </span>
+                                                )}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
 
-                                    {/* Tapback menu */}
-                                    <AnimatePresence>
-                                      {showTapbackMenu && (
-                                        <motion.div
-                                          initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                                          exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                                          className={`absolute ${isOwn ? 'right-0' : 'left-0'} bottom-full mb-2 z-10
-                                                    bg-[var(--surface)] border border-[var(--border)]
-                                                    rounded-full shadow-lg px-2 py-1 flex gap-1`}
-                                        >
-                                          {(Object.keys(TAPBACK_EMOJIS) as TapbackType[]).map((reaction) => {
-                                            const myReaction = reactions.find(r => r.user === currentUser.name);
-                                            const isSelected = myReaction?.reaction === reaction;
-                                            return (
-                                              <button
-                                                key={reaction}
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  toggleTapback(msg.id, reaction);
-                                                }}
-                                                className={`w-8 h-8 flex items-center justify-center rounded-full
-                                                          transition-all hover:scale-125 text-lg
-                                                          ${isSelected ? 'bg-[var(--accent-light)] scale-110' : 'hover:bg-[var(--surface-2)]'}`}
-                                              >
-                                                {TAPBACK_EMOJIS[reaction]}
-                                              </button>
-                                            );
-                                          })}
-                                        </motion.div>
-                                      )}
-                                    </AnimatePresence>
-
-                                    {/* Reactions display */}
-                                    {Object.keys(reactionCounts).length > 0 && (
-                                      <div className={`absolute ${isOwn ? 'left-0 -translate-x-1/2' : 'right-0 translate-x-1/2'}
-                                                    -bottom-2 flex gap-0.5 z-5`}>
-                                        <div className="bg-[var(--surface)] border border-[var(--border)]
-                                                      rounded-full px-1.5 py-0.5 flex gap-0.5 shadow-sm text-xs">
-                                          {(Object.entries(reactionCounts) as [TapbackType, number][]).map(([reaction, count]) => (
-                                            <span key={reaction} className="flex items-center">
-                                              {TAPBACK_EMOJIS[reaction]}
-                                              {count > 1 && <span className="text-[10px] ml-0.5 text-[var(--text-muted)]">{count}</span>}
-                                            </span>
-                                          ))}
-                                        </div>
+                                    {/* Read receipts - only show for last own message */}
+                                    {isOwn && isLastOwnMessage && (
+                                      <div className={`flex items-center gap-1 mt-1 text-[10px] text-[var(--text-muted)]
+                                                    ${reactions.length > 0 ? 'mt-3' : ''}`}>
+                                        {readBy.length === 0 ? (
+                                          <span className="flex items-center gap-0.5">
+                                            <Check className="w-3 h-3" />
+                                            Sent
+                                          </span>
+                                        ) : (
+                                          <span className="flex items-center gap-0.5 text-blue-500">
+                                            <CheckCheck className="w-3 h-3" />
+                                            {conversation?.type === 'dm' ? 'Read' : `Read by ${readBy.length}`}
+                                          </span>
+                                        )}
                                       </div>
                                     )}
                                   </div>
-
-                                  {/* Read receipts - show for own messages */}
-                                  {isOwn && (
-                                    <div className={`flex items-center gap-1 mt-1 text-xs text-[var(--text-muted)]
-                                                  ${reactions.length > 0 ? 'mt-3' : ''}`}>
-                                      {readBy.length === 0 ? (
-                                        <Check className="w-3 h-3" />
-                                      ) : (
-                                        <>
-                                          <CheckCheck className="w-3 h-3 text-blue-500" />
-                                          {conversation?.type === 'dm' ? (
-                                            <span className="text-[10px]">Read</span>
-                                          ) : readBy.length > 0 && (
-                                            <span className="text-[10px]">
-                                              {readBy.length === 1
-                                                ? `Read by ${readBy[0]}`
-                                                : `Read by ${readBy.length}`}
-                                            </span>
-                                          )}
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
-                              </div>
-                            </motion.div>
-                          );
-                        })
+                              </motion.div>
+                            );
+                          })}
+
+                          {/* Typing indicator */}
+                          <AnimatePresence>
+                            {activeTypingUsers.length > 0 && (
+                              <TypingIndicator userName={activeTypingUsers[0]} />
+                            )}
+                          </AnimatePresence>
+                        </>
                       )}
                       <div ref={messagesEndRef} />
                     </div>
@@ -843,18 +951,18 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                     <AnimatePresence>
                       {!isAtBottom && filteredMessages.length > 0 && (
                         <motion.button
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
                           onClick={() => scrollToBottom()}
-                          className="absolute bottom-20 left-1/2 -translate-x-1/2
+                          className="absolute bottom-[88px] left-1/2 -translate-x-1/2
                                    bg-[var(--surface)] border border-[var(--border)]
-                                   rounded-full px-3 py-1.5 shadow-lg flex items-center gap-1
-                                   text-sm text-[var(--text-muted)] hover:text-[var(--foreground)]
+                                   rounded-full px-3 py-1.5 shadow-lg flex items-center gap-1.5
+                                   text-sm text-[var(--foreground)] hover:bg-[var(--surface-2)]
                                    transition-colors"
                         >
                           <ChevronDown className="w-4 h-4" />
-                          {totalUnreadCount > 0 && `${totalUnreadCount} new`}
+                          <span>New messages</span>
                         </motion.button>
                       )}
                     </AnimatePresence>
@@ -866,37 +974,56 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                         {showEmojiPicker && (
                           <motion.div
                             ref={emojiPickerRef}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="mb-2 p-2 bg-[var(--background)] border border-[var(--border)]
-                                     rounded-xl shadow-lg"
+                            initial={{ opacity: 0, y: 8, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: 'auto' }}
+                            exit={{ opacity: 0, y: 8, height: 0 }}
+                            className="mb-2 bg-[var(--background)] border border-[var(--border)]
+                                     rounded-xl shadow-lg overflow-hidden"
                           >
-                            <div className="grid grid-cols-6 gap-1">
-                              {QUICK_EMOJIS.map((emoji) => (
+                            {/* Category tabs */}
+                            <div className="flex border-b border-[var(--border)]">
+                              {(Object.keys(EMOJI_CATEGORIES) as (keyof typeof EMOJI_CATEGORIES)[]).map((cat) => (
                                 <button
-                                  key={emoji}
-                                  onClick={() => addEmoji(emoji)}
-                                  className="w-8 h-8 flex items-center justify-center rounded-lg
-                                           hover:bg-[var(--surface-2)] transition-colors text-lg"
+                                  key={cat}
+                                  onClick={() => setEmojiCategory(cat)}
+                                  className={`flex-1 py-2 text-xs font-medium capitalize transition-colors
+                                            ${emojiCategory === cat
+                                              ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-b-2 border-[var(--accent)]'
+                                              : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'}`}
                                 >
-                                  {emoji}
+                                  {cat}
                                 </button>
                               ))}
+                            </div>
+                            {/* Emoji grid */}
+                            <div className="p-2">
+                              <div className="grid grid-cols-6 gap-1">
+                                {EMOJI_CATEGORIES[emojiCategory].map((emoji, i) => (
+                                  <button
+                                    key={`${emoji}-${i}`}
+                                    onClick={() => addEmoji(emoji)}
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg
+                                             hover:bg-[var(--surface-2)] transition-colors text-xl
+                                             hover:scale-110 active:scale-95"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
 
                       <div className="flex items-end gap-2">
-                        {/* Emoji button */}
                         <button
                           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                           disabled={!tableExists}
-                          className={`p-2.5 rounded-full transition-all duration-200
+                          className={`p-2 rounded-full transition-all duration-200
                                    hover:bg-[var(--surface-2)] disabled:opacity-50
                                    disabled:cursor-not-allowed
-                                   ${showEmojiPicker ? 'bg-[var(--surface-2)] text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}
+                                   ${showEmojiPicker ? 'bg-[var(--accent)]/10 text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}
+                          aria-label="Open emoji picker"
                         >
                           <Smile className="w-5 h-5" />
                         </button>
@@ -904,7 +1031,7 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                         <textarea
                           ref={inputRef}
                           value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
+                          onChange={handleInputChange}
                           onKeyDown={handleKeyDown}
                           placeholder={
                             !tableExists
@@ -912,42 +1039,41 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                               : !conversation
                               ? "Select a conversation"
                               : conversation.type === 'team'
-                              ? "Message the team..."
+                              ? "Message team..."
                               : `Message ${conversation.userName}...`
                           }
                           disabled={!tableExists}
                           rows={1}
-                          className="flex-1 px-4 py-2.5 rounded-2xl border border-[var(--border)]
+                          className="flex-1 px-4 py-2 rounded-2xl border border-[var(--border)]
                                    bg-[var(--background)] text-[var(--foreground)]
                                    placeholder:text-[var(--text-muted)]
-                                   focus:outline-none focus:border-[var(--accent)]
-                                   resize-none max-h-32 transition-colors
+                                   focus:outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20
+                                   resize-none max-h-24 transition-all text-[15px]
                                    disabled:opacity-50 disabled:cursor-not-allowed"
                           style={{
                             height: 'auto',
-                            minHeight: '42px',
-                            maxHeight: '128px'
+                            minHeight: '40px',
+                            maxHeight: '96px'
                           }}
                           onInput={(e) => {
                             const target = e.target as HTMLTextAreaElement;
                             target.style.height = 'auto';
-                            target.style.height = Math.min(target.scrollHeight, 128) + 'px';
+                            target.style.height = Math.min(target.scrollHeight, 96) + 'px';
                           }}
                         />
                         <button
                           onClick={sendMessage}
                           disabled={!newMessage.trim() || !tableExists}
                           className="p-2.5 rounded-full bg-[var(--accent)] text-white
-                                   hover:bg-[var(--allstate-blue-dark)] disabled:opacity-50
+                                   hover:bg-[var(--allstate-blue-dark)] disabled:opacity-40
                                    disabled:cursor-not-allowed transition-all duration-200
-                                   hover:scale-105 active:scale-95"
+                                   hover:scale-105 active:scale-95 shadow-sm
+                                   disabled:hover:scale-100"
+                          aria-label="Send message"
                         >
                           <Send className="w-5 h-5" />
                         </button>
                       </div>
-                      <p className="text-xs text-[var(--text-muted)] mt-2 text-center">
-                        Tap message to react • Press Enter to send
-                      </p>
                     </div>
                   </>
                 )}
