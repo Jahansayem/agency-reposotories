@@ -177,7 +177,7 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
     return { type: 'team' };
   }, [sortedConversations]);
 
-  // Fetch all messages
+  // Fetch all messages and calculate initial unread counts
   const fetchMessages = useCallback(async () => {
     if (!isSupabaseConfigured()) return;
 
@@ -194,11 +194,39 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
         setTableExists(false);
       }
     } else {
-      setMessages(data || []);
+      const messages = data || [];
+      setMessages(messages);
       setTableExists(true);
+
+      // Calculate initial unread counts based on read_by field
+      const initialUnreadCounts: Record<string, number> = {};
+      messages.forEach((msg: ChatMessage) => {
+        // Skip messages from current user
+        if (msg.created_by === currentUser.name) return;
+
+        // Check if current user has read this message
+        const readBy = msg.read_by || [];
+        if (readBy.includes(currentUser.name)) return;
+
+        // Determine the conversation key for this message
+        let convKey: string | null = null;
+        if (!msg.recipient) {
+          // Team message
+          convKey = 'team';
+        } else if (msg.recipient === currentUser.name) {
+          // DM sent to current user
+          convKey = msg.created_by;
+        }
+
+        if (convKey) {
+          initialUnreadCounts[convKey] = (initialUnreadCounts[convKey] || 0) + 1;
+        }
+      });
+
+      setUnreadCounts(initialUnreadCounts);
     }
     setLoading(false);
-  }, []);
+  }, [currentUser.name]);
 
   // Track state in refs to avoid re-subscribing
   const isOpenRef = useRef(isOpen);
@@ -246,19 +274,34 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
             // Clear typing indicator for sender
             setTypingUsers(prev => ({ ...prev, [newMsg.created_by]: false }));
 
+            // Don't count own messages as unread
             if (newMsg.created_by === currentUser.name) return;
 
-            const msgConvKey = !newMsg.recipient ? 'team' :
-              newMsg.recipient === currentUser.name ? newMsg.created_by : null;
+            // Determine which conversation this message belongs to for the current user
+            let msgConvKey: string | null = null;
+            if (!newMsg.recipient) {
+              // Team message - always counts for team conversation
+              msgConvKey = 'team';
+            } else if (newMsg.recipient === currentUser.name) {
+              // DM sent TO current user - counts under sender's conversation
+              msgConvKey = newMsg.created_by;
+            }
+            // If recipient is someone else, this message isn't relevant to current user
 
             if (!msgConvKey) return;
 
+            // Check if user is currently viewing this conversation
             const currentConv = conversationRef.current;
             const currentKey = currentConv ? (currentConv.type === 'team' ? 'team' : currentConv.userName) : null;
-            const isViewingThis = isOpenRef.current && !showConversationListRef.current &&
-                                  currentKey === msgConvKey && isAtBottomRef.current;
+            const isPanelOpen = isOpenRef.current;
+            const isViewingConversation = !showConversationListRef.current;
+            const isViewingThisConv = currentKey === msgConvKey;
+            const isAtBottomOfChat = isAtBottomRef.current;
 
-            if (!isViewingThis) {
+            // Only mark as unread if user is NOT actively viewing this conversation at the bottom
+            const shouldMarkUnread = !isPanelOpen || !isViewingConversation || !isViewingThisConv || !isAtBottomOfChat;
+
+            if (shouldMarkUnread) {
               setUnreadCounts(prev => ({
                 ...prev,
                 [msgConvKey]: (prev[msgConvKey] || 0) + 1
