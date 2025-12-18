@@ -87,6 +87,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId }
   const [dueDate, setDueDate] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [showOptions, setShowOptions] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [draggedFile, setDraggedFile] = useState<File | null>(null);
 
   // Load user preferences on mount
   useEffect(() => {
@@ -310,16 +312,84 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId }
     }
   };
 
+  // File drag-and-drop handlers
+  const isValidFileType = (file: File) => {
+    const name = file.name.toLowerCase();
+    const type = file.type;
+    return (
+      type.startsWith('audio/') ||
+      type.startsWith('image/') ||
+      type === 'application/pdf' ||
+      name.match(/\.(mp3|wav|m4a|ogg|webm|aac|flac|pdf|jpg|jpeg|png|gif|webp)$/)
+    );
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Check if dragging files
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Only set to false if we're leaving the form entirely
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDraggingFile(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && isValidFileType(file)) {
+      setDraggedFile(file);
+      setShowFileImporter(true);
+    }
+  };
+
   const priorityConfig = PRIORITY_CONFIG[priority];
 
   return (
     <>
       <form
         onSubmit={handleQuickAdd}
-        className={`rounded-xl border shadow-sm overflow-hidden ${
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`rounded-xl border shadow-sm overflow-hidden transition-all relative ${
           darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-        }`}
+        } ${isDraggingFile ? 'ring-2 ring-purple-500 border-purple-500' : ''}`}
       >
+        {/* File drop overlay */}
+        {isDraggingFile && (
+          <div className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl ${
+            darkMode ? 'bg-purple-900/80' : 'bg-purple-100/90'
+          }`}>
+            <div className="text-center">
+              <Upload className={`w-10 h-10 mx-auto mb-2 ${darkMode ? 'text-purple-300' : 'text-purple-600'}`} />
+              <p className={`font-medium ${darkMode ? 'text-purple-200' : 'text-purple-700'}`}>
+                Drop to import file
+              </p>
+              <p className={`text-sm mt-1 ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                Audio, PDF, or Image
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Main input area */}
         <div className="p-3">
           <div className="flex gap-2">
@@ -525,13 +595,18 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId }
       {/* File Importer Modal (voicemail, PDF, image) */}
       {showFileImporter && (
         <FileImporter
-          onClose={() => setShowFileImporter(false)}
+          onClose={() => {
+            setShowFileImporter(false);
+            setDraggedFile(null);
+          }}
           onCreateTask={(text, priority, dueDate, assignedTo, subtasks) => {
             onAdd(text, priority, dueDate, assignedTo, subtasks);
             setShowFileImporter(false);
+            setDraggedFile(null);
           }}
           users={users}
           darkMode={darkMode}
+          initialFile={draggedFile}
         />
       )}
     </>

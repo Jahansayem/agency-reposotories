@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   X,
   Loader2,
@@ -43,6 +43,7 @@ interface FileImporterProps {
   ) => void;
   users: string[];
   darkMode?: boolean;
+  initialFile?: File | null;
 }
 
 type FileType = 'audio' | 'pdf' | 'image' | 'unknown';
@@ -81,6 +82,7 @@ export default function FileImporter({
   onCreateTask,
   users,
   darkMode = false,
+  initialFile = null,
 }: FileImporterProps) {
   // File state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -90,6 +92,15 @@ export default function FileImporter({
   const [isDragging, setIsDragging] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialFileProcessed = useRef(false);
+
+  // Handle initial file from drag-and-drop
+  useEffect(() => {
+    if (initialFile && !initialFileProcessed.current) {
+      initialFileProcessed.current = true;
+      handleFileSelect(initialFile);
+    }
+  }, [initialFile]);
 
   // Processing state
   const [status, setStatus] = useState<ProcessingStatus>('idle');
