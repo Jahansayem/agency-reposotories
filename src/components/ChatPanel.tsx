@@ -556,9 +556,9 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
           >
             <MessageSquare className="w-6 h-6" />
             {totalUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[1.5rem] h-6 px-1 bg-red-500
+              <span className="absolute -top-1 -right-1 min-w-[1.5rem] h-6 px-1.5 bg-red-500
                              rounded-full text-xs font-bold flex items-center
-                             justify-center animate-pulse">
+                             justify-center text-white shadow-lg border-2 border-white animate-pulse">
                 {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
               </span>
             )}
@@ -685,7 +685,7 @@ export default function ChatPanel({ currentUser, users }: ChatPanelProps) {
                             {unreadCount > 0 && (
                               <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1 bg-red-500
                                              rounded-full text-xs font-bold flex items-center justify-center text-white
-                                             shadow-sm">
+                                             shadow-md border border-white/50 animate-pulse">
                                 {unreadCount > 99 ? '99+' : unreadCount}
                               </span>
                             )}
