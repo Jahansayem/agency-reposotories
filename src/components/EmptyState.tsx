@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Plus, Search, CheckCircle2, Calendar, AlertTriangle, Sparkles } from 'lucide-react';
+import { Plus, Search, CheckCircle2, Calendar, AlertTriangle, Sparkles, Rocket, Trophy, ClipboardList } from 'lucide-react';
 
 type EmptyStateVariant = 'no-tasks' | 'no-results' | 'all-done' | 'no-due-today' | 'no-overdue' | 'first-time';
 
@@ -16,177 +16,432 @@ interface EmptyStateProps {
 
 const variants = {
   'no-tasks': {
-    icon: Plus,
+    icon: ClipboardList,
     title: 'No tasks yet',
     description: 'Create your first task to get started',
     action: 'Add Task',
-    color: '#0033A0',
-    bgColor: 'rgba(0, 51, 160, 0.1)',
+    color: 'var(--accent)',
+    bgColor: 'var(--accent-light)',
+    gradient: 'from-blue-500/20 to-indigo-500/20',
   },
   'no-results': {
     icon: Search,
     title: 'No matches found',
     description: 'Try a different search term',
     action: 'Clear Search',
-    color: '#6b7280',
-    bgColor: 'rgba(107, 114, 128, 0.1)',
+    color: 'var(--text-muted)',
+    bgColor: 'var(--surface-2)',
+    gradient: 'from-slate-500/20 to-gray-500/20',
   },
   'all-done': {
-    icon: CheckCircle2,
+    icon: Trophy,
     title: 'All caught up!',
     description: 'You\'ve completed all your tasks',
     action: 'Add More',
-    color: '#10b981',
-    bgColor: 'rgba(16, 185, 129, 0.1)',
+    color: 'var(--success)',
+    bgColor: 'var(--success-light)',
+    gradient: 'from-emerald-500/20 to-green-500/20',
   },
   'no-due-today': {
     icon: Calendar,
     title: 'Nothing due today',
     description: 'Enjoy your free time or plan ahead',
     action: null,
-    color: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.1)',
+    color: 'var(--accent-gold)',
+    bgColor: 'var(--accent-gold-light)',
+    gradient: 'from-amber-500/20 to-yellow-500/20',
   },
   'no-overdue': {
     icon: CheckCircle2,
     title: 'No overdue tasks',
     description: 'You\'re on top of your deadlines',
     action: null,
-    color: '#10b981',
-    bgColor: 'rgba(16, 185, 129, 0.1)',
+    color: 'var(--success)',
+    bgColor: 'var(--success-light)',
+    gradient: 'from-emerald-500/20 to-teal-500/20',
   },
   'first-time': {
-    icon: Sparkles,
+    icon: Rocket,
     title: 'Welcome!',
     description: 'Let\'s create your first task together',
     action: 'Get Started',
-    color: '#8b5cf6',
-    bgColor: 'rgba(139, 92, 246, 0.1)',
+    color: 'var(--accent-gold)',
+    bgColor: 'var(--accent-gold-light)',
+    gradient: 'from-amber-500/20 to-orange-500/20',
   },
 };
 
-// Simple SVG illustrations for empty states
+// Refined SVG illustrations
 function TaskIllustration({ color }: { color: string }) {
   return (
-    <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Clipboard */}
-      <rect x="30" y="15" width="60" height="75" rx="6" fill={color} opacity="0.1" stroke={color} strokeWidth="2"/>
-      <rect x="45" y="10" width="30" height="12" rx="4" fill={color} opacity="0.2"/>
-      <circle cx="60" cy="16" r="3" fill={color}/>
+    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Clipboard body */}
+      <motion.rect
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        x="35" y="20" width="70" height="85" rx="8"
+        fill="currentColor"
+        className="text-[var(--surface-2)]"
+        stroke={color}
+        strokeWidth="2"
+      />
 
-      {/* Task lines */}
-      <rect x="42" y="35" width="36" height="4" rx="2" fill={color} opacity="0.3"/>
-      <rect x="42" y="47" width="28" height="4" rx="2" fill={color} opacity="0.2"/>
-      <rect x="42" y="59" width="32" height="4" rx="2" fill={color} opacity="0.15"/>
-      <rect x="42" y="71" width="24" height="4" rx="2" fill={color} opacity="0.1"/>
+      {/* Clipboard clip */}
+      <motion.rect
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        x="52" y="12" width="36" height="16" rx="4"
+        fill={color}
+        opacity="0.2"
+      />
+      <motion.circle
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 0.3, delay: 0.2, type: "spring" }}
+        cx="70" cy="20" r="4" fill={color}
+      />
 
-      {/* Plus icon floating */}
+      {/* Task lines with stagger animation */}
+      {[42, 58, 74, 90].map((y, i) => (
+        <motion.rect
+          key={y}
+          initial={{ opacity: 0, width: 0 }}
+          animate={{ opacity: 0.3 - i * 0.05, width: 44 - i * 6 }}
+          transition={{ duration: 0.4, delay: 0.3 + i * 0.1 }}
+          x="48" y={y} height="6" rx="3"
+          fill={color}
+        />
+      ))}
+
+      {/* Floating plus icon */}
       <motion.g
-        animate={{ y: [0, -5, 0] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        animate={{
+          y: [0, -8, 0],
+          rotate: [0, 5, 0]
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
       >
-        <circle cx="95" cy="25" r="12" fill={color}/>
-        <path d="M95 20V30M90 25H100" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+        <circle cx="108" cy="32" r="16" fill={color} />
+        <path d="M108 24V40M100 32H116" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
       </motion.g>
+
+      {/* Decorative sparkle */}
+      <motion.circle
+        animate={{ opacity: [0.2, 0.8, 0.2], scale: [0.8, 1.2, 0.8] }}
+        transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+        cx="32" cy="45" r="3" fill={color}
+      />
     </svg>
   );
 }
 
 function SearchIllustration({ color }: { color: string }) {
   return (
-    <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Magnifying glass */}
-      <circle cx="50" cy="45" r="25" fill={color} opacity="0.1" stroke={color} strokeWidth="3"/>
-      <line x1="68" y1="63" x2="90" y2="85" stroke={color} strokeWidth="4" strokeLinecap="round"/>
+      <motion.circle
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        cx="60" cy="50" r="30"
+        fill="none"
+        stroke={color}
+        strokeWidth="4"
+        opacity="0.3"
+      />
+      <motion.circle
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        cx="60" cy="50" r="22"
+        fill="currentColor"
+        className="text-[var(--surface-2)]"
+      />
 
-      {/* Question marks */}
+      {/* Handle */}
+      <motion.line
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        x1="82" y1="72" x2="105" y2="95"
+        stroke={color}
+        strokeWidth="6"
+        strokeLinecap="round"
+      />
+
+      {/* Question mark */}
       <motion.text
-        x="45"
-        y="52"
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, delay: 0.4, type: "spring" }}
+        x="52"
+        y="58"
         fill={color}
-        opacity="0.5"
-        fontSize="24"
+        fontSize="28"
         fontWeight="bold"
-        animate={{ opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
+        fontFamily="system-ui"
       >
         ?
       </motion.text>
+
+      {/* Decorative dots */}
+      <motion.circle
+        animate={{ opacity: [0.2, 0.6, 0.2] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+        cx="95" cy="35" r="4" fill={color}
+      />
+      <motion.circle
+        animate={{ opacity: [0.2, 0.6, 0.2] }}
+        transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+        cx="110" cy="50" r="3" fill={color}
+      />
     </svg>
   );
 }
 
 function CelebrationIllustration({ color }: { color: string }) {
   return (
-    <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Trophy */}
-      <path d="M40 30H80V50C80 61 71 70 60 70C49 70 40 61 40 50V30Z" fill={color} opacity="0.2"/>
-      <path d="M40 30H30C30 30 28 45 40 45" stroke={color} strokeWidth="2" fill="none"/>
-      <path d="M80 30H90C90 30 92 45 80 45" stroke={color} strokeWidth="2" fill="none"/>
-      <rect x="55" y="70" width="10" height="10" fill={color} opacity="0.3"/>
-      <rect x="45" y="80" width="30" height="6" rx="2" fill={color} opacity="0.4"/>
+      <motion.path
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        d="M50 35H90V60C90 75 80 85 70 85C60 85 50 75 50 60V35Z"
+        fill={color}
+        opacity="0.2"
+      />
+      <motion.path
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        d="M50 35H40C40 35 38 55 50 55"
+        stroke={color}
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <motion.path
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        d="M90 35H100C100 35 102 55 90 55"
+        stroke={color}
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
+
+      {/* Base */}
+      <motion.rect
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.3, delay: 0.3 }}
+        x="62" y="85" width="16" height="10" fill={color} opacity="0.3"
+      />
+      <motion.rect
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.3, delay: 0.35 }}
+        x="52" y="95" width="36" height="8" rx="2" fill={color} opacity="0.4"
+      />
 
       {/* Stars */}
-      <motion.g
-        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 1, repeat: Infinity, delay: 0 }}
-      >
-        <polygon points="25,25 27,31 33,31 28,35 30,41 25,37 20,41 22,35 17,31 23,31" fill={color}/>
-      </motion.g>
-      <motion.g
-        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 1, repeat: Infinity, delay: 0.3 }}
-      >
-        <polygon points="95,20 97,26 103,26 98,30 100,36 95,32 90,36 92,30 87,26 93,26" fill={color}/>
-      </motion.g>
-      <motion.g
-        animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 1, repeat: Infinity, delay: 0.6 }}
-      >
-        <polygon points="100,55 101,58 104,58 102,60 103,63 100,61 97,63 98,60 96,58 99,58" fill={color}/>
-      </motion.g>
+      {[
+        { x: 28, y: 28, delay: 0, size: 1 },
+        { x: 112, y: 25, delay: 0.2, size: 0.9 },
+        { x: 118, y: 60, delay: 0.4, size: 0.7 },
+        { x: 22, y: 55, delay: 0.3, size: 0.8 },
+      ].map((star, i) => (
+        <motion.g
+          key={i}
+          animate={{
+            scale: [1, 1.3, 1],
+            opacity: [0.5, 1, 0.5],
+            rotate: [0, 15, 0]
+          }}
+          transition={{ duration: 1.5, repeat: Infinity, delay: star.delay }}
+          style={{ originX: `${star.x}px`, originY: `${star.y}px` }}
+        >
+          <polygon
+            points={`${star.x},${star.y - 8 * star.size} ${star.x + 3 * star.size},${star.y - 3 * star.size} ${star.x + 8 * star.size},${star.y - 3 * star.size} ${star.x + 4 * star.size},${star.y + 2 * star.size} ${star.x + 6 * star.size},${star.y + 8 * star.size} ${star.x},${star.y + 4 * star.size} ${star.x - 6 * star.size},${star.y + 8 * star.size} ${star.x - 4 * star.size},${star.y + 2 * star.size} ${star.x - 8 * star.size},${star.y - 3 * star.size} ${star.x - 3 * star.size},${star.y - 3 * star.size}`}
+            fill={color}
+          />
+        </motion.g>
+      ))}
     </svg>
   );
 }
 
 function WelcomeIllustration({ color }: { color: string }) {
   return (
-    <svg width="120" height="100" viewBox="0 0 120 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Rocket */}
       <motion.g
-        animate={{ y: [0, -8, 0], rotate: [0, 2, 0] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        animate={{
+          y: [0, -10, 0],
+          rotate: [0, 3, 0]
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
       >
-        <ellipse cx="60" cy="45" rx="15" ry="25" fill={color} opacity="0.8"/>
-        <ellipse cx="60" cy="35" rx="8" ry="10" fill="white" opacity="0.3"/>
-        <path d="M45 55L40 75L60 65L80 75L75 55" fill={color} opacity="0.6"/>
-        <circle cx="60" cy="40" r="5" fill="white" opacity="0.5"/>
+        {/* Rocket body */}
+        <motion.ellipse
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          cx="70" cy="50" rx="18" ry="32"
+          fill={color}
+        />
+
+        {/* Rocket window */}
+        <motion.ellipse
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          cx="70" cy="40" rx="10" ry="12"
+          fill="white"
+          opacity="0.3"
+        />
+        <motion.circle
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.3, type: "spring" }}
+          cx="70" cy="42" r="6"
+          fill="white"
+          opacity="0.5"
+        />
+
+        {/* Rocket fins */}
+        <motion.path
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          d="M52 65L42 85L60 75Z"
+          fill={color}
+          opacity="0.7"
+        />
+        <motion.path
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          d="M88 65L98 85L80 75Z"
+          fill={color}
+          opacity="0.7"
+        />
       </motion.g>
 
-      {/* Stars/sparkles */}
-      <motion.circle
-        cx="30"
-        cy="30"
-        r="3"
-        fill={color}
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
+      {/* Flame */}
+      <motion.path
+        animate={{
+          d: [
+            "M60 82 Q70 100 80 82 Q75 95 70 100 Q65 95 60 82",
+            "M58 82 Q70 105 82 82 Q75 98 70 105 Q65 98 58 82",
+            "M60 82 Q70 100 80 82 Q75 95 70 100 Q65 95 60 82"
+          ],
+          opacity: [0.6, 0.9, 0.6]
+        }}
+        transition={{ duration: 0.5, repeat: Infinity }}
+        fill="url(#flameGradient)"
       />
-      <motion.circle
-        cx="90"
-        cy="25"
-        r="2"
-        fill={color}
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+
+      <defs>
+        <linearGradient id="flameGradient" x1="70" y1="82" x2="70" y2="105" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FCD34D" />
+          <stop offset="1" stopColor="#F97316" stopOpacity="0.5" />
+        </linearGradient>
+      </defs>
+
+      {/* Stars */}
+      {[
+        { x: 30, y: 30, delay: 0 },
+        { x: 108, y: 28, delay: 0.3 },
+        { x: 115, y: 55, delay: 0.6 },
+        { x: 25, y: 60, delay: 0.9 },
+      ].map((star, i) => (
+        <motion.circle
+          key={i}
+          animate={{ opacity: [0.2, 0.8, 0.2], scale: [0.8, 1.2, 0.8] }}
+          transition={{ duration: 2, repeat: Infinity, delay: star.delay }}
+          cx={star.x}
+          cy={star.y}
+          r="3"
+          fill={color}
+        />
+      ))}
+    </svg>
+  );
+}
+
+function CalendarIllustration({ color }: { color: string }) {
+  return (
+    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Calendar body */}
+      <motion.rect
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        x="35" y="28" width="70" height="72" rx="8"
+        fill="currentColor"
+        className="text-[var(--surface-2)]"
+        stroke={color}
+        strokeWidth="2"
       />
-      <motion.circle
-        cx="95"
-        cy="60"
-        r="2.5"
+
+      {/* Calendar header */}
+      <motion.rect
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        x="35" y="28" width="70" height="18" rx="8"
         fill={color}
-        animate={{ opacity: [0.3, 1, 0.3] }}
-        transition={{ duration: 1.5, repeat: Infinity, delay: 1 }}
+        opacity="0.2"
+      />
+
+      {/* Calendar rings */}
+      <motion.rect
+        initial={{ scaleY: 0 }}
+        animate={{ scaleY: 1 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
+        x="50" y="20" width="6" height="16" rx="3" fill={color}
+      />
+      <motion.rect
+        initial={{ scaleY: 0 }}
+        animate={{ scaleY: 1 }}
+        transition={{ duration: 0.3, delay: 0.25 }}
+        x="84" y="20" width="6" height="16" rx="3" fill={color}
+      />
+
+      {/* Calendar days grid */}
+      {[0, 1, 2].map((row) =>
+        [0, 1, 2, 3].map((col) => (
+          <motion.rect
+            key={`${row}-${col}`}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 0.15, scale: 1 }}
+            transition={{ duration: 0.2, delay: 0.3 + row * 0.1 + col * 0.05 }}
+            x={45 + col * 14}
+            y={54 + row * 14}
+            width="10"
+            height="10"
+            rx="2"
+            fill={color}
+          />
+        ))
+      )}
+
+      {/* Checkmark overlay */}
+      <motion.path
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+        d="M55 70 L65 80 L85 55"
+        stroke={color}
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
       />
     </svg>
   );
@@ -222,6 +477,8 @@ export default function EmptyState({
         return <CelebrationIllustration color={config.color} />;
       case 'first-time':
         return <WelcomeIllustration color={config.color} />;
+      case 'no-due-today':
+        return <CalendarIllustration color={config.color} />;
       default:
         return null;
     }
@@ -231,48 +488,73 @@ export default function EmptyState({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="flex flex-col items-center justify-center py-12 px-4"
+      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+      className="flex flex-col items-center justify-center py-16 px-6"
     >
+      {/* Background glow */}
+      <div className={`absolute inset-0 bg-gradient-radial ${config.gradient} opacity-30 blur-3xl pointer-events-none`} />
+
       {/* Illustration */}
-      <div className="mb-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="relative mb-2"
+      >
         {renderIllustration()}
-      </div>
+      </motion.div>
 
       {/* Icon badge */}
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+        transition={{ delay: 0.3, type: 'spring', stiffness: 300, damping: 20 }}
+        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 relative"
         style={{ backgroundColor: config.bgColor }}
       >
-        <Icon className="w-7 h-7" style={{ color: config.color }} />
+        <div
+          className="absolute inset-0 rounded-2xl blur-xl opacity-50"
+          style={{ backgroundColor: config.color }}
+        />
+        <Icon className="w-7 h-7 relative z-10" style={{ color: config.color }} />
       </motion.div>
 
       {/* Title */}
-      <h3 className={`text-lg font-semibold mb-1 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+      <motion.h3
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.4 }}
+        className="text-xl font-semibold mb-2 text-[var(--foreground)]"
+      >
         {variant === 'first-time' && userName ? `Welcome, ${userName}!` : config.title}
-      </h3>
+      </motion.h3>
 
       {/* Description */}
-      <p className={`text-sm text-center max-w-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+      <motion.p
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.4 }}
+        className="text-sm text-center max-w-xs text-[var(--text-muted)]"
+      >
         {variant === 'no-results' && searchQuery
           ? `No tasks match "${searchQuery}"`
           : config.description}
-      </p>
+      </motion.p>
 
       {/* Action button */}
       {config.action && (
         <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
           onClick={handleAction}
-          className="mt-4 px-4 py-2 rounded-lg font-medium text-sm transition-all hover:shadow-md"
+          className="mt-6 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg"
           style={{
             backgroundColor: config.color,
             color: 'white',
+            boxShadow: `0 4px 16px ${config.color}40`,
           }}
         >
           {config.action}

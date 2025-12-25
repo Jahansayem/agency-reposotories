@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ArrowLeft, Download, ExternalLink, Mail, Zap, CheckCircle, HelpCircle, Monitor, Globe, ChevronDown, Sparkles } from 'lucide-react';
 
 export default function OutlookSetupPage() {
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -57,288 +58,304 @@ export default function OutlookSetupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-[var(--background)] relative overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[var(--accent)]/5 rounded-full blur-[150px] -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[var(--accent-gold)]/8 rounded-full blur-[120px] translate-y-1/3 -translate-x-1/4" />
+        <div
+          className="absolute inset-0 opacity-[0.015]"
+          style={{
+            backgroundImage: `linear-gradient(var(--foreground) 1px, transparent 1px), linear-gradient(90deg, var(--foreground) 1px, transparent 1px)`,
+            backgroundSize: '50px 50px'
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-10">
           <a
             href="/"
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-[#0033A0] transition-colors mb-4"
+            className="inline-flex items-center gap-2 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors mb-6 group text-sm font-medium"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Todo List
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            Back to Tasks
           </a>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-[#0033A0] rounded-2xl flex items-center justify-center shadow-lg">
-              <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"/>
-              </svg>
+
+          <div className="flex items-start gap-5">
+            <div className="relative flex-shrink-0">
+              <div className="absolute inset-0 bg-[var(--accent)]/20 rounded-2xl blur-xl" />
+              <div className="relative w-16 h-16 bg-gradient-to-br from-[var(--accent)] to-[#1D4ED8] rounded-2xl flex items-center justify-center shadow-lg ring-1 ring-white/10">
+                <Mail className="w-8 h-8 text-white" />
+              </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Outlook Add-in Setup</h1>
-              <p className="text-slate-600">Turn emails into tasks in seconds</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] tracking-tight">Outlook Add-in Setup</h1>
+              <p className="text-[var(--text-muted)] mt-1">Turn emails into tasks in seconds</p>
             </div>
           </div>
         </div>
 
-        {/* Quick Overview - Condensed */}
-        <div className="bg-gradient-to-r from-[#0033A0] to-[#0055D4] rounded-2xl shadow-lg p-6 mb-6 text-white">
-          <h2 className="text-xl font-semibold mb-3">How It Works</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <span className="text-sm opacity-90">Open email</span>
+        {/* How It Works - Hero Card */}
+        <div className="relative mb-8 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0A1628] via-[#1E3A5F] to-[#0A1628] rounded-2xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[var(--accent-gold)]/20 via-transparent to-transparent rounded-2xl" />
+
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-center gap-2 mb-5">
+              <Sparkles className="w-5 h-5 text-[var(--accent-gold)]" />
+              <h2 className="text-lg font-semibold text-white">How It Works</h2>
             </div>
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-sm opacity-90">Click analyze</span>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { icon: Mail, label: 'Open email' },
+                { icon: Zap, label: 'Click analyze' },
+                { icon: CheckCircle, label: 'Review task' },
+                { icon: Download, label: 'Add to list' },
+              ].map((step, i) => (
+                <div key={i} className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center mb-3 ring-1 ring-white/10">
+                    <step.icon className="w-5 h-5 text-white/90" />
+                  </div>
+                  <span className="text-sm text-white/70 font-medium">{step.label}</span>
+                </div>
+              ))}
             </div>
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <span className="text-sm opacity-90">Review task</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mb-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <span className="text-sm opacity-90">Add to list</span>
-            </div>
+
+            {/* Bottom accent line */}
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--accent-gold)]/40 to-transparent" />
           </div>
         </div>
 
-        {/* AI extracts info */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
-          <p className="text-slate-600 text-sm text-center">
-            AI automatically extracts <strong>task description</strong>, <strong>assignee</strong>, <strong>priority</strong>, and <strong>due date</strong> from your emails
+        {/* AI Info Banner */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 mb-8 shadow-sm">
+          <p className="text-[var(--text-muted)] text-sm text-center">
+            AI automatically extracts <span className="text-[var(--foreground)] font-medium">task description</span>, <span className="text-[var(--foreground)] font-medium">assignee</span>, <span className="text-[var(--foreground)] font-medium">priority</span>, and <span className="text-[var(--foreground)] font-medium">due date</span> from your emails
           </p>
         </div>
 
-        {/* Step 1: Which Outlook? */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <span className="w-8 h-8 bg-[#0033A0] text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
-            Which Outlook do you use?
-          </h2>
+        {/* Step 1: Which Outlook */}
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 mb-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[#1D4ED8] flex items-center justify-center text-white text-sm font-bold shadow-sm">
+              1
+            </div>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">Which Outlook do you use?</h2>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => setOutlookVersion('new')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
+              className={`group p-4 rounded-xl border-2 text-left transition-all duration-200 ${
                 outlookVersion === 'new'
-                  ? 'border-[#0033A0] bg-blue-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-[var(--accent)] bg-[var(--accent-light)] shadow-sm'
+                  : 'border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-2)]'
               }`}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-[#0033A0]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
-                  </svg>
+              <div className="flex items-center gap-3">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
+                  outlookVersion === 'new' ? 'bg-[var(--accent)]/15' : 'bg-[var(--surface-2)]'
+                }`}>
+                  <Globe className={`w-5 h-5 ${outlookVersion === 'new' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
                 </div>
-                <div>
-                  <p className="font-semibold text-slate-800">Web or New Outlook</p>
-                  <p className="text-xs text-slate-500">outlook.com, new app</p>
+                <div className="flex-1">
+                  <p className="font-semibold text-[var(--foreground)]">Web or New Outlook</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">outlook.com, new app</p>
                 </div>
                 {outlookVersion === 'new' && (
-                  <svg className="w-5 h-5 text-[#0033A0] ml-auto" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <CheckCircle className="w-5 h-5 text-[var(--accent)]" />
                 )}
               </div>
             </button>
+
             <button
               onClick={() => setOutlookVersion('classic')}
-              className={`p-4 rounded-xl border-2 text-left transition-all ${
+              className={`group p-4 rounded-xl border-2 text-left transition-all duration-200 ${
                 outlookVersion === 'classic'
-                  ? 'border-[#0033A0] bg-blue-50'
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-[var(--accent)] bg-[var(--accent-light)] shadow-sm'
+                  : 'border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-2)]'
               }`}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+              <div className="flex items-center gap-3">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
+                  outlookVersion === 'classic' ? 'bg-[var(--accent)]/15' : 'bg-[var(--surface-2)]'
+                }`}>
+                  <Monitor className={`w-5 h-5 ${outlookVersion === 'classic' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
                 </div>
-                <div>
-                  <p className="font-semibold text-slate-800">Classic Desktop</p>
-                  <p className="text-xs text-slate-500">Traditional Outlook app</p>
+                <div className="flex-1">
+                  <p className="font-semibold text-[var(--foreground)]">Classic Desktop</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">Traditional Outlook app</p>
                 </div>
                 {outlookVersion === 'classic' && (
-                  <svg className="w-5 h-5 text-[#0033A0] ml-auto" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <CheckCircle className="w-5 h-5 text-[var(--accent)]" />
                 )}
               </div>
             </button>
           </div>
+
           {!outlookVersion && (
-            <p className="text-xs text-slate-500 mt-3 text-center">
+            <p className="text-xs text-[var(--text-muted)] mt-4 text-center">
               Not sure? If you use Outlook in a web browser or the newer-looking app, choose &quot;Web or New Outlook&quot;
             </p>
           )}
         </div>
 
-        {/* Step 2: Download - Only shows after selection */}
+        {/* Step 2: Download */}
         {outlookVersion && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-[#0033A0] text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
-              Download the Add-in File
-            </h2>
-            <button
-              onClick={outlookVersion === 'new' ? downloadManifest : downloadDesktopManifest}
-              disabled={outlookVersion === 'new' ? downloading : downloadingDesktop}
-              className="w-full px-4 py-4 bg-[#0033A0] text-white rounded-xl font-medium hover:bg-[#002580] transition-colors flex items-center justify-center gap-3 disabled:opacity-50 text-lg"
-            >
-              {(outlookVersion === 'new' ? downloading : downloadingDesktop) ? (
-                <>
-                  <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Downloading...
-                </>
-              ) : (
-                <>
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Add-in File
-                </>
-              )}
-            </button>
-            <p className="text-xs text-slate-500 mt-3 text-center">
-              Save this file somewhere you can find it (like Downloads or Desktop)
-            </p>
+          <div className="relative mb-6 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-light)] to-[var(--accent)]/5 rounded-2xl" />
+            <div className="relative border border-[var(--accent)]/20 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[#1D4ED8] flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                  2
+                </div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">Download the Add-in File</h2>
+              </div>
+
+              <button
+                onClick={outlookVersion === 'new' ? downloadManifest : downloadDesktopManifest}
+                disabled={outlookVersion === 'new' ? downloading : downloadingDesktop}
+                className="w-full px-5 py-4 bg-gradient-to-r from-[var(--accent)] to-[#1D4ED8] text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-60 text-base shadow-md"
+                style={{ boxShadow: '0 4px 16px rgba(37, 99, 235, 0.25)' }}
+              >
+                {(outlookVersion === 'new' ? downloading : downloadingDesktop) ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-5 h-5" />
+                    Download Add-in File
+                  </>
+                )}
+              </button>
+
+              <p className="text-xs text-[var(--text-muted)] mt-3 text-center">
+                Save this file somewhere you can find it (like Downloads or Desktop)
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Step 3: Installation Instructions */}
+        {/* Step 3: Installation */}
         {outlookVersion && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-[#0033A0] text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
-              Install in Outlook
-            </h2>
-
-            {/* Primary installation method */}
-            <div className="mb-4">
-              <a
-                href="https://aka.ms/olksideload"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full px-4 py-4 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors text-center text-lg"
-              >
-                Open Outlook Add-ins Page →
-              </a>
-              <p className="text-xs text-slate-500 mt-2 text-center">
-                This link opens the Add-ins manager in Outlook
-              </p>
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 mb-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[#1D4ED8] flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                3
+              </div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Install in Outlook</h2>
             </div>
 
-            {/* Simple steps */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <p className="text-sm font-medium text-slate-700 mb-3">Then follow these steps:</p>
-              <ol className="space-y-2 text-slate-600 text-sm">
-                <li className="flex gap-2">
-                  <span className="font-bold text-[#0033A0]">A.</span>
-                  <span>Click <strong>&quot;My add-ins&quot;</strong></span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-[#0033A0]">B.</span>
-                  <span>Scroll down to <strong>&quot;Custom Addins&quot;</strong></span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-[#0033A0]">C.</span>
-                  <span>Click <strong>&quot;Add a custom add-in&quot;</strong> → <strong>&quot;Add from File...&quot;</strong></span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-[#0033A0]">D.</span>
-                  <span>Select the file you downloaded and click <strong>Install</strong></span>
-                </li>
+            <a
+              href="https://aka.ms/olksideload"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full px-5 py-4 bg-gradient-to-r from-[var(--success)] to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-center text-base shadow-md mb-4 flex items-center justify-center gap-2"
+              style={{ boxShadow: '0 4px 16px rgba(5, 150, 105, 0.25)' }}
+            >
+              Open Outlook Add-ins Page
+              <ExternalLink className="w-4 h-4" />
+            </a>
+
+            <p className="text-xs text-[var(--text-muted)] text-center mb-5">
+              This link opens the Add-ins manager in Outlook
+            </p>
+
+            <div className="bg-[var(--surface-2)] rounded-xl p-5 border border-[var(--border-subtle)]">
+              <p className="text-sm font-semibold text-[var(--foreground)] mb-3">Then follow these steps:</p>
+              <ol className="space-y-2.5 text-[var(--text-muted)] text-sm">
+                {[
+                  ['A', 'Click "My add-ins"'],
+                  ['B', 'Scroll down to "Custom Addins"'],
+                  ['C', 'Click "Add a custom add-in" → "Add from File..."'],
+                  ['D', 'Select the file you downloaded and click Install'],
+                ].map(([letter, text]) => (
+                  <li key={letter} className="flex gap-3">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-md bg-[var(--accent)]/10 text-[var(--accent)] font-bold text-xs flex items-center justify-center">
+                      {letter}
+                    </span>
+                    <span dangerouslySetInnerHTML={{ __html: text.replace(/"([^"]+)"/g, '<strong class="text-[var(--foreground)]">"$1"</strong>') }} />
+                  </li>
+                ))}
               </ol>
             </div>
 
-            {/* Success message */}
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
-              <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
+            <div className="mt-5 p-4 bg-[var(--success-light)] border border-[var(--success)]/20 rounded-xl text-sm text-[var(--success)] flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
               <span>Once installed, the add-in syncs across all your Outlook apps automatically!</span>
             </div>
           </div>
         )}
 
-        {/* Using the Add-in - Always visible */}
-        <div className="bg-[#D4A853]/10 border border-[#D4A853]/30 rounded-2xl p-6 mb-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <span className="text-xl">📧</span> Using the Add-in
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <div className="bg-white rounded-xl p-4">
-              <div className="w-12 h-12 bg-[#D4A853]/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                <span className="text-xl">1</span>
-              </div>
-              <p className="text-sm text-slate-600">Open an email and click <strong>&quot;Bealer Todo&quot;</strong> in the toolbar</p>
+        {/* Using the Add-in */}
+        <div className="relative mb-6 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-gold-light)] to-[var(--accent-gold)]/5 rounded-2xl" />
+          <div className="relative border border-[var(--accent-gold)]/20 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-5">
+              <Mail className="w-5 h-5 text-[var(--accent-gold)]" />
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Using the Add-in</h2>
             </div>
-            <div className="bg-white rounded-xl p-4">
-              <div className="w-12 h-12 bg-[#D4A853]/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                <span className="text-xl">2</span>
-              </div>
-              <p className="text-sm text-slate-600">Click <strong>&quot;Analyze Email&quot;</strong> to extract task details</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {[
+                { step: '1', text: 'Open an email and click "Bealer Todo" in the toolbar' },
+                { step: '2', text: 'Click "Analyze Email" to extract task details' },
+                { step: '3', text: 'Review, edit if needed, and click "Add Task"' },
+              ].map((item) => (
+                <div key={item.step} className="bg-[var(--surface)] rounded-xl p-4 text-center border border-[var(--border)]">
+                  <div className="w-10 h-10 rounded-full bg-[var(--accent-gold)]/15 flex items-center justify-center mx-auto mb-3">
+                    <span className="text-[var(--accent-gold)] font-bold">{item.step}</span>
+                  </div>
+                  <p className="text-sm text-[var(--text-muted)]" dangerouslySetInnerHTML={{ __html: item.text.replace(/"([^"]+)"/g, '<strong class="text-[var(--foreground)]">"$1"</strong>') }} />
+                </div>
+              ))}
             </div>
-            <div className="bg-white rounded-xl p-4">
-              <div className="w-12 h-12 bg-[#D4A853]/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                <span className="text-xl">3</span>
-              </div>
-              <p className="text-sm text-slate-600">Review, edit if needed, and click <strong>&quot;Add Task&quot;</strong></p>
-            </div>
+
+            <p className="text-xs text-[var(--text-muted)] mt-5 text-center">
+              Tip: On Outlook web, find the add-in under the <strong className="text-[var(--foreground)]">...</strong> (More actions) menu
+            </p>
           </div>
-          <p className="text-xs text-slate-500 mt-4 text-center">
-            Tip: On Outlook web, find the add-in under the <strong>...</strong> (More actions) menu
-          </p>
         </div>
 
-        {/* Troubleshooting - Collapsible */}
-        <details className="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6">
-          <summary className="p-4 cursor-pointer font-semibold text-slate-800 hover:bg-slate-50 rounded-2xl flex items-center gap-2">
-            <span className="text-lg">❓</span> Having trouble? Click here for help
+        {/* Troubleshooting */}
+        <details className="group bg-[var(--surface)] border border-[var(--border)] rounded-2xl mb-8 shadow-sm">
+          <summary className="p-5 cursor-pointer font-semibold text-[var(--foreground)] hover:bg-[var(--surface-2)] rounded-2xl flex items-center gap-3 transition-colors">
+            <HelpCircle className="w-5 h-5 text-[var(--text-muted)]" />
+            Having trouble? Click here for help
+            <ChevronDown className="w-4 h-4 text-[var(--text-muted)] ml-auto transition-transform group-open:rotate-180" />
           </summary>
-          <div className="px-4 pb-4 space-y-3 text-sm">
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="font-medium text-slate-700">Can&apos;t find &quot;Add a custom add-in&quot;?</p>
-              <p className="text-slate-500 mt-1">Your organization may have disabled this. Ask IT to enable custom add-ins.</p>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="font-medium text-slate-700">Button not showing up?</p>
-              <p className="text-slate-500 mt-1">Make sure you have an email open (not just selected). Try refreshing Outlook.</p>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-lg">
-              <p className="font-medium text-slate-700">Need to remove it?</p>
-              <p className="text-slate-500 mt-1">Go to <a href="https://aka.ms/olksideload" target="_blank" rel="noopener noreferrer" className="text-[#0033A0] hover:underline">aka.ms/olksideload</a>, find it under Custom Add-ins, and click Remove.</p>
-            </div>
+          <div className="px-5 pb-5 space-y-3">
+            {[
+              {
+                q: 'Can\'t find "Add a custom add-in"?',
+                a: 'Your organization may have disabled this. Ask IT to enable custom add-ins.',
+              },
+              {
+                q: 'Button not showing up?',
+                a: 'Make sure you have an email open (not just selected). Try refreshing Outlook.',
+              },
+              {
+                q: 'Need to remove it?',
+                a: 'Go to <a href="https://aka.ms/olksideload" target="_blank" rel="noopener noreferrer" class="text-[var(--accent)] hover:underline">aka.ms/olksideload</a>, find it under Custom Add-ins, and click Remove.',
+              },
+            ].map((item, i) => (
+              <div key={i} className="p-4 bg-[var(--surface-2)] rounded-xl border border-[var(--border-subtle)]">
+                <p className="font-medium text-[var(--foreground)] text-sm">{item.q}</p>
+                <p className="text-[var(--text-muted)] text-sm mt-1" dangerouslySetInnerHTML={{ __html: item.a }} />
+              </div>
+            ))}
           </div>
         </details>
 
         {/* Footer */}
-        <div className="text-center text-slate-500 text-sm">
-          <p>Questions? Contact the Bealer Agency team for help.</p>
+        <div className="text-center">
+          <p className="text-[var(--text-muted)] text-sm">
+            Questions? Contact the Bealer Agency team for help.
+          </p>
         </div>
       </div>
     </div>
