@@ -922,22 +922,42 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-        <div className="w-8 h-8 border-3 border-[#0033A0] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)] relative overflow-hidden">
+        {/* Ambient gradient orbs */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 right-1/3 w-[500px] h-[500px] bg-[var(--accent-gold)]/8 rounded-full blur-[120px]" />
+          <div className="absolute bottom-1/3 left-1/4 w-[400px] h-[400px] bg-[var(--accent)]/10 rounded-full blur-[100px]" />
+        </div>
+        <div className="relative z-10 flex flex-col items-center gap-5">
+          <div className="relative">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--accent-gold)] to-[#E5B936] flex items-center justify-center shadow-lg" style={{ boxShadow: '0 8px 24px rgba(201, 162, 39, 0.3)' }}>
+              <svg className="w-7 h-7 text-[#0A1628]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+              </svg>
+            </div>
+            <div className="absolute -inset-3 bg-[var(--accent-gold)]/20 rounded-3xl blur-xl animate-pulse" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-[var(--accent-gold)] animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 rounded-full bg-[var(--accent-gold)] animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 rounded-full bg-[var(--accent-gold)] animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className={`min-h-screen flex items-center justify-center px-4 ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
-        <div className={`p-8 rounded-2xl shadow-xl border max-w-md w-full text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-          <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-red-500" />
+      <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
+        <div className="p-8 rounded-[var(--radius-xl)] shadow-[var(--shadow-lg)] border border-[var(--border)] bg-[var(--surface)] max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-[var(--danger-light)] rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-[var(--danger)]" />
           </div>
-          <h2 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Setup Required</h2>
-          <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{error}</p>
-          <p className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>See SETUP.md for instructions</p>
+          <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">Setup Required</h2>
+          <p className="text-sm mb-4 text-[var(--text-muted)]">{error}</p>
+          <p className="text-xs text-[var(--text-light)]">See SETUP.md for instructions</p>
         </div>
       </div>
     );
@@ -945,38 +965,38 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
   return (
     <PullToRefresh onRefresh={fetchTodos} darkMode={darkMode}>
-      <div className={`min-h-screen transition-colors ${darkMode ? 'bg-slate-900' : 'bg-slate-50'}`}>
+      <div className="min-h-screen transition-colors bg-[var(--background)]">
         {/* Skip link for accessibility */}
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:z-50">
           Skip to main content
         </a>
 
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-[#0033A0] shadow-lg">
-        <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-2xl'}`}>
+        {/* Header - Refined Industrial */}
+        <header className="sticky top-0 z-40 bg-[var(--gradient-hero)] shadow-[var(--shadow-lg)] border-b border-white/5">
+        <div className={`mx-auto px-4 sm:px-6 py-4 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-2xl'}`}>
           <div className="flex items-center justify-between gap-3">
             {/* Logo & Context Info */}
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-sm">B</span>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent-gold)] to-[#E5B936] flex items-center justify-center flex-shrink-0 shadow-lg" style={{ boxShadow: '0 4px 12px rgba(201, 162, 39, 0.35)' }}>
+                <span className="text-[#0A1628] font-bold text-base">B</span>
               </div>
               <div className="min-w-0">
-                <h1 className="text-base font-bold text-white truncate">Bealer Agency</h1>
+                <h1 className="text-base font-bold text-white truncate tracking-tight">Bealer Agency</h1>
                 {/* Show contextual info instead of "Welcome back" */}
-                <p className="text-xs text-white/70 truncate">
+                <p className="text-xs text-white/60 truncate">
                   {stats.active} active{stats.dueToday > 0 && ` • ${stats.dueToday} due today`}{stats.overdue > 0 && ` • ${stats.overdue} overdue`}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {/* View toggle with labels */}
-              <div className="flex bg-white/10 rounded-lg p-0.5">
+              <div className="flex bg-white/8 backdrop-blur-sm rounded-xl p-1 border border-white/10">
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     viewMode === 'list'
-                      ? 'bg-white text-[#0033A0] shadow-md'
+                      ? 'bg-[var(--accent-gold)] text-[#0A1628] shadow-md'
                       : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}
                   aria-pressed={viewMode === 'list'}
@@ -987,9 +1007,9 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                     viewMode === 'kanban'
-                      ? 'bg-white text-[#0033A0] shadow-md'
+                      ? 'bg-[var(--accent-gold)] text-[#0A1628] shadow-md'
                       : 'text-white/70 hover:text-white hover:bg-white/10'
                   }`}
                   aria-pressed={viewMode === 'kanban'}
@@ -1003,7 +1023,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               {/* Activity Feed - accessible to all users */}
               <button
                 onClick={() => setShowActivityFeed(true)}
-                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
                 aria-label="View activity feed"
               >
                 <Activity className="w-4 h-4" />
@@ -1013,7 +1033,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               {userName === OWNER_USERNAME && (
                 <button
                   onClick={() => setShowStrategicDashboard(true)}
-                  className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
                   aria-label="Strategic Goals Dashboard"
                   title="Strategic Goals"
                 >
@@ -1024,7 +1044,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               {/* Weekly progress chart */}
               <button
                 onClick={() => setShowWeeklyChart(true)}
-                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
                 aria-label="View weekly progress"
               >
                 <BarChart2 className="w-4 h-4" />
@@ -1033,7 +1053,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               {/* Theme toggle */}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
                 aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
               >
                 {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -1047,10 +1067,10 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
       {/* Connection status - floating indicator */}
       <div className="fixed bottom-4 right-4 z-30">
-        <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium shadow-lg ${
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-[var(--shadow-md)] backdrop-blur-sm ${
           connected
-            ? darkMode ? 'bg-emerald-900/90 text-emerald-200' : 'bg-emerald-100 text-emerald-700'
-            : darkMode ? 'bg-red-900/90 text-red-200' : 'bg-red-100 text-red-700'
+            ? 'bg-[var(--success-light)] text-[var(--success)] border border-[var(--success)]/20'
+            : 'bg-[var(--danger-light)] text-[var(--danger)] border border-[var(--danger)]/20'
         }`}>
           {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
           {connected ? 'Live' : 'Offline'}
@@ -1059,43 +1079,46 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
       {/* Main */}
       <main id="main-content" className={`mx-auto px-4 sm:px-6 py-6 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-2xl'}`}>
-        {/* Actionable Stats Cards - Reduced to 3, always visible, clickable */}
+        {/* Actionable Stats Cards - Premium Design */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <button
             type="button"
             onClick={() => { setQuickFilter('all'); setShowCompleted(false); }}
-            className={`rounded-xl p-3 border shadow-sm text-left transition-all hover:shadow-md ${
+            className={`group relative rounded-[var(--radius-lg)] p-4 border text-left transition-all duration-300 hover:shadow-[var(--shadow-md)] overflow-hidden ${
               quickFilter === 'all' && !showCompleted
-                ? 'ring-2 ring-[#0033A0] border-[#0033A0]'
-                : ''
-            } ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}
+                ? 'ring-2 ring-[var(--accent)] border-[var(--accent)] bg-[var(--accent-light)]'
+                : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-hover)]'
+            }`}
           >
-            <p className="text-xl sm:text-2xl font-bold text-[#0033A0]">{stats.active}</p>
-            <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>To Do</p>
+            <div className="absolute top-0 right-0 w-20 h-20 bg-[var(--accent)]/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
+            <p className="text-2xl sm:text-3xl font-bold text-[var(--accent)] relative">{stats.active}</p>
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] font-medium mt-0.5 relative">To Do</p>
           </button>
           <button
             type="button"
             onClick={() => setQuickFilter('due_today')}
-            className={`rounded-xl p-3 border shadow-sm text-left transition-all hover:shadow-md ${
+            className={`group relative rounded-[var(--radius-lg)] p-4 border text-left transition-all duration-300 hover:shadow-[var(--shadow-md)] overflow-hidden ${
               quickFilter === 'due_today'
-                ? 'ring-2 ring-orange-500 border-orange-500'
-                : ''
-            } ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}
+                ? 'ring-2 ring-[var(--warning)] border-[var(--warning)] bg-[var(--warning-light)]'
+                : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-hover)]'
+            }`}
           >
-            <p className="text-xl sm:text-2xl font-bold text-orange-500">{stats.dueToday}</p>
-            <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Due Today</p>
+            <div className="absolute top-0 right-0 w-20 h-20 bg-[var(--warning)]/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
+            <p className="text-2xl sm:text-3xl font-bold text-[var(--warning)] relative">{stats.dueToday}</p>
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] font-medium mt-0.5 relative">Due Today</p>
           </button>
           <button
             type="button"
             onClick={() => setQuickFilter('overdue')}
-            className={`rounded-xl p-3 border shadow-sm text-left transition-all hover:shadow-md ${
+            className={`group relative rounded-[var(--radius-lg)] p-4 border text-left transition-all duration-300 hover:shadow-[var(--shadow-md)] overflow-hidden ${
               quickFilter === 'overdue'
-                ? 'ring-2 ring-red-500 border-red-500'
-                : ''
-            } ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}
+                ? 'ring-2 ring-[var(--danger)] border-[var(--danger)] bg-[var(--danger-light)]'
+                : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-hover)]'
+            }`}
           >
-            <p className="text-xl sm:text-2xl font-bold text-red-500">{stats.overdue}</p>
-            <p className={`text-xs sm:text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Overdue</p>
+            <div className="absolute top-0 right-0 w-20 h-20 bg-[var(--danger)]/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500" />
+            <p className="text-2xl sm:text-3xl font-bold text-[var(--danger)] relative">{stats.overdue}</p>
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] font-medium mt-0.5 relative">Overdue</p>
           </button>
         </div>
 
@@ -1114,28 +1137,24 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
           <AddTodo onAdd={addTodo} users={users} darkMode={darkMode} currentUserId={currentUser.id} />
         </div>
 
-        {/* Unified Filter Bar */}
-        <div className={`rounded-xl p-3 mb-4 ${darkMode ? 'bg-slate-800' : 'bg-white'} border ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+        {/* Unified Filter Bar - Premium */}
+        <div className="rounded-[var(--radius-xl)] p-4 mb-4 bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-sm)]">
           {/* Search Row */}
           <div className="flex gap-2 mb-3">
             <div className="relative flex-1">
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} aria-hidden="true" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-light)]" aria-hidden="true" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search tasks..."
                 aria-label="Search tasks"
-                className={`w-full pl-10 pr-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] ${
-                  darkMode
-                    ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400'
-                    : 'bg-slate-50 border-slate-200 text-slate-700 placeholder-slate-400'
-                }`}
+                className="input-refined w-full pl-10 pr-4 py-2.5 text-sm text-[var(--foreground)] placeholder-[var(--text-light)]"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${darkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
                   aria-label="Clear search"
                 >
                   <X className="w-4 h-4" />
@@ -1149,11 +1168,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value as SortOption)}
                 aria-label="Sort tasks"
-                className={`appearance-none pl-3 pr-8 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] ${
-                  darkMode
-                    ? 'bg-slate-700 border-slate-600 text-white'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
-                }`}
+                className="input-refined appearance-none pl-3 pr-9 py-2.5 text-sm text-[var(--foreground)] cursor-pointer"
               >
                 <option value="created">Newest</option>
                 <option value="due_date">Due Date</option>
@@ -1161,7 +1176,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 <option value="alphabetical">A-Z</option>
                 <option value="custom">Manual</option>
               </select>
-              <ArrowUpDown className={`absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${darkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+              <ArrowUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
             </div>
           </div>
 
@@ -1181,12 +1196,10 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                     setShowCompleted(false);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
                   quickFilter === f.id
-                    ? 'bg-[#0033A0] text-white'
-                    : darkMode
-                      ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-[var(--accent)] text-white shadow-sm'
+                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
                 }`}
                 aria-pressed={quickFilter === f.id}
               >
@@ -1195,18 +1208,16 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               </button>
             ))}
 
-            <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1" />
+            <div className="w-px h-5 bg-[var(--border)] mx-1" />
 
             {/* Show completed toggle */}
             <button
               type="button"
               onClick={() => setShowCompleted(!showCompleted)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
                 showCompleted
-                  ? 'bg-emerald-500 text-white'
-                  : darkMode
-                    ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-[var(--success)] text-white shadow-sm'
+                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
               }`}
               aria-pressed={showCompleted}
             >
@@ -1219,7 +1230,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               <button
                 type="button"
                 onClick={() => { setQuickFilter('all'); setShowCompleted(false); }}
-                className="text-xs text-[#0033A0] hover:underline ml-auto"
+                className="text-xs text-[var(--accent)] hover:underline ml-auto font-medium"
               >
                 Clear filter
               </button>
@@ -1237,12 +1248,10 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 }
                 setShowBulkActions(!showBulkActions);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
                 showBulkActions
-                  ? 'bg-[#D4A853] text-white'
-                  : darkMode
-                    ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                  ? 'bg-[var(--accent-gold)] text-[#0A1628] shadow-sm'
+                  : 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] border border-[var(--border)]'
               }`}
             >
               <CheckSquare className="w-4 h-4" />
@@ -1252,25 +1261,25 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
             {/* Bulk actions bar */}
             {showBulkActions && selectedTodos.size > 0 && (
               <div className="flex items-center gap-2 flex-1">
-                <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-700'}`}>
+                <span className="text-sm font-medium text-[var(--foreground)]">
                   {selectedTodos.size} selected
                 </span>
                 <button
                   onClick={selectAll}
-                  className={`px-2 py-1 text-xs rounded ${darkMode ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                  className="px-2.5 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
                 >
                   All
                 </button>
                 <button
                   onClick={clearSelection}
-                  className={`px-2 py-1 text-xs rounded ${darkMode ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                  className="px-2.5 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
                 >
                   Clear
                 </button>
                 <div className="flex-1" />
                 <button
                   onClick={bulkComplete}
-                  className="px-3 py-1.5 text-sm rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 flex items-center gap-1.5"
+                  className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--success)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm"
                 >
                   <CheckSquare className="w-4 h-4" />
                   <span className="hidden sm:inline">Complete</span>
@@ -1278,7 +1287,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 <div className="relative">
                   <select
                     onChange={(e) => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}
-                    className={`appearance-none px-3 py-1.5 pr-8 text-sm rounded-lg border ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-white border-slate-200 text-slate-700'}`}
+                    className="input-refined appearance-none px-3 py-2 pr-8 text-sm cursor-pointer"
                     aria-label="Assign to"
                   >
                     <option value="">Assign...</option>
@@ -1286,11 +1295,11 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                       <option key={user} value={user}>{user}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" />
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
                 </div>
                 <button
                   onClick={bulkDelete}
-                  className="px-3 py-1.5 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 flex items-center gap-1.5"
+                  className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--danger)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span className="hidden sm:inline">Delete</span>

@@ -148,14 +148,14 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+            className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] max-w-md w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with gradient */}
-            <div className="relative bg-gradient-to-br from-[#0033A0] to-indigo-600 p-6 text-white">
+            <div className="relative bg-[var(--gradient-hero)] p-6 text-white">
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/20 transition-colors"
+                className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/20 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -165,13 +165,14 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                   initial={{ rotate: -20 }}
                   animate={{ rotate: [-20, 20, -10, 10, 0] }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="w-16 h-16 rounded-xl bg-white/20 flex items-center justify-center"
+                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--accent-gold)] to-[#E5B936] flex items-center justify-center shadow-lg"
+                  style={{ boxShadow: '0 8px 24px rgba(201, 162, 39, 0.35)' }}
                 >
-                  <Trophy className="w-8 h-8" />
+                  <Trophy className="w-8 h-8 text-[#0A1628]" />
                 </motion.div>
                 <div>
-                  <h2 className="text-2xl font-bold">Your Progress</h2>
-                  <p className="text-white/80 text-sm flex items-center gap-1">
+                  <h2 className="text-2xl font-bold tracking-tight">Your Progress</h2>
+                  <p className="text-white/70 text-sm flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
                     {new Date().toLocaleDateString('en-US', {
                       weekday: 'long',
@@ -185,22 +186,22 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
 
             {/* Stats Grid */}
             <div className="p-6">
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 {/* Completed Today */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4"
+                  className="bg-[var(--success-light)] rounded-[var(--radius-lg)] p-4 border border-[var(--success)]/10"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Completed</span>
+                    <CheckCircle2 className="w-5 h-5 text-[var(--success)]" />
+                    <span className="text-sm font-medium text-[var(--success)]">Completed</span>
                   </div>
-                  <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                  <p className="text-3xl font-bold text-[var(--success)]">
                     {stats.totalCompleted}
                   </p>
-                  <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">tasks done</p>
+                  <p className="text-xs text-[var(--success)]/70">tasks done</p>
                 </motion.div>
 
                 {/* Total Tasks */}
@@ -208,16 +209,16 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4"
+                  className="bg-[var(--accent-light)] rounded-[var(--radius-lg)] p-4 border border-[var(--accent)]/10"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Total</span>
+                    <Target className="w-5 h-5 text-[var(--accent)]" />
+                    <span className="text-sm font-medium text-[var(--accent)]">Total</span>
                   </div>
-                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  <p className="text-3xl font-bold text-[var(--accent)]">
                     {todos.length}
                   </p>
-                  <p className="text-xs text-blue-600/70 dark:text-blue-400/70">all tasks</p>
+                  <p className="text-xs text-[var(--accent)]/70">all tasks</p>
                 </motion.div>
 
                 {/* Streak */}
@@ -225,16 +226,16 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4"
+                  className="bg-[var(--warning-light)] rounded-[var(--radius-lg)] p-4 border border-[var(--warning)]/10"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <Flame className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                    <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Streak</span>
+                    <Flame className="w-5 h-5 text-[var(--warning)]" />
+                    <span className="text-sm font-medium text-[var(--warning)]">Streak</span>
                   </div>
-                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                  <p className="text-3xl font-bold text-[var(--warning)]">
                     {stats.streak}
                   </p>
-                  <p className="text-xs text-orange-600/70 dark:text-orange-400/70">days active</p>
+                  <p className="text-xs text-[var(--warning)]/70">days active</p>
                 </motion.div>
 
                 {/* Productivity */}
@@ -242,16 +243,16 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4"
+                  className="bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] p-4 border border-[var(--accent-gold)]/10"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Done</span>
+                    <TrendingUp className="w-5 h-5 text-[var(--accent-gold)]" />
+                    <span className="text-sm font-medium text-[var(--accent-gold)]">Done</span>
                   </div>
-                  <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                  <p className="text-3xl font-bold text-[var(--accent-gold)]">
                     {stats.productivity}%
                   </p>
-                  <p className="text-xs text-purple-600/70 dark:text-purple-400/70">completion rate</p>
+                  <p className="text-xs text-[var(--accent-gold)]/70">completion rate</p>
                 </motion.div>
               </div>
 
@@ -260,10 +261,10 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-800/50 rounded-xl p-4 text-center"
+                className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 text-center border border-[var(--border-subtle)]"
               >
                 <span className="text-2xl mb-2 block">{getEmoji()}</span>
-                <p className="text-slate-700 dark:text-slate-200 font-medium">
+                <p className="text-[var(--foreground)] font-medium">
                   {getMessage()}
                 </p>
               </motion.div>
@@ -274,7 +275,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.6 }}
                 onClick={onClose}
-                className="w-full mt-6 py-3 px-4 bg-[#0033A0] hover:bg-[#002880] text-white font-medium rounded-xl transition-colors"
+                className="w-full mt-6 py-3.5 px-4 bg-gradient-to-br from-[var(--accent-gold)] to-[#E5B936] hover:opacity-90 text-[#0A1628] font-semibold rounded-[var(--radius-lg)] transition-all shadow-[var(--shadow-gold)] active:scale-[0.98]"
               >
                 Keep Going!
               </motion.button>

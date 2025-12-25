@@ -38,17 +38,17 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
 
   return (
     <div
-      className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5 rounded-lg transition-colors ${
-        subtask.completed ? 'bg-slate-50 opacity-60' : 'bg-white'
+      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-2.5 rounded-[var(--radius-md)] transition-colors ${
+        subtask.completed ? 'bg-[var(--surface-2)] opacity-60' : 'bg-[var(--surface)]'
       }`}
     >
       {/* Checkbox */}
       <button
         onClick={() => onToggle(subtask.id)}
-        className={`w-6 h-6 sm:w-5 sm:h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
+        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
           subtask.completed
-            ? 'bg-indigo-500 border-indigo-500'
-            : 'border-slate-300 hover:border-indigo-400 active:border-indigo-500'
+            ? 'bg-[var(--accent)] border-[var(--accent)]'
+            : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
         }`}
       >
         {subtask.completed && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />}
@@ -63,13 +63,13 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
           autoFocus
-          className="flex-1 text-sm px-2 py-1 rounded border border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          className="flex-1 text-sm px-2.5 py-1.5 rounded-[var(--radius-sm)] border border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-light)] bg-[var(--surface)] text-[var(--foreground)]"
         />
       ) : (
         <span
           onClick={() => !subtask.completed && setIsEditing(true)}
           className={`flex-1 text-sm leading-snug cursor-pointer ${
-            subtask.completed ? 'text-slate-400 line-through' : 'text-slate-700 hover:text-indigo-600'
+            subtask.completed ? 'text-[var(--text-light)] line-through' : 'text-[var(--foreground)] hover:text-[var(--accent)]'
           }`}
           title={subtask.completed ? undefined : 'Click to edit'}
         >
@@ -79,14 +79,14 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
 
       {/* Estimated time */}
       {subtask.estimatedMinutes && !isEditing && (
-        <span className="text-xs text-slate-400 whitespace-nowrap">{subtask.estimatedMinutes}m</span>
+        <span className="text-xs text-[var(--text-light)] whitespace-nowrap">{subtask.estimatedMinutes}m</span>
       )}
 
       {/* Edit button */}
       {!isEditing && !subtask.completed && (
         <button
           onClick={() => setIsEditing(true)}
-          className="p-1.5 -m-1 text-slate-300 hover:text-indigo-500 active:text-indigo-600 rounded transition-colors touch-manipulation opacity-0 group-hover:opacity-100 sm:opacity-100"
+          className="p-1.5 -m-1 text-[var(--text-light)] hover:text-[var(--accent)] active:text-[var(--accent-hover)] rounded transition-colors touch-manipulation opacity-0 group-hover:opacity-100 sm:opacity-100"
         >
           <Pencil className="w-3.5 h-3.5" />
         </button>
@@ -95,7 +95,7 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
       {/* Delete button */}
       <button
         onClick={() => onDelete(subtask.id)}
-        className="p-1.5 -m-1 text-slate-300 hover:text-red-500 active:text-red-600 rounded transition-colors touch-manipulation"
+        className="p-1.5 -m-1 text-[var(--text-light)] hover:text-[var(--danger)] active:text-[var(--danger)] rounded transition-colors touch-manipulation"
       >
         <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       </button>
@@ -153,10 +153,10 @@ const getDueDateStatus = (date: string, completed: boolean): 'overdue' | 'today'
 };
 
 const dueDateStyles = {
-  overdue: 'bg-red-100 text-red-700 border border-red-200',
-  today: 'bg-orange-100 text-orange-700 border border-orange-200',
-  upcoming: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-  future: 'bg-slate-100 text-slate-600',
+  overdue: 'bg-[var(--danger-light)] text-[var(--danger)] border border-[var(--danger)]/20',
+  today: 'bg-[var(--warning-light)] text-[var(--warning)] border border-[var(--warning)]/20',
+  upcoming: 'bg-[var(--accent-gold-light)] text-[var(--accent-gold)] border border-[var(--accent-gold)]/20',
+  future: 'bg-[var(--surface-2)] text-[var(--text-muted)]',
 };
 
 export default function TodoItem({
@@ -250,18 +250,14 @@ export default function TodoItem({
   return (
     <div
       role="listitem"
-      className={`group relative rounded-xl border-2 transition-all ${
-        darkMode ? 'bg-slate-800' : 'bg-white'
-      } ${
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${
         todo.completed
-          ? darkMode ? 'border-slate-700 opacity-60' : 'border-slate-100 opacity-60'
+          ? 'bg-[var(--surface)] border-[var(--border-subtle)] opacity-60'
           : dueDateStatus === 'overdue'
-            ? darkMode ? 'border-red-500/50 bg-red-900/20' : 'border-red-200 bg-red-50/30'
+            ? 'border-[var(--danger)]/30 bg-[var(--danger-light)]'
             : selected
-              ? 'border-[#0033A0] bg-[#0033A0]/5'
-              : darkMode
-                ? 'border-slate-700 hover:border-[#0033A0]/50 hover:shadow-md'
-                : 'border-slate-100 hover:border-[#0033A0]/30 hover:shadow-md'
+              ? 'border-[var(--accent)] bg-[var(--accent-light)]'
+              : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)]'
       }`}
     >
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
@@ -272,17 +268,17 @@ export default function TodoItem({
             type="checkbox"
             checked={selected}
             onChange={(e) => onSelect(todo.id, e.target.checked)}
-            className="w-4 h-4 rounded border-slate-300 text-[#0033A0] focus:ring-[#0033A0] cursor-pointer"
+            className="w-4 h-4 rounded-[var(--radius-sm)] border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
           />
         )}
 
         {/* Completion checkbox */}
         <button
           onClick={handleToggle}
-          className={`w-7 h-7 sm:w-6 sm:h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
+          className={`w-7 h-7 sm:w-6 sm:h-6 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
             todo.completed
-              ? 'bg-emerald-500 border-emerald-500'
-              : 'border-slate-300 hover:border-[#0033A0] hover:bg-[#0033A0]/5 active:border-[#0033A0] active:bg-[#0033A0]/10'
+              ? 'bg-[var(--success)] border-[var(--success)]'
+              : 'border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--accent-light)] active:border-[var(--accent)]'
           }`}
         >
           {todo.completed && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
@@ -292,8 +288,8 @@ export default function TodoItem({
         <div className="flex-1 min-w-0" onClick={() => setExpanded(!expanded)}>
           <p className={`font-medium cursor-pointer ${
             todo.completed
-              ? 'text-slate-400 line-through'
-              : darkMode ? 'text-white' : 'text-slate-800'
+              ? 'text-[var(--text-light)] line-through'
+              : 'text-[var(--foreground)]'
           }`}>
             {todo.text}
           </p>
@@ -332,7 +328,7 @@ export default function TodoItem({
             {todo.notes && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]"
               >
                 <MessageSquare className="w-3 h-3" />
                 Note
@@ -343,7 +339,7 @@ export default function TodoItem({
             {subtasks.length > 0 && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowSubtasks(!showSubtasks); }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-md text-xs font-medium bg-indigo-100 text-indigo-600 hover:bg-indigo-200 active:bg-indigo-300 touch-manipulation"
+                className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-light)] text-[var(--accent)] hover:bg-[var(--accent)]/15 active:bg-[var(--accent)]/20 touch-manipulation"
               >
                 <ListTree className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
                 {completedSubtasks}/{subtasks.length}
@@ -353,7 +349,7 @@ export default function TodoItem({
 
             {/* Assigned to */}
             {todo.assigned_to && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-[#D4A853]/10 text-[#D4A853]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-gold-light)] text-[var(--accent-gold)]">
                 <User className="w-3 h-3" />
                 {todo.assigned_to}
               </span>
@@ -361,7 +357,7 @@ export default function TodoItem({
 
             {/* Created by - only show if different from assigned */}
             {(!todo.assigned_to || todo.created_by !== todo.assigned_to) && (
-              <span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+              <span className="text-xs text-[var(--text-light)]">
                 by {todo.created_by}
               </span>
             )}
@@ -373,9 +369,7 @@ export default function TodoItem({
           {/* Expand/collapse */}
           <button
             onClick={() => setExpanded(!expanded)}
-            className={`p-2 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
-              darkMode ? 'hover:bg-slate-700 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
-            }`}
+            className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
             aria-expanded={expanded}
             aria-label={expanded ? 'Collapse task details' : 'Expand task details'}
           >
@@ -386,9 +380,7 @@ export default function TodoItem({
           {onSaveAsTemplate && (
             <button
               onClick={() => onSaveAsTemplate(todo)}
-              className={`p-2 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                darkMode ? 'hover:bg-purple-900/50 text-slate-400 hover:text-purple-400' : 'hover:bg-purple-50 text-slate-400 hover:text-purple-600'
-              }`}
+              className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--accent-light)] text-[var(--text-muted)] hover:text-[var(--accent)]"
               aria-label="Save as template"
               title="Save as template"
             >
@@ -400,9 +392,7 @@ export default function TodoItem({
           {onDuplicate && (
             <button
               onClick={() => onDuplicate(todo)}
-              className={`p-2 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
-                darkMode ? 'hover:bg-slate-700 text-slate-400 hover:text-slate-200' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
-              }`}
+              className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
               aria-label="Duplicate task"
             >
               <Copy className="w-4 h-4" />
@@ -412,9 +402,7 @@ export default function TodoItem({
           {/* Delete button */}
           <button
             onClick={() => onDelete(todo.id)}
-            className={`p-2 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center ${
-              darkMode ? 'hover:bg-red-900/50 text-slate-400 hover:text-red-400' : 'hover:bg-red-50 text-slate-400 hover:text-red-500'
-            }`}
+            className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--danger-light)] text-[var(--text-muted)] hover:text-[var(--danger)]"
             aria-label="Delete task"
           >
             <Trash2 className="w-4 h-4" />
@@ -424,23 +412,23 @@ export default function TodoItem({
 
       {/* Notes display */}
       {showNotes && todo.notes && (
-        <div className="mx-4 mb-3 p-3 bg-slate-50 rounded-lg text-sm text-slate-600">
+        <div className="mx-4 mb-3 p-3 bg-[var(--surface-2)] rounded-[var(--radius-md)] text-sm text-[var(--text-muted)]">
           {todo.notes}
         </div>
       )}
 
       {/* Subtasks display - separate toggle when not expanded */}
       {!expanded && showSubtasks && subtasks.length > 0 && (
-        <div className="mx-3 sm:mx-4 mb-3 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
+        <div className="mx-3 sm:mx-4 mb-3 p-3 bg-[var(--accent-light)] rounded-[var(--radius-lg)] border border-[var(--accent)]/10">
           {/* Progress bar */}
           <div className="mb-3">
-            <div className="flex justify-between text-xs text-indigo-600 mb-1">
+            <div className="flex justify-between text-xs text-[var(--accent)] mb-1">
               <span>Progress</span>
               <span>{subtaskProgress}%</span>
             </div>
-            <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-[var(--accent)]/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 transition-all duration-300"
+                className="h-full bg-[var(--accent)] transition-all duration-300"
                 style={{ width: `${subtaskProgress}%` }}
               />
             </div>
@@ -463,14 +451,14 @@ export default function TodoItem({
 
       {/* Expanded actions */}
       {expanded && !todo.completed && (
-        <div className="px-3 sm:px-4 pb-4 pt-2 border-t border-slate-100 space-y-3">
+        <div className="px-3 sm:px-4 pb-4 pt-3 border-t border-[var(--border-subtle)] space-y-3">
           {/* Row 1: Priority, Due date, Assign, Recurrence - grid on mobile for better layout */}
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
             {/* Priority selector */}
             <select
               value={priority}
               onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-              className="text-base sm:text-sm px-3 py-2.5 sm:py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+              className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -483,14 +471,14 @@ export default function TodoItem({
               type="date"
               value={todo.due_date ? todo.due_date.split('T')[0] : ''}
               onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-              className="text-base sm:text-sm px-3 py-2.5 sm:py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+              className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
             />
 
             {/* Assign to */}
             <select
               value={todo.assigned_to || ''}
               onChange={(e) => onAssign(todo.id, e.target.value || null)}
-              className="text-base sm:text-sm px-3 py-2.5 sm:py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+              className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
             >
               <option value="">Unassigned</option>
               {users.map((user) => (
@@ -503,7 +491,7 @@ export default function TodoItem({
               <select
                 value={todo.recurrence || ''}
                 onChange={(e) => onSetRecurrence(todo.id, (e.target.value || null) as RecurrencePattern)}
-                className="text-base sm:text-sm px-3 py-2.5 sm:py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0]"
+                className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
               >
                 <option value="">No repeat</option>
                 <option value="daily">Daily</option>
@@ -515,21 +503,21 @@ export default function TodoItem({
 
           {/* Subtasks section - always visible in expanded view */}
           {onUpdateSubtasks && (
-            <div className="p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 overflow-hidden">
+            <div className="p-3 bg-[var(--accent-light)] rounded-[var(--radius-lg)] border border-[var(--accent)]/10 overflow-hidden">
               {/* Header with AI buttons - stacks on mobile */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <ListTree className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-                  <span className="text-sm font-medium text-indigo-700">Subtasks</span>
+                  <ListTree className="w-4 h-4 text-[var(--accent)] flex-shrink-0" />
+                  <span className="text-sm font-medium text-[var(--accent)]">Subtasks</span>
                   {subtasks.length > 0 && (
-                    <span className="text-xs text-indigo-500">({completedSubtasks}/{subtasks.length})</span>
+                    <span className="text-xs text-[var(--accent)]/70">({completedSubtasks}/{subtasks.length})</span>
                   )}
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
                   {/* Import button */}
                   <button
                     onClick={() => setShowContentImporter(true)}
-                    className="text-xs px-2 py-1.5 rounded-md bg-amber-100 hover:bg-amber-200 active:bg-amber-300 text-amber-700 font-medium flex items-center gap-1 transition-colors touch-manipulation"
+                    className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-gold-light)] hover:bg-[var(--accent-gold)]/20 active:bg-[var(--accent-gold)]/25 text-[var(--accent-gold)] font-medium flex items-center gap-1.5 transition-colors touch-manipulation"
                   >
                     <Mail className="w-3.5 h-3.5" />
                     <span>Import</span>
@@ -540,9 +528,9 @@ export default function TodoItem({
               {/* Progress bar - only show if subtasks exist */}
               {subtasks.length > 0 && (
                 <div className="mb-3">
-                  <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-[var(--accent)]/10 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-indigo-500 transition-all duration-300"
+                      className="h-full bg-[var(--accent)] transition-all duration-300"
                       style={{ width: `${subtaskProgress}%` }}
                     />
                   </div>
@@ -572,12 +560,12 @@ export default function TodoItem({
                   onChange={(e) => setNewSubtaskText(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addManualSubtask()}
                   placeholder="Add a subtask..."
-                  className="flex-1 text-base sm:text-sm px-3 py-2.5 sm:py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 min-h-[44px] sm:min-h-0 touch-manipulation"
+                  className="input-refined flex-1 text-base sm:text-sm px-3 py-2.5 sm:py-2 min-h-[44px] sm:min-h-0 touch-manipulation text-[var(--foreground)]"
                 />
                 <button
                   onClick={addManualSubtask}
                   disabled={!newSubtaskText.trim()}
-                  className="px-3 py-2.5 sm:py-2 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg text-sm font-medium transition-colors touch-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
+                  className="px-3 py-2.5 sm:py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-2)] text-white disabled:text-[var(--text-light)] rounded-[var(--radius-lg)] text-sm font-medium transition-colors touch-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -588,13 +576,13 @@ export default function TodoItem({
           {/* Notes */}
           {onUpdateNotes && (
             <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Notes</label>
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Notes</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 onBlur={handleNotesBlur}
                 placeholder="Add notes or context..."
-                className="w-full text-base sm:text-sm px-3 py-2.5 sm:py-2 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] resize-none"
+                className="input-refined w-full text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)] resize-none"
                 rows={2}
               />
             </div>

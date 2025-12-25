@@ -252,19 +252,19 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-64 max-w-[280px] bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
+          <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-64 max-w-[280px] bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-[var(--shadow-xl)] border border-[var(--border)] overflow-hidden z-50 max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
             {/* Current user */}
-            <div className="p-3 bg-slate-50 border-b border-slate-100">
+            <div className="p-3 bg-[var(--surface-2)] border-b border-[var(--border-subtle)]">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-semibold shadow-md"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold shadow-md"
                   style={{ backgroundColor: currentUser.color }}
                 >
                   {getUserInitials(currentUser.name)}
                 </div>
                 <div>
-                  <p className="font-semibold text-slate-900">{currentUser.name}</p>
-                  <p className="text-xs text-slate-400">Signed in</p>
+                  <p className="font-semibold text-[var(--foreground)]">{currentUser.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">Signed in</p>
                 </div>
               </div>
             </div>
@@ -272,7 +272,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
             {/* Other users */}
             {users.filter(u => u.id !== currentUser.id).length > 0 && (
               <div className="py-2">
-                <p className="px-3 pb-1 text-xs font-medium text-slate-400 uppercase tracking-wide">
+                <p className="px-3 pb-1 text-xs font-medium text-[var(--text-light)] uppercase tracking-wide">
                   Switch Account
                 </p>
                 {users
@@ -281,7 +281,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
                     <button
                       key={user.id}
                       onClick={() => handleUserSelect(user)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 sm:py-2 hover:bg-slate-50 active:bg-slate-100 transition-colors text-left min-h-[44px] touch-manipulation"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 sm:py-2 hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors text-left min-h-[44px] touch-manipulation"
                     >
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
@@ -289,15 +289,15 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
                       >
                         {getUserInitials(user.name)}
                       </div>
-                      <span className="flex-1 text-slate-700 text-base sm:text-sm truncate">{user.name}</span>
-                      <Lock className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                      <span className="flex-1 text-[var(--foreground)] text-base sm:text-sm truncate">{user.name}</span>
+                      <Lock className="w-3.5 h-3.5 text-[var(--text-light)] flex-shrink-0" />
                     </button>
                   ))}
               </div>
             )}
 
             {/* Actions */}
-            <div className="border-t border-slate-100">
+            <div className="border-t border-[var(--border-subtle)]">
               {canAddUsers && (
                 <button
                   onClick={() => {
@@ -308,7 +308,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
                     setConfirmPin(['', '', '', '']);
                     setError('');
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-3 sm:py-2.5 hover:bg-slate-50 active:bg-slate-100 text-[#0033A0] font-medium transition-colors min-h-[44px] touch-manipulation text-base sm:text-sm"
+                  className="w-full flex items-center gap-2 px-3 py-3 sm:py-2.5 hover:bg-[var(--accent-light)] active:bg-[var(--accent)]/15 text-[var(--accent)] font-medium transition-colors min-h-[44px] touch-manipulation text-base sm:text-sm"
                 >
                   <UserPlus className="w-4 h-4" />
                   Add New User
@@ -316,7 +316,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
               )}
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 py-3 sm:py-2.5 hover:bg-red-50 active:bg-red-100 text-red-500 font-medium transition-colors min-h-[44px] touch-manipulation text-base sm:text-sm"
+                className="w-full flex items-center gap-2 px-3 py-3 sm:py-2.5 hover:bg-[var(--danger-light)] active:bg-[var(--danger)]/15 text-[var(--danger)] font-medium transition-colors min-h-[44px] touch-manipulation text-base sm:text-sm"
               >
                 <LogOut className="w-4 h-4" />
                 Sign Out
