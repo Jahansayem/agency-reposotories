@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText } from 'lucide-react';
-import { Todo, TodoPriority, PRIORITY_CONFIG, RecurrencePattern, Subtask } from '@/types/todo';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip } from 'lucide-react';
+import { Todo, TodoPriority, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
+import AttachmentList from './AttachmentList';
+import AttachmentUpload from './AttachmentUpload';
 import Celebration from './Celebration';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 
@@ -106,6 +108,7 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
 interface TodoItemProps {
   todo: Todo;
   users: string[];
+  currentUserName: string;
   darkMode?: boolean;
   selected?: boolean;
   onSelect?: (id: string, selected: boolean) => void;
@@ -119,6 +122,7 @@ interface TodoItemProps {
   onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
+  onUpdateAttachments?: (id: string, attachments: Attachment[]) => void;
 }
 
 const formatDueDate = (date: string) => {
@@ -162,6 +166,7 @@ const dueDateStyles = {
 export default function TodoItem({
   todo,
   users,
+  currentUserName,
   darkMode = true,
   selected,
   onSelect,
@@ -175,6 +180,7 @@ export default function TodoItem({
   onSetRecurrence,
   onUpdateSubtasks,
   onSaveAsTemplate,
+  onUpdateAttachments,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
@@ -183,6 +189,8 @@ export default function TodoItem({
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [showContentImporter, setShowContentImporter] = useState(false);
+  const [showAttachmentUpload, setShowAttachmentUpload] = useState(false);
+  const [showAttachments, setShowAttachments] = useState(false);
   const priority = todo.priority || 'medium';
   const priorityConfig = PRIORITY_CONFIG[priority];
   const dueDateStatus = todo.due_date ? getDueDateStatus(todo.due_date, todo.completed) : null;
@@ -347,6 +355,17 @@ export default function TodoItem({
               </button>
             )}
 
+            {/* Attachments indicator */}
+            {todo.attachments && todo.attachments.length > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowAttachments(!showAttachments); }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-gold-light)] text-[var(--accent-gold)] hover:bg-[var(--accent-gold)]/15 active:bg-[var(--accent-gold)]/20 touch-manipulation"
+              >
+                <Paperclip className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+                {todo.attachments.length}
+              </button>
+            )}
+
             {/* Assigned to */}
             {todo.assigned_to && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-gold-light)] text-[var(--accent-gold)]">
@@ -446,6 +465,28 @@ export default function TodoItem({
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Attachments display - separate toggle when not expanded */}
+      {!expanded && showAttachments && todo.attachments && todo.attachments.length > 0 && (
+        <div className="mx-3 sm:mx-4 mb-3 p-3 bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] border border-[var(--accent-gold)]/10">
+          <div className="flex items-center gap-2 mb-3">
+            <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" />
+            <span className="text-sm font-medium text-[var(--accent-gold)]">Attachments</span>
+            <span className="text-xs text-[var(--accent-gold)]/70">({todo.attachments.length})</span>
+          </div>
+          <AttachmentList
+            attachments={todo.attachments}
+            todoId={todo.id}
+            onRemove={(attachmentId) => {
+              if (onUpdateAttachments) {
+                const updated = todo.attachments?.filter(a => a.id !== attachmentId) || [];
+                onUpdateAttachments(todo.id, updated);
+              }
+            }}
+            canRemove={!!onUpdateAttachments}
+          />
         </div>
       )}
 
@@ -587,6 +628,48 @@ export default function TodoItem({
               />
             </div>
           )}
+
+          {/* Attachments section */}
+          {onUpdateAttachments && (
+            <div className="p-3 bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] border border-[var(--accent-gold)]/10">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" />
+                  <span className="text-sm font-medium text-[var(--accent-gold)]">Attachments</span>
+                  {todo.attachments && todo.attachments.length > 0 && (
+                    <span className="text-xs text-[var(--accent-gold)]/70">
+                      ({todo.attachments.length}/{MAX_ATTACHMENTS_PER_TODO})
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowAttachmentUpload(true)}
+                  disabled={(todo.attachments?.length || 0) >= MAX_ATTACHMENTS_PER_TODO}
+                  className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-gold)] hover:bg-[var(--accent-gold)]/90 text-[#0A1628] font-medium flex items-center gap-1.5 transition-colors touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add
+                </button>
+              </div>
+
+              {/* Attachment list */}
+              {todo.attachments && todo.attachments.length > 0 ? (
+                <AttachmentList
+                  attachments={todo.attachments}
+                  todoId={todo.id}
+                  onRemove={(attachmentId) => {
+                    const updated = todo.attachments?.filter(a => a.id !== attachmentId) || [];
+                    onUpdateAttachments(todo.id, updated);
+                  }}
+                  canRemove={true}
+                />
+              ) : (
+                <p className="text-xs text-[var(--accent-gold)]/70 text-center py-3">
+                  No attachments yet. Click &quot;Add&quot; to upload files.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -596,6 +679,21 @@ export default function TodoItem({
           onClose={() => setShowContentImporter(false)}
           onAddSubtasks={handleAddImportedSubtasks}
           parentTaskText={todo.text}
+        />
+      )}
+
+      {/* Attachment Upload Modal */}
+      {showAttachmentUpload && onUpdateAttachments && (
+        <AttachmentUpload
+          todoId={todo.id}
+          userName={currentUserName}
+          onUploadComplete={() => {
+            // Trigger a refresh of the todo data
+            // The parent component should handle this via real-time subscription
+          }}
+          onClose={() => setShowAttachmentUpload(false)}
+          currentAttachmentCount={todo.attachments?.length || 0}
+          maxAttachments={MAX_ATTACHMENTS_PER_TODO}
         />
       )}
     </div>

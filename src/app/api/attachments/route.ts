@@ -1,0 +1,286 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
+import {
+  ALLOWED_ATTACHMENT_TYPES,
+  MAX_ATTACHMENT_SIZE,
+  MAX_ATTACHMENTS_PER_TODO,
+  Attachment
+} from '@/types/todo';
+
+// Create a Supabase client with service role for storage operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const STORAGE_BUCKET = 'todo-attachments';
+
+// Helper to ensure bucket exists
+async function ensureBucketExists() {
+  const { data: buckets } = await supabase.storage.listBuckets();
+  const bucketExists = buckets?.some(b => b.name === STORAGE_BUCKET);
+
+  if (!bucketExists) {
+    const { error } = await supabase.storage.createBucket(STORAGE_BUCKET, {
+      public: false,
+      fileSizeLimit: MAX_ATTACHMENT_SIZE,
+      allowedMimeTypes: Object.keys(ALLOWED_ATTACHMENT_TYPES),
+    });
+    if (error && !error.message.includes('already exists')) {
+      console.error('Error creating bucket:', error);
+      throw error;
+    }
+  }
+}
+
+// POST - Upload a new attachment
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+    const todoId = formData.get('todoId') as string | null;
+    const userName = formData.get('userName') as string | null;
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    if (!todoId) {
+      return NextResponse.json(
+        { success: false, error: 'No todoId provided' },
+        { status: 400 }
+      );
+    }
+
+    if (!userName) {
+      return NextResponse.json(
+        { success: false, error: 'No userName provided' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const mimeType = file.type;
+    if (!(mimeType in ALLOWED_ATTACHMENT_TYPES)) {
+      return NextResponse.json(
+        { success: false, error: `File type ${mimeType} is not allowed` },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      return NextResponse.json(
+        { success: false, error: `File size exceeds ${MAX_ATTACHMENT_SIZE / (1024 * 1024)}MB limit` },
+        { status: 400 }
+      );
+    }
+
+    // Check current attachment count for this todo
+    const { data: todo, error: fetchError } = await supabase
+      .from('todos')
+      .select('attachments')
+      .eq('id', todoId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching todo:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Todo not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentAttachments = (todo.attachments || []) as Attachment[];
+    if (currentAttachments.length >= MAX_ATTACHMENTS_PER_TODO) {
+      return NextResponse.json(
+        { success: false, error: `Maximum of ${MAX_ATTACHMENTS_PER_TODO} attachments per todo` },
+        { status: 400 }
+      );
+    }
+
+    // Ensure storage bucket exists
+    await ensureBucketExists();
+
+    // Generate unique file path
+    const attachmentId = uuidv4();
+    const fileExt = ALLOWED_ATTACHMENT_TYPES[mimeType as keyof typeof ALLOWED_ATTACHMENT_TYPES].ext;
+    const storagePath = `${todoId}/${attachmentId}.${fileExt}`;
+
+    // Convert file to buffer for upload
+    const arrayBuffer = await file.arrayBuffer();
+    const fileBuffer = Buffer.from(arrayBuffer);
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(storagePath, fileBuffer, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Error uploading file:', uploadError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to upload file' },
+        { status: 500 }
+      );
+    }
+
+    // Create attachment metadata
+    const attachment: Attachment = {
+      id: attachmentId,
+      file_name: file.name,
+      file_type: ALLOWED_ATTACHMENT_TYPES[mimeType as keyof typeof ALLOWED_ATTACHMENT_TYPES].category,
+      file_size: file.size,
+      storage_path: storagePath,
+      mime_type: mimeType,
+      uploaded_by: userName,
+      uploaded_at: new Date().toISOString(),
+    };
+
+    // Update todo with new attachment
+    const updatedAttachments = [...currentAttachments, attachment];
+    const { error: updateError } = await supabase
+      .from('todos')
+      .update({ attachments: updatedAttachments })
+      .eq('id', todoId);
+
+    if (updateError) {
+      // Rollback: delete uploaded file
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+      console.error('Error updating todo:', updateError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to save attachment metadata' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      attachment,
+    });
+  } catch (error) {
+    console.error('Error handling attachment upload:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Remove an attachment
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const todoId = searchParams.get('todoId');
+    const attachmentId = searchParams.get('attachmentId');
+
+    if (!todoId || !attachmentId) {
+      return NextResponse.json(
+        { success: false, error: 'todoId and attachmentId are required' },
+        { status: 400 }
+      );
+    }
+
+    // Get current todo
+    const { data: todo, error: fetchError } = await supabase
+      .from('todos')
+      .select('attachments')
+      .eq('id', todoId)
+      .single();
+
+    if (fetchError) {
+      return NextResponse.json(
+        { success: false, error: 'Todo not found' },
+        { status: 404 }
+      );
+    }
+
+    const currentAttachments = (todo.attachments || []) as Attachment[];
+    const attachmentToRemove = currentAttachments.find(a => a.id === attachmentId);
+
+    if (!attachmentToRemove) {
+      return NextResponse.json(
+        { success: false, error: 'Attachment not found' },
+        { status: 404 }
+      );
+    }
+
+    // Remove from storage
+    const { error: storageError } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove([attachmentToRemove.storage_path]);
+
+    if (storageError) {
+      console.error('Error removing file from storage:', storageError);
+      // Continue anyway to clean up metadata
+    }
+
+    // Update todo without this attachment
+    const updatedAttachments = currentAttachments.filter(a => a.id !== attachmentId);
+    const { error: updateError } = await supabase
+      .from('todos')
+      .update({ attachments: updatedAttachments })
+      .eq('id', todoId);
+
+    if (updateError) {
+      console.error('Error updating todo:', updateError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to remove attachment' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error handling attachment deletion:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - Get a signed URL for downloading
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const storagePath = searchParams.get('path');
+
+    if (!storagePath) {
+      return NextResponse.json(
+        { success: false, error: 'Storage path is required' },
+        { status: 400 }
+      );
+    }
+
+    // Generate a signed URL (valid for 1 hour)
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(storagePath, 3600);
+
+    if (error) {
+      console.error('Error generating signed URL:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to generate download URL' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      url: data.signedUrl,
+    });
+  } catch (error) {
+    console.error('Error handling download request:', error);
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

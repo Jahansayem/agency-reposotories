@@ -12,6 +12,59 @@ export interface Subtask {
   estimatedMinutes?: number;
 }
 
+export interface Attachment {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  storage_path: string;
+  mime_type: string;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
+// Allowed attachment file types
+export const ALLOWED_ATTACHMENT_TYPES = {
+  // Documents
+  'application/pdf': { ext: 'pdf', category: 'document' },
+  'application/msword': { ext: 'doc', category: 'document' },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { ext: 'docx', category: 'document' },
+  'application/vnd.ms-excel': { ext: 'xls', category: 'document' },
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { ext: 'xlsx', category: 'document' },
+  'application/vnd.ms-powerpoint': { ext: 'ppt', category: 'document' },
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': { ext: 'pptx', category: 'document' },
+  'text/plain': { ext: 'txt', category: 'document' },
+  'text/csv': { ext: 'csv', category: 'document' },
+  // Images
+  'image/jpeg': { ext: 'jpg', category: 'image' },
+  'image/png': { ext: 'png', category: 'image' },
+  'image/gif': { ext: 'gif', category: 'image' },
+  'image/webp': { ext: 'webp', category: 'image' },
+  'image/svg+xml': { ext: 'svg', category: 'image' },
+  // Audio
+  'audio/mpeg': { ext: 'mp3', category: 'audio' },
+  'audio/wav': { ext: 'wav', category: 'audio' },
+  'audio/ogg': { ext: 'ogg', category: 'audio' },
+  'audio/webm': { ext: 'webm', category: 'audio' },
+  'audio/mp4': { ext: 'm4a', category: 'audio' },
+  'audio/x-m4a': { ext: 'm4a', category: 'audio' },
+  // Video
+  'video/mp4': { ext: 'mp4', category: 'video' },
+  'video/webm': { ext: 'webm', category: 'video' },
+  'video/quicktime': { ext: 'mov', category: 'video' },
+  // Archives
+  'application/zip': { ext: 'zip', category: 'archive' },
+  'application/x-rar-compressed': { ext: 'rar', category: 'archive' },
+} as const;
+
+export type AttachmentMimeType = keyof typeof ALLOWED_ATTACHMENT_TYPES;
+export type AttachmentCategory = 'document' | 'image' | 'audio' | 'video' | 'archive';
+
+// Max file size: 25MB
+export const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
+// Max attachments per todo
+export const MAX_ATTACHMENTS_PER_TODO = 10;
+
 export interface Todo {
   id: string;
   text: string;
@@ -27,6 +80,7 @@ export interface Todo {
   updated_at?: string;
   updated_by?: string;
   subtasks?: Subtask[];
+  attachments?: Attachment[];
 }
 
 export type SortOption = 'created' | 'due_date' | 'priority' | 'alphabetical' | 'custom';
@@ -157,7 +211,9 @@ export type ActivityAction =
   | 'subtask_deleted'
   | 'notes_updated'
   | 'template_created'
-  | 'template_used';
+  | 'template_used'
+  | 'attachment_added'
+  | 'attachment_removed';
 
 export interface ActivityLogEntry {
   id: string;

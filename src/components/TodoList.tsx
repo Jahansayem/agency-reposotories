@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, OWNER_USERNAME } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, OWNER_USERNAME } from '@/types/todo';
 import TodoItem from './TodoItem';
 import SortableTodoItem from './SortableTodoItem';
 import AddTodo from './AddTodo';
@@ -698,6 +698,47 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     }
   };
 
+  const updateAttachments = async (id: string, attachments: Attachment[]) => {
+    const oldTodo = todos.find((t) => t.id === id);
+
+    setTodos((prev) =>
+      prev.map((todo) => (todo.id === id ? { ...todo, attachments } : todo))
+    );
+
+    const { error: updateError } = await supabase
+      .from('todos')
+      .update({ attachments })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error updating attachments:', updateError);
+      if (oldTodo) {
+        setTodos((prev) => prev.map((todo) => (todo.id === id ? oldTodo : todo)));
+      }
+    } else if (oldTodo) {
+      // Log activity for attachment changes
+      const oldCount = oldTodo.attachments?.length || 0;
+      const newCount = attachments.length;
+      if (newCount > oldCount) {
+        logActivity({
+          action: 'attachment_added',
+          userName,
+          todoId: id,
+          todoText: oldTodo.text,
+          details: { count: newCount - oldCount },
+        });
+      } else if (newCount < oldCount) {
+        logActivity({
+          action: 'attachment_removed',
+          userName,
+          todoId: id,
+          todoText: oldTodo.text,
+          details: { count: oldCount - newCount },
+        });
+      }
+    }
+  };
+
   // Save task as template
   const saveAsTemplate = async (name: string, isShared: boolean) => {
     if (!templateTodo) return;
@@ -1351,6 +1392,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                       key={todo.id}
                       todo={todo}
                       users={users}
+                      currentUserName={userName}
                       darkMode={darkMode}
                       selected={selectedTodos.has(todo.id)}
                       onSelect={showBulkActions ? handleSelectTodo : undefined}
@@ -1363,6 +1405,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                       onUpdateNotes={updateNotes}
                       onSetRecurrence={setRecurrence}
                       onUpdateSubtasks={updateSubtasks}
+                      onUpdateAttachments={updateAttachments}
                       onSaveAsTemplate={(t) => setTemplateTodo(t)}
                       isDragEnabled={!showBulkActions && sortOption === 'custom'}
                     />

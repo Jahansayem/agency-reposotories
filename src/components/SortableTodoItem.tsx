@@ -4,11 +4,12 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import TodoItem from './TodoItem';
-import { Todo, TodoPriority, RecurrencePattern, Subtask } from '@/types/todo';
+import { Todo, TodoPriority, RecurrencePattern, Subtask, Attachment } from '@/types/todo';
 
 interface SortableTodoItemProps {
   todo: Todo;
   users: string[];
+  currentUserName: string;
   darkMode?: boolean;
   selected?: boolean;
   onSelect?: (id: string, selected: boolean) => void;
@@ -22,6 +23,7 @@ interface SortableTodoItemProps {
   onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
+  onUpdateAttachments?: (id: string, attachments: Attachment[]) => void;
   isDragEnabled?: boolean;
 }
 
