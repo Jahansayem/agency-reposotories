@@ -698,25 +698,31 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     }
   };
 
-  const updateAttachments = async (id: string, attachments: Attachment[]) => {
+  const updateAttachments = async (id: string, attachments: Attachment[], skipDbUpdate = false) => {
     const oldTodo = todos.find((t) => t.id === id);
 
     setTodos((prev) =>
       prev.map((todo) => (todo.id === id ? { ...todo, attachments } : todo))
     );
 
-    const { error: updateError } = await supabase
-      .from('todos')
-      .update({ attachments })
-      .eq('id', id);
+    // Skip database update if the API already handled it (e.g., after delete or upload)
+    if (!skipDbUpdate) {
+      const { error: updateError } = await supabase
+        .from('todos')
+        .update({ attachments })
+        .eq('id', id);
 
-    if (updateError) {
-      console.error('Error updating attachments:', updateError);
-      if (oldTodo) {
-        setTodos((prev) => prev.map((todo) => (todo.id === id ? oldTodo : todo)));
+      if (updateError) {
+        console.error('Error updating attachments:', updateError);
+        if (oldTodo) {
+          setTodos((prev) => prev.map((todo) => (todo.id === id ? oldTodo : todo)));
+        }
+        return; // Don't log activity if update failed
       }
-    } else if (oldTodo) {
-      // Log activity for attachment changes
+    }
+
+    // Log activity for attachment changes
+    if (oldTodo) {
       const oldCount = oldTodo.attachments?.length || 0;
       const newCount = attachments.length;
       if (newCount > oldCount) {
@@ -797,6 +803,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
   const bulkAssign = async (assignedTo: string) => {
     const idsToUpdate = Array.from(selectedTodos);
+    const originalTodos = todos.filter(t => selectedTodos.has(t.id));
 
     setTodos((prev) =>
       prev.map((todo) =>
@@ -806,14 +813,24 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     setSelectedTodos(new Set());
     setShowBulkActions(false);
 
-    await supabase
+    const { error } = await supabase
       .from('todos')
       .update({ assigned_to: assignedTo })
       .in('id', idsToUpdate);
+
+    if (error) {
+      console.error('Error bulk assigning:', error);
+      // Rollback on failure
+      setTodos((prev) => {
+        const rollbackMap = new Map(originalTodos.map(t => [t.id, t]));
+        return prev.map((todo) => rollbackMap.get(todo.id) || todo);
+      });
+    }
   };
 
   const bulkComplete = async () => {
     const idsToUpdate = Array.from(selectedTodos);
+    const originalTodos = todos.filter(t => selectedTodos.has(t.id));
 
     setTodos((prev) =>
       prev.map((todo) =>
@@ -823,10 +840,19 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     setSelectedTodos(new Set());
     setShowBulkActions(false);
 
-    await supabase
+    const { error } = await supabase
       .from('todos')
       .update({ completed: true, status: 'done' })
       .in('id', idsToUpdate);
+
+    if (error) {
+      console.error('Error bulk completing:', error);
+      // Rollback on failure
+      setTodos((prev) => {
+        const rollbackMap = new Map(originalTodos.map(t => [t.id, t]));
+        return prev.map((todo) => rollbackMap.get(todo.id) || todo);
+      });
+    }
   };
 
   const handleSelectTodo = (id: string, selected: boolean) => {

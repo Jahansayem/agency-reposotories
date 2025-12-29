@@ -81,9 +81,43 @@
   --radius-2xl: 28px;
 }
 
-/* ─── Dark Theme ─── */
+/* ─── Dark Theme (via class toggle) ─── */
+:root.dark {
+  --background: #0C0B09;
+  --background-warm: #0F0E0C;
+  --foreground: #F5F4F2;
+  --surface: #18160F;
+  --surface-2: #211E17;
+  --surface-3: #2A261D;
+  --surface-elevated: #1F1C15;
+  --border: #3D3830;
+  --border-hover: #4D473E;
+  --border-subtle: #2D2A24;
+  --text-muted: #A09A90;
+  --text-light: #6D675E;
+  --text-inverse: #0C0B09;
+
+  --accent: #60A5FA;
+  --accent-hover: #3B82F6;
+  --accent-light: rgba(96, 165, 250, 0.12);
+  --accent-gold: #ECBF44;
+  --accent-gold-light: rgba(236, 191, 68, 0.15);
+
+  --success: #34D399;
+  --success-light: rgba(52, 211, 153, 0.12);
+  --success-vivid: #10B981;
+  --warning: #FBBF24;
+  --warning-light: rgba(251, 191, 36, 0.12);
+  --danger: #F87171;
+  --danger-light: rgba(248, 113, 113, 0.12);
+
+  --shadow-color: 30 30% 4%;
+  --gradient-hero: linear-gradient(160deg, #0C0B09 0%, #18160F 40%, #211E17 100%);
+}
+
+/* ─── Dark Theme (via system preference, used as fallback) ─── */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.dark):not(:has(.light-override)) {
     --background: #0C0B09;
     --background-warm: #0F0E0C;
     --foreground: #F5F4F2;
@@ -205,8 +239,13 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+:root.dark .glass-card {
+  background: rgba(24, 22, 15, 0.9);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
 @media (prefers-color-scheme: dark) {
-  .glass-card {
+  :root:not(.dark) .glass-card {
     background: rgba(24, 22, 15, 0.9);
     border-color: rgba(255, 255, 255, 0.06);
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
@@ -54,9 +54,9 @@ interface KanbanBoardProps {
 }
 
 const columns: { id: TodoStatus; title: string; icon: string; color: string; bgColor: string }[] = [
-  { id: 'todo', title: 'To Do', icon: '📋', color: '#0033A0', bgColor: 'rgba(0, 51, 160, 0.08)' },
-  { id: 'in_progress', title: 'In Progress', icon: '⚡', color: '#D4A853', bgColor: 'rgba(212, 168, 83, 0.08)' },
-  { id: 'done', title: 'Done', icon: '✓', color: '#059669', bgColor: 'rgba(5, 150, 105, 0.08)' },
+  { id: 'todo', title: 'To Do', icon: '📋', color: 'var(--accent)', bgColor: 'var(--accent-light)' },
+  { id: 'in_progress', title: 'In Progress', icon: '⚡', color: 'var(--warning)', bgColor: 'var(--warning-light)' },
+  { id: 'done', title: 'Done', icon: '✓', color: 'var(--success)', bgColor: 'var(--success-light)' },
 ];
 
 const formatDueDate = (date: string) => {
@@ -135,7 +135,7 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
       exit={{ opacity: 0, scale: 0.95 }}
       className={`group rounded-xl border-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing bg-white dark:bg-slate-800 touch-manipulation ${
         isDragging
-          ? 'shadow-2xl ring-2 ring-[#0033A0] border-[#0033A0]'
+          ? 'shadow-2xl ring-2 ring-[var(--accent)] border-[var(--accent)]'
           : 'shadow-sm border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-slate-200 dark:hover:border-slate-600'
       }`}
       onMouseEnter={() => setShowActions(true)}
@@ -175,7 +175,7 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
                   ? 'bg-slate-100 text-slate-400'
                   : overdue
                     ? 'bg-red-100 text-red-600'
-                    : 'bg-[#0033A0]/10 text-[#0033A0]'
+                    : 'bg-[var(--accent)]/10 text-[var(--accent)]'
               }`}>
                 {overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
                 {formatDueDate(todo.due_date)}
@@ -235,13 +235,13 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 text-sm sm:text-xs px-3 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] touch-manipulation"
+                  className="flex-1 text-sm sm:text-xs px-3 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
                 />
                 <select
                   value={todo.assigned_to || ''}
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 text-sm sm:text-xs px-3 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20 focus:border-[#0033A0] touch-manipulation"
+                  className="flex-1 text-sm sm:text-xs px-3 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
                 >
                   <option value="">Unassigned</option>
                   {users.map((user) => (
@@ -309,7 +309,7 @@ function KanbanCard({ todo }: { todo: Todo }) {
   const overdue = todo.due_date && !todo.completed && isOverdue(todo.due_date);
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border-2 border-[#0033A0] overflow-hidden ring-4 ring-[#0033A0]/20">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border-2 border-[var(--accent)] overflow-hidden ring-4 ring-[var(--accent)]/20">
       <div className="h-1.5" style={{ backgroundColor: priorityConfig.color }} />
       <div className="p-3">
         <p className="text-sm font-medium text-slate-800 dark:text-white">{todo.text}</p>
@@ -325,7 +325,7 @@ function KanbanCard({ todo }: { todo: Todo }) {
             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium ${
               overdue
                 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                : 'bg-[#0033A0]/10 text-[#0033A0]'
+                : 'bg-[var(--accent)]/10 text-[var(--accent)]'
             }`}>
               <Clock className="w-2.5 h-2.5" />
               {formatDueDate(todo.due_date)}
@@ -371,6 +371,17 @@ function TaskDetailModal({
   const [text, setText] = useState(todo.text);
   const [notes, setNotes] = useState(todo.notes || '');
   const [newSubtaskText, setNewSubtaskText] = useState('');
+
+  // Sync local state when todo prop changes (e.g., from real-time updates)
+  useEffect(() => {
+    if (!editingText) {
+      setText(todo.text);
+    }
+  }, [todo.text, editingText]);
+
+  useEffect(() => {
+    setNotes(todo.notes || '');
+  }, [todo.notes]);
 
   const priority = todo.priority || 'medium';
   const priorityConfig = PRIORITY_CONFIG[priority];
@@ -446,14 +457,14 @@ function TaskDetailModal({
                     darkMode
                       ? 'bg-slate-700 border-slate-600 text-white'
                       : 'bg-white border-slate-200 text-slate-800'
-                  } focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
+                  } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
                   rows={2}
                   autoFocus
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={handleSaveText}
-                    className="px-3 py-1.5 bg-[#0033A0] text-white text-sm rounded-lg hover:bg-[#002878] transition-colors"
+                    className="px-3 py-1.5 bg-[var(--accent)] text-white text-sm rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
                   >
                     Save
                   </button>
@@ -509,7 +520,7 @@ function TaskDetailModal({
                   darkMode
                     ? 'bg-slate-700 border-slate-600 text-white'
                     : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
+                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               >
                 {columns.map((col) => (
                   <option key={col.id} value={col.id}>{col.title}</option>
@@ -528,7 +539,7 @@ function TaskDetailModal({
                   darkMode
                     ? 'bg-slate-700 border-slate-600 text-white'
                     : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
+                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -549,7 +560,7 @@ function TaskDetailModal({
                   darkMode
                     ? 'bg-slate-700 border-slate-600 text-white'
                     : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
+                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               />
             </div>
 
@@ -564,7 +575,7 @@ function TaskDetailModal({
                   darkMode
                     ? 'bg-slate-700 border-slate-600 text-white'
                     : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
+                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               >
                 <option value="">Unassigned</option>
                 {users.map((user) => (
@@ -590,7 +601,7 @@ function TaskDetailModal({
                 darkMode
                   ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'
                   : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
-              } focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
+              } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
             />
           </div>
 
@@ -654,12 +665,12 @@ function TaskDetailModal({
                       darkMode
                         ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'
                         : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
-                    } focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
+                    } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
                   />
                   <button
                     onClick={handleAddSubtask}
                     disabled={!newSubtaskText.trim()}
-                    className="px-3 py-2 bg-[#0033A0] text-white rounded-lg hover:bg-[#002878] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -692,7 +703,7 @@ function TaskDetailModal({
           </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[#0033A0] text-white rounded-lg hover:bg-[#002878] transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium"
           >
             Done
           </button>

@@ -81,9 +81,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check current attachment count for this todo
+    // Use a transaction-safe approach: fetch, validate, and we'll re-check before update
     const { data: todo, error: fetchError } = await supabase
       .from('todos')
-      .select('attachments')
+      .select('attachments, text')
       .eq('id', todoId)
       .single();
 
@@ -102,6 +103,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const todoText = todo.text as string;
 
     // Ensure storage bucket exists
     await ensureBucketExists();
@@ -143,11 +146,37 @@ export async function POST(request: NextRequest) {
       uploaded_at: new Date().toISOString(),
     };
 
-    // Update todo with new attachment
-    const updatedAttachments = [...currentAttachments, attachment];
+    // Re-fetch to verify count hasn't changed (optimistic concurrency check)
+    // This prevents race conditions by checking count before final update
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('todos')
+      .select('attachments')
+      .eq('id', todoId)
+      .single();
+
+    if (verifyError) {
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+      return NextResponse.json(
+        { success: false, error: 'Todo not found' },
+        { status: 404 }
+      );
+    }
+
+    const verifyAttachments = (verifyData.attachments || []) as Attachment[];
+    if (verifyAttachments.length >= MAX_ATTACHMENTS_PER_TODO) {
+      // Race condition - another upload completed first
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+      return NextResponse.json(
+        { success: false, error: `Maximum of ${MAX_ATTACHMENTS_PER_TODO} attachments reached` },
+        { status: 400 }
+      );
+    }
+
+    // Use the verified attachments array to avoid overwriting concurrent changes
+    const finalAttachments = [...verifyAttachments, attachment];
     const { error: updateError } = await supabase
       .from('todos')
-      .update({ attachments: updatedAttachments })
+      .update({ attachments: finalAttachments })
       .eq('id', todoId);
 
     if (updateError) {
@@ -163,6 +192,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       attachment,
+      todoText, // Include for activity logging on client
     });
   } catch (error) {
     console.error('Error handling attachment upload:', error);

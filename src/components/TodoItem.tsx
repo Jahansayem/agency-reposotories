@@ -122,7 +122,7 @@ interface TodoItemProps {
   onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
-  onUpdateAttachments?: (id: string, attachments: Attachment[]) => void;
+  onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
 }
 
 const formatDueDate = (date: string) => {
@@ -481,11 +481,12 @@ export default function TodoItem({
             todoId={todo.id}
             onRemove={(attachmentId) => {
               if (onUpdateAttachments) {
+                // skipDbUpdate=true because the DELETE API already updated the database
                 const updated = todo.attachments?.filter(a => a.id !== attachmentId) || [];
-                onUpdateAttachments(todo.id, updated);
+                onUpdateAttachments(todo.id, updated, true);
               }
             }}
-            canRemove={!!onUpdateAttachments}
+            canRemove={!!onUpdateAttachments && !todo.completed}
           />
         </div>
       )}
@@ -658,8 +659,9 @@ export default function TodoItem({
                   attachments={todo.attachments}
                   todoId={todo.id}
                   onRemove={(attachmentId) => {
+                    // skipDbUpdate=true because the DELETE API already updated the database
                     const updated = todo.attachments?.filter(a => a.id !== attachmentId) || [];
-                    onUpdateAttachments(todo.id, updated);
+                    onUpdateAttachments(todo.id, updated, true);
                   }}
                   canRemove={true}
                 />
@@ -687,9 +689,11 @@ export default function TodoItem({
         <AttachmentUpload
           todoId={todo.id}
           userName={currentUserName}
-          onUploadComplete={() => {
-            // Trigger a refresh of the todo data
-            // The parent component should handle this via real-time subscription
+          onUploadComplete={(newAttachment) => {
+            // Update local state with the new attachment and trigger activity logging
+            // skipDbUpdate=true because the API already saved to database
+            const updatedAttachments = [...(todo.attachments || []), newAttachment];
+            onUpdateAttachments(todo.id, updatedAttachments, true);
           }}
           onClose={() => setShowAttachmentUpload(false)}
           currentAttachmentCount={todo.attachments?.length || 0}

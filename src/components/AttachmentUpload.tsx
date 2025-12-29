@@ -7,7 +7,7 @@ import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE } from '@/types/todo';
 interface AttachmentUploadProps {
   todoId: string;
   userName: string;
-  onUploadComplete: () => void;
+  onUploadComplete: (newAttachment: import('@/types/todo').Attachment) => void;
   onClose: () => void;
   currentAttachmentCount: number;
   maxAttachments: number;
@@ -29,7 +29,7 @@ export default function AttachmentUpload({
 
   const remainingSlots = maxAttachments - currentAttachmentCount;
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     // Check file type
     if (!(file.type in ALLOWED_ATTACHMENT_TYPES)) {
       return `File type "${file.type || 'unknown'}" is not supported. Allowed types: PDF, Word, Excel, Images, Audio, Video`;
@@ -41,9 +41,9 @@ export default function AttachmentUpload({
     }
 
     return null;
-  };
+  }, []);
 
-  const uploadFile = async (file: File) => {
+  const uploadFile = useCallback(async (file: File) => {
     setError(null);
     setProgress(0);
 
@@ -78,14 +78,15 @@ export default function AttachmentUpload({
       }
 
       setProgress(100);
-      onUploadComplete();
+      // Pass the new attachment back to parent for state update and activity logging
+      onUploadComplete(result.attachment);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload file');
     } finally {
       setUploading(false);
     }
-  };
+  }, [todoId, userName, validateFile, onUploadComplete, onClose]);
 
   const handleFileSelect = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -97,8 +98,7 @@ export default function AttachmentUpload({
 
     // Upload the first file only
     uploadFile(files[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remainingSlots, maxAttachments]);
+  }, [remainingSlots, maxAttachments, uploadFile]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();

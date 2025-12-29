@@ -23,7 +23,7 @@ interface SortableTodoItemProps {
   onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
-  onUpdateAttachments?: (id: string, attachments: Attachment[]) => void;
+  onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   isDragEnabled?: boolean;
 }
 

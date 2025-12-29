@@ -75,12 +75,12 @@ const EMOJI_CATEGORIES = {
   symbols: ['❤️', '🧡', '💛', '💚', '💙', '💜', '💯', '✨', '🔥', '⭐', '💫', '🎉'],
 };
 
-// Presence status config
+// Presence status config - using semantic color values for consistency
 const PRESENCE_CONFIG: Record<PresenceStatus, { color: string; label: string }> = {
-  online: { color: '#22c55e', label: 'Online' },
-  away: { color: '#f59e0b', label: 'Away' },
-  dnd: { color: '#ef4444', label: 'Do Not Disturb' },
-  offline: { color: '#6b7280', label: 'Offline' },
+  online: { color: 'var(--success-vivid)', label: 'Online' },
+  away: { color: 'var(--warning)', label: 'Away' },
+  dnd: { color: 'var(--danger)', label: 'Do Not Disturb' },
+  offline: { color: 'var(--text-muted)', label: 'Offline' },
 };
 
 interface ChatPanelProps {
@@ -275,7 +275,8 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
 
   const getUserColor = useCallback((userName: string) => {
     const user = users.find(u => u.name === userName);
-    return user?.color || '#2563EB';
+    // Use CSS variable for fallback to support theme changes
+    return user?.color || 'var(--accent)';
   }, [users]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -1332,7 +1333,7 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
                       {sortedConversations.map(({ conv, lastMessage }, index) => {
                         const isTeam = conv.type === 'team';
                         const userName = conv.type === 'dm' ? conv.userName : '';
-                        const userColor = isTeam ? '#2563EB' : getUserColor(userName);
+                        const userColor = isTeam ? 'var(--accent)' : getUserColor(userName);
                         const unreadCount = unreadCounts[isTeam ? 'team' : userName] || 0;
                         const isMuted = mutedConversations.has(isTeam ? 'team' : userName);
                         const presence = isTeam ? null : userPresence[userName];
