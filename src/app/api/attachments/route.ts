@@ -17,20 +17,34 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const STORAGE_BUCKET = 'todo-attachments';
 
 // Helper to ensure bucket exists
+// Note: This function is a no-op if using anon key with RLS enabled
+// The bucket should be pre-created in Supabase dashboard or via service role
 async function ensureBucketExists() {
-  const { data: buckets } = await supabase.storage.listBuckets();
-  const bucketExists = buckets?.some(b => b.name === STORAGE_BUCKET);
+  try {
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
 
-  if (!bucketExists) {
-    const { error } = await supabase.storage.createBucket(STORAGE_BUCKET, {
-      public: false,
-      fileSizeLimit: MAX_ATTACHMENT_SIZE,
-      allowedMimeTypes: Object.keys(ALLOWED_ATTACHMENT_TYPES),
-    });
-    if (error && !error.message.includes('already exists')) {
-      console.error('Error creating bucket:', error);
-      throw error;
+    // If we can't list buckets (RLS blocks it), assume bucket exists and proceed
+    if (listError) {
+      console.log('Cannot list buckets (likely RLS), assuming bucket exists');
+      return;
     }
+
+    const bucketExists = buckets?.some(b => b.name === STORAGE_BUCKET);
+
+    if (!bucketExists) {
+      const { error } = await supabase.storage.createBucket(STORAGE_BUCKET, {
+        public: false,
+        fileSizeLimit: MAX_ATTACHMENT_SIZE,
+        allowedMimeTypes: Object.keys(ALLOWED_ATTACHMENT_TYPES),
+      });
+      if (error && !error.message.includes('already exists')) {
+        // Don't throw - bucket might exist but we can't see it due to RLS
+        console.warn('Could not create bucket (may already exist):', error.message);
+      }
+    }
+  } catch (err) {
+    // Don't fail the upload if bucket check fails - proceed and let the upload attempt tell us
+    console.warn('Bucket check failed, proceeding with upload attempt:', err);
   }
 }
 
