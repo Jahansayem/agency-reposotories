@@ -267,21 +267,58 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
         { event: 'INSERT', schema: 'public', table: 'activity_log' },
         (payload) => {
           if (!isMounted) return;
-          const newActivity = payload.new as { user_name: string };
+          const newActivity = payload.new as { user_name: string; action: string };
+          console.log('[ActivityBadge] Received activity:', newActivity.action, 'by', newActivity.user_name, 'currentUser:', userName);
           // Only increment for activities from other users
           if (newActivity.user_name !== userName) {
+            console.log('[ActivityBadge] Incrementing badge count');
             setUnreadActivityCount((prev) => prev + 1);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[ActivityBadge] Subscription status:', status);
+      });
+
+    // Polling fallback for activity count (in case Realtime is not enabled for activity_log)
+    let lastCheckedActivityId: string | null = null;
+    const pollForActivities = async () => {
+      if (!isMounted || showActivityFeed) return; // Don't poll if feed is open
+      try {
+        const { data } = await supabase
+          .from('activity_log')
+          .select('id, user_name, action')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          const latestActivity = data[0];
+          if (lastCheckedActivityId && latestActivity.id !== lastCheckedActivityId) {
+            // New activity detected
+            if (latestActivity.user_name !== userName) {
+              console.log('[ActivityBadge] Polling detected new activity:', latestActivity.action, 'by', latestActivity.user_name);
+              setUnreadActivityCount((prev) => prev + 1);
+            }
+          }
+          lastCheckedActivityId = latestActivity.id;
+        }
+      } catch (err) {
+        // Silently fail polling
+      }
+    };
+
+    // Initial check
+    pollForActivities();
+    // Poll every 5 seconds as fallback
+    const pollInterval = setInterval(pollForActivities, 5000);
 
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
       supabase.removeChannel(activityChannel);
+      clearInterval(pollInterval);
     };
-  }, [fetchTodos, userName, currentUser]);
+  }, [fetchTodos, userName, currentUser, showActivityFeed]);
 
   const addTodo = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string) => {
     const newTodo: Todo = {
