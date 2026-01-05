@@ -261,11 +261,17 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
     }
   }, [isDndMode]);
 
-  // Function to handle enabling notifications
-  const enableNotifications = useCallback(async () => {
-    const granted = await requestNotificationPermission();
-    setNotificationsEnabled(granted);
-  }, []);
+  // Function to toggle notifications
+  const toggleNotifications = useCallback(async () => {
+    if (notificationsEnabled) {
+      // Turn off notifications
+      setNotificationsEnabled(false);
+    } else {
+      // Request permission and turn on notifications
+      const granted = await requestNotificationPermission();
+      setNotificationsEnabled(granted);
+    }
+  }, [notificationsEnabled]);
 
   // Other users (excluding current user)
   const otherUsers = useMemo(() =>
@@ -1204,13 +1210,13 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
 
                   {/* Notification toggle */}
                   <motion.button
-                    onClick={enableNotifications}
+                    onClick={toggleNotifications}
                     className={`p-2 rounded-xl transition-all duration-200 ${
                       notificationsEnabled
                         ? 'bg-green-500/20 text-green-400'
                         : 'hover:bg-white/[0.08] text-white/50'
                     }`}
-                    title={notificationsEnabled ? 'Notifications enabled' : 'Enable notifications'}
+                    title={notificationsEnabled ? 'Click to disable notifications' : 'Click to enable notifications'}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
