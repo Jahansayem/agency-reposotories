@@ -35,7 +35,7 @@ import {
   LayoutList, LayoutGrid, Wifi, WifiOff, Search,
   ArrowUpDown, User, Calendar, AlertTriangle, CheckSquare,
   Trash2, X, Sun, Moon, ChevronDown, BarChart2, Activity, Target, GitMerge,
-  Paperclip, Filter, RotateCcw, Mail
+  Paperclip, Filter, RotateCcw, Mail, Check
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import UserSwitcher from './UserSwitcher';
@@ -1192,11 +1192,6 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
       ...secondaryTodos.flatMap(t => t.subtasks || [])
     ];
 
-    // Use earliest created date
-    const earliestDate = [primaryTodo, ...secondaryTodos]
-      .map(t => new Date(t.created_at).getTime())
-      .reduce((min, d) => Math.min(min, d));
-
     // Combine text (primary text + secondary texts as context)
     const combinedText = secondaryTodos.length > 0
       ? `${primaryTodo.text} [+${secondaryTodos.length} merged]`
@@ -1209,9 +1204,6 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
         return priorityRank[t.priority || 'medium'] < priorityRank[highest] ? (t.priority || 'medium') : highest;
       }, primaryTodo.priority || 'medium');
 
-    // Store merged task IDs for history
-    const mergedFrom = secondaryTodos.map(t => t.id);
-
     // Update primary todo with merged data
     const updatedTodo = {
       ...primaryTodo,
@@ -1220,8 +1212,6 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
       attachments: combinedAttachments,
       subtasks: combinedSubtasks,
       priority: highestPriority,
-      created_at: new Date(earliestDate).toISOString(),
-      merged_from: [...(primaryTodo.merged_from || []), ...mergedFrom],
     };
 
     // Optimistically update UI
@@ -1239,8 +1229,6 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
         attachments: combinedAttachments,
         subtasks: combinedSubtasks,
         priority: highestPriority,
-        created_at: new Date(earliestDate).toISOString(),
-        merged_from: [...(primaryTodo.merged_from || []), ...mergedFrom],
       })
       .eq('id', primaryTodoId);
 
@@ -1271,7 +1259,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
       todoText: combinedText,
       details: {
         merged_count: secondaryTodos.length,
-        merged_ids: mergedFrom,
+        merged_ids: secondaryTodos.map(t => t.id),
       },
     });
 
@@ -2204,91 +2192,95 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
       {showMergeModal && mergeTargets.length >= 2 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Merge Tasks">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => {
               setShowMergeModal(false);
               setMergeTargets([]);
               setSelectedPrimaryId(null);
             }}
           />
-          <div className={`relative w-full max-w-lg rounded-[var(--radius-xl)] shadow-xl p-6 ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[var(--brand-blue)]/10 flex items-center justify-center">
-                <GitMerge className="w-5 h-5 text-[var(--brand-blue)]" />
-              </div>
-              <div>
-                <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>Merge Tasks</h2>
-                <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
-                  Select the primary task to merge {mergeTargets.length} tasks into
-                </p>
+          <div className={`relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
+            {/* Header */}
+            <div className={`px-5 py-4 border-b ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[var(--brand-blue)]/15 flex items-center justify-center">
+                  <GitMerge className="w-4.5 h-4.5 text-[var(--brand-blue)]" />
+                </div>
+                <div>
+                  <h2 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>Merge {mergeTargets.length} Tasks</h2>
+                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+                    Select the task to keep
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2 max-h-80 overflow-y-auto mb-6">
-              {mergeTargets.map((todo, index) => (
-                <button
-                  key={todo.id}
-                  onClick={() => setSelectedPrimaryId(todo.id)}
-                  className={`w-full text-left p-4 rounded-xl border-2 transition-all hover:shadow-md ${
-                    selectedPrimaryId === todo.id
-                      ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]/10 shadow-md'
-                      : darkMode
-                        ? 'bg-slate-700/50 border-slate-600 hover:border-[var(--brand-sky)]'
-                        : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--brand-blue)]'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      darkMode ? 'bg-slate-600 text-slate-300' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-medium truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
-                        {todo.text}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-xs">
-                        <span className={darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}>
-                          {new Date(todo.created_at).toLocaleDateString()}
-                        </span>
-                        {todo.attachments && todo.attachments.length > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-[var(--accent-light)] text-[var(--accent)]">
-                            {todo.attachments.length} file{todo.attachments.length !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {todo.subtasks && todo.subtasks.length > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-[var(--brand-sky)]/20 text-[var(--brand-blue)]">
-                            {todo.subtasks.length} subtask{todo.subtasks.length !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {todo.priority && todo.priority !== 'medium' && (
-                          <span className={`px-1.5 py-0.5 rounded capitalize ${
-                            todo.priority === 'urgent' ? 'bg-[var(--danger-light)] text-[var(--danger)]' :
-                            todo.priority === 'high' ? 'bg-[var(--warning-light)] text-[var(--warning)]' :
-                            'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                          }`}>
-                            {todo.priority}
-                          </span>
+            {/* Task List */}
+            <div className="px-4 py-3 max-h-72 overflow-y-auto">
+              <div className="space-y-2">
+                {mergeTargets.map((todo) => (
+                  <button
+                    key={todo.id}
+                    onClick={() => setSelectedPrimaryId(todo.id)}
+                    className={`w-full text-left p-3 rounded-xl border transition-all ${
+                      selectedPrimaryId === todo.id
+                        ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]/10 ring-1 ring-[var(--brand-blue)]/30'
+                        : darkMode
+                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                          : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                        selectedPrimaryId === todo.id
+                          ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]'
+                          : darkMode
+                            ? 'border-slate-500'
+                            : 'border-[var(--border)]'
+                      }`}>
+                        {selectedPrimaryId === todo.id && (
+                          <Check className="w-3 h-3 text-white" />
                         )}
                       </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                          {todo.text}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+                            {new Date(todo.created_at).toLocaleDateString()}
+                          </span>
+                          {todo.attachments && todo.attachments.length > 0 && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                              {todo.attachments.length} file{todo.attachments.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {todo.subtasks && todo.subtasks.length > 0 && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                              {todo.subtasks.length} subtask{todo.subtasks.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className={`p-3 rounded-lg text-sm ${darkMode ? 'bg-slate-700 text-slate-300' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
-              <p className="font-medium mb-1">What happens when you merge:</p>
-              <ul className="list-disc list-inside space-y-0.5 text-xs">
-                <li>All notes will be combined</li>
-                <li>All attachments will be preserved</li>
-                <li>All subtasks will be combined</li>
-                <li>Highest priority will be kept</li>
-                <li>Earliest creation date will be preserved</li>
-              </ul>
+            {/* Info Box */}
+            <div className={`mx-4 mb-3 p-3 rounded-lg text-xs ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
+              <p className="font-medium mb-1.5 text-[var(--text-light)]">When merged:</p>
+              <div className="grid grid-cols-2 gap-1">
+                <span>• Notes combined</span>
+                <span>• Attachments kept</span>
+                <span>• Subtasks merged</span>
+                <span>• Highest priority</span>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
+            {/* Footer */}
+            <div className={`px-4 py-3 border-t flex justify-end gap-2 ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}>
               <button
                 onClick={() => {
                   setShowMergeModal(false);
@@ -2297,7 +2289,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 }}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                   darkMode
-                    ? 'text-slate-300 hover:bg-slate-700'
+                    ? 'text-slate-300 hover:bg-white/10'
                     : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
                 }`}
               >
@@ -2311,18 +2303,16 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                   }
                 }}
                 disabled={!selectedPrimaryId}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
                   selectedPrimaryId
-                    ? 'bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue)]/90'
+                    ? 'bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue)]/90 shadow-sm'
                     : darkMode
-                      ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                      ? 'bg-white/10 text-slate-500 cursor-not-allowed'
                       : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  <GitMerge className="w-4 h-4" />
-                  Merge Tasks
-                </span>
+                <GitMerge className="w-4 h-4" />
+                Merge
               </button>
             </div>
           </div>
