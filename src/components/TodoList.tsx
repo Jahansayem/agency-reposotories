@@ -35,7 +35,7 @@ import {
   LayoutList, LayoutGrid, Wifi, WifiOff, Search,
   ArrowUpDown, User, Calendar, AlertTriangle, CheckSquare,
   Trash2, X, Sun, Moon, ChevronDown, BarChart2, Activity, Target, GitMerge,
-  Paperclip, Filter, RotateCcw
+  Paperclip, Filter, RotateCcw, Mail
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import UserSwitcher from './UserSwitcher';
@@ -48,6 +48,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { logActivity } from '@/lib/activityLogger';
 import { findPotentialDuplicates, shouldCheckForDuplicates, DuplicateMatch } from '@/lib/duplicateDetection';
 import DuplicateDetectionModal from './DuplicateDetectionModal';
+import CustomerEmailModal from './CustomerEmailModal';
 
 interface TodoListProps {
   currentUser: AuthUser;
@@ -141,6 +142,10 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     transcription?: string;
     sourceFile?: File;
   } | null>(null);
+
+  // Customer email modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailTargetTodos, setEmailTargetTodos] = useState<Todo[]>([]);
 
   // DnD sensors for drag-and-drop reordering
   const sensors = useSensors(
@@ -1724,7 +1729,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search tasks..."
                 aria-label="Search tasks"
-                className="input-refined w-full pl-10 pr-4 py-2.5 text-sm text-[var(--foreground)] placeholder-[var(--text-light)]"
+                className="input-refined w-full !pl-10 pr-4 py-2.5 text-sm text-[var(--foreground)] placeholder-[var(--text-light)]"
               />
               {searchQuery && (
                 <button
@@ -1992,6 +1997,17 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                     <span className="hidden sm:inline">Merge</span>
                   </button>
                 )}
+                <button
+                  onClick={() => {
+                    const selectedTaskList = todos.filter(t => selectedTodos.has(t.id));
+                    setEmailTargetTodos(selectedTaskList);
+                    setShowEmailModal(true);
+                  }}
+                  className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--brand-sky)] text-[var(--brand-navy)] hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span className="hidden sm:inline">Email</span>
+                </button>
               </div>
             )}
           </div>
@@ -2299,6 +2315,19 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
           onCreateAnyway={handleCreateTaskAnyway}
           onAddToExisting={handleAddToExistingTask}
           onCancel={handleCancelDuplicateDetection}
+        />
+      )}
+
+      {/* Customer Email Modal */}
+      {showEmailModal && emailTargetTodos.length > 0 && (
+        <CustomerEmailModal
+          todos={emailTargetTodos}
+          currentUser={currentUser}
+          onClose={() => {
+            setShowEmailModal(false);
+            setEmailTargetTodos([]);
+          }}
+          darkMode={darkMode}
         />
       )}
 
