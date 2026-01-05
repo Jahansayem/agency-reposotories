@@ -130,6 +130,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [mergeTargets, setMergeTargets] = useState<Todo[]>([]);
   const [selectedPrimaryId, setSelectedPrimaryId] = useState<string | null>(null);
+  const [isMerging, setIsMerging] = useState(false);
 
   // Duplicate detection state
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -1164,110 +1165,123 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
   };
 
   const mergeTodos = async (primaryTodoId: string) => {
-    if (mergeTargets.length < 2) return;
+    if (mergeTargets.length < 2 || isMerging) return;
 
     const primaryTodo = mergeTargets.find(t => t.id === primaryTodoId);
     const secondaryTodos = mergeTargets.filter(t => t.id !== primaryTodoId);
 
     if (!primaryTodo) return;
 
-    // Combine data from all todos
-    const combinedNotes = [
-      primaryTodo.notes,
-      ...secondaryTodos.map(t => t.notes),
-      // Add merge history
-      `\n--- Merged Tasks (${new Date().toLocaleString()}) ---`,
-      ...secondaryTodos.map(t => `• "${t.text}" (created ${new Date(t.created_at).toLocaleDateString()})`)
-    ].filter(Boolean).join('\n');
+    setIsMerging(true);
 
-    // Combine all attachments
-    const combinedAttachments = [
-      ...(primaryTodo.attachments || []),
-      ...secondaryTodos.flatMap(t => t.attachments || [])
-    ];
+    try {
+      // Combine data from all todos
+      const combinedNotes = [
+        primaryTodo.notes,
+        ...secondaryTodos.map(t => t.notes),
+        // Add merge history
+        `\n--- Merged Tasks (${new Date().toLocaleString()}) ---`,
+        ...secondaryTodos.map(t => `• "${t.text}" (created ${new Date(t.created_at).toLocaleDateString()})`)
+      ].filter(Boolean).join('\n');
 
-    // Combine all subtasks
-    const combinedSubtasks = [
-      ...(primaryTodo.subtasks || []),
-      ...secondaryTodos.flatMap(t => t.subtasks || [])
-    ];
+      // Combine all attachments
+      const combinedAttachments = [
+        ...(primaryTodo.attachments || []),
+        ...secondaryTodos.flatMap(t => t.attachments || [])
+      ];
 
-    // Combine text (primary text + secondary texts as context)
-    const combinedText = secondaryTodos.length > 0
-      ? `${primaryTodo.text} [+${secondaryTodos.length} merged]`
-      : primaryTodo.text;
+      // Combine all subtasks
+      const combinedSubtasks = [
+        ...(primaryTodo.subtasks || []),
+        ...secondaryTodos.flatMap(t => t.subtasks || [])
+      ];
 
-    // Keep highest priority
-    const priorityRank: Record<TodoPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-    const highestPriority = [primaryTodo, ...secondaryTodos]
-      .reduce((highest, t) => {
-        return priorityRank[t.priority || 'medium'] < priorityRank[highest] ? (t.priority || 'medium') : highest;
-      }, primaryTodo.priority || 'medium');
+      // Combine text (primary text + secondary texts as context)
+      const combinedText = secondaryTodos.length > 0
+        ? `${primaryTodo.text} [+${secondaryTodos.length} merged]`
+        : primaryTodo.text;
 
-    // Update primary todo with merged data
-    const updatedTodo = {
-      ...primaryTodo,
-      text: combinedText,
-      notes: combinedNotes,
-      attachments: combinedAttachments,
-      subtasks: combinedSubtasks,
-      priority: highestPriority,
-    };
+      // Keep highest priority
+      const priorityRank: Record<TodoPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+      const highestPriority = [primaryTodo, ...secondaryTodos]
+        .reduce((highest, t) => {
+          return priorityRank[t.priority || 'medium'] < priorityRank[highest] ? (t.priority || 'medium') : highest;
+        }, primaryTodo.priority || 'medium');
 
-    // Optimistically update UI
-    setTodos(prev => prev.map(t => t.id === primaryTodoId ? updatedTodo : t));
+      // Update primary todo in database first
+      const { error: updateError } = await supabase
+        .from('todos')
+        .update({
+          text: combinedText,
+          notes: combinedNotes,
+          attachments: combinedAttachments,
+          subtasks: combinedSubtasks,
+          priority: highestPriority,
+        })
+        .eq('id', primaryTodoId);
 
-    // Delete secondary todos from UI
-    setTodos(prev => prev.filter(t => !secondaryTodos.some(st => st.id === t.id)));
+      if (updateError) {
+        console.error('Error updating merged todo:', updateError);
+        alert('Failed to merge tasks. Please try again.');
+        setIsMerging(false);
+        return;
+      }
 
-    // Update primary todo in database
-    const { error: updateError } = await supabase
-      .from('todos')
-      .update({
+      // Delete secondary todos from database
+      const { error: deleteError } = await supabase
+        .from('todos')
+        .delete()
+        .in('id', secondaryTodos.map(t => t.id));
+
+      if (deleteError) {
+        console.error('Error deleting merged todos:', deleteError);
+        alert('Merge partially failed. Refreshing...');
+        fetchTodos();
+        setIsMerging(false);
+        return;
+      }
+
+      // Update primary todo with merged data in UI
+      const updatedTodo = {
+        ...primaryTodo,
         text: combinedText,
         notes: combinedNotes,
         attachments: combinedAttachments,
         subtasks: combinedSubtasks,
         priority: highestPriority,
-      })
-      .eq('id', primaryTodoId);
+      };
 
-    if (updateError) {
-      console.error('Error updating merged todo:', updateError);
-      // Rollback by refetching
+      // Update UI after successful DB operations
+      setTodos(prev => {
+        const filtered = prev.filter(t => !secondaryTodos.some(st => st.id === t.id));
+        return filtered.map(t => t.id === primaryTodoId ? updatedTodo : t);
+      });
+
+      // Log activity
+      logActivity({
+        action: 'tasks_merged',
+        userName,
+        todoId: primaryTodoId,
+        todoText: combinedText,
+        details: {
+          merged_count: secondaryTodos.length,
+          merged_ids: secondaryTodos.map(t => t.id),
+        },
+      });
+
+      // Clear selection and close modal
+      setSelectedTodos(new Set());
+      setShowBulkActions(false);
+      setShowMergeModal(false);
+      setMergeTargets([]);
+      setSelectedPrimaryId(null);
+    } catch (error) {
+      console.error('Error during merge:', error);
+      alert('An unexpected error occurred. Please try again.');
       fetchTodos();
-      return;
+    } finally {
+      setIsMerging(false);
     }
-
-    // Delete secondary todos from database
-    const { error: deleteError } = await supabase
-      .from('todos')
-      .delete()
-      .in('id', secondaryTodos.map(t => t.id));
-
-    if (deleteError) {
-      console.error('Error deleting merged todos:', deleteError);
-      fetchTodos();
-      return;
-    }
-
-    // Log activity
-    logActivity({
-      action: 'tasks_merged',
-      userName,
-      todoId: primaryTodoId,
-      todoText: combinedText,
-      details: {
-        merged_count: secondaryTodos.length,
-        merged_ids: secondaryTodos.map(t => t.id),
-      },
-    });
-
-    // Clear selection and close modal
-    setSelectedTodos(new Set());
-    setShowBulkActions(false);
-    setShowMergeModal(false);
-    setMergeTargets([]);
   };
 
   const handleSelectTodo = (id: string, selected: boolean) => {
@@ -2194,9 +2208,11 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => {
-              setShowMergeModal(false);
-              setMergeTargets([]);
-              setSelectedPrimaryId(null);
+              if (!isMerging) {
+                setShowMergeModal(false);
+                setMergeTargets([]);
+                setSelectedPrimaryId(null);
+              }
             }}
           />
           <div className={`relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
@@ -2283,36 +2299,52 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
             <div className={`px-4 py-3 border-t flex justify-end gap-2 ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}>
               <button
                 onClick={() => {
-                  setShowMergeModal(false);
-                  setMergeTargets([]);
-                  setSelectedPrimaryId(null);
+                  if (!isMerging) {
+                    setShowMergeModal(false);
+                    setMergeTargets([]);
+                    setSelectedPrimaryId(null);
+                  }
                 }}
+                disabled={isMerging}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  darkMode
-                    ? 'text-slate-300 hover:bg-white/10'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
+                  isMerging
+                    ? 'opacity-50 cursor-not-allowed'
+                    : darkMode
+                      ? 'text-slate-300 hover:bg-white/10'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
                 }`}
               >
                 Cancel
               </button>
               <button
                 onClick={() => {
-                  if (selectedPrimaryId) {
+                  if (selectedPrimaryId && !isMerging) {
                     mergeTodos(selectedPrimaryId);
-                    setSelectedPrimaryId(null);
                   }
                 }}
-                disabled={!selectedPrimaryId}
+                disabled={!selectedPrimaryId || isMerging}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
-                  selectedPrimaryId
+                  selectedPrimaryId && !isMerging
                     ? 'bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue)]/90 shadow-sm'
                     : darkMode
                       ? 'bg-white/10 text-slate-500 cursor-not-allowed'
                       : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'
                 }`}
               >
-                <GitMerge className="w-4 h-4" />
-                Merge
+                {isMerging ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Merging...
+                  </>
+                ) : (
+                  <>
+                    <GitMerge className="w-4 h-4" />
+                    Merge Tasks
+                  </>
+                )}
               </button>
             </div>
           </div>
