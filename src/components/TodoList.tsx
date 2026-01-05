@@ -2097,6 +2097,15 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
             onUpdateNotes={updateNotes}
             onUpdateText={updateText}
             onUpdateSubtasks={updateSubtasks}
+            onToggle={toggleTodo}
+            onDuplicate={duplicateTodo}
+            onSetRecurrence={setRecurrence}
+            onUpdateAttachments={updateAttachments}
+            onSaveAsTemplate={(t) => setTemplateTodo(t)}
+            onEmailCustomer={(todo) => {
+              setEmailTargetTodos([todo]);
+              setShowEmailModal(true);
+            }}
           />
         )}
 

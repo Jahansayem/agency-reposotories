@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
@@ -40,9 +40,18 @@ import {
   ClipboardList,
   Zap,
   CheckCircle2,
-  LucideIcon
+  LucideIcon,
+  Copy,
+  Repeat,
+  BookmarkPlus,
+  Mail,
+  Upload,
+  File,
+  Image,
+  Video,
+  Mic
 } from 'lucide-react';
-import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask, RecurrencePattern, Attachment } from '@/types/todo';
 import Celebration from './Celebration';
 
 interface KanbanBoardProps {
@@ -57,6 +66,12 @@ interface KanbanBoardProps {
   onUpdateNotes?: (id: string, notes: string) => void;
   onUpdateText?: (id: string, text: string) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
+  onToggle?: (id: string, completed: boolean) => void;
+  onDuplicate?: (todo: Todo) => void;
+  onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
+  onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
+  onSaveAsTemplate?: (todo: Todo) => void;
+  onEmailCustomer?: (todo: Todo) => void;
 }
 
 const columns: { id: TodoStatus; title: string; Icon: LucideIcon; color: string; bgColor: string }[] = [
@@ -369,6 +384,12 @@ interface TaskDetailModalProps {
   onUpdateNotes?: (id: string, notes: string) => void;
   onUpdateText?: (id: string, text: string) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
+  onToggle?: (id: string, completed: boolean) => void;
+  onDuplicate?: (todo: Todo) => void;
+  onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
+  onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
+  onSaveAsTemplate?: (todo: Todo) => void;
+  onEmailCustomer?: (todo: Todo) => void;
 }
 
 function TaskDetailModal({
@@ -384,11 +405,20 @@ function TaskDetailModal({
   onUpdateNotes,
   onUpdateText,
   onUpdateSubtasks,
+  onToggle,
+  onDuplicate,
+  onSetRecurrence,
+  onUpdateAttachments,
+  onSaveAsTemplate,
+  onEmailCustomer,
 }: TaskDetailModalProps) {
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
   const [notes, setNotes] = useState(todo.notes || '');
   const [newSubtaskText, setNewSubtaskText] = useState('');
+  const [showRecurrenceMenu, setShowRecurrenceMenu] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync local state when todo prop changes (e.g., from real-time updates)
   useEffect(() => {
@@ -443,6 +473,78 @@ function TaskDetailModal({
     const updated = subtasks.filter((_, i) => i !== index);
     onUpdateSubtasks(todo.id, updated);
   };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !onUpdateAttachments) return;
+
+    setIsUploading(true);
+    try {
+      const newAttachments: Attachment[] = [];
+
+      for (const file of Array.from(files)) {
+        // Determine file type
+        let fileType: 'image' | 'document' | 'audio' | 'video' | 'other' = 'other';
+        if (file.type.startsWith('image/')) fileType = 'image';
+        else if (file.type.startsWith('audio/')) fileType = 'audio';
+        else if (file.type.startsWith('video/')) fileType = 'video';
+        else if (file.type.includes('pdf') || file.type.includes('document') || file.type.includes('text')) fileType = 'document';
+
+        // Create a temporary URL for the file (in real app, would upload to storage)
+        const url = URL.createObjectURL(file);
+
+        newAttachments.push({
+          id: `attachment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          file_name: file.name,
+          file_type: fileType,
+          file_size: file.size,
+          storage_path: url,
+          mime_type: file.type,
+          uploaded_at: new Date().toISOString(),
+          uploaded_by: todo.created_by,
+        });
+      }
+
+      const updatedAttachments = [...(todo.attachments || []), ...newAttachments];
+      onUpdateAttachments(todo.id, updatedAttachments);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAttachment = (attachmentId: string) => {
+    if (!onUpdateAttachments) return;
+    const updated = (todo.attachments || []).filter(a => a.id !== attachmentId);
+    onUpdateAttachments(todo.id, updated);
+  };
+
+  const getFileIcon = (fileType: string) => {
+    switch (fileType) {
+      case 'image': return Image;
+      case 'audio': return Mic;
+      case 'video': return Video;
+      case 'document': return FileText;
+      default: return File;
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const recurrenceOptions: { value: string; label: string }[] = [
+    { value: '', label: 'No repeat' },
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'monthly', label: 'Monthly' },
+  ];
+
+  const attachments = todo.attachments || [];
 
   return (
     <div
@@ -697,11 +799,188 @@ function TaskDetailModal({
             </div>
           )}
 
+          {/* Recurrence */}
+          {onSetRecurrence && (
+            <div>
+              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <Repeat className="inline-block w-3.5 h-3.5 mr-1" />
+                Repeat
+              </label>
+              <select
+                value={todo.recurrence || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  onSetRecurrence(todo.id, value === '' ? null : value as RecurrencePattern);
+                }}
+                className={`w-full px-3 py-2 rounded-lg border text-sm ${
+                  darkMode
+                    ? 'bg-slate-700 border-slate-600 text-white'
+                    : 'bg-white border-slate-200 text-slate-800'
+                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+              >
+                {recurrenceOptions.map((opt) => (
+                  <option key={opt.value || 'none'} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Attachments */}
+          {onUpdateAttachments && (
+            <div>
+              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <Paperclip className="inline-block w-3.5 h-3.5 mr-1" />
+                Attachments ({attachments.length})
+              </label>
+
+              {/* Existing attachments */}
+              {attachments.length > 0 && (
+                <div className="space-y-1.5 mb-2">
+                  {attachments.map((attachment) => {
+                    const FileIcon = getFileIcon(attachment.file_type);
+                    return (
+                      <div
+                        key={attachment.id}
+                        className={`flex items-center gap-2 p-2 rounded-lg ${
+                          darkMode ? 'bg-slate-700/50' : 'bg-slate-50'
+                        }`}
+                      >
+                        <FileIcon className={`w-4 h-4 flex-shrink-0 ${
+                          attachment.file_type === 'audio' ? 'text-purple-500' : 'text-amber-500'
+                        }`} />
+                        <span className={`flex-1 text-sm truncate ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                          {attachment.file_name}
+                        </span>
+                        <span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {formatFileSize(attachment.file_size)}
+                        </span>
+                        <button
+                          onClick={() => handleRemoveAttachment(attachment.id)}
+                          className={`p-1 rounded transition-colors ${
+                            darkMode ? 'hover:bg-slate-600 text-slate-400' : 'hover:bg-slate-200 text-slate-400'
+                          } hover:text-red-500`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Upload button */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed text-sm transition-colors ${
+                  darkMode
+                    ? 'border-slate-600 text-slate-400 hover:bg-slate-700/50 hover:border-slate-500'
+                    : 'border-slate-300 text-slate-500 hover:bg-slate-50 hover:border-slate-400'
+                } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <Upload className="w-4 h-4" />
+                {isUploading ? 'Uploading...' : 'Add files'}
+              </button>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className={`pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
+            <label className={`block text-xs font-medium mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Quick Actions
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {/* Mark Complete Toggle */}
+              {onToggle && (
+                <button
+                  onClick={() => onToggle(todo.id, !todo.completed)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    todo.completed
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : darkMode
+                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {todo.completed ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                  {todo.completed ? 'Completed' : 'Mark Done'}
+                </button>
+              )}
+
+              {/* Duplicate */}
+              {onDuplicate && (
+                <button
+                  onClick={() => {
+                    onDuplicate(todo);
+                    onClose();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    darkMode
+                      ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Copy className="w-4 h-4" />
+                  Duplicate
+                </button>
+              )}
+
+              {/* Save as Template */}
+              {onSaveAsTemplate && (
+                <button
+                  onClick={() => {
+                    onSaveAsTemplate(todo);
+                    onClose();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    darkMode
+                      ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <BookmarkPlus className="w-4 h-4" />
+                  Save Template
+                </button>
+              )}
+
+              {/* Email Customer */}
+              {onEmailCustomer && (
+                <button
+                  onClick={() => {
+                    onEmailCustomer(todo);
+                    onClose();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    darkMode
+                      ? 'bg-[var(--brand-sky)]/20 text-[var(--brand-blue)] hover:bg-[var(--brand-sky)]/30'
+                      : 'bg-[var(--brand-sky)]/30 text-[var(--brand-navy)] hover:bg-[var(--brand-sky)]/50'
+                  }`}
+                >
+                  <Mail className="w-4 h-4" />
+                  Email Update
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Meta info */}
           <div className={`pt-3 border-t text-xs ${
             darkMode ? 'border-slate-700 text-slate-500' : 'border-slate-200 text-slate-400'
           }`}>
             Created by {todo.created_by} • {new Date(todo.created_at).toLocaleDateString()}
+            {todo.recurrence && (
+              <span className="ml-2">
+                <Repeat className="inline-block w-3 h-3 mr-0.5" />
+                {todo.recurrence}
+              </span>
+            )}
           </div>
         </div>
 
@@ -743,6 +1022,12 @@ export default function KanbanBoard({
   onUpdateNotes,
   onUpdateText,
   onUpdateSubtasks,
+  onToggle,
+  onDuplicate,
+  onSetRecurrence,
+  onUpdateAttachments,
+  onSaveAsTemplate,
+  onEmailCustomer,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -957,6 +1242,12 @@ export default function KanbanBoard({
             onUpdateNotes={onUpdateNotes}
             onUpdateText={onUpdateText}
             onUpdateSubtasks={onUpdateSubtasks}
+            onToggle={onToggle}
+            onDuplicate={onDuplicate}
+            onSetRecurrence={onSetRecurrence}
+            onUpdateAttachments={onUpdateAttachments}
+            onSaveAsTemplate={onSaveAsTemplate}
+            onEmailCustomer={onEmailCustomer}
           />
         )}
       </AnimatePresence>
