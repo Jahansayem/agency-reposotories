@@ -123,6 +123,20 @@ interface SortableCardProps {
 
 function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPriority, onCardClick, showBulkActions, isSelected, onSelectTodo }: SortableCardProps) {
   const [showActions, setShowActions] = useState(false);
+  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+
+  // Helper to get date offset for snooze
+  const getSnoozeDate = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleSnooze = (days: number) => {
+    onSetDueDate(todo.id, getSnoozeDate(days));
+    setShowSnoozeMenu(false);
+  };
+
   const {
     attributes,
     listeners,
@@ -295,27 +309,92 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700"
+              className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 overflow-hidden"
             >
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              {/* Row 1: Date and Assignee */}
+              <div className="flex gap-2 mb-2">
                 <input
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 text-sm sm:text-xs px-3 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
+                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
                 />
                 <select
                   value={todo.assigned_to || ''}
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 text-sm sm:text-xs px-3 py-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
+                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
                 >
                   <option value="">Unassigned</option>
                   {users.map((user) => (
                     <option key={user} value={user}>{user}</option>
                   ))}
                 </select>
+              </div>
+              {/* Row 2: Priority and Action Buttons */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={priority}
+                  onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+                {/* Snooze button */}
+                {!todo.completed && (
+                  <div className="relative flex-shrink-0">
+                    <motion.button
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowSnoozeMenu(!showSnoozeMenu);
+                      }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/30 text-slate-400 hover:text-amber-500 transition-colors touch-manipulation flex items-center justify-center"
+                      aria-label="Snooze task"
+                      title="Snooze (reschedule)"
+                    >
+                      <Clock className="w-5 h-5 sm:w-4 sm:h-4" />
+                    </motion.button>
+                    {showSnoozeMenu && (
+                      <div
+                        className="absolute right-0 bottom-full mb-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg z-50 py-1 min-w-[140px]"
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSnooze(1); }}
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                        >
+                          Tomorrow
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSnooze(2); }}
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                        >
+                          In 2 Days
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSnooze(7); }}
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                        >
+                          Next Week
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSnooze(30); }}
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                        >
+                          Next Month
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <motion.button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
@@ -324,7 +403,7 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
                   }}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="p-3 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors touch-manipulation flex items-center justify-center"
+                  className="flex-shrink-0 p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors touch-manipulation flex items-center justify-center"
                   aria-label="Delete task"
                 >
                   <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -452,9 +531,22 @@ function TaskDetailModal({
   const [notes, setNotes] = useState(todo.notes || '');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [showRecurrenceMenu, setShowRecurrenceMenu] = useState(false);
+  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showContentImporter, setShowContentImporter] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to get date offset for snooze
+  const getSnoozeDate = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleSnooze = (days: number) => {
+    onSetDueDate(todo.id, getSnoozeDate(days));
+    setShowSnoozeMenu(false);
+  };
 
   // Sync local state when todo prop changes (e.g., from real-time updates)
   useEffect(() => {
@@ -714,16 +806,71 @@ function TaskDetailModal({
               <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Due Date
               </label>
-              <input
-                type="date"
-                value={todo.due_date ? todo.due_date.split('T')[0] : ''}
-                onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${
-                  darkMode
-                    ? 'bg-slate-700 border-slate-600 text-white'
-                    : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
-              />
+              <div className="flex gap-1.5">
+                <input
+                  type="date"
+                  value={todo.due_date ? todo.due_date.split('T')[0] : ''}
+                  onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
+                  className={`flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm ${
+                    darkMode
+                      ? 'bg-slate-700 border-slate-600 text-white'
+                      : 'bg-white border-slate-200 text-slate-800'
+                  } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                />
+                {!todo.completed && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
+                      className={`p-2 rounded-lg border text-sm transition-colors ${
+                        darkMode
+                          ? 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-amber-900/30 hover:text-amber-400 hover:border-amber-500/50'
+                          : 'bg-white border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300'
+                      }`}
+                      title="Snooze (quick reschedule)"
+                    >
+                      <Clock className="w-4 h-4" />
+                    </button>
+                    {showSnoozeMenu && (
+                      <div className={`absolute right-0 top-full mt-1 rounded-lg shadow-lg z-50 py-1 min-w-[140px] border ${
+                        darkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-200'
+                      }`}>
+                        <button
+                          onClick={() => handleSnooze(1)}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
+                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          Tomorrow
+                        </button>
+                        <button
+                          onClick={() => handleSnooze(2)}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
+                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          In 2 Days
+                        </button>
+                        <button
+                          onClick={() => handleSnooze(7)}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
+                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          Next Week
+                        </button>
+                        <button
+                          onClick={() => handleSnooze(30)}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
+                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          Next Month
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

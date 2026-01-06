@@ -35,7 +35,7 @@ import {
   LayoutList, LayoutGrid, Wifi, WifiOff, Search,
   ArrowUpDown, User, Calendar, AlertTriangle, CheckSquare,
   Trash2, X, Sun, Moon, ChevronDown, BarChart2, Activity, Target, GitMerge,
-  Paperclip, Filter, RotateCcw, Mail, Check
+  Paperclip, Filter, RotateCcw, Mail, Check, Clock, Zap
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import UserSwitcher from './UserSwitcher';
@@ -46,7 +46,7 @@ import StrategicDashboard from './StrategicDashboard';
 import SaveTemplateModal from './SaveTemplateModal';
 import { useTheme } from '@/contexts/ThemeContext';
 import { logActivity } from '@/lib/activityLogger';
-import { findPotentialDuplicates, shouldCheckForDuplicates, DuplicateMatch } from '@/lib/duplicateDetection';
+import { findPotentialDuplicates, shouldCheckForDuplicates, DuplicateMatch, extractPotentialNames } from '@/lib/duplicateDetection';
 import DuplicateDetectionModal from './DuplicateDetectionModal';
 import CustomerEmailModal from './CustomerEmailModal';
 
@@ -105,6 +105,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
   // Advanced filter state
   const [statusFilter, setStatusFilter] = useState<TodoStatus | 'all'>('all');
   const [assignedToFilter, setAssignedToFilter] = useState<string>('all');
+  const [customerFilter, setCustomerFilter] = useState<string>('all');
   const [hasAttachmentsFilter, setHasAttachmentsFilter] = useState<boolean | null>(null);
   const [dateRangeFilter, setDateRangeFilter] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -1156,6 +1157,42 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     }
   };
 
+  // Bulk reschedule - set new due date for selected tasks
+  const bulkReschedule = async (newDueDate: string) => {
+    const idsToUpdate = Array.from(selectedTodos);
+    const originalTodos = todos.filter(t => selectedTodos.has(t.id));
+
+    // Optimistic update
+    setTodos((prev) =>
+      prev.map((todo) =>
+        selectedTodos.has(todo.id) ? { ...todo, due_date: newDueDate } : todo
+      )
+    );
+    setSelectedTodos(new Set());
+    setShowBulkActions(false);
+
+    const { error } = await supabase
+      .from('todos')
+      .update({ due_date: newDueDate })
+      .in('id', idsToUpdate);
+
+    if (error) {
+      console.error('Error bulk rescheduling:', error);
+      // Rollback on failure
+      setTodos((prev) => {
+        const rollbackMap = new Map(originalTodos.map(t => [t.id, t]));
+        return prev.map((todo) => rollbackMap.get(todo.id) || todo);
+      });
+    }
+  };
+
+  // Helper to get date offset
+  const getDateOffset = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
   // Merge selected todos into one
   const initiateMerge = () => {
     if (selectedTodos.size < 2) return;
@@ -1309,6 +1346,16 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     return todos;
   }, [todos]);
 
+  // Extract unique customer names from todos for filtering
+  const uniqueCustomers = useMemo(() => {
+    const customers = new Set<string>();
+    todos.forEach(todo => {
+      const names = extractPotentialNames(`${todo.text} ${todo.notes || ''}`);
+      names.forEach(name => customers.add(name));
+    });
+    return Array.from(customers).sort();
+  }, [todos]);
+
   // Filter and sort todos
   const filteredAndSortedTodos = useMemo(() => {
     let result = [...visibleTodos];
@@ -1346,6 +1393,10 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
       case 'urgent':
         result = result.filter((todo) => todo.priority === 'urgent' && !todo.completed);
         break;
+      case 'triage':
+        // Triage mode: show only overdue tasks, auto-sort by urgency
+        result = result.filter((todo) => isOverdue(todo.due_date, todo.completed));
+        break;
     }
 
     // Apply status filter
@@ -1369,6 +1420,14 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
       } else {
         result = result.filter((todo) => !todo.attachments || todo.attachments.length === 0);
       }
+    }
+
+    // Apply customer filter
+    if (customerFilter !== 'all') {
+      result = result.filter((todo) => {
+        const names = extractPotentialNames(`${todo.text} ${todo.notes || ''}`);
+        return names.includes(customerFilter);
+      });
     }
 
     // Apply date range filter (on due_date)
@@ -1413,6 +1472,24 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
       case 'alphabetical':
         result.sort((a, b) => a.text.localeCompare(b.text));
         break;
+      case 'urgency':
+        // Smart urgency sort: combines days overdue with priority
+        result.sort((a, b) => {
+          const getUrgencyScore = (todo: Todo) => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let daysOverdue = 0;
+            if (todo.due_date && !todo.completed) {
+              const dueDate = new Date(todo.due_date);
+              dueDate.setHours(0, 0, 0, 0);
+              daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86400000));
+            }
+            const priorityWeight = { urgent: 100, high: 50, medium: 25, low: 0 }[todo.priority || 'medium'];
+            return (daysOverdue * 10) + priorityWeight;
+          };
+          return getUrgencyScore(b) - getUrgencyScore(a);
+        });
+        break;
       case 'custom':
         // Sort by custom order if available
         if (customOrder.length > 0) {
@@ -1434,7 +1511,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
     }
 
     return result;
-  }, [visibleTodos, searchQuery, quickFilter, showCompleted, sortOption, userName, customOrder, statusFilter, assignedToFilter, hasAttachmentsFilter, dateRangeFilter]);
+  }, [visibleTodos, searchQuery, quickFilter, showCompleted, sortOption, userName, customOrder, statusFilter, assignedToFilter, customerFilter, hasAttachmentsFilter, dateRangeFilter]);
 
   // Stats should be based on visible todos only
   const stats = {
@@ -1756,6 +1833,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 <option value="created">Newest</option>
                 <option value="due_date">Due Date</option>
                 <option value="priority">Priority</option>
+                <option value="urgency">Urgency</option>
                 <option value="alphabetical">A-Z</option>
                 <option value="custom">Manual</option>
               </select>
@@ -1791,6 +1869,26 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               </button>
             ))}
 
+            {/* Triage mode - special button for overdue tasks */}
+            {stats.overdue > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickFilter('triage');
+                  setSortOption('urgency');
+                }}
+                className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
+                  quickFilter === 'triage'
+                    ? 'bg-[var(--danger)] text-white shadow-sm'
+                    : 'bg-[var(--danger-light)] text-[var(--danger)] hover:bg-[var(--danger)]/20 border border-[var(--danger)]/20'
+                }`}
+                aria-pressed={quickFilter === 'triage'}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Triage ({stats.overdue})
+              </button>
+            )}
+
             <div className="w-px h-5 bg-[var(--border)] mx-1" />
 
             {/* Show completed toggle */}
@@ -1815,7 +1913,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               type="button"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
-                showAdvancedFilters || statusFilter !== 'all' || assignedToFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end
+                showAdvancedFilters || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end
                   ? 'bg-[var(--brand-blue)] text-white shadow-sm'
                   : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
               }`}
@@ -1823,15 +1921,15 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
             >
               <Filter className="w-3.5 h-3.5" />
               Filters
-              {(statusFilter !== 'all' || assignedToFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
+              {(statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
                 <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-white/20">
-                  {[statusFilter !== 'all', assignedToFilter !== 'all', hasAttachmentsFilter !== null, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length}
+                  {[statusFilter !== 'all', assignedToFilter !== 'all', customerFilter !== 'all', hasAttachmentsFilter !== null, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length}
                 </span>
               )}
             </button>
 
             {/* Active filter indicator / Clear all */}
-            {(quickFilter !== 'all' || statusFilter !== 'all' || assignedToFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
+            {(quickFilter !== 'all' || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
               <button
                 type="button"
                 onClick={() => {
@@ -1839,6 +1937,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                   setShowCompleted(false);
                   setStatusFilter('all');
                   setAssignedToFilter('all');
+                  setCustomerFilter('all');
                   setHasAttachmentsFilter(null);
                   setDateRangeFilter({ start: '', end: '' });
                 }}
@@ -1880,6 +1979,21 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                   <option value="unassigned">Unassigned</option>
                   {users.map((user) => (
                     <option key={user} value={user}>{user}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Customer filter */}
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Customer</label>
+                <select
+                  value={customerFilter}
+                  onChange={(e) => setCustomerFilter(e.target.value)}
+                  className="input-refined w-full text-sm py-2"
+                >
+                  <option value="all">All Customers</option>
+                  {uniqueCustomers.map((customer) => (
+                    <option key={customer} value={customer}>{customer}</option>
                   ))}
                 </select>
               </div>
@@ -1926,7 +2040,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
         </div>
 
         {/* Bulk Actions - Available in both list and board views */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
             <button
               onClick={() => {
                 if (showBulkActions) {
@@ -1934,7 +2048,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
                 }
                 setShowBulkActions(!showBulkActions);
               }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 flex-shrink-0 ${
                 showBulkActions
                   ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-sm'
                   : 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] border border-[var(--border)]'
@@ -1946,70 +2060,92 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
 
             {/* Bulk actions bar */}
             {showBulkActions && selectedTodos.size > 0 && (
-              <div className="flex items-center gap-2 flex-1">
-                <span className="text-sm font-medium text-[var(--foreground)]">
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                <span className="text-sm font-medium text-[var(--foreground)] flex-shrink-0">
                   {selectedTodos.size} selected
                 </span>
                 <button
                   onClick={selectAll}
-                  className="px-2.5 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
+                  className="px-2.5 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors flex-shrink-0"
                 >
                   All
                 </button>
                 <button
                   onClick={clearSelection}
-                  className="px-2.5 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
+                  className="px-2.5 py-1 text-xs rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors flex-shrink-0"
                 >
                   Clear
                 </button>
-                <div className="flex-1" />
-                <button
-                  onClick={bulkComplete}
-                  className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--success)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm"
-                >
-                  <CheckSquare className="w-4 h-4" />
-                  <span className="hidden sm:inline">Complete</span>
-                </button>
-                <div className="relative">
-                  <select
-                    onChange={(e) => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}
-                    className="input-refined appearance-none px-3 py-2 pr-8 text-sm cursor-pointer"
-                    aria-label="Assign to"
-                  >
-                    <option value="">Assign...</option>
-                    {users.map((user) => (
-                      <option key={user} value={user}>{user}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
-                </div>
-                <button
-                  onClick={bulkDelete}
-                  className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--danger)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span className="hidden sm:inline">Delete</span>
-                </button>
-                {selectedTodos.size >= 2 && (
+                <div className="hidden sm:block flex-1" />
+                <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={initiateMerge}
-                    className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--brand-blue)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm"
+                    onClick={bulkComplete}
+                    className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--success)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm flex-shrink-0"
                   >
-                    <GitMerge className="w-4 h-4" />
-                    <span className="hidden sm:inline">Merge</span>
+                    <CheckSquare className="w-4 h-4" />
+                    <span className="hidden sm:inline">Complete</span>
                   </button>
-                )}
-                <button
-                  onClick={() => {
-                    const selectedTaskList = todos.filter(t => selectedTodos.has(t.id));
-                    setEmailTargetTodos(selectedTaskList);
-                    setShowEmailModal(true);
-                  }}
-                  className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--brand-sky)] text-[var(--brand-navy)] hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span className="hidden sm:inline">Email</span>
-                </button>
+                  <div className="relative flex-shrink-0">
+                    <select
+                      onChange={(e) => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}
+                      className="input-refined appearance-none px-3 py-2 pr-8 text-sm cursor-pointer"
+                      aria-label="Assign to"
+                    >
+                      <option value="">Assign...</option>
+                      {users.map((user) => (
+                        <option key={user} value={user}>{user}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+                  </div>
+                  {/* Reschedule dropdown */}
+                  <div className="relative flex-shrink-0">
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          bulkReschedule(e.target.value);
+                        }
+                        e.target.value = '';
+                      }}
+                      className="input-refined appearance-none px-3 py-2 pr-8 text-sm cursor-pointer"
+                      aria-label="Reschedule to"
+                    >
+                      <option value="">Reschedule...</option>
+                      <option value={getDateOffset(0)}>Today</option>
+                      <option value={getDateOffset(1)}>Tomorrow</option>
+                      <option value={getDateOffset(7)}>Next Week</option>
+                      <option value={getDateOffset(30)}>Next Month</option>
+                    </select>
+                    <Clock className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+                  </div>
+                  <button
+                    onClick={bulkDelete}
+                    className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--danger)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm flex-shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </button>
+                  {selectedTodos.size >= 2 && (
+                    <button
+                      onClick={initiateMerge}
+                      className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--brand-blue)] text-white hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm flex-shrink-0"
+                    >
+                      <GitMerge className="w-4 h-4" />
+                      <span className="hidden sm:inline">Merge</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      const selectedTaskList = todos.filter(t => selectedTodos.has(t.id));
+                      setEmailTargetTodos(selectedTaskList);
+                      setShowEmailModal(true);
+                    }}
+                    className="px-3.5 py-2 text-sm rounded-[var(--radius-md)] bg-[var(--brand-sky)] text-[var(--brand-navy)] hover:opacity-90 flex items-center gap-1.5 transition-all shadow-sm flex-shrink-0"
+                  >
+                    <Mail className="w-4 h-4" />
+                    <span className="hidden sm:inline">Email</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

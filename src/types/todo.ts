@@ -85,8 +85,8 @@ export interface Todo {
   merged_from?: string[]; // IDs of tasks that were merged into this one
 }
 
-export type SortOption = 'created' | 'due_date' | 'priority' | 'alphabetical' | 'custom';
-export type QuickFilter = 'all' | 'my_tasks' | 'due_today' | 'overdue' | 'urgent';
+export type SortOption = 'created' | 'due_date' | 'priority' | 'alphabetical' | 'custom' | 'urgency';
+export type QuickFilter = 'all' | 'my_tasks' | 'due_today' | 'overdue' | 'urgent' | 'triage';
 
 export type ViewMode = 'list' | 'kanban';
 

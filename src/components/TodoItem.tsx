@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock } from 'lucide-react';
 import { Todo, TodoPriority, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import AttachmentList from './AttachmentList';
 import AttachmentUpload from './AttachmentUpload';
@@ -194,7 +194,20 @@ export default function TodoItem({
   const [showAttachmentUpload, setShowAttachmentUpload] = useState(false);
   const [showAttachments, setShowAttachments] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
+  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const priority = todo.priority || 'medium';
+
+  // Helper to get date offset for snooze
+  const getSnoozeDate = (days: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleSnooze = (days: number) => {
+    onSetDueDate(todo.id, getSnoozeDate(days));
+    setShowSnoozeMenu(false);
+  };
   const priorityConfig = PRIORITY_CONFIG[priority];
   const dueDateStatus = todo.due_date ? getDueDateStatus(todo.due_date, todo.completed) : null;
 
@@ -283,16 +296,17 @@ export default function TodoItem({
           />
         )}
 
-        {/* Completion checkbox */}
+        {/* Completion checkbox - prominent one-click complete */}
         <button
           onClick={handleToggle}
-          className={`w-7 h-7 sm:w-6 sm:h-6 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
+          className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 touch-manipulation hover:scale-110 active:scale-95 ${
             todo.completed
-              ? 'bg-[var(--success)] border-[var(--success)]'
-              : 'border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--accent-light)] active:border-[var(--accent)]'
+              ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
+              : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10 hover:shadow-md active:border-[var(--success)]'
           }`}
+          title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
         >
-          {todo.completed && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+          {todo.completed && <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
         </button>
 
         {/* Content */}
@@ -400,6 +414,44 @@ export default function TodoItem({
               </span>
             )}
           </div>
+
+          {/* Quick inline actions - visible on hover for incomplete tasks */}
+          {!todo.completed && (
+            <div
+              className="hidden sm:flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                type="date"
+                value={todo.due_date ? todo.due_date.split('T')[0] : ''}
+                onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
+                className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
+                title="Set due date"
+              />
+              <select
+                value={todo.assigned_to || ''}
+                onChange={(e) => onAssign(todo.id, e.target.value || null)}
+                className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none min-w-[90px]"
+                title="Assign to"
+              >
+                <option value="">Unassigned</option>
+                {users.map((user) => (
+                  <option key={user} value={user}>{user}</option>
+                ))}
+              </select>
+              <select
+                value={priority}
+                onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
+                className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
+                title="Set priority"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Action buttons - always visible on mobile, hover on desktop */}
@@ -435,6 +487,48 @@ export default function TodoItem({
             >
               <Copy className="w-4 h-4" />
             </button>
+          )}
+
+          {/* Snooze - only show for incomplete tasks */}
+          {!todo.completed && (
+            <div className="relative">
+              <button
+                onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
+                className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-amber-50 dark:hover:bg-amber-500/10 text-[var(--text-muted)] hover:text-amber-600"
+                aria-label="Snooze task"
+                title="Snooze (reschedule)"
+              >
+                <Clock className="w-4 h-4" />
+              </button>
+              {showSnoozeMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-lg z-50 py-1 min-w-[140px]">
+                  <button
+                    onClick={() => handleSnooze(1)}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
+                  >
+                    Tomorrow
+                  </button>
+                  <button
+                    onClick={() => handleSnooze(2)}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
+                  >
+                    In 2 Days
+                  </button>
+                  <button
+                    onClick={() => handleSnooze(7)}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
+                  >
+                    Next Week
+                  </button>
+                  <button
+                    onClick={() => handleSnooze(30)}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
+                  >
+                    Next Month
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Email Customer */}
