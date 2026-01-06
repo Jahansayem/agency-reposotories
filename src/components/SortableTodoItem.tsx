@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import TodoItem from './TodoItem';
-import { Todo, TodoPriority, RecurrencePattern, Subtask, Attachment } from '@/types/todo';
+import { Todo, TodoPriority, TodoStatus, RecurrencePattern, Subtask, Attachment } from '@/types/todo';
 
 interface SortableTodoItemProps {
   todo: Todo;
@@ -18,6 +18,8 @@ interface SortableTodoItemProps {
   onAssign: (id: string, assignedTo: string | null) => void;
   onSetDueDate: (id: string, dueDate: string | null) => void;
   onSetPriority: (id: string, priority: TodoPriority) => void;
+  onStatusChange?: (id: string, status: TodoStatus) => void;
+  onUpdateText?: (id: string, text: string) => void;
   onDuplicate?: (todo: Todo) => void;
   onUpdateNotes?: (id: string, notes: string) => void;
   onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;

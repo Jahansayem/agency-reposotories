@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock } from 'lucide-react';
-import { Todo, TodoPriority, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
+import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, STATUS_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import AttachmentList from './AttachmentList';
 import AttachmentUpload from './AttachmentUpload';
 import Celebration from './Celebration';
@@ -117,6 +117,8 @@ interface TodoItemProps {
   onAssign: (id: string, assignedTo: string | null) => void;
   onSetDueDate: (id: string, dueDate: string | null) => void;
   onSetPriority: (id: string, priority: TodoPriority) => void;
+  onStatusChange?: (id: string, status: TodoStatus) => void;
+  onUpdateText?: (id: string, text: string) => void;
   onDuplicate?: (todo: Todo) => void;
   onUpdateNotes?: (id: string, notes: string) => void;
   onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
@@ -176,6 +178,8 @@ export default function TodoItem({
   onAssign,
   onSetDueDate,
   onSetPriority,
+  onStatusChange,
+  onUpdateText,
   onDuplicate,
   onUpdateNotes,
   onSetRecurrence,
@@ -195,7 +199,11 @@ export default function TodoItem({
   const [showAttachments, setShowAttachments] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+  const [editingText, setEditingText] = useState(false);
+  const [text, setText] = useState(todo.text);
   const priority = todo.priority || 'medium';
+  const status = todo.status || 'todo';
+  const statusConfig = STATUS_CONFIG[status];
 
   // Helper to get date offset for snooze
   const getSnoozeDate = (days: number) => {
@@ -216,6 +224,14 @@ export default function TodoItem({
       setCelebrating(true);
     }
     onToggle(todo.id, !todo.completed);
+  };
+
+  const handleSaveText = () => {
+    const trimmed = text.trim();
+    if (onUpdateText && trimmed && trimmed !== todo.text) {
+      onUpdateText(todo.id, trimmed);
+    }
+    setEditingText(false);
   };
 
   const handleNotesBlur = () => {
@@ -271,6 +287,12 @@ export default function TodoItem({
     setShowContentImporter(false);
   };
 
+  useEffect(() => {
+    if (!editingText) {
+      setText(todo.text);
+    }
+  }, [todo.text, editingText]);
+
   return (
     <div
       role="listitem"
@@ -311,13 +333,31 @@ export default function TodoItem({
 
         {/* Content */}
         <div className="flex-1 min-w-0" onClick={() => setExpanded(!expanded)}>
-          <p className={`font-medium cursor-pointer ${
-            todo.completed
-              ? 'text-[var(--text-light)] line-through'
-              : 'text-[var(--foreground)]'
-          }`}>
-            {todo.text}
-          </p>
+          {editingText ? (
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onBlur={handleSaveText}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveText();
+                if (e.key === 'Escape') {
+                  setText(todo.text);
+                  setEditingText(false);
+                }
+              }}
+              autoFocus
+              className="input-refined w-full text-base sm:text-sm px-3 py-2 text-[var(--foreground)]"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <p className={`font-medium cursor-pointer ${
+              todo.completed
+                ? 'text-[var(--text-light)] line-through'
+                : 'text-[var(--foreground)]'
+            }`}>
+              {todo.text}
+            </p>
+          )}
 
           {/* Meta row */}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -328,6 +368,14 @@ export default function TodoItem({
             >
               <Flag className="w-3 h-3" />
               {priorityConfig.label}
+            </span>
+
+            {/* Status */}
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium"
+              style={{ backgroundColor: statusConfig.bgColor, color: statusConfig.color }}
+            >
+              {statusConfig.label}
             </span>
 
             {/* Due date with color coding */}
@@ -465,6 +513,21 @@ export default function TodoItem({
           >
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
+
+          {/* Edit title */}
+          {onUpdateText && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingText(true);
+                setExpanded(true);
+              }}
+              className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+              aria-label="Edit task title"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
 
           {/* Save as Template */}
           {onSaveAsTemplate && (
@@ -630,10 +693,23 @@ export default function TodoItem({
       )}
 
       {/* Expanded actions */}
-      {expanded && !todo.completed && (
+      {expanded && (
         <div className="px-3 sm:px-4 pb-4 pt-3 border-t border-[var(--border-subtle)] space-y-3">
-          {/* Row 1: Priority, Due date, Assign, Recurrence - grid on mobile for better layout */}
+          {/* Row 1: Status, Priority, Due date, Assign, Recurrence - grid on mobile for better layout */}
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            {/* Status */}
+            {onStatusChange && (
+              <select
+                value={status}
+                onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
+                className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
+              >
+                <option value="todo">To Do</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            )}
+
             {/* Priority selector */}
             <select
               value={priority}

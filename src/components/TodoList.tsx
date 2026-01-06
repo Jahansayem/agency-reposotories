@@ -2048,6 +2048,8 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
                       onAssign={assignTodo}
                       onSetDueDate={setDueDate}
                       onSetPriority={setPriority}
+                      onStatusChange={updateStatus}
+                      onUpdateText={updateText}
                       onDuplicate={duplicateTodo}
                       onUpdateNotes={updateNotes}
                       onSetRecurrence={setRecurrence}
