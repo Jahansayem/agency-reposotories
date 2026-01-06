@@ -35,7 +35,7 @@ import {
   LayoutList, LayoutGrid, Wifi, WifiOff, Search,
   ArrowUpDown, User, Calendar, AlertTriangle, CheckSquare,
   Trash2, X, Sun, Moon, ChevronDown, BarChart2, Activity, Target, GitMerge,
-  Paperclip, Filter, RotateCcw, Mail, Check, Clock, Zap
+  Paperclip, Filter, RotateCcw, Mail, Check, Clock, Zap, ChevronLeft, Home
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import UserSwitcher from './UserSwitcher';
@@ -53,6 +53,9 @@ import CustomerEmailModal from './CustomerEmailModal';
 interface TodoListProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
+  onBackToDashboard?: () => void;
+  initialFilter?: QuickFilter | null;
+  autoFocusAddTask?: boolean;
 }
 
 // Helper to check if due today
@@ -83,7 +86,7 @@ const priorityOrder: Record<TodoPriority, number> = {
   low: 3,
 };
 
-export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
+export default function TodoList({ currentUser, onUserChange, onBackToDashboard, initialFilter, autoFocusAddTask }: TodoListProps) {
   const userName = currentUser.name;
   const { theme, toggleTheme } = useTheme();
   const darkMode = theme === 'dark';
@@ -99,7 +102,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
   // Search, sort, and filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('created');
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialFilter || 'all');
   const [showCompleted, setShowCompleted] = useState(false);
 
   // Advanced filter state
@@ -1605,6 +1608,20 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
           <div className="flex items-center justify-between gap-3">
             {/* Logo & Context Info */}
             <div className="flex items-center gap-3 min-w-0">
+              {/* Back to Dashboard button */}
+              {onBackToDashboard && (
+                <button
+                  onClick={onBackToDashboard}
+                  className={`p-2 rounded-xl transition-all flex-shrink-0 ${
+                    darkMode
+                      ? 'hover:bg-white/10 text-white/70 hover:text-white'
+                      : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  }`}
+                  title="Back to Dashboard"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              )}
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center flex-shrink-0 shadow-lg" style={{ boxShadow: '0 4px 12px rgba(0, 51, 160, 0.35)' }}>
                 <span className="text-white font-bold text-base">B</span>
               </div>
@@ -1794,7 +1811,7 @@ export default function TodoList({ currentUser, onUserChange }: TodoListProps) {
               }}
             />
           </div>
-          <AddTodo onAdd={addTodo} users={users} darkMode={darkMode} currentUserId={currentUser.id} />
+          <AddTodo onAdd={addTodo} users={users} darkMode={darkMode} currentUserId={currentUser.id} autoFocus={autoFocusAddTask} />
         </div>
 
         {/* Unified Filter Bar - Premium */}

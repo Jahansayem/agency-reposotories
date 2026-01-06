@@ -13,6 +13,7 @@ interface AddTodoProps {
   users: string[];
   darkMode?: boolean;
   currentUserId?: string;
+  autoFocus?: boolean;
 }
 
 interface SmartParseResult {
@@ -81,7 +82,7 @@ declare global {
   }
 }
 
-export default function AddTodo({ onAdd, users, darkMode = true, currentUserId }: AddTodoProps) {
+export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, autoFocus }: AddTodoProps) {
   const [text, setText] = useState('');
   const [priority, setPriority] = useState<TodoPriority>('medium');
   const [dueDate, setDueDate] = useState('');
@@ -132,6 +133,13 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId }
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [text]);
+
+  // Auto-focus on mount if requested
+  useEffect(() => {
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [autoFocus]);
 
   // Smart parse API call
   const smartParse = useCallback(async (inputText: string): Promise<SmartParseResult | null> => {

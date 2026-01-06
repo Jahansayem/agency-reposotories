@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import TodoList from '@/components/TodoList';
+import MainApp from '@/components/MainApp';
 import LoginScreen from '@/components/LoginScreen';
 import { AuthUser } from '@/types/todo';
 import { getStoredSession, setStoredSession, clearStoredSession } from '@/lib/auth';
@@ -105,5 +105,5 @@ export default function Home() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  return <TodoList currentUser={currentUser} onUserChange={handleUserChange} />;
+  return <MainApp currentUser={currentUser} onUserChange={handleUserChange} />;
 }
