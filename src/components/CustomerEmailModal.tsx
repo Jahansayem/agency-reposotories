@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Mail, Copy, ExternalLink, Sparkles, Check,
   User, Phone, AtSign, FileText, ChevronDown, ChevronUp,
-  RefreshCw, Send
+  RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 import { extractPhoneNumbers, extractEmails, extractPotentialNames } from '@/lib/duplicateDetection';
@@ -26,10 +26,17 @@ interface DetectedCustomer {
   confidence: 'high' | 'medium' | 'low';
 }
 
+interface EmailWarning {
+  type: 'sensitive_info' | 'date_promise' | 'coverage_detail' | 'pricing' | 'negative_news' | 'needs_verification';
+  message: string;
+  location: string;
+}
+
 interface GeneratedEmail {
   subject: string;
   body: string;
   suggestedFollowUp?: string;
+  warnings?: EmailWarning[];
 }
 
 export default function CustomerEmailModal({
@@ -116,6 +123,12 @@ export default function CustomerEmailModal({
             subtasksTotal: t.subtasks?.length || 0,
             notes: t.notes,
             dueDate: t.due_date,
+            transcription: t.transcription,
+            attachments: t.attachments?.map(a => ({
+              file_name: a.file_name,
+              file_type: a.file_type,
+            })),
+            completed: t.completed,
           })),
           tone,
           senderName: currentUser.name,
@@ -133,6 +146,7 @@ export default function CustomerEmailModal({
         subject: data.subject,
         body: data.body,
         suggestedFollowUp: data.suggestedFollowUp,
+        warnings: data.warnings || [],
       });
       setEditedSubject(data.subject);
       setEditedBody(data.body);
@@ -461,6 +475,49 @@ export default function CustomerEmailModal({
                   Regenerate
                 </button>
               </div>
+
+              {/* Warnings */}
+              {generatedEmail.warnings && generatedEmail.warnings.length > 0 && (
+                <div className={`mb-3 p-3 rounded-lg border-2 ${
+                  darkMode
+                    ? 'bg-yellow-500/10 border-yellow-500/30'
+                    : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex items-start gap-2 mb-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-yellow-700 dark:text-yellow-400 mb-1">
+                        Review Before Sending
+                      </h4>
+                      <div className="space-y-2">
+                        {generatedEmail.warnings.map((warning, i) => {
+                          const getWarningIcon = (type: string) => {
+                            switch (type) {
+                              case 'sensitive_info': return Shield;
+                              case 'date_promise': return Calendar;
+                              case 'pricing': return DollarSign;
+                              case 'coverage_detail': return FileText;
+                              default: return Info;
+                            }
+                          };
+                          const WarningIcon = getWarningIcon(warning.type);
+                          return (
+                            <div key={i} className={`flex items-start gap-2 text-xs ${
+                              darkMode ? 'text-yellow-200' : 'text-yellow-800'
+                            }`}>
+                              <WarningIcon className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-medium">{warning.location}:</span>{' '}
+                                {warning.message}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Subject */}
               <div className="mb-3">

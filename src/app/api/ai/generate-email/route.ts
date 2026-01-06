@@ -11,6 +11,9 @@ interface TaskSummary {
   subtasksTotal: number;
   notes?: string;
   dueDate?: string;
+  transcription?: string;
+  attachments?: Array<{ file_name: string; file_type: string }>;
+  completed?: boolean;
 }
 
 interface EmailRequest {
@@ -27,27 +30,44 @@ const SYSTEM_PROMPT = `You are a professional assistant helping insurance agency
 
 Your job is to generate clear, professional emails that update customers on the status of their insurance-related tasks.
 
-Guidelines:
-- Be warm but professional - this is a small agency with personal relationships
+INSURANCE AGENT COMMUNICATION STYLE:
+- Use industry-appropriate language (e.g., "policy", "coverage", "premium", "claim", "quote", "renewal", "deductible", "carrier")
+- Be warm and personal - insurance agents build long-term relationships with clients
+- Show proactive care: "I wanted to reach out", "I'm making sure", "I'm keeping an eye on"
+- Use reassuring language when appropriate: "you're all set", "everything is in order", "we've got you covered"
+- Reference specific actions taken: "I spoke with the carrier", "I reviewed your policy", "I submitted the paperwork"
+
+CONTENT GUIDELINES:
 - Focus on what's been ACCOMPLISHED and what's NEXT
-- Never expose internal details (task IDs, systems, internal notes)
-- Use the customer's name naturally (not every sentence)
+- If voicemail transcriptions are provided, use them to understand customer concerns and reference them naturally
+- If attachments are mentioned, acknowledge them (e.g., "I've reviewed the documents you sent")
+- If subtasks show detailed progress, use that to demonstrate thoroughness
+- For completed tasks, be clear about outcomes and next steps
+- Never expose internal details (task IDs, systems, internal notes that aren't relevant)
 - Keep it concise - 2-4 short paragraphs max
 - Be specific about what was done without being overly technical
-- End with clear next steps OR a reassurance that things are handled
-- For insurance context: policies, claims, payments, quotes, renewals are common topics
 
 Status meanings:
-- "todo": Not started yet
-- "in_progress": Currently being worked on
-- "done": Completed
+- "todo": Not started yet (be honest but reassuring)
+- "in_progress": Currently being worked on (show active progress)
+- "done": Completed (celebrate the accomplishment)
 
 Do NOT:
 - Use bullet points (write in natural paragraphs)
 - Start with "I hope this email finds you well"
 - Be overly formal or stiff
 - Include placeholder text like [DATE] or [NAME]
-- Mention the task management system`;
+- Mention the task management system
+- Make promises about timing without context
+
+REVIEW FLAGS:
+You must also identify potential issues that the agent should review before sending:
+- Sensitive information that might be in notes/transcriptions (SSNs, account numbers, private health info)
+- Promises about specific dates or timelines
+- Statements about coverage or policy details that should be verified
+- Any placeholder information that needs to be filled in
+- Negative news that may need softer delivery
+- Mentions of money, payments, or pricing that should be double-checked`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,13 +91,18 @@ export async function POST(request: NextRequest) {
 
     const anthropic = new Anthropic({ apiKey });
 
-    // Build task summary for the prompt
+    // Build detailed task summary for the prompt
     const taskSummary = tasks.map((t, i) => {
-      const statusLabel = t.status === 'done' ? 'Completed' : t.status === 'in_progress' ? 'In Progress' : 'Pending';
-      const subtaskInfo = t.subtasksTotal > 0 ? ` (${t.subtasksCompleted}/${t.subtasksTotal} steps done)` : '';
+      const statusLabel = t.status === 'done' || t.completed ? 'Completed' : t.status === 'in_progress' ? 'In Progress' : 'Pending';
+      const subtaskInfo = t.subtasksTotal > 0 ? ` (${t.subtasksCompleted}/${t.subtasksTotal} steps completed)` : '';
       const dueInfo = t.dueDate ? ` - Due: ${t.dueDate}` : '';
-      return `${i + 1}. ${t.text} - ${statusLabel}${subtaskInfo}${dueInfo}`;
-    }).join('\n');
+      const notesInfo = t.notes ? `\n   Notes: ${t.notes}` : '';
+      const transcriptionInfo = t.transcription ? `\n   Voicemail: ${t.transcription}` : '';
+      const attachmentInfo = t.attachments && t.attachments.length > 0
+        ? `\n   Attachments: ${t.attachments.map(a => `${a.file_name} (${a.file_type})`).join(', ')}`
+        : '';
+      return `${i + 1}. ${t.text} - ${statusLabel}${subtaskInfo}${dueInfo}${notesInfo}${transcriptionInfo}${attachmentInfo}`;
+    }).join('\n\n');
 
     // Calculate overall progress
     const completed = tasks.filter(t => t.status === 'done').length;
@@ -104,12 +129,23 @@ ${taskSummary}
 Tone: ${toneInstructions[tone]}
 ${includeNextSteps ? 'Include specific next steps or what the customer can expect.' : 'Keep focus on status update only.'}
 
+IMPORTANT: Review the task details carefully. If voicemail transcriptions are provided, use them to understand context and customer concerns. If attachments are mentioned, acknowledge them appropriately. Pay attention to subtask progress to show thoroughness.
+
 Generate a JSON response with:
 {
   "subject": "Brief, specific email subject line",
   "body": "The email body (use \\n for line breaks between paragraphs)",
-  "suggestedFollowUp": "Optional: when to follow up (e.g., 'in 2-3 days') or null"
-}`;
+  "suggestedFollowUp": "Optional: when to follow up (e.g., 'in 2-3 days') or null",
+  "warnings": [
+    {
+      "type": "sensitive_info" | "date_promise" | "coverage_detail" | "pricing" | "negative_news" | "needs_verification",
+      "message": "Brief description of what to review",
+      "location": "Where in the email this appears (subject/body)"
+    }
+  ]
+}
+
+The warnings array should flag any items that need the agent's review before sending. Only include warnings if there are actual issues to review.`;
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -137,6 +173,7 @@ Generate a JSON response with:
       subject: emailData.subject,
       body: emailData.body,
       suggestedFollowUp: emailData.suggestedFollowUp || null,
+      warnings: emailData.warnings || [],
     });
 
   } catch (error) {
