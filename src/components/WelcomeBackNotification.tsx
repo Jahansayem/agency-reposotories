@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Clock, AlertCircle } from 'lucide-react';
-import { Todo, AuthUser } from '@/types/todo';
+import { X, Clock, AlertCircle, Flag, ChevronRight } from 'lucide-react';
+import { Todo, AuthUser, PRIORITY_CONFIG } from '@/types/todo';
 import { supabase } from '@/lib/supabase';
 
 interface WelcomeBackNotificationProps {
@@ -15,7 +15,7 @@ interface WelcomeBackNotificationProps {
   onUserUpdate: (user: AuthUser) => void;
 }
 
-const AUTO_DISMISS_MS = 5000;
+const AUTO_DISMISS_MS = 8000; // Increased to give time to read high priority tasks
 
 export default function WelcomeBackNotification({
   show,
@@ -27,6 +27,7 @@ export default function WelcomeBackNotification({
 }: WelcomeBackNotificationProps) {
   const [pendingCount, setPendingCount] = useState(0);
   const [overdueCount, setOverdueCount] = useState(0);
+  const [highPriorityTasks, setHighPriorityTasks] = useState<Todo[]>([]);
   const [progress, setProgress] = useState(100);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -59,8 +60,21 @@ export default function WelcomeBackNotification({
         return d < today;
       }).length;
 
+      // Get recent high priority tasks (urgent or high, not completed)
+      const highPriority = todos
+        .filter(t => !t.completed && (t.priority === 'urgent' || t.priority === 'high'))
+        .sort((a, b) => {
+          // Sort by priority first (urgent before high), then by creation date
+          const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+          const priorityDiff = (priorityOrder[a.priority || 'medium'] || 2) - (priorityOrder[b.priority || 'medium'] || 2);
+          if (priorityDiff !== 0) return priorityDiff;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        })
+        .slice(0, 3); // Show up to 3 high priority tasks
+
       setPendingCount(pending);
       setOverdueCount(overdue);
+      setHighPriorityTasks(highPriority);
       setProgress(100);
 
       // Mark welcome as shown in database
@@ -121,32 +135,32 @@ export default function WelcomeBackNotification({
           animate={{ opacity: 1, y: 0, x: 0 }}
           exit={{ opacity: 0, y: 20, x: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-4 right-4 z-50 w-full max-w-sm cursor-pointer"
+          className="fixed bottom-4 right-4 z-50 w-full max-w-md cursor-pointer"
           onClick={handleClick}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           role="status"
           aria-live="polite"
         >
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Progress bar for auto-dismiss */}
-            <div className="h-0.5 bg-slate-100 dark:bg-slate-700">
+            <div className="h-1 bg-slate-100 dark:bg-slate-700">
               <div
-                className="h-full bg-[#0033A0] transition-all duration-50"
+                className="h-full bg-gradient-to-r from-[#0033A0] to-[#72B5E8] transition-all duration-50"
                 style={{ width: `${progress}%` }}
               />
             </div>
 
-            <div className="p-3">
+            <div className="p-4">
               {/* Header row */}
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                    Welcome back, {currentUser.name}
+                  <p className="text-base font-semibold text-slate-800 dark:text-slate-100">
+                    Welcome back, {currentUser.name}!
                   </p>
 
                   {/* Stats inline */}
-                  <div className="flex items-center gap-3 mt-1.5">
+                  <div className="flex items-center gap-3 mt-1">
                     {pendingCount > 0 && (
                       <div className="flex items-center gap-1 text-xs">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -164,8 +178,8 @@ export default function WelcomeBackNotification({
                       </div>
                     )}
                     {pendingCount === 0 && overdueCount === 0 && (
-                      <span className="text-xs text-slate-400">
-                        All tasks completed
+                      <span className="text-xs text-green-600 dark:text-green-400">
+                        All caught up!
                       </span>
                     )}
                   </div>
@@ -174,17 +188,61 @@ export default function WelcomeBackNotification({
                 {/* Close button */}
                 <button
                   onClick={handleClose}
-                  className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0"
                   aria-label="Dismiss notification"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Hint text */}
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                Click to view details
-              </p>
+              {/* High Priority Tasks Section */}
+              {highPriorityTasks.length > 0 && (
+                <div className="mb-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Flag className="w-3.5 h-3.5 text-red-500" />
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wide">
+                      Priority Tasks
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {highPriorityTasks.map((task) => {
+                      const priorityConfig = PRIORITY_CONFIG[task.priority || 'medium'];
+                      return (
+                        <div
+                          key={task.id}
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 border-l-2"
+                          style={{ borderLeftColor: priorityConfig.color }}
+                        >
+                          <div
+                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: priorityConfig.color }}
+                          />
+                          <span className="text-sm text-slate-700 dark:text-slate-200 truncate flex-1">
+                            {task.text}
+                          </span>
+                          <span
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded uppercase"
+                            style={{
+                              backgroundColor: priorityConfig.bgColor,
+                              color: priorityConfig.color,
+                            }}
+                          >
+                            {task.priority}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Call to action */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
+                  Click to view all tasks
+                </p>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </div>
             </div>
           </div>
         </motion.div>
@@ -194,24 +252,31 @@ export default function WelcomeBackNotification({
 }
 
 // Helper to check if we should show the notification (using cloud data)
+// Shows on first login of the session, and again after 4+ hours away
 export function shouldShowWelcomeNotification(currentUser: AuthUser): boolean {
-  const { last_login, welcome_shown_at } = currentUser;
-
-  if (!last_login) return false;
-
-  const lastLogin = new Date(last_login);
+  const { welcome_shown_at } = currentUser;
   const now = new Date();
-  const hoursSinceLogin = (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60);
 
-  // Don't show if logged in less than 4 hours ago
-  if (hoursSinceLogin < 4) return false;
+  // Check session storage to see if we've shown it this browser session
+  if (typeof window !== 'undefined') {
+    const sessionShown = sessionStorage.getItem(`welcomeShown_${currentUser.id}`);
+    if (sessionShown) {
+      // Already shown this session, don't show again
+      return false;
+    }
+  }
 
-  // Check if welcome was already shown recently
+  // Check if welcome was shown recently (in case of page refresh within session)
   if (welcome_shown_at) {
     const shownAt = new Date(welcome_shown_at);
     const hoursSinceShown = (now.getTime() - shownAt.getTime()) / (1000 * 60 * 60);
     // Don't show again if shown within last 4 hours
     if (hoursSinceShown < 4) return false;
+  }
+
+  // Mark as shown in session storage
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(`welcomeShown_${currentUser.id}`, 'true');
   }
 
   return true;

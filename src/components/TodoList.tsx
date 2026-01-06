@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, OWNER_USERNAME } from '@/types/todo';
 import TodoItem from './TodoItem';
@@ -125,12 +125,6 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
   const [showWeeklyChart, setShowWeeklyChart] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showActivityFeed, setShowActivityFeed] = useState(false);
-  const [unreadActivityCount, setUnreadActivityCount] = useState(0);
-  const lastSeenActivityTimestampRef = useRef<string | null>(null);
-  const showActivityFeedRef = useRef(false);
-
-  // LocalStorage key for tracking last seen activity
-  const LAST_SEEN_ACTIVITY_KEY = `lastSeenActivity_${userName}`;
   const [showStrategicDashboard, setShowStrategicDashboard] = useState(false);
   const [templateTodo, setTemplateTodo] = useState<Todo | null>(null);
   const [customOrder, setCustomOrder] = useState<string[]>([]);
@@ -252,11 +246,6 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
     setLoading(false);
   }, []);
 
-  // Keep ref in sync with state for use in polling interval
-  useEffect(() => {
-    showActivityFeedRef.current = showActivityFeed;
-  }, [showActivityFeed]);
-
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       setError('Supabase is not configured. Please check your environment variables.');
@@ -305,132 +294,9 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
         if (isMounted) setConnected(status === 'SUBSCRIBED');
       });
 
-    // Subscribe to activity_log for unread badge notifications
-    const activityChannel = supabase
-      .channel('activity-badge-channel')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'activity_log' },
-        (payload) => {
-          if (!isMounted) return;
-          const newActivity = payload.new as { user_name: string; action: string };
-          console.log('[ActivityBadge] Received activity:', newActivity.action, 'by', newActivity.user_name, 'currentUser:', userName);
-          // Only increment for activities from other users
-          if (newActivity.user_name !== userName) {
-            console.log('[ActivityBadge] Incrementing badge count');
-            setUnreadActivityCount((prev) => prev + 1);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('[ActivityBadge] Subscription status:', status);
-      });
-
-    // Check for unread activities on initial load
-    const checkInitialUnread = async () => {
-      if (!isMounted) return;
-      try {
-        // Get last seen timestamp from localStorage
-        const lastSeenKey = `lastSeenActivity_${userName}`;
-        const lastSeenTimestamp = localStorage.getItem(lastSeenKey);
-        console.log('[ActivityBadge] Initial check - lastSeenTimestamp:', lastSeenTimestamp);
-
-        if (!lastSeenTimestamp) {
-          // First visit - get the latest activity timestamp and set it
-          // Don't show badge for first-time users (they haven't "missed" anything)
-          const { data } = await supabase
-            .from('activity_log')
-            .select('created_at')
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          if (data && data.length > 0) {
-            const latestTimestamp = data[0].created_at;
-            localStorage.setItem(lastSeenKey, latestTimestamp);
-            lastSeenActivityTimestampRef.current = latestTimestamp;
-            console.log('[ActivityBadge] First visit - set lastSeen to:', latestTimestamp);
-          } else {
-            // No activities yet, set to now
-            const now = new Date().toISOString();
-            localStorage.setItem(lastSeenKey, now);
-            lastSeenActivityTimestampRef.current = now;
-            console.log('[ActivityBadge] First visit, no activities - set lastSeen to now');
-          }
-          return;
-        }
-
-        // Returning user - count unread activities from other users
-        lastSeenActivityTimestampRef.current = lastSeenTimestamp;
-
-        const { data, error, count } = await supabase
-          .from('activity_log')
-          .select('id, user_name, created_at', { count: 'exact' })
-          .neq('user_name', userName)
-          .gt('created_at', lastSeenTimestamp)
-          .order('created_at', { ascending: false })
-          .limit(100);
-
-        if (error) {
-          console.error('[ActivityBadge] Initial check error:', error);
-          return;
-        }
-
-        const unreadCount = count || (data?.length || 0);
-        console.log('[ActivityBadge] Returning user - unread count:', unreadCount);
-
-        if (unreadCount > 0) {
-          setUnreadActivityCount(unreadCount);
-        }
-      } catch (err) {
-        console.error('[ActivityBadge] Initial check exception:', err);
-      }
-    };
-
-    // Polling fallback for new activities
-    const pollForActivities = async () => {
-      if (!isMounted) return;
-      // Don't poll if feed is open (use ref to get current value)
-      if (showActivityFeedRef.current) {
-        console.log('[ActivityBadge] Skipping poll - feed is open');
-        return;
-      }
-      try {
-        const lastSeen = lastSeenActivityTimestampRef.current;
-        if (!lastSeen) return; // Wait for initial check
-
-        const { data, error } = await supabase
-          .from('activity_log')
-          .select('id, user_name, created_at')
-          .neq('user_name', userName)
-          .gt('created_at', lastSeen)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (error) {
-          console.error('[ActivityBadge] Polling error:', error);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          console.log('[ActivityBadge] Poll found', data.length, 'new activities');
-          // Update the count to reflect actual unread
-          setUnreadActivityCount(data.length);
-        }
-      } catch (err) {
-        console.error('[ActivityBadge] Polling exception:', err);
-      }
-    };
-
-    // Initial check for unread activities
-    checkInitialUnread();
-    // Poll every 5 seconds as fallback (more responsive)
-    const pollInterval = setInterval(pollForActivities, 5000);
-
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);
-      supabase.removeChannel(activityChannel);
-      clearInterval(pollInterval);
     };
   }, [fetchTodos, userName, currentUser]);
 
@@ -1733,16 +1599,8 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
 
               {/* Activity Feed - accessible to all users */}
               <button
-                onClick={() => {
-                  setShowActivityFeed(true);
-                  setUnreadActivityCount(0);
-                  // Update last seen timestamp when opening the feed
-                  const now = new Date().toISOString();
-                  localStorage.setItem(LAST_SEEN_ACTIVITY_KEY, now);
-                  lastSeenActivityTimestampRef.current = now;
-                  console.log('[ActivityBadge] Opened feed, set lastSeen to:', now);
-                }}
-                className={`relative p-2 rounded-xl transition-all duration-200 ${
+                onClick={() => setShowActivityFeed(true)}
+                className={`p-2 rounded-xl transition-all duration-200 ${
                   darkMode
                     ? 'text-white/60 hover:text-white hover:bg-white/10'
                     : 'text-[var(--text-muted)] hover:text-[var(--brand-blue)] hover:bg-[var(--surface-2)]'
@@ -1750,11 +1608,6 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
                 aria-label="View activity feed"
               >
                 <Activity className="w-4 h-4" />
-                {unreadActivityCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-lg animate-pulse">
-                    {unreadActivityCount > 99 ? '99+' : unreadActivityCount}
-                  </span>
-                )}
               </button>
 
               {/* Strategic Dashboard - Owner only */}
