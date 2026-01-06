@@ -14,12 +14,10 @@ import {
   Target,
   Users,
   ListTodo,
-  Zap,
   ChevronRight,
   Sun,
   Moon,
   Sunrise,
-  Sparkles,
   BarChart3,
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
@@ -43,6 +41,16 @@ interface WeekDay {
   completed: number;
   isToday: boolean;
 }
+
+// Harmonious team colors - all derived from the brand palette
+const TEAM_COLORS = [
+  { bg: 'bg-[#0033A0]', text: 'text-white' },           // Brand blue
+  { bg: 'bg-[#1E3A5F]', text: 'text-white' },           // Navy
+  { bg: 'bg-[#72B5E8]', text: 'text-[#0A1628]' },       // Sky blue
+  { bg: 'bg-[#C9A227]', text: 'text-[#0A1628]' },       // Gold
+  { bg: 'bg-[#4A6FA5]', text: 'text-white' },           // Muted blue
+  { bg: 'bg-[#2D5F8A]', text: 'text-white' },           // Steel blue
+];
 
 export default function Dashboard({
   todos,
@@ -168,43 +176,53 @@ export default function Dashboard({
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#0A1628]' : 'bg-[var(--background)]'}`}>
-      {/* Hero Header with enhanced gradient and texture */}
+    <div className={`min-h-screen ${darkMode ? 'bg-[#0A1628]' : 'bg-slate-50'}`}>
+      {/* Hero Header with refined gradient */}
       <div className="relative overflow-hidden">
-        {/* Background gradient layers */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-navy)] via-[var(--brand-blue)] to-[var(--brand-sky)]" />
+        {/* Background - sophisticated layered gradient */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(135deg, #0A1628 0%, #0033A0 50%, #1E3A5F 100%)',
+          }}
+        />
 
-        {/* Animated gradient orbs */}
+        {/* Subtle animated accent */}
         <div className="absolute inset-0 overflow-hidden">
           <motion.div
             animate={{
-              x: [0, 30, 0],
-              y: [0, -20, 0],
+              opacity: [0.3, 0.5, 0.3],
             }}
             transition={{
-              duration: 20,
+              duration: 8,
               repeat: Infinity,
               ease: 'easeInOut',
             }}
-            className="absolute -top-20 -right-20 w-[500px] h-[500px] bg-[var(--brand-sky)]/30 rounded-full blur-[100px]"
+            className="absolute -top-20 -right-20 w-[600px] h-[600px]"
+            style={{
+              background: 'radial-gradient(circle, rgba(114, 181, 232, 0.15) 0%, transparent 70%)',
+            }}
           />
           <motion.div
             animate={{
-              x: [0, -20, 0],
-              y: [0, 30, 0],
+              opacity: [0.2, 0.4, 0.2],
             }}
             transition={{
-              duration: 25,
+              duration: 10,
               repeat: Infinity,
               ease: 'easeInOut',
+              delay: 2,
             }}
-            className="absolute -bottom-40 -left-20 w-[400px] h-[400px] bg-[#00205B]/50 rounded-full blur-[80px]"
+            className="absolute -bottom-32 -left-20 w-[500px] h-[500px]"
+            style={{
+              background: 'radial-gradient(circle, rgba(201, 162, 39, 0.1) 0%, transparent 70%)',
+            }}
           />
         </div>
 
-        {/* Subtle noise texture overlay */}
+        {/* Subtle texture */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.02]"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
           }}
@@ -216,37 +234,34 @@ export default function Dashboard({
             animate="visible"
             variants={containerVariants}
           >
-            {/* Greeting with animated icon */}
+            {/* Greeting */}
             <motion.div variants={itemVariants} className="flex items-center gap-3 mb-3">
               <motion.div
                 animate={{ rotate: [0, 5, -5, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <greeting.Icon className="w-6 h-6 text-[var(--brand-sky)]" />
+                <greeting.Icon className="w-5 h-5 text-[#C9A227]" />
               </motion.div>
-              <span className="text-[var(--brand-sky)] font-medium tracking-wide uppercase text-sm">{greeting.text}</span>
+              <span className="text-[#C9A227] font-medium tracking-widest uppercase text-xs">{greeting.text}</span>
             </motion.div>
 
-            {/* Name with gradient text effect */}
+            {/* Name */}
             <motion.h1
               variants={itemVariants}
               className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight"
-              style={{
-                textShadow: '0 2px 20px rgba(0,0,0,0.15)',
-              }}
             >
               {currentUser.name}
             </motion.h1>
 
             {/* Status message */}
-            <motion.p variants={itemVariants} className="text-white/80 text-lg font-light">
+            <motion.p variants={itemVariants} className="text-white/70 text-lg">
               {stats.active === 0
                 ? "All caught up! No active tasks."
                 : (
                   <>
                     You have <span className="font-semibold text-white">{stats.active}</span> active task{stats.active !== 1 ? 's' : ''}
                     {stats.overdue > 0 && (
-                      <span className="text-red-300 font-medium"> including {stats.overdue} overdue</span>
+                      <span className="text-[#F87171] font-medium"> including {stats.overdue} overdue</span>
                     )}
                   </>
                 )}
@@ -255,26 +270,26 @@ export default function Dashboard({
             {/* Quick Stats Badges */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-3 mt-8">
               <motion.div
-                whileHover={{ scale: 1.05, y: -2 }}
-                className="flex items-center gap-2.5 bg-white/10 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/10 shadow-lg shadow-black/10"
+                whileHover={{ scale: 1.02 }}
+                className="flex items-center gap-2.5 bg-white/5 backdrop-blur-sm rounded-full px-5 py-2.5 border border-white/10"
               >
                 <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
+                  animate={{ scale: [1, 1.15, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 >
-                  <Flame className="w-4 h-4 text-orange-400" />
+                  <Flame className="w-4 h-4 text-[#C9A227]" />
                 </motion.div>
-                <span className="text-white text-sm font-semibold">
+                <span className="text-white/90 text-sm font-medium">
                   {currentUser.streak_count || 0} day streak
                 </span>
               </motion.div>
 
               <motion.div
-                whileHover={{ scale: 1.05, y: -2 }}
-                className="flex items-center gap-2.5 bg-white/10 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/10 shadow-lg shadow-black/10"
+                whileHover={{ scale: 1.02 }}
+                className="flex items-center gap-2.5 bg-white/5 backdrop-blur-sm rounded-full px-5 py-2.5 border border-white/10"
               >
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span className="text-white text-sm font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
+                <span className="text-white/90 text-sm font-medium">
                   {stats.weeklyCompleted} completed this week
                 </span>
               </motion.div>
@@ -290,42 +305,31 @@ export default function Dashboard({
           animate="visible"
           variants={containerVariants}
         >
-          {/* Priority Action Cards */}
+          {/* Priority Action Cards - Refined color system */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {/* Overdue Card */}
+            {/* Overdue Card - Coral red, not harsh */}
             <motion.button
               onClick={onFilterOverdue}
               disabled={stats.overdue === 0}
               onHoverStart={() => setHoveredCard('overdue')}
               onHoverEnd={() => setHoveredCard(null)}
-              whileHover={stats.overdue > 0 ? { scale: 1.03, y: -4 } : {}}
+              whileHover={stats.overdue > 0 ? { scale: 1.02, y: -4 } : {}}
               whileTap={stats.overdue > 0 ? { scale: 0.98 } : {}}
-              className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-500 ${
+              className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 ${
                 stats.overdue > 0
-                  ? 'bg-gradient-to-br from-red-500 to-rose-600 shadow-xl shadow-red-500/25'
+                  ? 'bg-gradient-to-br from-[#EF4444] to-[#DC2626] shadow-lg shadow-red-500/20'
                   : darkMode
-                    ? 'bg-[var(--surface)] border border-[var(--border)]'
-                    : 'bg-white border border-[var(--border)] shadow-sm'
+                    ? 'bg-[#1E293B] border border-[#334155]'
+                    : 'bg-white border border-slate-200 shadow-sm'
               }`}
             >
-              {/* Animated background pattern for active state */}
-              {stats.overdue > 0 && (
-                <motion.div
-                  className="absolute inset-0 opacity-20"
-                  animate={{
-                    backgroundPosition: ['0% 0%', '100% 100%'],
-                  }}
-                  transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-                  style={{
-                    backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-                    backgroundSize: '24px 24px',
-                  }}
-                />
-              )}
-
               <div className="relative">
-                <div className={`flex items-center justify-between mb-4 ${stats.overdue > 0 ? 'text-white/90' : 'text-[var(--text-muted)]'}`}>
-                  <div className={`p-2 rounded-xl ${stats.overdue > 0 ? 'bg-white/20' : 'bg-red-50 dark:bg-red-500/10'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-2.5 rounded-xl ${
+                    stats.overdue > 0
+                      ? 'bg-white/20'
+                      : darkMode ? 'bg-red-500/10' : 'bg-red-50'
+                  }`}>
                     <AlertTriangle className={`w-5 h-5 ${stats.overdue > 0 ? 'text-white' : 'text-red-500'}`} />
                   </div>
                   <AnimatePresence>
@@ -335,54 +339,48 @@ export default function Dashboard({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
                       >
-                        <ChevronRight className="w-5 h-5 text-white" />
+                        <ChevronRight className="w-5 h-5 text-white/80" />
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
-                <p className={`text-4xl font-bold tracking-tight ${stats.overdue > 0 ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                <p className={`text-4xl font-bold tracking-tight ${
+                  stats.overdue > 0 ? 'text-white' : darkMode ? 'text-slate-300' : 'text-slate-800'
+                }`}>
                   {stats.overdue}
                 </p>
-                <p className={`text-sm font-medium mt-1 ${stats.overdue > 0 ? 'text-white/80' : 'text-[var(--text-muted)]'}`}>
+                <p className={`text-sm font-medium mt-1 ${
+                  stats.overdue > 0 ? 'text-white/80' : darkMode ? 'text-slate-400' : 'text-slate-600'
+                }`}>
                   Overdue
                 </p>
               </div>
             </motion.button>
 
-            {/* Due Today Card */}
+            {/* Due Today Card - Warm amber when active, elegant when empty */}
             <motion.button
               onClick={onFilterDueToday}
               disabled={stats.dueToday === 0}
               onHoverStart={() => setHoveredCard('today')}
               onHoverEnd={() => setHoveredCard(null)}
-              whileHover={stats.dueToday > 0 ? { scale: 1.03, y: -4 } : {}}
+              whileHover={stats.dueToday > 0 ? { scale: 1.02, y: -4 } : {}}
               whileTap={stats.dueToday > 0 ? { scale: 0.98 } : {}}
-              className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-500 ${
+              className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 ${
                 stats.dueToday > 0
-                  ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-xl shadow-amber-500/25'
+                  ? 'bg-gradient-to-br from-[#F59E0B] to-[#D97706] shadow-lg shadow-amber-500/20'
                   : darkMode
-                    ? 'bg-[var(--surface)] border border-[var(--border)]'
-                    : 'bg-white border border-[var(--border)] shadow-sm'
+                    ? 'bg-[#1E293B] border border-[#334155]'
+                    : 'bg-white border border-slate-200 shadow-sm'
               }`}
             >
-              {stats.dueToday > 0 && (
-                <motion.div
-                  className="absolute inset-0 opacity-20"
-                  animate={{
-                    backgroundPosition: ['0% 0%', '100% 100%'],
-                  }}
-                  transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-                  style={{
-                    backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-                    backgroundSize: '24px 24px',
-                  }}
-                />
-              )}
-
               <div className="relative">
-                <div className={`flex items-center justify-between mb-4 ${stats.dueToday > 0 ? 'text-white/90' : 'text-[var(--text-muted)]'}`}>
-                  <div className={`p-2 rounded-xl ${stats.dueToday > 0 ? 'bg-white/20' : 'bg-amber-50 dark:bg-amber-500/10'}`}>
-                    <Calendar className={`w-5 h-5 ${stats.dueToday > 0 ? 'text-white' : 'text-amber-500'}`} />
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-2.5 rounded-xl ${
+                    stats.dueToday > 0
+                      ? 'bg-white/20'
+                      : darkMode ? 'bg-amber-500/10' : 'bg-amber-50'
+                  }`}>
+                    <Calendar className={`w-5 h-5 ${stats.dueToday > 0 ? 'text-white' : 'text-amber-600'}`} />
                   </div>
                   <AnimatePresence>
                     {stats.dueToday > 0 && hoveredCard === 'today' && (
@@ -391,54 +389,48 @@ export default function Dashboard({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
                       >
-                        <ChevronRight className="w-5 h-5 text-white" />
+                        <ChevronRight className="w-5 h-5 text-white/80" />
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
-                <p className={`text-4xl font-bold tracking-tight ${stats.dueToday > 0 ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                <p className={`text-4xl font-bold tracking-tight ${
+                  stats.dueToday > 0 ? 'text-white' : darkMode ? 'text-slate-300' : 'text-slate-800'
+                }`}>
                   {stats.dueToday}
                 </p>
-                <p className={`text-sm font-medium mt-1 ${stats.dueToday > 0 ? 'text-white/80' : 'text-[var(--text-muted)]'}`}>
+                <p className={`text-sm font-medium mt-1 ${
+                  stats.dueToday > 0 ? 'text-white/80' : darkMode ? 'text-slate-400' : 'text-slate-600'
+                }`}>
                   Due Today
                 </p>
               </div>
             </motion.button>
 
-            {/* My Tasks Card */}
+            {/* My Tasks Card - Brand blue when active */}
             <motion.button
               onClick={onFilterMyTasks}
               disabled={stats.myTasks === 0}
               onHoverStart={() => setHoveredCard('mytasks')}
               onHoverEnd={() => setHoveredCard(null)}
-              whileHover={stats.myTasks > 0 ? { scale: 1.03, y: -4 } : {}}
+              whileHover={stats.myTasks > 0 ? { scale: 1.02, y: -4 } : {}}
               whileTap={stats.myTasks > 0 ? { scale: 0.98 } : {}}
-              className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-500 ${
+              className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 ${
                 stats.myTasks > 0
-                  ? 'bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] shadow-xl shadow-[var(--brand-blue)]/25'
+                  ? 'bg-gradient-to-br from-[#0033A0] to-[#0052CC] shadow-lg shadow-blue-600/20'
                   : darkMode
-                    ? 'bg-[var(--surface)] border border-[var(--border)]'
-                    : 'bg-white border border-[var(--border)] shadow-sm'
+                    ? 'bg-[#1E293B] border border-[#334155]'
+                    : 'bg-white border border-slate-200 shadow-sm'
               }`}
             >
-              {stats.myTasks > 0 && (
-                <motion.div
-                  className="absolute inset-0 opacity-20"
-                  animate={{
-                    backgroundPosition: ['0% 0%', '100% 100%'],
-                  }}
-                  transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
-                  style={{
-                    backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-                    backgroundSize: '24px 24px',
-                  }}
-                />
-              )}
-
               <div className="relative">
-                <div className={`flex items-center justify-between mb-4 ${stats.myTasks > 0 ? 'text-white/90' : 'text-[var(--text-muted)]'}`}>
-                  <div className={`p-2 rounded-xl ${stats.myTasks > 0 ? 'bg-white/20' : 'bg-blue-50 dark:bg-blue-500/10'}`}>
-                    <Target className={`w-5 h-5 ${stats.myTasks > 0 ? 'text-white' : 'text-[var(--brand-blue)]'}`} />
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`p-2.5 rounded-xl ${
+                    stats.myTasks > 0
+                      ? 'bg-white/20'
+                      : darkMode ? 'bg-blue-500/10' : 'bg-blue-50'
+                  }`}>
+                    <Target className={`w-5 h-5 ${stats.myTasks > 0 ? 'text-white' : 'text-[#0033A0]'}`} />
                   </div>
                   <AnimatePresence>
                     {stats.myTasks > 0 && hoveredCard === 'mytasks' && (
@@ -447,165 +439,147 @@ export default function Dashboard({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 10 }}
                       >
-                        <ChevronRight className="w-5 h-5 text-white" />
+                        <ChevronRight className="w-5 h-5 text-white/80" />
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
-                <p className={`text-4xl font-bold tracking-tight ${stats.myTasks > 0 ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                <p className={`text-4xl font-bold tracking-tight ${
+                  stats.myTasks > 0 ? 'text-white' : darkMode ? 'text-slate-300' : 'text-slate-800'
+                }`}>
                   {stats.myTasks}
                 </p>
-                <p className={`text-sm font-medium mt-1 ${stats.myTasks > 0 ? 'text-white/80' : 'text-[var(--text-muted)]'}`}>
+                <p className={`text-sm font-medium mt-1 ${
+                  stats.myTasks > 0 ? 'text-white/80' : darkMode ? 'text-slate-400' : 'text-slate-600'
+                }`}>
                   My Tasks
                 </p>
               </div>
             </motion.button>
           </motion.div>
 
-          {/* Weekly Progress Chart - Enhanced */}
+          {/* Weekly Progress Chart - Clean and professional */}
           <motion.div
             variants={itemVariants}
-            className={`rounded-2xl p-6 mb-8 ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'} border border-[var(--border)] shadow-sm overflow-hidden relative`}
+            className={`rounded-2xl p-6 mb-8 ${
+              darkMode ? 'bg-[#1E293B] border border-[#334155]' : 'bg-white border border-slate-200'
+            } shadow-sm`}
           >
-            {/* Subtle gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-blue)]/[0.02] to-transparent pointer-events-none" />
-
-            <div className="relative">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-[var(--brand-blue)]/10">
-                    <BarChart3 className="w-5 h-5 text-[var(--brand-blue)]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[var(--foreground)]">This Week</h3>
-                    <p className="text-sm text-[var(--text-muted)]">{stats.weeklyCompleted} tasks completed</p>
-                  </div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${darkMode ? 'bg-[#0033A0]/20' : 'bg-[#0033A0]/10'}`}>
+                  <BarChart3 className="w-5 h-5 text-[#0033A0]" />
                 </div>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.5, type: 'spring' }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10"
-                >
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">{stats.completionRate}%</span>
-                </motion.div>
+                <div>
+                  <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>This Week</h3>
+                  <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                    {stats.weeklyCompleted} tasks completed
+                  </p>
+                </div>
               </div>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.5, type: 'spring' }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#10B981]/10"
+              >
+                <TrendingUp className="w-4 h-4 text-[#10B981]" />
+                <span className="font-semibold text-[#10B981]">{stats.completionRate}%</span>
+              </motion.div>
+            </div>
 
-              {/* Enhanced Bar Chart */}
-              <div className="flex items-end justify-between gap-3 h-32">
-                {stats.weekData.map((day, index) => {
-                  const height = stats.maxDaily > 0 ? (day.completed / stats.maxDaily) * 100 : 0;
-                  return (
-                    <motion.div
-                      key={day.dayName}
-                      className="flex-1 flex flex-col items-center gap-2"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 + index * 0.05 }}
-                    >
-                      {/* Count label */}
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.5 + index * 0.05 }}
-                        className={`text-xs font-semibold ${
-                          day.isToday ? 'text-[var(--brand-blue)]' :
-                          day.completed > 0 ? 'text-[var(--foreground)]' : 'text-[var(--text-muted)]'
-                        }`}
-                      >
-                        {day.completed > 0 ? day.completed : ''}
-                      </motion.span>
-
-                      {/* Bar container */}
-                      <div className="w-full flex-1 flex flex-col justify-end">
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: `${Math.max(height, 8)}%` }}
-                          transition={{
-                            delay: 0.4 + index * 0.06,
-                            duration: 0.6,
-                            type: 'spring',
-                            stiffness: 100,
-                          }}
-                          className={`w-full rounded-lg relative overflow-hidden ${
-                            day.isToday
-                              ? 'bg-gradient-to-t from-[var(--brand-blue)] to-[var(--brand-sky)]'
-                              : day.completed > 0
-                                ? 'bg-[var(--brand-blue)]/30'
-                                : darkMode ? 'bg-[var(--surface-2)]' : 'bg-slate-100'
-                          }`}
-                        >
-                          {/* Shine effect for today */}
-                          {day.isToday && (
-                            <motion.div
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                              animate={{
-                                x: ['-100%', '100%'],
-                              }}
-                              transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                repeatDelay: 3,
-                              }}
-                            />
-                          )}
-                        </motion.div>
-                      </div>
-
-                      {/* Day label */}
-                      <div className={`text-xs font-medium px-2 py-1 rounded-md ${
+            {/* Bar Chart */}
+            <div className="flex items-end justify-between gap-2 sm:gap-3 h-32">
+              {stats.weekData.map((day, index) => {
+                const height = stats.maxDaily > 0 ? (day.completed / stats.maxDaily) * 100 : 0;
+                return (
+                  <motion.div
+                    key={day.dayName}
+                    className="flex-1 flex flex-col items-center gap-2"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + index * 0.05 }}
+                  >
+                    {/* Count label */}
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 + index * 0.05 }}
+                      className={`text-xs font-semibold min-h-[16px] ${
                         day.isToday
-                          ? 'bg-[var(--brand-blue)]/10 text-[var(--brand-blue)]'
-                          : 'text-[var(--text-muted)]'
-                      }`}>
-                        {day.dayName}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
+                          ? darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'
+                          : day.completed > 0
+                            ? (darkMode ? 'text-slate-300' : 'text-slate-600')
+                            : 'text-transparent'
+                      }`}
+                    >
+                      {day.completed > 0 ? day.completed : '0'}
+                    </motion.span>
+
+                    {/* Bar container */}
+                    <div className="w-full flex-1 flex flex-col justify-end">
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: `${Math.max(height, 8)}%` }}
+                        transition={{
+                          delay: 0.4 + index * 0.06,
+                          duration: 0.6,
+                          type: 'spring',
+                          stiffness: 100,
+                        }}
+                        className={`w-full rounded-md ${
+                          day.isToday
+                            ? 'bg-[#0033A0]'
+                            : day.completed > 0
+                              ? darkMode ? 'bg-[#0033A0]/40' : 'bg-[#0033A0]/25'
+                              : darkMode ? 'bg-slate-700' : 'bg-slate-100'
+                        }`}
+                      />
+                    </div>
+
+                    {/* Day label */}
+                    <span className={`text-xs font-medium px-2 py-1 rounded-md ${
+                      day.isToday
+                        ? darkMode
+                          ? 'bg-[#72B5E8]/20 text-[#72B5E8] font-semibold'
+                          : 'bg-[#0033A0]/10 text-[#0033A0] font-semibold'
+                        : darkMode ? 'text-slate-400' : 'text-slate-600'
+                    }`}>
+                      {day.dayName}
+                    </span>
+                  </motion.div>
+                );
+              })}
             </div>
           </motion.div>
 
-          {/* Quick Actions - Enhanced */}
+          {/* Quick Actions - Refined buttons */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
             <motion.button
               onClick={onAddTask}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className="group relative flex items-center justify-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] text-white font-semibold shadow-xl shadow-[var(--brand-blue)]/25 overflow-hidden"
+              whileHover={{ scale: 1.01, y: -2 }}
+              whileTap={{ scale: 0.99 }}
+              className="group relative flex items-center justify-center gap-3 p-5 rounded-2xl bg-[#0033A0] text-white font-semibold shadow-lg shadow-[#0033A0]/25 overflow-hidden transition-all hover:shadow-xl hover:shadow-[#0033A0]/30"
             >
-              {/* Animated background */}
+              {/* Subtle shine effect */}
               <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0"
-                animate={{
-                  x: ['-100%', '100%'],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatDelay: 4,
-                }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                initial={{ x: '-100%' }}
+                whileHover={{ x: '100%' }}
+                transition={{ duration: 0.6 }}
               />
-
-              <motion.div
-                whileHover={{ rotate: 90 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Plus className="w-5 h-5" />
-              </motion.div>
+              <Plus className="w-5 h-5 relative" />
               <span className="relative">Add New Task</span>
             </motion.button>
 
             <motion.button
               onClick={onNavigateToTasks}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className={`group flex items-center justify-center gap-3 p-6 rounded-2xl font-semibold transition-all border-2 ${
+              whileHover={{ scale: 1.01, y: -2 }}
+              whileTap={{ scale: 0.99 }}
+              className={`group flex items-center justify-center gap-3 p-5 rounded-2xl font-semibold transition-all border ${
                 darkMode
-                  ? 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)]/50'
-                  : 'bg-white border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)] shadow-sm'
+                  ? 'bg-[#1E293B] border-[#334155] text-white hover:border-[#72B5E8]/50 hover:bg-[#1E293B]/80'
+                  : 'bg-white border-slate-200 text-slate-800 hover:border-[#0033A0]/30 hover:shadow-md'
               }`}
             >
               <ListTodo className="w-5 h-5" />
@@ -615,35 +589,29 @@ export default function Dashboard({
                 animate={{ x: [0, 4, 0] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               >
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4 opacity-60" />
               </motion.div>
             </motion.button>
           </motion.div>
 
-          {/* Team Activity - Enhanced */}
+          {/* Team Activity - Harmonious colors */}
           <motion.div
             variants={itemVariants}
-            className={`rounded-2xl p-6 ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'} border border-[var(--border)] shadow-sm`}
+            className={`rounded-2xl p-6 ${
+              darkMode ? 'bg-[#1E293B] border border-[#334155]' : 'bg-white border border-slate-200'
+            } shadow-sm`}
           >
             <div className="flex items-center gap-3 mb-5">
-              <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-500/10">
-                <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className={`p-2.5 rounded-xl ${darkMode ? 'bg-[#72B5E8]/20' : 'bg-[#72B5E8]/10'}`}>
+                <Users className="w-5 h-5 text-[#0033A0]" />
               </div>
-              <h3 className="font-semibold text-[var(--foreground)]">Team</h3>
+              <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Team</h3>
             </div>
 
             <div className="flex flex-wrap gap-3">
               {users.map((user, index) => {
                 const userTasks = todos.filter(t => t.assigned_to === user && !t.completed).length;
-                const colors = [
-                  'from-blue-500 to-blue-600',
-                  'from-emerald-500 to-emerald-600',
-                  'from-purple-500 to-purple-600',
-                  'from-amber-500 to-amber-600',
-                  'from-pink-500 to-pink-600',
-                  'from-cyan-500 to-cyan-600',
-                ];
-                const color = colors[index % colors.length];
+                const colorScheme = TEAM_COLORS[index % TEAM_COLORS.length];
 
                 return (
                   <motion.div
@@ -651,20 +619,28 @@ export default function Dashboard({
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.5 + index * 0.05 }}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-default ${
-                      darkMode ? 'bg-[var(--surface-2)]' : 'bg-slate-50 hover:bg-slate-100'
-                    } transition-colors`}
+                    whileHover={{ scale: 1.02 }}
+                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-default transition-colors ${
+                      darkMode
+                        ? 'bg-slate-800/50 hover:bg-slate-800'
+                        : 'bg-slate-50 hover:bg-slate-100'
+                    }`}
                   >
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center text-white text-sm font-bold shadow-sm`}>
+                    <div className={`w-8 h-8 rounded-lg ${colorScheme.bg} ${colorScheme.text} flex items-center justify-center text-sm font-bold`}>
                       {user.charAt(0)}
                     </div>
-                    <span className="text-sm font-medium text-[var(--foreground)]">{user}</span>
+                    <span className={`text-sm font-medium ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                      {user}
+                    </span>
                     {userTasks > 0 && (
                       <motion.span
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="text-xs px-2 py-0.5 rounded-full bg-[var(--brand-blue)]/10 text-[var(--brand-blue)] font-semibold"
+                        className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                          darkMode
+                            ? 'bg-[#72B5E8]/20 text-[#72B5E8]'
+                            : 'bg-[#0033A0]/10 text-[#0033A0]'
+                        }`}
                       >
                         {userTasks}
                       </motion.span>
