@@ -2129,7 +2129,7 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
           </DndContext>
         ) : (
           <KanbanBoard
-            todos={visibleTodos}
+            todos={filteredAndSortedTodos}
             users={users}
             darkMode={darkMode}
             onStatusChange={updateStatus}
