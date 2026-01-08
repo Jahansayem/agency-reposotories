@@ -19,8 +19,125 @@ import {
   Moon,
   Sunrise,
   BarChart3,
+  Sparkles,
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
+
+// Animated grid background component
+function AnimatedGrid() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <svg
+        className="absolute inset-0 w-full h-full"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <pattern
+            id="dashboard-grid"
+            width="40"
+            height="40"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M 40 0 L 0 0 0 40"
+              fill="none"
+              stroke="rgba(114, 181, 232, 0.08)"
+              strokeWidth="1"
+            />
+          </pattern>
+          <linearGradient id="grid-fade" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="white" stopOpacity="1" />
+            <stop offset="60%" stopColor="white" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </linearGradient>
+          <mask id="grid-mask">
+            <rect width="100%" height="100%" fill="url(#grid-fade)" />
+          </mask>
+        </defs>
+        <rect
+          width="100%"
+          height="100%"
+          fill="url(#dashboard-grid)"
+          mask="url(#grid-mask)"
+        />
+      </svg>
+      {/* Animated pulse lines */}
+      <motion.div
+        className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#72B5E8]/30 to-transparent"
+        animate={{ x: ['-100%', '100%'] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.div
+        className="absolute top-0 left-0 w-[1px] h-full bg-gradient-to-b from-transparent via-[#C9A227]/20 to-transparent"
+        animate={{ y: ['-100%', '100%'] }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'linear', delay: 2 }}
+      />
+    </div>
+  );
+}
+
+// Floating geometric shapes
+function FloatingShapes() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Large subtle circle */}
+      <motion.div
+        className="absolute -top-20 -right-20 w-80 h-80 rounded-full opacity-20"
+        style={{
+          background: 'radial-gradient(circle, rgba(114, 181, 232, 0.3) 0%, transparent 70%)',
+        }}
+        animate={{
+          scale: [1, 1.1, 1],
+          opacity: [0.15, 0.25, 0.15],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      {/* Gold accent orb */}
+      <motion.div
+        className="absolute bottom-10 left-10 w-40 h-40 rounded-full opacity-15"
+        style={{
+          background: 'radial-gradient(circle, rgba(201, 162, 39, 0.4) 0%, transparent 70%)',
+        }}
+        animate={{
+          scale: [1, 1.2, 1],
+          y: [0, -20, 0],
+        }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      {/* Floating diamond */}
+      <motion.div
+        className="absolute top-1/3 right-1/4 w-4 h-4 rotate-45 bg-[#72B5E8]/10 rounded-sm"
+        animate={{
+          y: [0, -15, 0],
+          rotate: [45, 90, 45],
+          opacity: [0.3, 0.6, 0.3],
+        }}
+        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      {/* Small dots */}
+      {[...Array(5)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1.5 h-1.5 rounded-full bg-[#72B5E8]/20"
+          style={{
+            top: `${20 + i * 15}%`,
+            left: `${10 + i * 20}%`,
+          }}
+          animate={{
+            y: [0, -10, 0],
+            opacity: [0.2, 0.5, 0.2],
+          }}
+          transition={{
+            duration: 3 + i,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: i * 0.5,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface DashboardProps {
   todos: Todo[];
@@ -186,22 +303,28 @@ export default function Dashboard({
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#0A1628]' : 'bg-slate-50'}`}>
+    <div className={`min-h-screen relative ${darkMode ? 'bg-[#0A1628]' : 'bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50'}`}>
+      {/* Global animated grid background */}
+      <AnimatedGrid />
+      <FloatingShapes />
+
       {/* Hero Header with refined gradient */}
       <div className="relative overflow-hidden">
-        {/* Background - sophisticated layered gradient */}
+        {/* Background - sophisticated layered gradient with depth */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(135deg, #0A1628 0%, #0033A0 50%, #1E3A5F 100%)',
+            background: 'linear-gradient(135deg, #0A1628 0%, #0033A0 40%, #1E3A5F 70%, #0A1628 100%)',
           }}
         />
 
-        {/* Subtle animated accent */}
+        {/* Enhanced animated accents with more depth */}
         <div className="absolute inset-0 overflow-hidden">
+          {/* Primary glow */}
           <motion.div
             animate={{
-              opacity: [0.3, 0.5, 0.3],
+              opacity: [0.2, 0.4, 0.2],
+              scale: [1, 1.05, 1],
             }}
             transition={{
               duration: 8,
@@ -210,12 +333,30 @@ export default function Dashboard({
             }}
             className="absolute -top-20 -right-20 w-[600px] h-[600px]"
             style={{
+              background: 'radial-gradient(circle, rgba(114, 181, 232, 0.2) 0%, transparent 60%)',
+            }}
+          />
+          {/* Secondary sky blue glow */}
+          <motion.div
+            animate={{
+              opacity: [0.15, 0.3, 0.15],
+              x: [0, 20, 0],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="absolute top-1/4 right-1/3 w-[400px] h-[400px]"
+            style={{
               background: 'radial-gradient(circle, rgba(114, 181, 232, 0.15) 0%, transparent 70%)',
             }}
           />
+          {/* Gold accent */}
           <motion.div
             animate={{
-              opacity: [0.2, 0.4, 0.2],
+              opacity: [0.1, 0.25, 0.1],
+              y: [0, -30, 0],
             }}
             transition={{
               duration: 10,
@@ -225,14 +366,23 @@ export default function Dashboard({
             }}
             className="absolute -bottom-32 -left-20 w-[500px] h-[500px]"
             style={{
-              background: 'radial-gradient(circle, rgba(201, 162, 39, 0.1) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(201, 162, 39, 0.15) 0%, transparent 60%)',
             }}
+          />
+          {/* Animated line accent */}
+          <motion.div
+            className="absolute bottom-0 left-0 right-0 h-[1px]"
+            style={{
+              background: 'linear-gradient(90deg, transparent 0%, rgba(114, 181, 232, 0.3) 50%, transparent 100%)',
+            }}
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           />
         </div>
 
-        {/* Subtle texture */}
+        {/* Subtle texture overlay */}
         <div
-          className="absolute inset-0 opacity-[0.02]"
+          className="absolute inset-0 opacity-[0.03]"
           style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
           }}
@@ -244,24 +394,40 @@ export default function Dashboard({
             animate="visible"
             variants={containerVariants}
           >
-            {/* Greeting */}
-            <motion.div variants={itemVariants} className="flex items-center gap-3 mb-3">
+            {/* Greeting badge */}
+            <motion.div variants={itemVariants} className="flex items-center gap-3 mb-4">
               <motion.div
-                animate={{ rotate: [0, 5, -5, 0] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10"
+                animate={{ scale: [1, 1.02, 1] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <greeting.Icon className="w-5 h-5 text-[#C9A227]" />
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <greeting.Icon className="w-4 h-4 text-[#C9A227]" />
+                </motion.div>
+                <span className="text-[#C9A227] font-semibold tracking-wide uppercase text-xs">{greeting.text}</span>
               </motion.div>
-              <span className="text-[#C9A227] font-medium tracking-widest uppercase text-xs">{greeting.text}</span>
             </motion.div>
 
-            {/* Name */}
-            <motion.h1
-              variants={itemVariants}
-              className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight"
-            >
-              {currentUser.name}
-            </motion.h1>
+            {/* Name with enhanced styling */}
+            <motion.div variants={itemVariants} className="relative inline-block mb-3">
+              <motion.h1
+                className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight"
+                style={{ textShadow: '0 4px 30px rgba(0, 51, 160, 0.3)' }}
+              >
+                {currentUser.name}
+              </motion.h1>
+              {/* Sparkle decoration */}
+              <motion.div
+                className="absolute -top-2 -right-6"
+                animate={{ rotate: [0, 15, 0], scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <Sparkles className="w-5 h-5 text-[#C9A227]/60" />
+              </motion.div>
+            </motion.div>
 
             {/* Status message */}
             <motion.p variants={itemVariants} className="text-white/70 text-lg">
@@ -315,33 +481,43 @@ export default function Dashboard({
           animate="visible"
           variants={containerVariants}
         >
-          {/* Priority Action Cards - Refined color system */}
+          {/* Priority Action Cards - Enhanced with glassmorphism */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            {/* Overdue Card - Coral red, not harsh */}
+            {/* Overdue Card */}
             <motion.button
               onClick={onFilterOverdue}
               disabled={stats.overdue === 0}
               onHoverStart={() => setHoveredCard('overdue')}
               onHoverEnd={() => setHoveredCard(null)}
-              whileHover={stats.overdue > 0 ? { scale: 1.02, y: -4 } : {}}
+              whileHover={stats.overdue > 0 ? { scale: 1.03, y: -6 } : { scale: 1.01 }}
               whileTap={stats.overdue > 0 ? { scale: 0.98 } : {}}
               className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 ${
                 stats.overdue > 0
-                  ? 'bg-gradient-to-br from-[#EF4444] to-[#DC2626] shadow-lg shadow-red-500/20'
+                  ? 'bg-gradient-to-br from-[#EF4444] via-[#DC2626] to-[#B91C1C] shadow-xl shadow-red-500/30'
                   : darkMode
-                    ? 'bg-[#1E293B] border border-[#334155]'
-                    : 'bg-white border border-slate-200 shadow-sm'
+                    ? 'bg-[#1E293B]/80 backdrop-blur-xl border border-[#334155]/50 hover:border-red-500/30'
+                    : 'bg-white/80 backdrop-blur-xl border border-slate-200/50 shadow-sm hover:shadow-md hover:border-red-200'
               }`}
             >
+              {/* Shine effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full"
+                animate={hoveredCard === 'overdue' ? { translateX: '200%' } : {}}
+                transition={{ duration: 0.6 }}
+              />
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2.5 rounded-xl ${
-                    stats.overdue > 0
-                      ? 'bg-white/20'
-                      : darkMode ? 'bg-red-500/10' : 'bg-red-50'
-                  }`}>
+                  <motion.div
+                    className={`p-3 rounded-xl ${
+                      stats.overdue > 0
+                        ? 'bg-white/20 backdrop-blur-sm'
+                        : darkMode ? 'bg-red-500/10' : 'bg-red-50'
+                    }`}
+                    animate={stats.overdue > 0 ? { scale: [1, 1.05, 1] } : {}}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
                     <AlertTriangle className={`w-5 h-5 ${stats.overdue > 0 ? 'text-white' : 'text-red-500'}`} />
-                  </div>
+                  </motion.div>
                   <AnimatePresence>
                     {stats.overdue > 0 && hoveredCard === 'overdue' && (
                       <motion.div
@@ -354,40 +530,51 @@ export default function Dashboard({
                     )}
                   </AnimatePresence>
                 </div>
-                <p className={`text-4xl font-bold tracking-tight ${
-                  stats.overdue > 0 ? 'text-white' : darkMode ? 'text-slate-300' : 'text-slate-800'
-                }`}>
+                <motion.p
+                  className={`text-4xl font-bold tracking-tight ${
+                    stats.overdue > 0 ? 'text-white' : darkMode ? 'text-slate-300' : 'text-slate-800'
+                  }`}
+                  initial={{ scale: 1 }}
+                  animate={stats.overdue > 0 ? { scale: [1, 1.02, 1] } : {}}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
                   {stats.overdue}
-                </p>
-                <p className={`text-sm font-medium mt-1 ${
-                  stats.overdue > 0 ? 'text-white/80' : darkMode ? 'text-slate-400' : 'text-slate-600'
+                </motion.p>
+                <p className={`text-sm font-medium mt-1.5 ${
+                  stats.overdue > 0 ? 'text-white/90' : darkMode ? 'text-slate-400' : 'text-slate-600'
                 }`}>
                   Overdue
                 </p>
               </div>
             </motion.button>
 
-            {/* Due Today Card - Warm amber when active, elegant when empty */}
+            {/* Due Today Card */}
             <motion.button
               onClick={onFilterDueToday}
               disabled={stats.dueToday === 0}
               onHoverStart={() => setHoveredCard('today')}
               onHoverEnd={() => setHoveredCard(null)}
-              whileHover={stats.dueToday > 0 ? { scale: 1.02, y: -4 } : {}}
+              whileHover={stats.dueToday > 0 ? { scale: 1.03, y: -6 } : { scale: 1.01 }}
               whileTap={stats.dueToday > 0 ? { scale: 0.98 } : {}}
               className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 ${
                 stats.dueToday > 0
-                  ? 'bg-gradient-to-br from-[#F59E0B] to-[#D97706] shadow-lg shadow-amber-500/20'
+                  ? 'bg-gradient-to-br from-[#F59E0B] via-[#D97706] to-[#B45309] shadow-xl shadow-amber-500/30'
                   : darkMode
-                    ? 'bg-[#1E293B] border border-[#334155]'
-                    : 'bg-white border border-slate-200 shadow-sm'
+                    ? 'bg-[#1E293B]/80 backdrop-blur-xl border border-[#334155]/50 hover:border-amber-500/30'
+                    : 'bg-white/80 backdrop-blur-xl border border-slate-200/50 shadow-sm hover:shadow-md hover:border-amber-200'
               }`}
             >
+              {/* Shine effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full"
+                animate={hoveredCard === 'today' ? { translateX: '200%' } : {}}
+                transition={{ duration: 0.6 }}
+              />
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2.5 rounded-xl ${
+                  <div className={`p-3 rounded-xl ${
                     stats.dueToday > 0
-                      ? 'bg-white/20'
+                      ? 'bg-white/20 backdrop-blur-sm'
                       : darkMode ? 'bg-amber-500/10' : 'bg-amber-50'
                   }`}>
                     <Calendar className={`w-5 h-5 ${stats.dueToday > 0 ? 'text-white' : 'text-amber-600'}`} />
@@ -409,35 +596,41 @@ export default function Dashboard({
                 }`}>
                   {stats.dueToday}
                 </p>
-                <p className={`text-sm font-medium mt-1 ${
-                  stats.dueToday > 0 ? 'text-white/80' : darkMode ? 'text-slate-400' : 'text-slate-600'
+                <p className={`text-sm font-medium mt-1.5 ${
+                  stats.dueToday > 0 ? 'text-white/90' : darkMode ? 'text-slate-400' : 'text-slate-600'
                 }`}>
                   Due Today
                 </p>
               </div>
             </motion.button>
 
-            {/* My Tasks Card - Brand blue when active */}
+            {/* My Tasks Card */}
             <motion.button
               onClick={onFilterMyTasks}
               disabled={stats.myTasks === 0}
               onHoverStart={() => setHoveredCard('mytasks')}
               onHoverEnd={() => setHoveredCard(null)}
-              whileHover={stats.myTasks > 0 ? { scale: 1.02, y: -4 } : {}}
+              whileHover={stats.myTasks > 0 ? { scale: 1.03, y: -6 } : { scale: 1.01 }}
               whileTap={stats.myTasks > 0 ? { scale: 0.98 } : {}}
               className={`group relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 ${
                 stats.myTasks > 0
-                  ? 'bg-gradient-to-br from-[#0033A0] to-[#0052CC] shadow-lg shadow-blue-600/20'
+                  ? 'bg-gradient-to-br from-[#0033A0] via-[#0047CC] to-[#1E3A5F] shadow-xl shadow-blue-600/30'
                   : darkMode
-                    ? 'bg-[#1E293B] border border-[#334155]'
-                    : 'bg-white border border-slate-200 shadow-sm'
+                    ? 'bg-[#1E293B]/80 backdrop-blur-xl border border-[#334155]/50 hover:border-blue-500/30'
+                    : 'bg-white/80 backdrop-blur-xl border border-slate-200/50 shadow-sm hover:shadow-md hover:border-blue-200'
               }`}
             >
+              {/* Shine effect */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full"
+                animate={hoveredCard === 'mytasks' ? { translateX: '200%' } : {}}
+                transition={{ duration: 0.6 }}
+              />
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2.5 rounded-xl ${
+                  <div className={`p-3 rounded-xl ${
                     stats.myTasks > 0
-                      ? 'bg-white/20'
+                      ? 'bg-white/20 backdrop-blur-sm'
                       : darkMode ? 'bg-blue-500/10' : 'bg-blue-50'
                   }`}>
                     <Target className={`w-5 h-5 ${stats.myTasks > 0 ? 'text-white' : 'text-[#0033A0]'}`} />
@@ -459,8 +652,8 @@ export default function Dashboard({
                 }`}>
                   {stats.myTasks}
                 </p>
-                <p className={`text-sm font-medium mt-1 ${
-                  stats.myTasks > 0 ? 'text-white/80' : darkMode ? 'text-slate-400' : 'text-slate-600'
+                <p className={`text-sm font-medium mt-1.5 ${
+                  stats.myTasks > 0 ? 'text-white/90' : darkMode ? 'text-slate-400' : 'text-slate-600'
                 }`}>
                   My Tasks
                 </p>
@@ -468,38 +661,52 @@ export default function Dashboard({
             </motion.button>
           </motion.div>
 
-          {/* Weekly Progress Chart - Clean and professional */}
+          {/* Weekly Progress Chart - Enhanced with glassmorphism */}
           <motion.div
             variants={itemVariants}
-            className={`rounded-2xl p-6 mb-8 ${
-              darkMode ? 'bg-[#1E293B] border border-[#334155]' : 'bg-white border border-slate-200'
+            className={`relative overflow-hidden rounded-2xl p-6 mb-8 ${
+              darkMode
+                ? 'bg-[#1E293B]/80 backdrop-blur-xl border border-[#334155]/50'
+                : 'bg-white/80 backdrop-blur-xl border border-slate-200/50'
             } shadow-sm`}
           >
-            <div className="flex items-center justify-between mb-6">
+            {/* Subtle gradient accent */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#72B5E8]/10 to-transparent rounded-bl-full" />
+
+            <div className="relative flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl ${darkMode ? 'bg-[#0033A0]/20' : 'bg-[#0033A0]/10'}`}>
+                <motion.div
+                  className={`p-3 rounded-xl ${darkMode ? 'bg-[#0033A0]/20' : 'bg-gradient-to-br from-[#0033A0]/10 to-[#72B5E8]/10'}`}
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                >
                   <BarChart3 className="w-5 h-5 text-[#0033A0]" />
-                </div>
+                </motion.div>
                 <div>
                   <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>This Week</h3>
                   <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                    {stats.weeklyCompleted} tasks completed
+                    <span className="font-semibold text-[#0033A0]">{stats.weeklyCompleted}</span> tasks completed
                   </p>
                 </div>
               </div>
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.5, type: 'spring' }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#10B981]/10"
+                initial={{ scale: 0, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-[#10B981]/10 to-[#10B981]/5 border border-[#10B981]/20"
               >
-                <TrendingUp className="w-4 h-4 text-[#10B981]" />
-                <span className="font-semibold text-[#10B981]">{stats.completionRate}%</span>
+                <motion.div
+                  animate={{ y: [0, -2, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  <TrendingUp className="w-4 h-4 text-[#10B981]" />
+                </motion.div>
+                <span className="font-bold text-[#10B981]">{stats.completionRate}%</span>
               </motion.div>
             </div>
 
-            {/* Bar Chart */}
-            <div className="flex items-end justify-between gap-2 sm:gap-3 h-32">
+            {/* Enhanced Bar Chart */}
+            <div className="flex items-end justify-between gap-3 sm:gap-4 h-36">
               {stats.weekData.map((day, index) => {
                 const height = stats.maxDaily > 0 ? (day.completed / stats.maxDaily) * 100 : 0;
                 return (
@@ -508,152 +715,215 @@ export default function Dashboard({
                     className="flex-1 flex flex-col items-center gap-2"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + index * 0.05 }}
+                    transition={{ delay: 0.3 + index * 0.08 }}
                   >
-                    {/* Count label */}
+                    {/* Count label with animation */}
                     <motion.span
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 + index * 0.05 }}
-                      className={`text-xs font-semibold min-h-[16px] ${
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 + index * 0.08 }}
+                      className={`text-sm font-bold min-h-[20px] ${
                         day.isToday
-                          ? darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'
+                          ? 'text-[#0033A0]'
                           : day.completed > 0
-                            ? (darkMode ? 'text-slate-300' : 'text-slate-600')
-                            : 'text-transparent'
+                            ? (darkMode ? 'text-slate-300' : 'text-slate-700')
+                            : darkMode ? 'text-slate-600' : 'text-slate-300'
                       }`}
                     >
-                      {day.completed > 0 ? day.completed : '0'}
+                      {day.completed}
                     </motion.span>
 
-                    {/* Bar container */}
-                    <div className="w-full flex-1 flex flex-col justify-end">
+                    {/* Bar container with glow effect */}
+                    <div className="w-full flex-1 flex flex-col justify-end relative">
                       <motion.div
                         initial={{ height: 0 }}
-                        animate={{ height: `${Math.max(height, 8)}%` }}
+                        animate={{ height: `${Math.max(height, 6)}%` }}
                         transition={{
-                          delay: 0.4 + index * 0.06,
-                          duration: 0.6,
+                          delay: 0.4 + index * 0.08,
+                          duration: 0.8,
                           type: 'spring',
-                          stiffness: 100,
+                          stiffness: 80,
                         }}
-                        className={`w-full rounded-md ${
+                        className={`w-full rounded-lg relative overflow-hidden ${
                           day.isToday
-                            ? 'bg-[#0033A0]'
+                            ? 'bg-gradient-to-t from-[#0033A0] to-[#0047CC] shadow-lg shadow-[#0033A0]/30'
                             : day.completed > 0
-                              ? darkMode ? 'bg-[#0033A0]/40' : 'bg-[#0033A0]/25'
-                              : darkMode ? 'bg-slate-700' : 'bg-slate-100'
+                              ? darkMode
+                                ? 'bg-gradient-to-t from-[#0033A0]/50 to-[#72B5E8]/30'
+                                : 'bg-gradient-to-t from-[#0033A0]/30 to-[#72B5E8]/20'
+                              : darkMode ? 'bg-slate-700/50' : 'bg-slate-100'
                         }`}
-                      />
+                      >
+                        {/* Shimmer effect on today's bar */}
+                        {day.isToday && (
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-t from-transparent via-white/20 to-transparent"
+                            animate={{ y: ['100%', '-100%'] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                          />
+                        )}
+                      </motion.div>
                     </div>
 
                     {/* Day label */}
-                    <span className={`text-xs font-medium px-2 py-1 rounded-md ${
-                      day.isToday
-                        ? darkMode
-                          ? 'bg-[#72B5E8]/20 text-[#72B5E8] font-semibold'
-                          : 'bg-[#0033A0]/10 text-[#0033A0] font-semibold'
-                        : darkMode ? 'text-slate-400' : 'text-slate-600'
-                    }`}>
+                    <motion.span
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all ${
+                        day.isToday
+                          ? 'bg-[#0033A0] text-white shadow-md shadow-[#0033A0]/20'
+                          : darkMode
+                            ? 'text-slate-400 hover:text-slate-300'
+                            : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                      whileHover={{ scale: 1.05 }}
+                    >
                       {day.dayName}
-                    </span>
+                    </motion.span>
                   </motion.div>
                 );
               })}
             </div>
           </motion.div>
 
-          {/* Quick Actions - Refined buttons */}
+          {/* Quick Actions - Enhanced buttons with premium feel */}
           <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
             <motion.button
               onClick={onAddTask}
-              whileHover={{ scale: 1.01, y: -2 }}
-              whileTap={{ scale: 0.99 }}
-              className="group relative flex items-center justify-center gap-3 p-5 rounded-2xl bg-[#0033A0] text-white font-semibold shadow-lg shadow-[#0033A0]/25 overflow-hidden transition-all hover:shadow-xl hover:shadow-[#0033A0]/30"
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.98 }}
+              className="group relative flex items-center justify-center gap-3 p-5 rounded-2xl bg-gradient-to-r from-[#0033A0] via-[#0047CC] to-[#0033A0] text-white font-semibold shadow-xl shadow-[#0033A0]/30 overflow-hidden transition-all"
             >
-              {/* Subtle shine effect */}
+              {/* Animated background */}
               <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: '100%' }}
-                transition={{ duration: 0.6 }}
+                className="absolute inset-0 bg-gradient-to-r from-[#0047CC] via-[#72B5E8]/30 to-[#0047CC]"
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                style={{ opacity: 0.3 }}
               />
-              <Plus className="w-5 h-5 relative" />
-              <span className="relative">Add New Task</span>
+              {/* Shine effect on hover */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+              />
+              <motion.div
+                animate={{ rotate: [0, 90, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <Plus className="w-5 h-5 relative" />
+              </motion.div>
+              <span className="relative font-bold">Add New Task</span>
             </motion.button>
 
             <motion.button
               onClick={onNavigateToTasks}
-              whileHover={{ scale: 1.01, y: -2 }}
-              whileTap={{ scale: 0.99 }}
-              className={`group flex items-center justify-center gap-3 p-5 rounded-2xl font-semibold transition-all border ${
+              whileHover={{ scale: 1.02, y: -4 }}
+              whileTap={{ scale: 0.98 }}
+              className={`group relative flex items-center justify-center gap-3 p-5 rounded-2xl font-semibold transition-all overflow-hidden ${
                 darkMode
-                  ? 'bg-[#1E293B] border-[#334155] text-white hover:border-[#72B5E8]/50 hover:bg-[#1E293B]/80'
-                  : 'bg-white border-slate-200 text-slate-800 hover:border-[#0033A0]/30 hover:shadow-md'
+                  ? 'bg-[#1E293B]/80 backdrop-blur-xl border border-[#334155]/50 text-white hover:border-[#72B5E8]/50'
+                  : 'bg-white/80 backdrop-blur-xl border border-slate-200/50 text-slate-800 hover:border-[#0033A0]/30 hover:shadow-lg'
               }`}
             >
-              <ListTodo className="w-5 h-5" />
-              <span>View All Tasks</span>
+              {/* Subtle gradient on hover */}
+              <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${
+                darkMode
+                  ? 'bg-gradient-to-r from-[#72B5E8]/5 to-transparent'
+                  : 'bg-gradient-to-r from-[#0033A0]/5 to-transparent'
+              }`} />
+              <ListTodo className="w-5 h-5 relative" />
+              <span className="relative font-bold">View All Tasks</span>
               <motion.div
-                className="ml-1"
-                animate={{ x: [0, 4, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
+                className="ml-1 relative"
+                animate={{ x: [0, 6, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
               >
-                <ArrowRight className="w-4 h-4 opacity-60" />
+                <ArrowRight className="w-4 h-4" />
               </motion.div>
             </motion.button>
           </motion.div>
 
-          {/* Team Activity - Harmonious colors */}
+          {/* Team Activity - Enhanced with glassmorphism */}
           <motion.div
             variants={itemVariants}
-            className={`rounded-2xl p-6 ${
-              darkMode ? 'bg-[#1E293B] border border-[#334155]' : 'bg-white border border-slate-200'
+            className={`relative overflow-hidden rounded-2xl p-6 ${
+              darkMode
+                ? 'bg-[#1E293B]/80 backdrop-blur-xl border border-[#334155]/50'
+                : 'bg-white/80 backdrop-blur-xl border border-slate-200/50'
             } shadow-sm`}
           >
-            <div className="flex items-center gap-3 mb-5">
-              <div className={`p-2.5 rounded-xl ${darkMode ? 'bg-[#72B5E8]/20' : 'bg-[#72B5E8]/10'}`}>
+            {/* Decorative accent */}
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-[#C9A227]/10 to-transparent rounded-tr-full" />
+
+            <div className="relative flex items-center gap-3 mb-5">
+              <motion.div
+                className={`p-3 rounded-xl ${darkMode ? 'bg-[#72B5E8]/20' : 'bg-gradient-to-br from-[#72B5E8]/15 to-[#0033A0]/10'}`}
+                whileHover={{ scale: 1.05, rotate: -5 }}
+              >
                 <Users className="w-5 h-5 text-[#0033A0]" />
-              </div>
+              </motion.div>
               <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Team</h3>
+              <span className={`text-xs px-2 py-1 rounded-full ${darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                {users.length} members
+              </span>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="relative flex flex-wrap gap-3">
               {users.map((user, index) => {
                 const userTasks = todos.filter(t => t.assigned_to === user && !t.completed).length;
                 const colorScheme = TEAM_COLORS[index % TEAM_COLORS.length];
+                const isCurrentUser = user === currentUser.name;
 
                 return (
                   <motion.div
                     key={user}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5 + index * 0.05 }}
-                    whileHover={{ scale: 1.02 }}
-                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl cursor-default transition-colors ${
-                      darkMode
-                        ? 'bg-slate-800/50 hover:bg-slate-800'
-                        : 'bg-slate-50 hover:bg-slate-100'
+                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ delay: 0.5 + index * 0.08, type: 'spring' }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className={`relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-default transition-all ${
+                      isCurrentUser
+                        ? darkMode
+                          ? 'bg-[#0033A0]/20 border border-[#0033A0]/30'
+                          : 'bg-[#0033A0]/5 border border-[#0033A0]/20 shadow-sm'
+                        : darkMode
+                          ? 'bg-slate-800/50 hover:bg-slate-800 border border-transparent hover:border-slate-700'
+                          : 'bg-slate-50/80 hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm'
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-lg ${colorScheme.bg} ${colorScheme.text} flex items-center justify-center text-sm font-bold`}>
-                      {user.charAt(0)}
+                    {/* User avatar with gradient border */}
+                    <div className="relative">
+                      <div className={`w-9 h-9 rounded-xl ${colorScheme.bg} ${colorScheme.text} flex items-center justify-center text-sm font-bold shadow-md`}>
+                        {user.charAt(0)}
+                      </div>
+                      {isCurrentUser && (
+                        <motion.div
+                          className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#10B981] rounded-full border-2 border-white"
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
                     </div>
-                    <span className={`text-sm font-medium ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
-                      {user}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className={`text-sm font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                        {user}
+                        {isCurrentUser && <span className="text-xs font-normal text-slate-400 ml-1">(you)</span>}
+                      </span>
+                      {userTasks > 0 && (
+                        <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {userTasks} active task{userTasks !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                     {userTasks > 0 && (
-                      <motion.span
+                      <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                        className={`ml-auto w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
                           darkMode
                             ? 'bg-[#72B5E8]/20 text-[#72B5E8]'
                             : 'bg-[#0033A0]/10 text-[#0033A0]'
                         }`}
                       >
                         {userTasks}
-                      </motion.span>
+                      </motion.div>
                     )}
                   </motion.div>
                 );
