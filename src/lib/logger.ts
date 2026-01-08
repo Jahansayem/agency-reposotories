@@ -134,50 +134,42 @@ export function withErrorLogging<T extends (...args: any[]) => Promise<any>>(
 
 /**
  * HOC for React components to catch and log errors
+ * NOTE: Commented out due to JSX in .ts file - move to separate .tsx file if needed
  */
-export function withErrorBoundary<P extends object>(
-  Component: React.ComponentType<P>,
-  componentName: string
-): React.ComponentType<P> {
-  return class ErrorBoundaryWrapper extends React.Component<
-    P,
-    { hasError: boolean }
-  > {
-    constructor(props: P) {
-      super(props);
-      this.state = { hasError: false };
-    }
+// export function withErrorBoundary<P extends object>(
+//   Component: React.ComponentType<P>,
+//   componentName: string
+// ): React.ComponentType<P> {
+//   return class ErrorBoundaryWrapper extends React.Component<
+//     P,
+//     { hasError: boolean }
+//   > {
+//     constructor(props: P) {
+//       super(props);
+//       this.state = { hasError: false };
+//     }
 
-    static getDerivedStateFromError() {
-      return { hasError: true };
-    }
+//     static getDerivedStateFromError() {
+//       return { hasError: true };
+//     }
 
-    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-      logger.error(
-        `React component error in ${componentName}`,
-        error,
-        {
-          component: componentName,
-          componentStack: errorInfo.componentStack,
-        }
-      );
-    }
+//     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+//       logger.error(
+//         `React component error in ${componentName}`,
+//         error,
+//         {
+//           component: componentName,
+//           componentStack: errorInfo.componentStack,
+//         }
+//       );
+//     }
 
-    render() {
-      if (this.state.hasError) {
-        return (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-            <h3 className="text-red-800 dark:text-red-200 font-semibold">
-              Something went wrong
-            </h3>
-            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-              We've been notified and are looking into it.
-            </p>
-          </div>
-        );
-      }
+//     render() {
+//       if (this.state.hasError) {
+//         return null; // Would need JSX here
+//       }
 
-      return <Component {...this.props} />;
-    }
-  };
-}
+//       return <Component {...this.props} />;
+//     }
+//   };
+// }

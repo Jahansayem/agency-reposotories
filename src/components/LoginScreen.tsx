@@ -17,6 +17,7 @@ import {
   getLockoutState,
 } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { OAuthLoginButtons } from './OAuthLoginButtons';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
@@ -794,7 +795,21 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       </div>
                     )}
                   </motion.div>
-                ) : users.length === 0 ? (
+                ) : null}
+
+                {/* OAuth buttons for existing users */}
+                {filteredUsers.length > 0 && (
+                  <motion.div
+                    className="px-6 pb-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 }}
+                  >
+                    <OAuthLoginButtons />
+                  </motion.div>
+                )}
+
+                {filteredUsers.length === 0 && users.length === 0 ? (
                   <motion.div
                     className="px-8 py-16 text-center"
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -863,6 +878,16 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <p className="text-white/40 text-sm">No results for &ldquo;{searchQuery}&rdquo;</p>
                   </motion.div>
                 )}
+
+                {/* OAuth Login Buttons (when enabled) */}
+                <motion.div
+                  className="px-6 pb-4"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <OAuthLoginButtons />
+                </motion.div>
 
                 {/* Add user button */}
                 {users.length === 0 && (

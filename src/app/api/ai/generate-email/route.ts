@@ -22,6 +22,7 @@ interface EmailRequest {
   customerPhone?: string;
   tasks: TaskSummary[];
   tone: 'formal' | 'friendly' | 'brief';
+  language?: 'english' | 'spanish';
   senderName: string;
   includeNextSteps: boolean;
 }
@@ -69,10 +70,53 @@ You must also identify potential issues that the agent should review before send
 - Negative news that may need softer delivery
 - Mentions of money, payments, or pricing that should be double-checked`;
 
+const SPANISH_SYSTEM_PROMPT = `Eres un asistente profesional que ayuda al personal de agencias de seguros a escribir correos electrónicos de actualización para clientes.
+
+Tu trabajo es generar correos electrónicos claros y profesionales que actualicen a los clientes sobre el estado de sus asuntos relacionados con seguros.
+
+ESTILO DE COMUNICACIÓN DE AGENTE DE SEGUROS:
+- Usa lenguaje apropiado de la industria (por ejemplo, "póliza", "cobertura", "prima", "reclamación", "cotización", "renovación", "deducible", "aseguradora")
+- Sé cálido y personal - los agentes de seguros construyen relaciones a largo plazo con los clientes
+- Muestra cuidado proactivo: "Quería comunicarme", "Me estoy asegurando", "Estoy pendiente"
+- Usa lenguaje tranquilizador cuando sea apropiado: "todo está listo", "todo está en orden", "te tenemos cubierto"
+- Referencia acciones específicas tomadas: "Hablé con la aseguradora", "Revisé tu póliza", "Presenté la documentación"
+
+PAUTAS DE CONTENIDO:
+- Enfócate en lo que se ha LOGRADO y lo que SIGUE
+- Si se proporcionan transcripciones de mensajes de voz, úsalas para entender las preocupaciones del cliente y referenciarlas naturalmente
+- Si se mencionan archivos adjuntos, reconócelos (por ejemplo, "He revisado los documentos que enviaste")
+- Si las subtareas muestran progreso detallado, úsalo para demostrar minuciosidad
+- Para tareas completadas, sé claro sobre los resultados y los próximos pasos
+- Nunca expongas detalles internos (IDs de tareas, sistemas, notas internas que no son relevantes)
+- Manténlo conciso - máximo 2-4 párrafos cortos
+- Sé específico sobre lo que se hizo sin ser demasiado técnico
+
+Significados de estados:
+- "todo": Aún no comenzado (sé honesto pero tranquilizador)
+- "in_progress": Actualmente en progreso (muestra avance activo)
+- "done": Completado (celebra el logro)
+
+NO:
+- Usar viñetas (escribe en párrafos naturales)
+- Comenzar con "Espero que este correo te encuentre bien"
+- Ser demasiado formal o rígido
+- Incluir texto de marcador de posición como [FECHA] o [NOMBRE]
+- Mencionar el sistema de gestión de tareas
+- Hacer promesas sobre tiempos sin contexto
+
+SEÑALES DE REVISIÓN:
+También debes identificar problemas potenciales que el agente debe revisar antes de enviar:
+- Información sensible que podría estar en notas/transcripciones (SSNs, números de cuenta, información de salud privada)
+- Promesas sobre fechas o plazos específicos
+- Declaraciones sobre cobertura o detalles de póliza que deben ser verificados
+- Cualquier información de marcador de posición que necesite ser completada
+- Noticias negativas que puedan necesitar una entrega más suave
+- Menciones de dinero, pagos o precios que deben ser verificados`;
+
 export async function POST(request: NextRequest) {
   try {
     const body: EmailRequest = await request.json();
-    const { customerName, customerEmail, customerPhone, tasks, tone, senderName, includeNextSteps } = body;
+    const { customerName, customerEmail, customerPhone, tasks, tone, language = 'english', senderName, includeNextSteps } = body;
 
     if (!customerName || !tasks || tasks.length === 0) {
       return NextResponse.json(
@@ -109,14 +153,46 @@ export async function POST(request: NextRequest) {
     const inProgress = tasks.filter(t => t.status === 'in_progress').length;
     const pending = tasks.filter(t => t.status === 'todo').length;
 
-    const toneInstructions = {
+    const toneInstructions = language === 'spanish' ? {
+      formal: 'Usa un tono formal y profesional apropiado para correspondencia de negocios.',
+      friendly: 'Usa un tono cálido y amigable mientras te mantienes profesional. Esta es una agencia pequeña con relaciones personales.',
+      brief: 'Manténlo muy corto y directo al grano - solo la actualización esencial en máximo 2-3 oraciones.',
+    } : {
       formal: 'Use a formal, professional tone suitable for business correspondence.',
       friendly: 'Use a warm, friendly tone while remaining professional. This is a small agency with personal relationships.',
       brief: 'Keep it very short and to the point - just the essential update in 2-3 sentences max.',
     };
 
-    const prompt = `Generate a customer update email with the following details:
+    const promptDetails = language === 'spanish' ? `
+Nombre del Cliente: ${customerName}
+${customerEmail ? `Email del Cliente: ${customerEmail}` : ''}
+${customerPhone ? `Teléfono del Cliente: ${customerPhone}` : ''}
+Nombre del Remitente: ${senderName}
+Agencia: Bealer Agency
 
+Resumen de Tareas (${completed} completadas, ${inProgress} en progreso, ${pending} pendientes):
+${taskSummary}
+
+Tono: ${toneInstructions[tone]}
+${includeNextSteps ? 'Incluye próximos pasos específicos o qué puede esperar el cliente.' : 'Mantén el enfoque solo en la actualización de estado.'}
+
+IMPORTANTE: Revisa los detalles de las tareas cuidadosamente. Si se proporcionan transcripciones de mensajes de voz, úsalas para entender el contexto y las preocupaciones del cliente. Si se mencionan archivos adjuntos, reconócelos apropiadamente. Presta atención al progreso de las subtareas para mostrar minuciosidad.
+
+Genera una respuesta JSON con:
+{
+  "subject": "Línea de asunto breve y específica del correo electrónico",
+  "body": "El cuerpo del correo electrónico (usa \\n para saltos de línea entre párrafos)",
+  "suggestedFollowUp": "Opcional: cuándo hacer seguimiento (por ejemplo, 'en 2-3 días') o null",
+  "warnings": [
+    {
+      "type": "sensitive_info" | "date_promise" | "coverage_detail" | "pricing" | "negative_news" | "needs_verification",
+      "message": "Breve descripción de qué revisar",
+      "location": "Dónde aparece esto en el correo (subject/body)"
+    }
+  ]
+}
+
+El array de warnings debe señalar cualquier elemento que necesite la revisión del agente antes de enviar. Solo incluye warnings si hay problemas reales para revisar.` : `
 Customer Name: ${customerName}
 ${customerEmail ? `Customer Email: ${customerEmail}` : ''}
 ${customerPhone ? `Customer Phone: ${customerPhone}` : ''}
@@ -147,10 +223,14 @@ Generate a JSON response with:
 
 The warnings array should flag any items that need the agent's review before sending. Only include warnings if there are actual issues to review.`;
 
+    const prompt = (language === 'spanish'
+      ? `Genera un correo electrónico de actualización para el cliente con los siguientes detalles:`
+      : `Generate a customer update email with the following details:`) + promptDetails;
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: language === 'spanish' ? SPANISH_SYSTEM_PROMPT : SYSTEM_PROMPT,
       messages: [{ role: 'user', content: prompt }],
     });
 

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Mail, Copy, ExternalLink, Sparkles, Check,
   User, Phone, AtSign, FileText, ChevronDown, ChevronUp,
-  RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info
+  RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info, Languages
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 import { extractPhoneNumbers, extractEmails, extractPotentialNames } from '@/lib/duplicateDetection';
@@ -18,6 +18,7 @@ interface CustomerEmailModalProps {
 }
 
 type EmailTone = 'formal' | 'friendly' | 'brief';
+type EmailLanguage = 'english' | 'spanish';
 
 interface DetectedCustomer {
   name: string;
@@ -53,6 +54,7 @@ export default function CustomerEmailModal({
 
   // Email generation
   const [tone, setTone] = useState<EmailTone>('friendly');
+  const [language, setLanguage] = useState<EmailLanguage>('english');
   const [includeNextSteps, setIncludeNextSteps] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail | null>(null);
@@ -67,6 +69,7 @@ export default function CustomerEmailModal({
   // UI state
   const [showTaskDetails, setShowTaskDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
 
   // Detect customer from tasks on mount
   useEffect(() => {
@@ -131,6 +134,7 @@ export default function CustomerEmailModal({
             completed: t.completed,
           })),
           tone,
+          language,
           senderName: currentUser.name,
           includeNextSteps,
         }),
@@ -154,6 +158,39 @@ export default function CustomerEmailModal({
       setError(err instanceof Error ? err.message : 'Failed to generate email');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const translateToSpanish = async () => {
+    if (!generatedEmail) return;
+
+    setIsTranslating(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/ai/translate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: editedSubject || generatedEmail.subject,
+          body: editedBody || generatedEmail.body,
+          targetLanguage: 'spanish',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to translate email');
+      }
+
+      setEditedSubject(data.subject);
+      setEditedBody(data.body);
+      setLanguage('spanish');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to translate email');
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -409,6 +446,39 @@ export default function CustomerEmailModal({
                 </div>
               </div>
 
+              {/* Language Selection */}
+              <div>
+                <label className={`block text-xs mb-2 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                  Language
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setLanguage('english')}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                      language === 'english'
+                        ? 'bg-blue-500 text-white'
+                        : darkMode
+                        ? 'bg-white/10 hover:bg-white/20'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => setLanguage('spanish')}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                      language === 'spanish'
+                        ? 'bg-blue-500 text-white'
+                        : darkMode
+                        ? 'bg-white/10 hover:bg-white/20'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    Español
+                  </button>
+                </div>
+              </div>
+
               {/* Include Next Steps */}
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -463,17 +533,36 @@ export default function CustomerEmailModal({
                 <h3 className="font-medium flex items-center gap-2">
                   <Mail className="w-4 h-4 text-blue-500" />
                   Generated Email
+                  {language === 'spanish' && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-500">
+                      Español
+                    </span>
+                  )}
                 </h3>
-                <button
-                  onClick={generateEmail}
-                  disabled={isGenerating}
-                  className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
-                    darkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-white hover:bg-gray-100'
-                  }`}
-                >
-                  <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
-                  Regenerate
-                </button>
+                <div className="flex items-center gap-2">
+                  {language === 'english' && (
+                    <button
+                      onClick={translateToSpanish}
+                      disabled={isTranslating}
+                      className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
+                        darkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      <Languages className={`w-3 h-3 ${isTranslating ? 'animate-pulse' : ''}`} />
+                      Translate to Spanish
+                    </button>
+                  )}
+                  <button
+                    onClick={generateEmail}
+                    disabled={isGenerating}
+                    className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
+                      darkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-white hover:bg-gray-100'
+                    }`}
+                  >
+                    <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
+                    Regenerate
+                  </button>
+                </div>
               </div>
 
               {/* Warnings */}
