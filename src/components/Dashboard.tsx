@@ -5,18 +5,14 @@ import { motion } from 'framer-motion';
 import {
   CheckCircle2,
   AlertTriangle,
-  TrendingUp,
   Calendar,
   ArrowRight,
   Plus,
-  Flame,
-  Clock,
   ChevronRight,
   Sun,
   Moon,
   Sunrise,
-  BarChart3,
-  ListTodo,
+  Clock,
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 
@@ -40,15 +36,20 @@ interface WeekDay {
   isToday: boolean;
 }
 
+interface UpcomingTask {
+  id: string;
+  text: string;
+  due_date: string;
+  priority: string;
+}
+
 export default function Dashboard({
   todos,
   currentUser,
-  users,
   onNavigateToTasks,
   onAddTask,
   onFilterOverdue,
   onFilterDueToday,
-  onFilterMyTasks,
   darkMode = false,
 }: DashboardProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -67,8 +68,6 @@ export default function Dashboard({
     const activeTodos = todos.filter(t => !t.completed);
     const completedTodos = todos.filter(t => t.completed);
 
-    const myTasks = activeTodos.filter(t => t.assigned_to === currentUser.name);
-
     const overdue = activeTodos.filter(t => {
       if (!t.due_date) return false;
       const dueDate = new Date(t.due_date);
@@ -82,14 +81,26 @@ export default function Dashboard({
       return dueDate >= today && dueDate <= todayEnd;
     });
 
-    // Upcoming (next 7 days, excluding today)
+    // Next 7 days (excluding today)
     const nextWeek = new Date(today);
     nextWeek.setDate(nextWeek.getDate() + 7);
-    const upcoming = activeTodos.filter(t => {
-      if (!t.due_date) return false;
-      const dueDate = new Date(t.due_date);
-      return dueDate > todayEnd && dueDate <= nextWeek;
-    });
+    const upcoming = activeTodos
+      .filter(t => {
+        if (!t.due_date) return false;
+        const dueDate = new Date(t.due_date);
+        return dueDate > todayEnd && dueDate <= nextWeek;
+      })
+      .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+
+    // Get first upcoming task for "Next Up" display
+    const nextTask: UpcomingTask | null = upcoming.length > 0
+      ? {
+          id: upcoming[0].id,
+          text: upcoming[0].text,
+          due_date: upcoming[0].due_date!,
+          priority: upcoming[0].priority || 'medium',
+        }
+      : null;
 
     // Weekly completion data
     const weekData: WeekDay[] = [];
@@ -98,6 +109,8 @@ export default function Dashboard({
     const monday = new Date(today);
     monday.setDate(today.getDate() - daysFromMonday);
     monday.setHours(0, 0, 0, 0);
+
+    let totalCreatedThisWeek = 0;
 
     for (let i = 0; i < 5; i++) {
       const date = new Date(monday);
@@ -112,6 +125,13 @@ export default function Dashboard({
         return updatedAt >= date && updatedAt <= dateEnd;
       }).length;
 
+      // Count tasks created this week (for context)
+      const createdThisDay = todos.filter(t => {
+        const createdAt = new Date(t.created_at);
+        return createdAt >= date && createdAt <= dateEnd;
+      }).length;
+      totalCreatedThisWeek += createdThisDay;
+
       weekData.push({
         date,
         dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
@@ -124,20 +144,23 @@ export default function Dashboard({
     const weeklyCompleted = weekData.reduce((sum, d) => sum + d.completed, 0);
     const maxDaily = Math.max(...weekData.map(d => d.completed), 1);
 
+    // Weekly ratio: completed vs total tasks touched this week
+    const weeklyTotal = Math.max(weeklyCompleted + activeTodos.length, 1);
+    const weeklyRatio = Math.round((weeklyCompleted / weeklyTotal) * 100);
+
     return {
-      total: todos.length,
-      active: activeTodos.length,
-      completed: completedTodos.length,
-      myTasks: myTasks.length,
       overdue: overdue.length,
       dueToday: dueToday.length,
-      upcoming: upcoming.length,
+      dueTodayTasks: dueToday,
+      nextTask,
       weekData,
       weeklyCompleted,
+      weeklyTotal,
+      weeklyRatio,
       maxDaily,
-      completionRate: todos.length > 0 ? Math.round((completedTodos.length / todos.length) * 100) : 0,
+      hasActionableWork: overdue.length > 0 || dueToday.length > 0 || nextTask !== null,
     };
-  }, [todos, currentUser.name]);
+  }, [todos]);
 
   const getGreeting = () => {
     const hour = currentTime.getHours();
@@ -148,28 +171,18 @@ export default function Dashboard({
 
   const greeting = getGreeting();
 
-  // Determine what the hero message should be
-  const getHeroMessage = () => {
-    if (stats.dueToday > 0) {
-      return {
-        number: stats.dueToday,
-        label: stats.dueToday === 1 ? 'task due today' : 'tasks due today',
-        action: onFilterDueToday,
-        color: 'text-[#0033A0]',
-      };
-    }
-    if (stats.myTasks > 0) {
-      return {
-        number: stats.myTasks,
-        label: stats.myTasks === 1 ? 'task assigned to you' : 'tasks assigned to you',
-        action: onFilterMyTasks,
-        color: 'text-[#0033A0]',
-      };
-    }
-    return null;
-  };
+  const formatDueDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const heroMessage = getHeroMessage();
+    if (date.toDateString() === tomorrow.toDateString()) {
+      return 'Tomorrow';
+    }
+
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-[#0A1628]' : 'bg-slate-50'}`}>
@@ -192,68 +205,39 @@ export default function Dashboard({
           </div>
 
           {/* Name */}
-          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
             {currentUser.name}
           </h1>
 
-          {/* Hero stat - what needs doing NOW */}
-          {heroMessage ? (
-            <button
-              onClick={heroMessage.action}
-              className="group flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl px-5 py-3 border border-white/20 hover:bg-white/15 transition-colors"
-            >
-              <span className="text-3xl font-bold text-white">{heroMessage.number}</span>
-              <span className="text-white/80 text-sm">{heroMessage.label}</span>
-              <ChevronRight className="w-4 h-4 text-white/60 group-hover:translate-x-1 transition-transform" />
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 text-white/80">
-              <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
-              <span className="text-sm font-medium">You're all caught up</span>
-            </div>
-          )}
-
-          {/* Quick badges */}
-          <div className="flex flex-wrap gap-3 mt-6">
-            <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-2 border border-white/10">
-              <Flame className="w-4 h-4 text-[#F59E0B]" />
-              <span className="text-white/90 text-sm font-medium">
-                {currentUser.streak_count || 0} day streak
-              </span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-2 border border-white/10">
-              <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
-              <span className="text-white/90 text-sm font-medium">
-                {stats.weeklyCompleted} done this week
-              </span>
-            </div>
-          </div>
+          {/* Single contextual stat */}
+          <p className="text-white/70 text-sm">
+            {stats.weeklyCompleted} completed this week
+          </p>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-5 sm:px-6 py-6 space-y-5">
-        {/* Overdue Alert Bar - only shows if there are overdue tasks */}
+        {/* Overdue Alert - Primary CTA when there are overdue tasks */}
         {stats.overdue > 0 && (
           <motion.button
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={onFilterOverdue}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#FEF2F2] border border-[#FECACA] hover:bg-[#FEE2E2] transition-colors group"
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-[#0033A0] text-white hover:bg-[#002580] transition-colors group shadow-lg shadow-[#0033A0]/20"
           >
-            <div className="w-2 h-10 bg-[#EF4444] rounded-full" />
-            <AlertTriangle className="w-5 h-5 text-[#EF4444]" />
+            <AlertTriangle className="w-5 h-5" />
             <div className="flex-1 text-left">
-              <span className="text-[#991B1B] font-semibold">{stats.overdue} overdue</span>
-              <span className="text-[#B91C1C]/70 text-sm ml-2">needs attention</span>
+              <span className="font-semibold">{stats.overdue} overdue task{stats.overdue !== 1 ? 's' : ''}</span>
+              <span className="text-white/70 text-sm ml-2">need attention</span>
             </div>
-            <span className="text-[#EF4444] text-sm font-medium group-hover:underline">
-              View overdue →
+            <span className="text-sm font-medium group-hover:underline flex items-center gap-1">
+              View overdue <ArrowRight className="w-4 h-4" />
             </span>
           </motion.button>
         )}
 
-        {/* Unified Task Breakdown Card */}
+        {/* Today's Tasks */}
         <div className={`rounded-2xl p-5 ${
           darkMode
             ? 'bg-[#1E293B] border border-[#334155]'
@@ -262,122 +246,98 @@ export default function Dashboard({
           <h3 className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
             darkMode ? 'text-slate-400' : 'text-slate-500'
           }`}>
-            Task Overview
+            Today
           </h3>
 
-          <div className="space-y-1">
-            {/* Today */}
-            <button
-              onClick={onFilterDueToday}
-              disabled={stats.dueToday === 0}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
-                stats.dueToday > 0
-                  ? darkMode
-                    ? 'hover:bg-slate-700/50'
-                    : 'hover:bg-slate-50'
-                  : 'opacity-50 cursor-default'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  darkMode ? 'bg-[#0033A0]/20' : 'bg-[#0033A0]/10'
-                }`}>
-                  <Calendar className="w-5 h-5 text-[#0033A0]" />
-                </div>
-                <div className="text-left">
-                  <p className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Today</p>
-                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Due by end of day</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-2xl font-bold ${
-                  stats.dueToday > 0
-                    ? 'text-[#0033A0]'
-                    : darkMode ? 'text-slate-500' : 'text-slate-300'
-                }`}>
-                  {stats.dueToday}
-                </span>
-                {stats.dueToday > 0 && <ChevronRight className="w-4 h-4 text-slate-400" />}
-              </div>
-            </button>
+          {stats.dueToday > 0 ? (
+            <div className="space-y-2">
+              {stats.dueTodayTasks.slice(0, 3).map((task) => (
+                <button
+                  key={task.id}
+                  onClick={onFilterDueToday}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
+                    darkMode
+                      ? 'hover:bg-slate-700/50'
+                      : 'hover:bg-slate-50'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${
+                    task.priority === 'urgent' ? 'bg-red-500' :
+                    task.priority === 'high' ? 'bg-orange-500' :
+                    'bg-[#0033A0]'
+                  }`} />
+                  <span className={`flex-1 text-sm font-medium truncate ${
+                    darkMode ? 'text-white' : 'text-slate-900'
+                  }`}>
+                    {task.text}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+              ))}
+              {stats.dueToday > 3 && (
+                <button
+                  onClick={onFilterDueToday}
+                  className={`w-full text-center py-2 text-sm font-medium ${
+                    darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'
+                  } hover:underline`}
+                >
+                  +{stats.dueToday - 3} more due today
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 py-2">
+              <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
+              <span className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+                No tasks due today
+              </span>
+            </div>
+          )}
+        </div>
 
-            {/* Divider */}
-            <div className={`mx-4 border-t ${darkMode ? 'border-slate-700' : 'border-slate-100'}`} />
+        {/* Next Up - only show if there's something coming */}
+        {stats.nextTask && (
+          <div className={`rounded-2xl p-5 ${
+            darkMode
+              ? 'bg-[#1E293B] border border-[#334155]'
+              : 'bg-white border border-slate-200'
+          }`}>
+            <h3 className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
+              darkMode ? 'text-slate-400' : 'text-slate-500'
+            }`}>
+              Next Up
+            </h3>
 
-            {/* Upcoming */}
             <button
               onClick={onNavigateToTasks}
-              disabled={stats.upcoming === 0}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
-                stats.upcoming > 0
-                  ? darkMode
-                    ? 'hover:bg-slate-700/50'
-                    : 'hover:bg-slate-50'
-                  : 'opacity-50 cursor-default'
+              className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
+                darkMode
+                  ? 'hover:bg-slate-700/50'
+                  : 'hover:bg-slate-50'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  darkMode ? 'bg-[#72B5E8]/20' : 'bg-[#72B5E8]/10'
+              <div className={`w-2 h-2 mt-2 rounded-full ${
+                stats.nextTask.priority === 'urgent' ? 'bg-red-500' :
+                stats.nextTask.priority === 'high' ? 'bg-orange-500' :
+                'bg-[#0033A0]'
+              }`} />
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium truncate ${
+                  darkMode ? 'text-white' : 'text-slate-900'
                 }`}>
-                  <Clock className="w-5 h-5 text-[#0047CC]" />
-                </div>
-                <div className="text-left">
-                  <p className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Upcoming</p>
-                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Due in next 7 days</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-2xl font-bold ${
-                  stats.upcoming > 0
-                    ? darkMode ? 'text-slate-200' : 'text-slate-700'
-                    : darkMode ? 'text-slate-500' : 'text-slate-300'
-                }`}>
-                  {stats.upcoming}
-                </span>
-                {stats.upcoming > 0 && <ChevronRight className="w-4 h-4 text-slate-400" />}
-              </div>
-            </button>
-
-            {/* Divider */}
-            <div className={`mx-4 border-t ${darkMode ? 'border-slate-700' : 'border-slate-100'}`} />
-
-            {/* Assigned to me */}
-            <button
-              onClick={onFilterMyTasks}
-              disabled={stats.myTasks === 0}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
-                stats.myTasks > 0
-                  ? darkMode
-                    ? 'hover:bg-slate-700/50'
-                    : 'hover:bg-slate-50'
-                  : 'opacity-50 cursor-default'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  darkMode ? 'bg-slate-700' : 'bg-slate-100'
-                }`}>
-                  <ListTodo className="w-5 h-5 text-slate-600" />
-                </div>
-                <div className="text-left">
-                  <p className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Assigned to me</p>
-                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>All my active tasks</p>
+                  {stats.nextTask.text}
+                </p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {formatDueDate(stats.nextTask.due_date)}
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-2xl font-bold ${
-                  stats.myTasks > 0
-                    ? darkMode ? 'text-slate-200' : 'text-slate-700'
-                    : darkMode ? 'text-slate-500' : 'text-slate-300'
-                }`}>
-                  {stats.myTasks}
-                </span>
-                {stats.myTasks > 0 && <ChevronRight className="w-4 h-4 text-slate-400" />}
-              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 mt-1" />
             </button>
           </div>
-        </div>
+        )}
 
         {/* Weekly Progress */}
         <div className={`rounded-2xl p-5 ${
@@ -385,43 +345,50 @@ export default function Dashboard({
             ? 'bg-[#1E293B] border border-[#334155]'
             : 'bg-white border border-slate-200'
         }`}>
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                darkMode ? 'bg-[#0033A0]/20' : 'bg-[#0033A0]/10'
-              }`}>
-                <BarChart3 className="w-5 h-5 text-[#0033A0]" />
-              </div>
-              <div>
-                <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Weekly Progress</h3>
-                <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Tasks completed each day</p>
-              </div>
-            </div>
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${
-              stats.completionRate >= 50
-                ? 'bg-[#10B981]/10 text-[#10B981]'
-                : stats.completionRate >= 25
-                  ? 'bg-[#F59E0B]/10 text-[#F59E0B]'
-                  : 'bg-slate-100 text-slate-500'
-            }`}>
-              <TrendingUp className="w-4 h-4" />
-              <span className="font-bold text-sm">{stats.completionRate}%</span>
+          <div className="flex items-start justify-between mb-5">
+            <div>
+              <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                Weekly Progress
+              </h3>
+              <p className={`text-sm mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {stats.weeklyCompleted} of {stats.weeklyTotal} tasks completed ({stats.weeklyRatio}%)
+              </p>
             </div>
           </div>
 
-          {/* Chart */}
-          <div className="flex items-end justify-between gap-3 h-28">
+          {/* Progress bar */}
+          <div className={`h-2 rounded-full mb-5 ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${stats.weeklyRatio}%` }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className={`h-full rounded-full ${
+                stats.weeklyRatio >= 50 ? 'bg-[#10B981]' :
+                stats.weeklyRatio >= 25 ? 'bg-[#F59E0B]' :
+                'bg-[#0033A0]'
+              }`}
+            />
+          </div>
+
+          {/* Daily breakdown */}
+          <p className={`text-xs font-medium uppercase tracking-wide mb-3 ${
+            darkMode ? 'text-slate-500' : 'text-slate-400'
+          }`}>
+            Tasks completed each day
+          </p>
+
+          <div className="flex items-end justify-between gap-3 h-20">
             {stats.weekData.map((day, index) => {
               const height = stats.maxDaily > 0 ? (day.completed / stats.maxDaily) * 100 : 0;
               return (
                 <motion.div
                   key={day.dayName}
-                  className="flex-1 flex flex-col items-center gap-2"
+                  className="flex-1 flex flex-col items-center gap-1.5"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <span className={`text-sm font-semibold ${
+                  <span className={`text-xs font-semibold ${
                     day.completed > 0
                       ? darkMode ? 'text-white' : 'text-slate-700'
                       : darkMode ? 'text-slate-600' : 'text-slate-300'
@@ -429,12 +396,12 @@ export default function Dashboard({
                     {day.completed}
                   </span>
 
-                  <div className="w-full flex-1 flex flex-col justify-end">
+                  <div className="w-full flex-1 flex flex-col justify-end min-h-[20px]">
                     <motion.div
                       initial={{ height: 0 }}
-                      animate={{ height: `${Math.max(height, 4)}%` }}
+                      animate={{ height: `${Math.max(height, 8)}%` }}
                       transition={{ delay: 0.2 + index * 0.05, duration: 0.4 }}
-                      className={`w-full rounded-md ${
+                      className={`w-full rounded-sm ${
                         day.isToday
                           ? 'bg-[#0033A0]'
                           : day.completed > 0
@@ -444,10 +411,10 @@ export default function Dashboard({
                     />
                   </div>
 
-                  <span className={`text-xs font-medium ${
+                  <span className={`text-xs ${
                     day.isToday
                       ? 'text-[#0033A0] font-semibold'
-                      : darkMode ? 'text-slate-400' : 'text-slate-500'
+                      : darkMode ? 'text-slate-500' : 'text-slate-400'
                   }`}>
                     {day.dayName}
                   </span>
@@ -457,82 +424,68 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons - Priority based on context */}
         <div className="grid grid-cols-2 gap-4">
-          <motion.button
-            onClick={onAddTask}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center justify-center gap-2 p-4 rounded-xl bg-[#0033A0] text-white font-semibold shadow-lg shadow-[#0033A0]/20 hover:bg-[#0028A0] transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Add Task</span>
-          </motion.button>
+          {stats.overdue > 0 ? (
+            <>
+              {/* When overdue exists, View All is secondary */}
+              <motion.button
+                onClick={onNavigateToTasks}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-colors ${
+                  darkMode
+                    ? 'bg-slate-700 text-white hover:bg-slate-600'
+                    : 'bg-white border border-slate-200 text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <span>View All Tasks</span>
+                <ArrowRight className="w-4 h-4" />
+              </motion.button>
 
-          <motion.button
-            onClick={onNavigateToTasks}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-colors ${
-              darkMode
-                ? 'bg-slate-700 text-white hover:bg-slate-600'
-                : 'bg-white border border-slate-200 text-slate-800 hover:bg-slate-50'
-            }`}
-          >
-            <span>View All</span>
-            <ArrowRight className="w-4 h-4" />
-          </motion.button>
+              <motion.button
+                onClick={onAddTask}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-colors ${
+                  darkMode
+                    ? 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Plus className="w-5 h-5" />
+                <span>Add Task</span>
+              </motion.button>
+            </>
+          ) : (
+            <>
+              {/* No overdue - Add Task can be more prominent */}
+              <motion.button
+                onClick={onAddTask}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center justify-center gap-2 p-4 rounded-xl bg-[#0033A0] text-white font-semibold shadow-lg shadow-[#0033A0]/20 hover:bg-[#0028A0] transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                <span>Add Task</span>
+              </motion.button>
+
+              <motion.button
+                onClick={onNavigateToTasks}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-colors ${
+                  darkMode
+                    ? 'bg-slate-700 text-white hover:bg-slate-600'
+                    : 'bg-white border border-slate-200 text-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <span>View All Tasks</span>
+                <ArrowRight className="w-4 h-4" />
+              </motion.button>
+            </>
+          )}
         </div>
-
-        {/* Team coordination - only show if there's actionable info */}
-        {users.length > 1 && (
-          <div className={`rounded-2xl p-5 ${
-            darkMode
-              ? 'bg-[#1E293B] border border-[#334155]'
-              : 'bg-white border border-slate-200'
-          }`}>
-            <h3 className={`text-sm font-semibold uppercase tracking-wide mb-4 ${
-              darkMode ? 'text-slate-400' : 'text-slate-500'
-            }`}>
-              Team Workload
-            </h3>
-
-            <div className="space-y-3">
-              {users.map((user) => {
-                const userTasks = todos.filter(t => t.assigned_to === user && !t.completed).length;
-                const isYou = user === currentUser.name;
-
-                return (
-                  <div
-                    key={user}
-                    className={`flex items-center justify-between px-3 py-2 rounded-lg ${
-                      isYou
-                        ? darkMode ? 'bg-[#0033A0]/10' : 'bg-[#0033A0]/5'
-                        : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg bg-[#0033A0] text-white flex items-center justify-center text-sm font-bold`}>
-                        {user.charAt(0)}
-                      </div>
-                      <span className={`text-sm font-medium ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-                        {user}
-                        {isYou && <span className="text-slate-400 ml-1">(you)</span>}
-                      </span>
-                    </div>
-                    <span className={`text-sm ${
-                      userTasks > 0
-                        ? darkMode ? 'text-white font-semibold' : 'text-slate-900 font-semibold'
-                        : darkMode ? 'text-slate-500' : 'text-slate-400'
-                    }`}>
-                      {userTasks} task{userTasks !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
