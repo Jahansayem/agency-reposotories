@@ -139,6 +139,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [teamStats, setTeamStats] = useState<{ totalTasks: number; completedThisWeek: number; activeUsers: number } | null>(null);
+  const [showStats, setShowStats] = useState(false);
   const splashHighlights = [
     {
       Icon: Sparkles,
@@ -176,39 +177,54 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   }, []);
 
   useEffect(() => {
-    const fetchTeamStats = async () => {
-      // Get total tasks
-      const { count: totalTasks } = await supabase
-        .from('todos')
-        .select('*', { count: 'exact', head: true });
+    // Check if stats were already shown today
+    const checkAndFetchStats = async () => {
+      const lastShownDate = localStorage.getItem('statsLastShown');
+      const today = new Date().toDateString();
 
-      // Get tasks completed this week
-      const startOfWeek = new Date();
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1); // Monday
-      startOfWeek.setHours(0, 0, 0, 0);
+      if (lastShownDate !== today) {
+        // First login of the day - show stats
+        setShowStats(true);
 
-      const { count: completedThisWeek } = await supabase
-        .from('todos')
-        .select('*', { count: 'exact', head: true })
-        .eq('completed', true)
-        .gte('updated_at', startOfWeek.toISOString());
+        // Get total tasks
+        const { count: totalTasks } = await supabase
+          .from('todos')
+          .select('*', { count: 'exact', head: true });
 
-      // Get active users (logged in within last 7 days)
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        // Get tasks completed this week
+        const startOfWeek = new Date();
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1); // Monday
+        startOfWeek.setHours(0, 0, 0, 0);
 
-      const { count: activeUsers } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .gte('last_login', sevenDaysAgo.toISOString());
+        const { count: completedThisWeek } = await supabase
+          .from('todos')
+          .select('*', { count: 'exact', head: true })
+          .eq('completed', true)
+          .gte('updated_at', startOfWeek.toISOString());
 
-      setTeamStats({
-        totalTasks: totalTasks || 0,
-        completedThisWeek: completedThisWeek || 0,
-        activeUsers: activeUsers || 0,
-      });
+        // Get active users (logged in within last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const { count: activeUsers } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .gte('last_login', sevenDaysAgo.toISOString());
+
+        setTeamStats({
+          totalTasks: totalTasks || 0,
+          completedThisWeek: completedThisWeek || 0,
+          activeUsers: activeUsers || 0,
+        });
+
+        // Mark stats as shown today
+        localStorage.setItem('statsLastShown', today);
+      } else {
+        // Already shown today - hide stats
+        setShowStats(false);
+      }
     };
-    fetchTeamStats();
+    checkAndFetchStats();
   }, []);
 
   const filteredUsers = users.filter(user =>
@@ -584,57 +600,60 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 ))}
               </motion.div>
 
-              <motion.div
-                className="mt-10 grid grid-cols-3 gap-4"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                {/* Total Tasks */}
+              {showStats && teamStats && (
                 <motion.div
-                  className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-4 py-5 backdrop-blur relative overflow-hidden"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
+                  className="mt-10 grid grid-cols-3 gap-4"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -16 }}
+                  transition={{ delay: 0.5 }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#0033A0]/20 to-transparent opacity-50" />
-                  <div className="relative">
-                    <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Total Tasks</p>
-                    <p className="text-3xl font-bold text-white tabular-nums">
-                      {teamStats ? teamStats.totalTasks : '—'}
-                    </p>
-                  </div>
-                </motion.div>
+                  {/* Total Tasks */}
+                  <motion.div
+                    className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-4 py-5 backdrop-blur relative overflow-hidden"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#0033A0]/20 to-transparent opacity-50" />
+                    <div className="relative">
+                      <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Total Tasks</p>
+                      <p className="text-3xl font-bold text-white tabular-nums">
+                        {teamStats.totalTasks}
+                      </p>
+                    </div>
+                  </motion.div>
 
-                {/* Completed This Week */}
-                <motion.div
-                  className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-4 py-5 backdrop-blur relative overflow-hidden"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#C9A227]/20 to-transparent opacity-50" />
-                  <div className="relative">
-                    <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">This Week</p>
-                    <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-[#F4E5C7] to-[#D4A853] tabular-nums">
-                      {teamStats ? teamStats.completedThisWeek : '—'}
-                    </p>
-                  </div>
-                </motion.div>
+                  {/* Completed This Week */}
+                  <motion.div
+                    className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-4 py-5 backdrop-blur relative overflow-hidden"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#C9A227]/20 to-transparent opacity-50" />
+                    <div className="relative">
+                      <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">This Week</p>
+                      <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-[#F4E5C7] to-[#D4A853] tabular-nums">
+                        {teamStats.completedThisWeek}
+                      </p>
+                    </div>
+                  </motion.div>
 
-                {/* Active Users */}
-                <motion.div
-                  className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-4 py-5 backdrop-blur relative overflow-hidden"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ type: 'spring', stiffness: 300 }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#72B5E8]/20 to-transparent opacity-50" />
-                  <div className="relative">
-                    <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Active Users</p>
-                    <p className="text-3xl font-bold text-[#72B5E8] tabular-nums">
-                      {teamStats ? teamStats.activeUsers : '—'}
-                    </p>
-                  </div>
+                  {/* Active Users */}
+                  <motion.div
+                    className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] px-4 py-5 backdrop-blur relative overflow-hidden"
+                    whileHover={{ scale: 1.02 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#72B5E8]/20 to-transparent opacity-50" />
+                    <div className="relative">
+                      <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Active Users</p>
+                      <p className="text-3xl font-bold text-[#72B5E8] tabular-nums">
+                        {teamStats.activeUsers}
+                      </p>
+                    </div>
+                  </motion.div>
                 </motion.div>
-              </motion.div>
+              )}
             </div>
           </motion.div>
 
