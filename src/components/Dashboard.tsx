@@ -99,33 +99,38 @@ export default function Dashboard({
 
     const urgent = activeTodos.filter(t => t.priority === 'urgent' || t.priority === 'high');
 
-    // Weekly completion data (Mon-Fri only)
+    // Weekly completion data (Mon-Fri of current week)
     const weekData: WeekDay[] = [];
-    const cursor = new Date(today);
-    while (weekData.length < 5) {
-      const day = cursor.getDay();
-      if (day !== 0 && day !== 6) {
-        const date = new Date(cursor);
-        date.setHours(0, 0, 0, 0);
-        const dateEnd = new Date(date);
-        dateEnd.setHours(23, 59, 59, 999);
 
-        const completed = completedTodos.filter(t => {
-          const updatedAt = t.updated_at ? new Date(t.updated_at) : new Date(t.created_at);
-          return updatedAt >= date && updatedAt <= dateEnd;
-        }).length;
+    // Find Monday of current week
+    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // If Sunday, go back 6 days to Monday
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - daysFromMonday);
+    monday.setHours(0, 0, 0, 0);
 
-        weekData.push({
-          date,
-          dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
-          dayNumber: date.getDate(),
-          completed,
-          isToday: date.getTime() === today.getTime(),
-        });
-      }
-      cursor.setDate(cursor.getDate() - 1);
+    // Generate Mon-Fri of current week
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      date.setHours(0, 0, 0, 0);
+      const dateEnd = new Date(date);
+      dateEnd.setHours(23, 59, 59, 999);
+
+      const completed = completedTodos.filter(t => {
+        if (!t.completed) return false;
+        const updatedAt = t.updated_at ? new Date(t.updated_at) : new Date(t.created_at);
+        return updatedAt >= date && updatedAt <= dateEnd;
+      }).length;
+
+      weekData.push({
+        date,
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        dayNumber: date.getDate(),
+        completed,
+        isToday: date.toDateString() === today.toDateString(),
+      });
     }
-    weekData.reverse();
 
     const weeklyCompleted = weekData.reduce((sum, d) => sum + d.completed, 0);
     const maxDaily = Math.max(...weekData.map(d => d.completed), 1);
