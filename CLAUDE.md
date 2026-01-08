@@ -17,6 +17,7 @@ This document provides comprehensive context for AI assistants (like Claude Code
 11. [Debugging & Troubleshooting](#debugging--troubleshooting)
 12. [Testing Strategy](#testing-strategy)
 13. [Deployment](#deployment)
+14. [**🚀 Refactoring Plan**](#refactoring-plan) ⭐ **NEW**
 
 ---
 
@@ -1513,11 +1514,35 @@ When working on this codebase:
 
 ---
 
-**Last Updated:** 2025-01-08
-**Version:** 2.0
+## Refactoring Plan
+
+### 📋 Comprehensive Improvement Roadmap
+
+A **detailed 12-week plan** to address technical debt and architectural issues has been created. This zero-downtime refactoring plan includes:
+
+**Key Improvements:**
+- ✅ **OAuth 2.0 Authentication** (Google/Apple) alongside existing PIN system
+- ✅ **Enhanced Security** (Argon2 hashing, server-side rate limiting, Row-Level Security)
+- ✅ **Normalized Database Schema** (move from JSONB to proper relational tables)
+- ✅ **Component Refactoring** (break 2,000+ line components into modular pieces)
+- ✅ **State Management** (add Zustand for centralized state)
+- ✅ **Comprehensive Testing** (achieve 80%+ test coverage)
+- ✅ **Feature Flags** (gradual rollout without breaking existing functionality)
+
+**See [REFACTORING_PLAN.md](./REFACTORING_PLAN.md) for complete details.**
+
+**Strategy:** All improvements use feature flags and dual-write patterns to ensure **zero user disruption** during migration. Old system continues working while new system is built in parallel.
+
+**Timeline:** 12 weeks | **Risk:** Low | **Cost:** ~$36/month additional infrastructure
+
+---
+
+**Last Updated:** 2026-01-08
+**Version:** 2.1
 **Maintained by:** Development Team
 
 For questions or issues, refer to this document first, then check:
 - README.md for user-facing documentation
 - SETUP.md for installation instructions
 - tests/ directory for testing documentation
+- **[REFACTORING_PLAN.md](./REFACTORING_PLAN.md)** for improvement roadmap ⭐
