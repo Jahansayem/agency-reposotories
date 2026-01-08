@@ -12,7 +12,9 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "migrate:schema": "ts-node scripts/migrate-to-normalized-schema.ts",
+    "migrate:status": "ts-node scripts/check-migration-status.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -47,7 +49,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "happy-dom": "^20.1.0",
+    "p-limit": "^7.2.0",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
     "typescript": "5.9.3",
     "vitest": "^4.0.16"
   }
