@@ -33,39 +33,42 @@ export default function WeeklyProgressChart({
     const days: DayData[] = [];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-    // Get last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
+    // Get last 5 weekdays (Mon-Fri)
+    const cursor = new Date(today);
+    while (days.length < 5) {
+      const day = cursor.getDay();
+      if (day !== 0 && day !== 6) {
+        const date = new Date(cursor);
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
 
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
+        // Count tasks completed on this day (based on updated_at if completed)
+        const completed = todos.filter(t => {
+          if (!t.completed) return false;
+          const updatedAt = t.updated_at ? new Date(t.updated_at) : new Date(t.created_at);
+          return updatedAt >= dayStart && updatedAt <= dayEnd;
+        }).length;
 
-      // Count tasks completed on this day (based on updated_at if completed)
-      const completed = todos.filter(t => {
-        if (!t.completed) return false;
-        const updatedAt = t.updated_at ? new Date(t.updated_at) : new Date(t.created_at);
-        return updatedAt >= dayStart && updatedAt <= dayEnd;
-      }).length;
+        // Count tasks created on this day
+        const created = todos.filter(t => {
+          const createdAt = new Date(t.created_at);
+          return createdAt >= dayStart && createdAt <= dayEnd;
+        }).length;
 
-      // Count tasks created on this day
-      const created = todos.filter(t => {
-        const createdAt = new Date(t.created_at);
-        return createdAt >= dayStart && createdAt <= dayEnd;
-      }).length;
-
-      days.push({
-        day: dayNames[date.getDay()],
-        shortDay: dayNames[date.getDay()].charAt(0),
-        date,
-        completed,
-        created,
-      });
+        days.push({
+          day: dayNames[date.getDay()],
+          shortDay: dayNames[date.getDay()],
+          date,
+          completed,
+          created,
+        });
+      }
+      cursor.setDate(cursor.getDate() - 1);
     }
 
-    return days;
+    return days.reverse();
   }, [todos]);
 
   const stats = useMemo(() => {
@@ -76,8 +79,8 @@ export default function WeeklyProgressChart({
     // Calculate trend (compare last 3 days to previous 4)
     const recentCompleted = weekData.slice(-3).reduce((sum, d) => sum + d.completed, 0);
     const earlierCompleted = weekData.slice(0, 4).reduce((sum, d) => sum + d.completed, 0);
-    const avgRecent = recentCompleted / 3;
-    const avgEarlier = earlierCompleted / 4;
+    const avgRecent = recentCompleted / 2;
+    const avgEarlier = earlierCompleted / 3;
 
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (avgRecent > avgEarlier * 1.2) trend = 'up';
@@ -93,7 +96,7 @@ export default function WeeklyProgressChart({
       maxCompleted,
       trend,
       completionRate,
-      avgPerDay: (totalCompleted / 7).toFixed(1),
+      avgPerDay: (totalCompleted / 5).toFixed(1),
     };
   }, [weekData]);
 

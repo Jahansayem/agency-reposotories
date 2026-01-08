@@ -47,7 +47,7 @@ function FloatingParticle({ delay, duration, size, left, top }: { delay: number;
   );
 }
 
-// Animated logo component
+// Animated logo component with premium gold treatment
 function AnimatedLogo() {
   return (
     <motion.div
@@ -56,15 +56,15 @@ function AnimatedLogo() {
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
     >
-      {/* Outer glow rings */}
+      {/* Outer glow rings - now gold */}
       <motion.div
         className="absolute -inset-8 rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(201,162,39,0.15) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(212,168,83,0.25) 0%, transparent 70%)',
         }}
         animate={{
           scale: [1, 1.2, 1],
-          opacity: [0.5, 0.8, 0.5],
+          opacity: [0.6, 1, 0.6],
         }}
         transition={{
           duration: 4,
@@ -75,11 +75,11 @@ function AnimatedLogo() {
       <motion.div
         className="absolute -inset-4 rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(201,162,39,0.2) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(212,168,83,0.3) 0%, transparent 70%)',
         }}
         animate={{
           scale: [1.1, 1, 1.1],
-          opacity: [0.3, 0.6, 0.3],
+          opacity: [0.4, 0.7, 0.4],
         }}
         transition={{
           duration: 3,
@@ -89,21 +89,24 @@ function AnimatedLogo() {
         }}
       />
 
-      {/* Main logo container */}
+      {/* Main logo container - metallic gold gradient */}
       <motion.div
         className="relative w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #72B5E8 0%, #A8D4F5 50%, #72B5E8 100%)',
-          boxShadow: '0 20px 60px -10px rgba(201,162,39,0.5), inset 0 -4px 20px rgba(0,0,0,0.2), inset 0 4px 20px rgba(255,255,255,0.2)',
+          background: 'linear-gradient(135deg, #F4E5C7 0%, #D4A853 50%, #B8954A 100%)',
+          boxShadow: '0 20px 60px -10px rgba(212,168,83,0.6), inset 0 -4px 20px rgba(0,0,0,0.15), inset 0 4px 20px rgba(255,255,255,0.3)',
         }}
         whileHover={{ scale: 1.05 }}
         transition={{ type: 'spring', stiffness: 400, damping: 17 }}
       >
-        {/* Shimmer effect */}
+        {/* Embossed effect */}
+        <div className="absolute inset-[2px] bg-gradient-to-t from-[#C9A227]/40 to-transparent rounded-2xl" />
+
+        {/* Enhanced shimmer effect for metallic look */}
         <motion.div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.4) 50%, transparent 60%)',
+            background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.6) 50%, transparent 65%)',
           }}
           animate={{
             x: ['-100%', '200%'],
@@ -502,12 +505,15 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               </motion.div>
 
               <motion.h1
-                className="mt-6 text-5xl font-semibold tracking-tight text-white"
+                className="mt-6 text-6xl md:text-7xl font-bold tracking-[-0.02em] leading-[1.1] text-white"
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                Run the day with a board that feels alive.
+                Run the day{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F4E5C7] via-[#D4A853] to-[#C9A227]">
+                  in sync
+                </span>
               </motion.h1>
               <motion.p
                 className="mt-5 text-lg text-white/70 leading-relaxed"
@@ -708,6 +714,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.4 }}
                   >
+                    {/* Animated shield forming */}
                     <motion.div
                       className="relative inline-block mb-6"
                       animate={{
@@ -719,13 +726,43 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                         ease: 'easeInOut',
                       }}
                     >
-                      <div className="absolute inset-0 bg-[#72B5E8]/20 rounded-3xl blur-xl scale-150" />
-                      <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-white/[0.1] to-white/[0.03] border border-white/[0.1] flex items-center justify-center">
-                        <Sparkles className="w-9 h-9 text-[#72B5E8]" />
-                      </div>
+                      <div className="absolute inset-0 bg-[#D4A853]/30 rounded-3xl blur-xl scale-150" />
+                      <svg
+                        viewBox="0 0 100 100"
+                        className="w-24 h-24 relative"
+                        aria-hidden="true"
+                      >
+                        <defs>
+                          <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#F4E5C7" />
+                            <stop offset="50%" stopColor="#D4A853" />
+                            <stop offset="100%" stopColor="#B8954A" />
+                          </linearGradient>
+                        </defs>
+                        <motion.path
+                          d="M50 10 L85 25 L85 55 Q85 75 50 90 Q15 75 15 55 L15 25 Z"
+                          fill="none"
+                          stroke="url(#goldGradient)"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          initial={{ pathLength: 0, opacity: 0 }}
+                          animate={{ pathLength: 1, opacity: 1 }}
+                          transition={{ duration: 2, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2 }}
+                        />
+                        <motion.circle
+                          cx="50"
+                          cy="50"
+                          r="8"
+                          fill="url(#goldGradient)"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: [0, 1, 0] }}
+                          transition={{ duration: 2, delay: 1.5, ease: 'easeOut', repeat: Infinity, repeatDelay: 2 }}
+                        />
+                      </svg>
                     </motion.div>
-                    <h2 className="text-white font-bold text-2xl tracking-tight">Welcome!</h2>
-                    <p className="text-base text-white/40 mt-2">Create your first account to get started</p>
+                    <h2 className="text-white font-bold text-2xl tracking-tight">Your team starts here</h2>
+                    <p className="text-base text-white/40 mt-2">Create the first account to protect your workflow</p>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -756,20 +793,23 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                         setConfirmPin(['', '', '', '']);
                         setError('');
                       }}
-                      className="group relative w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-semibold text-base overflow-hidden min-h-[60px]"
+                      className="group relative w-full flex items-center justify-center gap-3 py-5 rounded-2xl font-bold text-base overflow-hidden min-h-[60px]"
                       style={{
-                        background: 'linear-gradient(135deg, #72B5E8 0%, #A8D4F5 50%, #72B5E8 100%)',
-                        boxShadow: '0 20px 40px -10px rgba(201,162,39,0.4), inset 0 -2px 10px rgba(0,0,0,0.1)',
+                        background: 'linear-gradient(135deg, #F4E5C7 0%, #D4A853 50%, #B8954A 100%)',
+                        boxShadow: '0 20px 40px -10px rgba(212,168,83,0.5), inset 0 -2px 10px rgba(0,0,0,0.1), inset 0 2px 10px rgba(255,255,255,0.3)',
                       }}
-                      whileHover={{ scale: 1.02, boxShadow: '0 25px 50px -10px rgba(201,162,39,0.5)' }}
+                      whileHover={{ scale: 1.02, boxShadow: '0 25px 50px -10px rgba(212,168,83,0.7)' }}
                       whileTap={{ scale: 0.98 }}
                       aria-label="Add new user account"
                     >
-                      {/* Shimmer effect */}
+                      {/* Embossed effect */}
+                      <div className="absolute inset-[2px] bg-gradient-to-t from-[#C9A227]/30 to-transparent rounded-2xl" />
+
+                      {/* Enhanced shimmer for metallic look */}
                       <motion.div
                         className="absolute inset-0"
                         style={{
-                          background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%)',
+                          background: 'linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.5) 50%, transparent 65%)',
                         }}
                         animate={{ x: ['-100%', '200%'] }}
                         transition={{ duration: 2, repeat: Infinity, repeatDelay: 2, ease: 'easeInOut' }}
@@ -845,7 +885,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   >
                     <h2 className="text-2xl font-bold text-white tracking-tight">{selectedUser.name}</h2>
                     <p className="text-sm text-white/40 mt-3 flex items-center justify-center gap-2">
-                      <Shield className="w-4 h-4 text-[#72B5E8]" />
+                      <Shield className="w-4 h-4 text-[#D4A853]" />
                       Enter your 4-digit PIN
                     </p>
                   </motion.div>
@@ -878,10 +918,10 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       transition={{ delay: 0.3 + index * 0.08 }}
                       className="relative"
                     >
-                      {/* Glow effect when filled */}
+                      {/* Glow effect when filled - now gold */}
                       {digit && (
                         <motion.div
-                          className="absolute inset-0 rounded-2xl bg-[#72B5E8]/30 blur-lg"
+                          className="absolute inset-0 rounded-2xl bg-[#D4A853]/40 blur-lg"
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1.1 }}
                         />
@@ -900,8 +940,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                           lockoutSeconds > 0
                             ? 'border-red-500/50 bg-red-500/10 focus:ring-red-500/20 text-red-400'
                             : digit
-                              ? 'border-[#72B5E8] bg-[#72B5E8]/10 focus:ring-[#72B5E8]/20 text-white'
-                              : 'border-white/10 focus:border-[#72B5E8] focus:ring-[#72B5E8]/10 bg-white/[0.03] text-white hover:border-white/20'
+                              ? 'border-[#D4A853] bg-[#D4A853]/10 focus:ring-[#D4A853]/20 text-white shadow-[0_0_20px_rgba(212,168,83,0.3)]'
+                              : 'border-white/10 focus:border-[#D4A853] focus:ring-[#D4A853]/10 bg-white/[0.03] text-white hover:border-white/20'
                         }`}
                       />
                     </motion.div>
@@ -1048,8 +1088,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.4 + index * 0.05 }}
-                          className={`w-14 h-16 sm:w-16 sm:h-[72px] text-center text-2xl font-bold rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-[#72B5E8]/10 ${
-                            digit ? 'border-[#72B5E8] bg-[#72B5E8]/10 text-white' : 'border-white/10 bg-white/[0.03] focus:border-[#72B5E8] focus:bg-white/[0.05] text-white hover:border-white/20'
+                          className={`w-14 h-16 sm:w-16 sm:h-[72px] text-center text-2xl font-bold rounded-2xl border-2 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-[#D4A853]/10 ${
+                            digit ? 'border-[#D4A853] bg-[#D4A853]/10 text-white shadow-[0_0_15px_rgba(212,168,83,0.2)]' : 'border-white/10 bg-white/[0.03] focus:border-[#D4A853] focus:bg-white/[0.05] text-white hover:border-white/20'
                           }`}
                         />
                       ))}
@@ -1208,9 +1248,9 @@ function UserButton({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (
         )}
       </div>
 
-      {/* Lock icon with animated background */}
+      {/* Lock icon with animated background - gold on hover */}
       <motion.div
-        className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-[#72B5E8] flex items-center justify-center transition-all duration-300 border border-white/[0.06] group-hover:border-transparent"
+        className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/[0.04] group-hover:bg-gradient-to-br group-hover:from-[#F4E5C7] group-hover:to-[#D4A853] flex items-center justify-center transition-all duration-300 border border-white/[0.06] group-hover:border-transparent group-hover:shadow-[0_0_15px_rgba(212,168,83,0.4)]"
         whileHover={{ scale: 1.05 }}
       >
         <Lock className="w-4 h-4 text-white/40 group-hover:text-[#00205B] transition-colors duration-300" aria-hidden="true" />

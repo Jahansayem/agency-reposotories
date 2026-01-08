@@ -1301,8 +1301,31 @@ export default function KanbanBoard({
     return allCollisions.length > 0 ? allCollisions : [];
   };
 
+  const getUrgencyScore = (todo: Todo) => {
+    if (todo.completed) return -1;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let daysOverdue = 0;
+    if (todo.due_date) {
+      const dueDate = new Date(todo.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86400000));
+    }
+    const priorityWeight = { urgent: 100, high: 50, medium: 25, low: 0 }[todo.priority || 'medium'];
+    return (daysOverdue * 10) + priorityWeight;
+  };
+
   const getTodosByStatus = (status: TodoStatus) => {
-    return todos.filter((todo) => (todo.status || 'todo') === status);
+    return todos
+      .filter((todo) => (todo.status || 'todo') === status)
+      .sort((a, b) => {
+        const scoreDiff = getUrgencyScore(b) - getUrgencyScore(a);
+        if (scoreDiff !== 0) return scoreDiff;
+        const aDue = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
+        const bDue = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
+        if (aDue !== bDue) return aDue - bDue;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
   };
 
   const handleDragStart = (event: DragStartEvent) => {

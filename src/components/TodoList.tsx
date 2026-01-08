@@ -35,7 +35,7 @@ import {
   LayoutList, LayoutGrid, Wifi, WifiOff, Search,
   ArrowUpDown, User, Calendar, AlertTriangle, CheckSquare,
   Trash2, X, Sun, Moon, ChevronDown, BarChart2, Activity, Target, GitMerge,
-  Paperclip, Filter, RotateCcw, Mail, Check, Clock, Zap, ChevronLeft, Home
+  Paperclip, Filter, RotateCcw, Mail, Check, Clock, Zap, ChevronLeft, Home, Archive
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import UserSwitcher from './UserSwitcher';
@@ -90,6 +90,7 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
   const userName = currentUser.name;
   const { theme, toggleTheme } = useTheme();
   const darkMode = theme === 'dark';
+  const canViewArchive = currentUser.role === 'admin' || ['derrick', 'adrian'].includes(userName.toLowerCase());
 
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +102,7 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
 
   // Search, sort, and filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOption, setSortOption] = useState<SortOption>('created');
+  const [sortOption, setSortOption] = useState<SortOption>('urgency');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialFilter || 'all');
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -127,6 +128,9 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
   const [showActivityFeed, setShowActivityFeed] = useState(false);
   const [showStrategicDashboard, setShowStrategicDashboard] = useState(false);
   const [templateTodo, setTemplateTodo] = useState<Todo | null>(null);
+  const [showArchiveView, setShowArchiveView] = useState(false);
+  const [archiveQuery, setArchiveQuery] = useState('');
+  const [archiveTick, setArchiveTick] = useState(0);
   const [customOrder, setCustomOrder] = useState<string[]>([]);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [mergeTargets, setMergeTargets] = useState<Todo[]>([]);
@@ -214,6 +218,13 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setArchiveTick((tick) => tick + 1);
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchTodos = useCallback(async () => {
@@ -583,9 +594,10 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
   const updateStatus = async (id: string, status: TodoStatus) => {
     const oldTodo = todos.find((t) => t.id === id);
     const completed = status === 'done';
+    const updated_at = new Date().toISOString();
 
     setTodos((prev) =>
-      prev.map((todo) => (todo.id === id ? { ...todo, status, completed } : todo))
+      prev.map((todo) => (todo.id === id ? { ...todo, status, completed, updated_at } : todo))
     );
 
     if (status === 'done' && oldTodo && !oldTodo.completed) {
@@ -600,7 +612,7 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
 
     const { error: updateError } = await supabase
       .from('todos')
-      .update({ status, completed })
+      .update({ status, completed, updated_at })
       .eq('id', id);
 
     if (updateError) {
@@ -685,9 +697,10 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
 
   const toggleTodo = async (id: string, completed: boolean) => {
     const todoItem = todos.find(t => t.id === id);
+    const updated_at = new Date().toISOString();
 
     setTodos((prev) =>
-      prev.map((todo) => (todo.id === id ? { ...todo, completed } : todo))
+      prev.map((todo) => (todo.id === id ? { ...todo, completed, updated_at } : todo))
     );
 
     if (completed && todoItem) {
@@ -702,7 +715,7 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
 
     const { error: updateError } = await supabase
       .from('todos')
-      .update({ completed })
+      .update({ completed, updated_at })
       .eq('id', id);
 
     if (updateError) {
@@ -1268,20 +1281,52 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
     setSelectedTodos(new Set());
   };
 
-  // All users can now see all tasks
+  const getCompletedAtMs = (todo: Todo) => {
+    const raw = todo.updated_at || todo.created_at;
+    if (!raw) return null;
+    const time = new Date(raw).getTime();
+    return Number.isNaN(time) ? null : time;
+  };
+
+  const archivedTodos = useMemo(() => {
+    const cutoff = Date.now() - 48 * 60 * 60 * 1000;
+    return todos
+      .filter((todo) => {
+        if (!todo.completed) return false;
+        const completedAt = getCompletedAtMs(todo);
+        return completedAt !== null && completedAt <= cutoff;
+      })
+      .sort((a, b) => (getCompletedAtMs(b) || 0) - (getCompletedAtMs(a) || 0));
+  }, [todos, archiveTick]);
+
+  const archivedIds = useMemo(() => new Set(archivedTodos.map((todo) => todo.id)), [archivedTodos]);
+
+  // All users can now see all tasks, excluding archived
   const visibleTodos = useMemo(() => {
-    return todos;
-  }, [todos]);
+    return todos.filter((todo) => !archivedIds.has(todo.id));
+  }, [todos, archivedIds]);
 
   // Extract unique customer names from todos for filtering
   const uniqueCustomers = useMemo(() => {
     const customers = new Set<string>();
-    todos.forEach(todo => {
+    visibleTodos.forEach(todo => {
       const names = extractPotentialNames(`${todo.text} ${todo.notes || ''}`);
       names.forEach(name => customers.add(name));
     });
     return Array.from(customers).sort();
-  }, [todos]);
+  }, [visibleTodos]);
+
+  const filteredArchivedTodos = useMemo(() => {
+    const query = archiveQuery.trim().toLowerCase();
+    if (!query) return archivedTodos;
+    return archivedTodos.filter((todo) =>
+      todo.text.toLowerCase().includes(query) ||
+      todo.created_by.toLowerCase().includes(query) ||
+      (todo.assigned_to && todo.assigned_to.toLowerCase().includes(query)) ||
+      (todo.notes && todo.notes.toLowerCase().includes(query)) ||
+      (todo.transcription && todo.transcription.toLowerCase().includes(query))
+    );
+  }, [archivedTodos, archiveQuery]);
 
   // Filter and sort todos
   const filteredAndSortedTodos = useMemo(() => {
@@ -1609,6 +1654,21 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
               >
                 <Activity className="w-4 h-4" />
               </button>
+
+              {canViewArchive && (
+                <button
+                  onClick={() => setShowArchiveView(true)}
+                  className={`p-2 rounded-xl transition-all duration-200 ${
+                    darkMode
+                      ? 'text-white/60 hover:text-white hover:bg-white/10'
+                      : 'text-[var(--text-muted)] hover:text-[var(--brand-blue)] hover:bg-[var(--surface-2)]'
+                  }`}
+                  aria-label="View archive"
+                  title="Archived tasks"
+                >
+                  <Archive className="w-4 h-4" />
+                </button>
+              )}
 
               {/* Strategic Dashboard - Owner only */}
               {userName === OWNER_USERNAME && (
@@ -2184,6 +2244,89 @@ export default function TodoList({ currentUser, onUserChange, onBackToDashboard,
           darkMode={darkMode}
           onClose={() => setShowStrategicDashboard(false)}
         />
+      )}
+
+      {showArchiveView && canViewArchive && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Archived tasks">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowArchiveView(false)}
+          />
+          <div className="relative w-full max-w-3xl rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--foreground)]">Archive</h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Tasks completed for 48+ hours ({archivedTodos.length})
+                </p>
+              </div>
+              <button
+                onClick={() => setShowArchiveView(false)}
+                className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                aria-label="Close archive"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4 space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-light)] pointer-events-none" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={archiveQuery}
+                  onChange={(e) => setArchiveQuery(e.target.value)}
+                  placeholder="Search archived tasks..."
+                  aria-label="Search archived tasks"
+                  className="input-refined w-full !pl-10 pr-4 py-2.5 text-sm text-[var(--foreground)] placeholder-[var(--text-light)]"
+                />
+                {archiveQuery && (
+                  <button
+                    onClick={() => setArchiveQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                    aria-label="Clear archive search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-1">
+                {filteredArchivedTodos.length === 0 ? (
+                  <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
+                    No archived tasks match your search.
+                  </div>
+                ) : (
+                  filteredArchivedTodos.map((todo) => {
+                    const completedAt = getCompletedAtMs(todo);
+                    return (
+                      <div key={todo.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-[var(--foreground)]">{todo.text}</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-1">
+                              {todo.assigned_to ? `Assigned to ${todo.assigned_to}` : 'Unassigned'} • created by {todo.created_by}
+                            </p>
+                          </div>
+                          {completedAt && (
+                            <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">
+                              Completed {new Date(completedAt).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        {(todo.notes || todo.transcription) && (
+                          <p className="text-xs text-[var(--text-light)] mt-2 line-clamp-2">
+                            {todo.notes || todo.transcription}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Save Template Modal */}
