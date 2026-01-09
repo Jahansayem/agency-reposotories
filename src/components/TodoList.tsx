@@ -106,6 +106,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   const [sortOption, setSortOption] = useState<SortOption>('urgency');
   const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialFilter || 'all');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [highPriorityOnly, setHighPriorityOnly] = useState(false);
 
   // Advanced filter state
   const [statusFilter, setStatusFilter] = useState<TodoStatus | 'all'>('all');
@@ -1373,6 +1374,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         break;
     }
 
+    // Apply high priority filter
+    if (highPriorityOnly) {
+      result = result.filter((todo) => todo.priority === 'urgent' || todo.priority === 'high');
+    }
+
     // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter((todo) => todo.status === statusFilter);
@@ -1485,16 +1491,31 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
 
     return result;
-  }, [visibleTodos, searchQuery, quickFilter, showCompleted, sortOption, userName, customOrder, statusFilter, assignedToFilter, customerFilter, hasAttachmentsFilter, dateRangeFilter]);
+  }, [visibleTodos, searchQuery, quickFilter, showCompleted, sortOption, userName, customOrder, statusFilter, assignedToFilter, customerFilter, hasAttachmentsFilter, dateRangeFilter, highPriorityOnly]);
 
-  // Stats should be based on visible todos only
-  const stats = {
-    total: visibleTodos.length,
-    completed: visibleTodos.filter((t) => t.completed).length,
-    active: visibleTodos.filter((t) => !t.completed).length,
-    dueToday: visibleTodos.filter((t) => isDueToday(t.due_date) && !t.completed).length,
-    overdue: visibleTodos.filter((t) => isOverdue(t.due_date, t.completed)).length,
-  };
+  // Stats - calculate based on filter context for dynamic counts
+  const stats = useMemo(() => {
+    // Start with visible todos
+    let baseSet = [...visibleTodos];
+
+    // Apply assignment filter (My Tasks dropdown)
+    if (quickFilter === 'my_tasks') {
+      baseSet = baseSet.filter((t) => t.assigned_to === userName || t.created_by === userName);
+    }
+
+    // Apply high priority filter
+    if (highPriorityOnly) {
+      baseSet = baseSet.filter((t) => t.priority === 'urgent' || t.priority === 'high');
+    }
+
+    return {
+      total: baseSet.length,
+      completed: baseSet.filter((t) => t.completed).length,
+      active: baseSet.filter((t) => !t.completed).length,
+      dueToday: baseSet.filter((t) => isDueToday(t.due_date) && !t.completed).length,
+      overdue: baseSet.filter((t) => isOverdue(t.due_date, t.completed)).length,
+    };
+  }, [visibleTodos, quickFilter, highPriorityOnly, userName]);
 
   // Handle drag end for manual reordering
   const handleDragEnd = (event: DragEndEvent) => {
@@ -1734,7 +1755,19 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
       {/* Main */}
       <main id="main-content" className={`mx-auto px-4 sm:px-6 py-6 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-4xl'}`}>
-        {/* Actionable Stats Cards - Premium Design */}
+        {/* Context label when filtered */}
+        {(quickFilter !== 'all' || highPriorityOnly) && (
+          <div className="text-xs text-[var(--text-muted)] mb-2 flex items-center gap-2">
+            <span>Showing:</span>
+            {quickFilter === 'my_tasks' && <span className="font-medium text-[var(--accent)]">My Tasks</span>}
+            {quickFilter === 'due_today' && <span className="font-medium text-[var(--warning)]">Due Today</span>}
+            {quickFilter === 'overdue' && <span className="font-medium text-[var(--danger)]">Overdue</span>}
+            {quickFilter === 'all' && highPriorityOnly && <span className="font-medium text-[var(--danger)]">All Tasks</span>}
+            {highPriorityOnly && <span className="text-[var(--danger)]">• High Priority Only</span>}
+          </div>
+        )}
+
+        {/* Actionable Stats Cards - Dynamic counts based on filter context */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <button
             type="button"
@@ -1836,55 +1869,38 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </div>
           </div>
 
-          {/* Filter Chips - Single Row */}
+          {/* Simplified Filter Bar */}
           <div className="flex flex-wrap items-center gap-2">
-            {[
-              { id: 'all' as QuickFilter, label: 'All', icon: LayoutList },
-              { id: 'my_tasks' as QuickFilter, label: 'My Tasks', icon: User },
-              { id: 'urgent' as QuickFilter, label: 'Urgent', icon: AlertTriangle },
-            ].map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => {
-                  setQuickFilter(f.id);
-                  if (f.id === 'all') {
-                    setShowCompleted(false);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
-                  quickFilter === f.id
-                    ? 'bg-[var(--accent)] text-white shadow-sm'
-                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
-                }`}
-                aria-pressed={quickFilter === f.id}
+            {/* Assignment dropdown */}
+            <div className="relative">
+              <select
+                value={quickFilter}
+                onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
+                className="input-refined appearance-none pl-8 pr-8 py-2 text-sm font-medium cursor-pointer min-w-[130px]"
               >
-                <f.icon className="w-3.5 h-3.5" />
-                {f.label}
-              </button>
-            ))}
+                <option value="all">All Tasks</option>
+                <option value="my_tasks">My Tasks</option>
+                <option value="due_today">Due Today</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+            </div>
 
-            {/* Triage mode - special button for overdue tasks */}
-            {stats.overdue > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickFilter('triage');
-                  setSortOption('urgency');
-                }}
-                className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
-                  quickFilter === 'triage'
-                    ? 'bg-[var(--danger)] text-white shadow-sm'
-                    : 'bg-[var(--danger-light)] text-[var(--danger)] hover:bg-[var(--danger)]/20 border border-[var(--danger)]/20'
-                }`}
-                aria-pressed={quickFilter === 'triage'}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                Triage ({stats.overdue})
-              </button>
-            )}
-
-            <div className="w-px h-5 bg-[var(--border)] mx-1" />
+            {/* High Priority toggle */}
+            <button
+              type="button"
+              onClick={() => setHighPriorityOnly(!highPriorityOnly)}
+              className={`flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-[var(--radius-md)] transition-all duration-200 ${
+                highPriorityOnly
+                  ? 'bg-[var(--danger)] text-white shadow-sm'
+                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
+              }`}
+              aria-pressed={highPriorityOnly}
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              High Priority
+            </button>
 
             {/* Show completed toggle */}
             <button
@@ -1898,7 +1914,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               aria-pressed={showCompleted}
             >
               <CheckSquare className="w-3.5 h-3.5" />
-              Done ({stats.completed})
+              Show Completed
             </button>
 
             <div className="w-px h-5 bg-[var(--border)] mx-1" />
@@ -1924,11 +1940,12 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </button>
 
             {/* Active filter indicator / Clear all */}
-            {(quickFilter !== 'all' || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
+            {(quickFilter !== 'all' || highPriorityOnly || showCompleted || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
               <button
                 type="button"
                 onClick={() => {
                   setQuickFilter('all');
+                  setHighPriorityOnly(false);
                   setShowCompleted(false);
                   setStatusFilter('all');
                   setAssignedToFilter('all');
@@ -2554,116 +2571,91 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         />
       )}
 
-      {/* Floating Bulk Action Bar */}
+      {/* Floating Bulk Action Bar - Sticky at bottom */}
       {showBulkActions && selectedTodos.size > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
           <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
             <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-4xl'}`}>
               <div className="flex items-center justify-between gap-4">
-                {/* Left side - selection info */}
+                {/* Left side - selection info with dismiss button */}
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={clearSelection}
+                    className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                    title="Clear selection"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-[var(--brand-sky)] flex items-center justify-center">
-                      <span className="text-sm font-bold text-[var(--brand-navy)]">{selectedTodos.size}</span>
-                    </div>
-                    <span className="text-sm font-medium text-[var(--foreground)]">selected</span>
+                    <span className="text-sm font-bold text-[var(--foreground)]">{selectedTodos.size}</span>
+                    <span className="text-sm text-[var(--text-muted)]">selected</span>
                   </div>
-                  <div className="hidden sm:flex items-center gap-1.5">
-                    <button
-                      onClick={selectAll}
-                      className="px-2.5 py-1 text-xs rounded-full bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={clearSelection}
-                      className="px-2.5 py-1 text-xs rounded-full bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] transition-colors"
-                    >
-                      Clear
-                    </button>
-                  </div>
+                  <div className="hidden sm:block w-px h-5 bg-[var(--border)]" />
                 </div>
 
-                {/* Right side - action buttons */}
-                <div className="flex items-center gap-2">
-                  {/* Complete */}
+                {/* Action buttons - horizontal inline */}
+                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+                  {/* Mark Complete */}
                   <button
                     onClick={bulkComplete}
-                    className="p-2.5 sm:px-4 sm:py-2 rounded-xl bg-[var(--success)] text-white hover:opacity-90 flex items-center gap-2 transition-all shadow-sm"
-                    title="Complete selected"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
                   >
-                    <CheckSquare className="w-4 h-4" />
-                    <span className="hidden sm:inline text-sm font-medium">Complete</span>
+                    <Check className="w-4 h-4" />
+                    <span className="hidden sm:inline">Mark Complete</span>
                   </button>
 
-                  {/* Assign dropdown */}
+                  {/* Reassign dropdown */}
                   <div className="relative">
                     <select
                       onChange={(e) => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}
-                      className="appearance-none p-2.5 sm:px-4 sm:py-2 sm:pr-8 rounded-xl bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
-                      aria-label="Assign to"
+                      className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                      aria-label="Reassign"
                     >
-                      <option value="">Assign</option>
+                      <option value="">Reassign</option>
                       {users.map((user) => (
                         <option key={user} value={user}>{user}</option>
                       ))}
                     </select>
-                    <ChevronDown className="hidden sm:block absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
                   </div>
 
-                  {/* Reschedule dropdown */}
+                  {/* Change Date dropdown */}
                   <div className="relative">
                     <select
                       onChange={(e) => {
                         if (e.target.value) bulkReschedule(e.target.value);
                         e.target.value = '';
                       }}
-                      className="appearance-none p-2.5 sm:px-4 sm:py-2 sm:pr-8 rounded-xl bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
-                      aria-label="Reschedule"
+                      className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                      aria-label="Change Date"
                     >
-                      <option value="">Snooze</option>
+                      <option value="">Change Date</option>
                       <option value={getDateOffset(0)}>Today</option>
                       <option value={getDateOffset(1)}>Tomorrow</option>
                       <option value={getDateOffset(7)}>Next Week</option>
                       <option value={getDateOffset(30)}>Next Month</option>
                     </select>
-                    <Clock className="hidden sm:block absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
                   </div>
 
                   {/* Merge - only show when 2+ selected */}
                   {selectedTodos.size >= 2 && (
                     <button
                       onClick={initiateMerge}
-                      className="p-2.5 sm:px-4 sm:py-2 rounded-xl bg-[var(--brand-blue)] text-white hover:opacity-90 flex items-center gap-2 transition-all shadow-sm"
-                      title="Merge tasks"
+                      className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
                     >
                       <GitMerge className="w-4 h-4" />
-                      <span className="hidden sm:inline text-sm font-medium">Merge</span>
+                      Merge
                     </button>
                   )}
-
-                  {/* Email */}
-                  <button
-                    onClick={() => {
-                      const selectedTaskList = todos.filter(t => selectedTodos.has(t.id));
-                      setEmailTargetTodos(selectedTaskList);
-                      setShowEmailModal(true);
-                    }}
-                    className="p-2.5 sm:px-4 sm:py-2 rounded-xl bg-[var(--brand-sky)] text-[var(--brand-navy)] hover:opacity-90 flex items-center gap-2 transition-all shadow-sm"
-                    title="Email about selected"
-                  >
-                    <Mail className="w-4 h-4" />
-                    <span className="hidden sm:inline text-sm font-medium">Email</span>
-                  </button>
 
                   {/* Delete */}
                   <button
                     onClick={bulkDelete}
-                    className="p-2.5 sm:px-4 sm:py-2 rounded-xl bg-[var(--danger)] text-white hover:opacity-90 flex items-center gap-2 transition-all shadow-sm"
-                    title="Delete selected"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--danger)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
                   >
                     <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline text-sm font-medium">Delete</span>
+                    <span className="hidden sm:inline">Delete</span>
                   </button>
                 </div>
               </div>

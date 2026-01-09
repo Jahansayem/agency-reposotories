@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, STATUS_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import AttachmentList from './AttachmentList';
 import AttachmentUpload from './AttachmentUpload';
@@ -199,6 +199,7 @@ export default function TodoItem({
   const [showAttachments, setShowAttachments] = useState(false);
   const [showTranscription, setShowTranscription] = useState(false);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
   const priority = todo.priority || 'medium';
@@ -293,21 +294,40 @@ export default function TodoItem({
     }
   }, [todo.text, editingText]);
 
+  // Card styling based on priority × overdue status
+  const getCardStyle = () => {
+    // Completed tasks
+    if (todo.completed) {
+      return 'bg-[var(--surface)] border-[var(--border-subtle)] opacity-60';
+    }
+    // Selected state
+    if (selected) {
+      return 'border-[var(--accent)] bg-[var(--accent-light)]';
+    }
+    // Overdue severity hierarchy
+    if (dueDateStatus === 'overdue') {
+      const isHighPriority = priority === 'urgent' || priority === 'high';
+      const isMediumPriority = priority === 'medium';
+      if (isHighPriority) {
+        // CRITICAL: Full red background for high-priority overdue
+        return 'bg-red-500/15 dark:bg-red-500/20 border-red-500/40';
+      } else if (isMediumPriority) {
+        // MODERATE: Red left accent only for medium-priority overdue
+        return 'bg-[var(--surface)] border-[var(--border)] border-l-[3px] border-l-red-500';
+      }
+      // LOW: Normal card, date badge shows urgency
+    }
+    // Default card
+    return 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)]';
+  };
+
   return (
     <div
       role="listitem"
-      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${
-        todo.completed
-          ? 'bg-[var(--surface)] border-[var(--border-subtle)] opacity-60'
-          : dueDateStatus === 'overdue'
-            ? 'border-[var(--danger)]/30 bg-[var(--danger-light)]'
-            : selected
-              ? 'border-[var(--accent)] bg-[var(--accent-light)]'
-              : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)]'
-      }`}
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()}`}
     >
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
-      <div className="flex items-center gap-3 p-4">
+      <div className="flex items-center gap-3 px-4 py-3">
         {/* Selection checkbox (for bulk actions) */}
         {onSelect && (
           <input
@@ -350,110 +370,123 @@ export default function TodoItem({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <p className={`font-medium cursor-pointer ${
-              todo.completed
-                ? 'text-[var(--text-light)] line-through'
-                : 'text-[var(--foreground)]'
-            }`}>
+            <p
+              className={`font-medium cursor-pointer line-clamp-2 ${
+                todo.completed
+                  ? 'text-[var(--text-light)] line-through'
+                  : 'text-[var(--foreground)]'
+              }`}
+              title={todo.text}
+            >
               {todo.text}
             </p>
           )}
 
-          {/* Meta row */}
-          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            {/* Priority + Due date combined */}
-            <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium"
-              style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}
-            >
-              <Flag className="w-3 h-3" />
-              {priorityConfig.label}
-            </span>
-
-            {/* Due date - improved color coding */}
-            {todo.due_date && dueDateStatus && (
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
-                todo.completed
-                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-400'
-                  : dueDateStatus === 'overdue'
-                    ? 'bg-red-500 text-white'
-                    : dueDateStatus === 'today'
-                      ? 'bg-orange-500 text-white'
-                      : dueDateStatus === 'upcoming'
-                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                        : 'text-[var(--text-muted)]'
-              }`}>
-                <Calendar className="w-3 h-3" />
-                {formatDueDate(todo.due_date)}
-                {dueDateStatus === 'overdue' && !todo.completed && ' (overdue)'}
+          {/* Meta row - grouped with better spacing */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {/* Priority + Date group */}
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium"
+                style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}
+              >
+                <Flag className="w-3 h-3" />
+                {priorityConfig.label}
               </span>
+
+              {/* Due date - improved color coding */}
+              {todo.due_date && dueDateStatus && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
+                  todo.completed
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                    : dueDateStatus === 'overdue'
+                      ? 'bg-red-500 text-white'
+                      : dueDateStatus === 'today'
+                        ? 'bg-orange-500 text-white'
+                        : dueDateStatus === 'upcoming'
+                          ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                          : 'text-[var(--text-muted)]'
+                }`}>
+                  <Calendar className="w-3 h-3" />
+                  {formatDueDate(todo.due_date)}
+                  {dueDateStatus === 'overdue' && !todo.completed && ' (overdue)'}
+                </span>
+              )}
+
+              {/* Recurrence indicator */}
+              {todo.recurrence && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
+                  <Repeat className="w-3 h-3" />
+                  {todo.recurrence}
+                </span>
+              )}
+            </div>
+
+            {/* Separator - only show if there are metadata badges */}
+            {(todo.assigned_to || subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0)) && (
+              <div className="w-px h-4 bg-[var(--border)] mx-1" />
             )}
 
-            {/* Recurrence indicator */}
-            {todo.recurrence && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-purple-100 text-purple-700">
-                <Repeat className="w-3 h-3" />
-                {todo.recurrence}
-              </span>
-            )}
+            {/* Assignment + Metadata group */}
+            <div className="flex items-center gap-2">
+              {/* Assigned to */}
+              {todo.assigned_to && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-gold-light)] text-[var(--accent-gold)]">
+                  <User className="w-3 h-3" />
+                  {todo.assigned_to}
+                </span>
+              )}
 
-            {/* Notes indicator */}
-            {todo.notes && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]"
-              >
-                <MessageSquare className="w-3 h-3" />
-                Note
-              </button>
-            )}
-
-            {/* Transcription indicator */}
-            {todo.transcription && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowTranscription(!showTranscription); }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-purple-500/10 text-purple-500 hover:bg-purple-500/15 active:bg-purple-500/20 touch-manipulation"
-              >
-                <Mic className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-                Voicemail
-              </button>
-            )}
-
-            {/* Subtasks indicator - larger touch target */}
-            {subtasks.length > 0 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowSubtasks(!showSubtasks); }}
-                className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-light)] text-[var(--accent)] hover:bg-[var(--accent)]/15 active:bg-[var(--accent)]/20 touch-manipulation"
-              >
-                <ListTree className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-                {completedSubtasks}/{subtasks.length}
-                {subtaskProgress === 100 && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 ml-0.5" />}
-              </button>
-            )}
-
-            {/* Attachments indicator */}
-            {todo.attachments && todo.attachments.length > 0 && (() => {
-              const hasAudio = todo.attachments.some(a => a.file_type === 'audio');
-              const AttachmentIcon = hasAudio ? Music : Paperclip;
-              const iconColor = hasAudio ? 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/15 active:bg-purple-500/20' : 'bg-[var(--accent-gold-light)] text-[var(--accent-gold)] hover:bg-[var(--accent-gold)]/15 active:bg-[var(--accent-gold)]/20';
-              return (
+              {/* Subtasks indicator */}
+              {subtasks.length > 0 && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowAttachments(!showAttachments); }}
-                  className={`inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium touch-manipulation ${iconColor}`}
+                  onClick={(e) => { e.stopPropagation(); setShowSubtasks(!showSubtasks); }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-light)] text-[var(--accent)] hover:bg-[var(--accent)]/15 active:bg-[var(--accent)]/20 touch-manipulation"
                 >
-                  <AttachmentIcon className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-                  {todo.attachments.length}
+                  <ListTree className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+                  {completedSubtasks}/{subtasks.length}
+                  {subtaskProgress === 100 && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 ml-0.5" />}
                 </button>
-              );
-            })()}
+              )}
 
-            {/* Assigned to */}
-            {todo.assigned_to && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--accent-gold-light)] text-[var(--accent-gold)]">
-                <User className="w-3 h-3" />
-                {todo.assigned_to}
-              </span>
-            )}
+              {/* Notes indicator */}
+              {todo.notes && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  Note
+                </button>
+              )}
+
+              {/* Transcription indicator */}
+              {todo.transcription && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowTranscription(!showTranscription); }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium bg-purple-500/10 text-purple-500 hover:bg-purple-500/15 active:bg-purple-500/20 touch-manipulation"
+                >
+                  <Mic className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+                  Voicemail
+                </button>
+              )}
+
+              {/* Attachments indicator */}
+              {todo.attachments && todo.attachments.length > 0 && (() => {
+                const hasAudio = todo.attachments.some(a => a.file_type === 'audio');
+                const AttachmentIcon = hasAudio ? Music : Paperclip;
+                const iconColor = hasAudio ? 'bg-purple-500/10 text-purple-500 hover:bg-purple-500/15 active:bg-purple-500/20' : 'bg-[var(--accent-gold-light)] text-[var(--accent-gold)] hover:bg-[var(--accent-gold)]/15 active:bg-[var(--accent-gold)]/20';
+                return (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowAttachments(!showAttachments); }}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 sm:px-2 sm:py-0.5 rounded-[var(--radius-sm)] text-xs font-medium touch-manipulation ${iconColor}`}
+                  >
+                    <AttachmentIcon className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+                    {todo.attachments.length}
+                  </button>
+                );
+              })()}
+            </div>
 
           </div>
 
@@ -496,7 +529,7 @@ export default function TodoItem({
           )}
         </div>
 
-        {/* Action buttons - always visible on mobile, hover on desktop */}
+        {/* Action buttons - expand and three-dot menu */}
         <div className="flex items-center gap-1">
           {/* Expand/collapse */}
           <button
@@ -508,106 +541,104 @@ export default function TodoItem({
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
-          {/* Edit title */}
-          {onUpdateText && (
+          {/* Three-dot menu */}
+          <div className="relative">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingText(true);
-                setExpanded(true);
-              }}
+              onClick={(e) => { e.stopPropagation(); setShowActionsMenu(!showActionsMenu); }}
               className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
-              aria-label="Edit task title"
+              aria-label="Task actions"
+              aria-haspopup="true"
+              aria-expanded={showActionsMenu}
             >
-              <Pencil className="w-4 h-4" />
+              <MoreVertical className="w-4 h-4" />
             </button>
-          )}
 
-          {/* Save as Template */}
-          {onSaveAsTemplate && (
-            <button
-              onClick={() => onSaveAsTemplate(todo)}
-              className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--accent-light)] text-[var(--text-muted)] hover:text-[var(--accent)]"
-              aria-label="Save as template"
-              title="Save as template"
-            >
-              <FileText className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Duplicate */}
-          {onDuplicate && (
-            <button
-              onClick={() => onDuplicate(todo)}
-              className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
-              aria-label="Duplicate task"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
-          )}
-
-          {/* Snooze - only show for incomplete tasks */}
-          {!todo.completed && (
-            <div className="relative">
-              <button
-                onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
-                className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-amber-50 dark:hover:bg-amber-500/10 text-[var(--text-muted)] hover:text-amber-600"
-                aria-label="Snooze task"
-                title="Snooze (reschedule)"
+            {showActionsMenu && (
+              <div
+                className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-lg z-50 py-1 min-w-[180px]"
+                onClick={(e) => e.stopPropagation()}
               >
-                <Clock className="w-4 h-4" />
-              </button>
-              {showSnoozeMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-lg z-50 py-1 min-w-[140px]">
+                {/* Edit */}
+                {onUpdateText && (
                   <button
-                    onClick={() => handleSnooze(1)}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
+                    onClick={() => { setEditingText(true); setExpanded(true); setShowActionsMenu(false); }}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
                   >
-                    Tomorrow
+                    <Pencil className="w-4 h-4 text-[var(--text-muted)]" />
+                    Edit
                   </button>
-                  <button
-                    onClick={() => handleSnooze(2)}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
-                  >
-                    In 2 Days
-                  </button>
-                  <button
-                    onClick={() => handleSnooze(7)}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
-                  >
-                    Next Week
-                  </button>
-                  <button
-                    onClick={() => handleSnooze(30)}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
-                  >
-                    Next Month
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
 
-          {/* Email Customer */}
-          {onEmailCustomer && (
-            <button
-              onClick={() => onEmailCustomer(todo)}
-              className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[var(--text-muted)] hover:text-blue-500"
-              aria-label="Email customer update"
-              title="Generate customer email"
-            >
-              <Mail className="w-4 h-4" />
-            </button>
-          )}
+                {/* Duplicate */}
+                {onDuplicate && (
+                  <button
+                    onClick={() => { onDuplicate(todo); setShowActionsMenu(false); }}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
+                  >
+                    <Copy className="w-4 h-4 text-[var(--text-muted)]" />
+                    Duplicate
+                  </button>
+                )}
 
-          {/* Delete button */}
-          <button
-            onClick={() => onDelete(todo.id)}
-            className="p-2 rounded-[var(--radius-md)] opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-[var(--danger-light)] text-[var(--text-muted)] hover:text-[var(--danger)]"
-            aria-label="Delete task"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+                {/* Snooze submenu */}
+                {!todo.completed && (
+                  <div className="relative group/snooze">
+                    <button
+                      onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
+                      className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
+                    >
+                      <Clock className="w-4 h-4 text-[var(--text-muted)]" />
+                      Snooze
+                      <ChevronDown className="w-3 h-3 ml-auto text-[var(--text-muted)]" />
+                    </button>
+                    {showSnoozeMenu && (
+                      <div className="pl-6 py-1 border-t border-[var(--border)]">
+                        <button onClick={() => { handleSnooze(1); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">Tomorrow</button>
+                        <button onClick={() => { handleSnooze(2); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">In 2 Days</button>
+                        <button onClick={() => { handleSnooze(7); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">Next Week</button>
+                        <button onClick={() => { handleSnooze(30); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">Next Month</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="h-px bg-[var(--border)] my-1" />
+
+                {/* Save as Template */}
+                {onSaveAsTemplate && (
+                  <button
+                    onClick={() => { onSaveAsTemplate(todo); setShowActionsMenu(false); }}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4 text-[var(--text-muted)]" />
+                    Save as Template
+                  </button>
+                )}
+
+                {/* Email Customer */}
+                {onEmailCustomer && (
+                  <button
+                    onClick={() => { onEmailCustomer(todo); setShowActionsMenu(false); }}
+                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
+                  >
+                    <Mail className="w-4 h-4 text-[var(--text-muted)]" />
+                    Email Summary
+                  </button>
+                )}
+
+                <div className="h-px bg-[var(--border)] my-1" />
+
+                {/* Delete */}
+                <button
+                  onClick={() => { onDelete(todo.id); setShowActionsMenu(false); }}
+                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] text-[var(--danger)] flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
