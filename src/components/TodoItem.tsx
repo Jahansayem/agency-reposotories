@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, X } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, STATUS_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import AttachmentList from './AttachmentList';
 import AttachmentUpload from './AttachmentUpload';
@@ -128,7 +128,7 @@ interface TodoItemProps {
   onEmailCustomer?: (todo: Todo) => void;
 }
 
-const formatDueDate = (date: string) => {
+const formatDueDate = (date: string, includeYear = false) => {
   const d = new Date(date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -139,7 +139,22 @@ const formatDueDate = (date: string) => {
 
   if (dueDay.getTime() === today.getTime()) return 'Today';
   if (dueDay.getTime() === tomorrow.getTime()) return 'Tomorrow';
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  // Use "Dec 18, 2025" format for clarity
+  const options: Intl.DateTimeFormatOptions = includeYear
+    ? { month: 'short', day: 'numeric', year: 'numeric' }
+    : { month: 'short', day: 'numeric' };
+  return d.toLocaleDateString('en-US', options);
+};
+
+// Calculate days overdue for severity display
+const getDaysOverdue = (date: string): number => {
+  const d = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  const diff = today.getTime() - d.getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
 };
 
 const getDueDateStatus = (date: string, completed: boolean): 'overdue' | 'today' | 'upcoming' | 'future' => {
@@ -200,6 +215,7 @@ export default function TodoItem({
   const [showTranscription, setShowTranscription] = useState(false);
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
   const priority = todo.priority || 'medium';
@@ -394,24 +410,34 @@ export default function TodoItem({
                 {priorityConfig.label}
               </span>
 
-              {/* Due date - improved color coding */}
-              {todo.due_date && dueDateStatus && (
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
-                  todo.completed
-                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-400'
-                    : dueDateStatus === 'overdue'
-                      ? 'bg-red-500 text-white'
-                      : dueDateStatus === 'today'
-                        ? 'bg-orange-500 text-white'
-                        : dueDateStatus === 'upcoming'
-                          ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                          : 'text-[var(--text-muted)]'
-                }`}>
-                  <Calendar className="w-3 h-3" />
-                  {formatDueDate(todo.due_date)}
-                  {dueDateStatus === 'overdue' && !todo.completed && ' (overdue)'}
-                </span>
-              )}
+              {/* Due date - improved color coding with days overdue */}
+              {todo.due_date && dueDateStatus && (() => {
+                const daysOverdue = dueDateStatus === 'overdue' ? getDaysOverdue(todo.due_date) : 0;
+                return (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium ${
+                    todo.completed
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                      : dueDateStatus === 'overdue'
+                        ? 'bg-red-500 text-white'
+                        : dueDateStatus === 'today'
+                          ? 'bg-orange-500 text-white'
+                          : dueDateStatus === 'upcoming'
+                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                            : 'text-[var(--text-muted)]'
+                  }`}>
+                    {dueDateStatus === 'overdue' && !todo.completed && (
+                      <AlertTriangle className="w-3 h-3" />
+                    )}
+                    {dueDateStatus !== 'overdue' && <Calendar className="w-3 h-3" />}
+                    {formatDueDate(todo.due_date)}
+                    {dueDateStatus === 'overdue' && !todo.completed && (
+                      <span className="font-semibold">
+                        {daysOverdue === 1 ? '(1 day)' : `(${daysOverdue} days)`}
+                      </span>
+                    )}
+                  </span>
+                );
+              })()}
 
               {/* Recurrence indicator */}
               {todo.recurrence && (
@@ -628,9 +654,9 @@ export default function TodoItem({
 
                 <div className="h-px bg-[var(--border)] my-1" />
 
-                {/* Delete */}
+                {/* Delete - shows confirmation */}
                 <button
-                  onClick={() => { onDelete(todo.id); setShowActionsMenu(false); }}
+                  onClick={() => { setShowDeleteConfirm(true); setShowActionsMenu(false); }}
                   className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] text-[var(--danger)] flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -641,6 +667,43 @@ export default function TodoItem({
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div
+            className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-xl max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--foreground)]">Delete Task?</h3>
+                <p className="text-sm text-[var(--text-muted)]">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-sm text-[var(--text-muted)] mb-6 line-clamp-2">
+              &ldquo;{todo.text}&rdquo;
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 px-4 py-2.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-[var(--foreground)] font-medium hover:bg-[var(--surface-2)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { onDelete(todo.id); setShowDeleteConfirm(false); }}
+                className="flex-1 px-4 py-2.5 rounded-[var(--radius-lg)] bg-red-500 text-white font-medium hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Notes display */}
       {showNotes && todo.notes && (
@@ -717,96 +780,185 @@ export default function TodoItem({
         </div>
       )}
 
-      {/* Expanded actions */}
+      {/* Expanded actions - redesigned with clear sections */}
       {expanded && (
-        <div className="px-3 sm:px-4 pb-4 pt-3 border-t border-[var(--border-subtle)] space-y-3">
-          {/* Row 1: Status, Priority, Due date, Assign, Recurrence - grid on mobile for better layout */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-            {/* Status */}
-            {onStatusChange && (
-              <select
-                value={status}
-                onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
-                className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
-              >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-            )}
+        <div className="px-4 pb-4 pt-3 border-t border-[var(--border-subtle)]">
 
-            {/* Priority selector */}
-            <select
-              value={priority}
-              onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-              className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
+          {/* PRIMARY ACTION - Mark Done/Reopen prominently displayed */}
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={handleToggle}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-lg)] font-medium text-sm transition-all ${
+                todo.completed
+                  ? 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] border border-[var(--border)]'
+                  : 'bg-[var(--success)] hover:bg-[var(--success)]/90 text-white shadow-sm'
+              }`}
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
+              <Check className="w-4 h-4" />
+              {todo.completed ? 'Reopen Task' : 'Mark Done'}
+            </button>
 
-            {/* Due date */}
-            <input
-              type="date"
-              value={todo.due_date ? todo.due_date.split('T')[0] : ''}
-              onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-              className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
-            />
+            {/* Secondary actions: Duplicate, Save Template */}
+            <div className="flex items-center gap-2">
+              {onDuplicate && (
+                <button
+                  onClick={() => onDuplicate(todo)}
+                  className="p-2 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+                  title="Duplicate task"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              )}
+              {onSaveAsTemplate && (
+                <button
+                  onClick={() => onSaveAsTemplate(todo)}
+                  className="p-2 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+                  title="Save as template"
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
+              )}
+              {onEmailCustomer && (
+                <button
+                  onClick={() => onEmailCustomer(todo)}
+                  className="p-2 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+                  title="Email summary"
+                >
+                  <Mail className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
 
-            {/* Assign to */}
-            <select
-              value={todo.assigned_to || ''}
-              onChange={(e) => onAssign(todo.id, e.target.value || null)}
-              className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
-            >
-              <option value="">Unassigned</option>
-              {users.map((user) => (
-                <option key={user} value={user}>{user}</option>
-              ))}
-            </select>
+          {/* SECTION 1: Core Fields */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              {/* Status */}
+              {onStatusChange && (
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
+                    className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+                  >
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="done">Done</option>
+                  </select>
+                </div>
+              )}
 
-            {/* Recurrence */}
+              {/* Priority */}
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Priority</label>
+                <select
+                  value={priority}
+                  onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
+                  className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+
+              {/* Due date with overdue warning */}
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block flex items-center gap-1.5">
+                  Due Date
+                  {dueDateStatus === 'overdue' && !todo.completed && (
+                    <span className="inline-flex items-center gap-1 text-red-500">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span className="text-[10px] font-semibold">OVERDUE</span>
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="date"
+                  value={todo.due_date ? todo.due_date.split('T')[0] : ''}
+                  onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
+                  className={`input-refined w-full text-sm px-3 py-2 text-[var(--foreground)] ${
+                    dueDateStatus === 'overdue' && !todo.completed ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''
+                  }`}
+                />
+              </div>
+
+              {/* Assign to */}
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Assigned To</label>
+                <select
+                  value={todo.assigned_to || ''}
+                  onChange={(e) => onAssign(todo.id, e.target.value || null)}
+                  className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((user) => (
+                    <option key={user} value={user}>{user}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Recurrence - full width */}
             {onSetRecurrence && (
-              <select
-                value={todo.recurrence || ''}
-                onChange={(e) => onSetRecurrence(todo.id, (e.target.value || null) as RecurrencePattern)}
-                className="input-refined text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)]"
-              >
-                <option value="">No repeat</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Repeat</label>
+                <select
+                  value={todo.recurrence || ''}
+                  onChange={(e) => onSetRecurrence(todo.id, (e.target.value || null) as RecurrencePattern)}
+                  className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+                >
+                  <option value="">No repeat</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
             )}
           </div>
 
-          {/* Subtasks section - always visible in expanded view */}
+          {/* SECTION DIVIDER */}
+          <div className="h-px bg-[var(--border)] my-4" />
+
+          {/* SECTION 2: Notes */}
+          {onUpdateNotes && (
+            <div className="mb-4">
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Notes</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={handleNotesBlur}
+                placeholder="Add notes or context..."
+                className="input-refined w-full text-sm px-3 py-2.5 text-[var(--foreground)] resize-none"
+                rows={2}
+              />
+            </div>
+          )}
+
+          {/* SECTION 3: Subtasks */}
           {onUpdateSubtasks && (
-            <div className="p-3 bg-[var(--accent-light)] rounded-[var(--radius-lg)] border border-[var(--accent)]/10 overflow-hidden">
-              {/* Header with AI buttons - stacks on mobile */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+            <div className="mb-4 p-3 bg-[var(--accent-light)] rounded-[var(--radius-lg)] border border-[var(--accent)]/10">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <ListTree className="w-4 h-4 text-[var(--accent)] flex-shrink-0" />
+                  <ListTree className="w-4 h-4 text-[var(--accent)]" />
                   <span className="text-sm font-medium text-[var(--accent)]">Subtasks</span>
                   {subtasks.length > 0 && (
                     <span className="text-xs text-[var(--accent)]/70">({completedSubtasks}/{subtasks.length})</span>
                   )}
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  {/* Import button */}
-                  <button
-                    onClick={() => setShowContentImporter(true)}
-                    className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-gold-light)] hover:bg-[var(--accent-gold)]/20 active:bg-[var(--accent-gold)]/25 text-[var(--accent-gold)] font-medium flex items-center gap-1.5 transition-colors touch-manipulation"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Import</span>
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowContentImporter(true)}
+                  className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-gold-light)] hover:bg-[var(--accent-gold)]/20 text-[var(--accent-gold)] font-medium flex items-center gap-1.5 transition-colors"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  Import
+                </button>
               </div>
 
-              {/* Progress bar - only show if subtasks exist */}
+              {/* Progress bar */}
               {subtasks.length > 0 && (
                 <div className="mb-3">
                   <div className="h-2 bg-[var(--accent)]/10 rounded-full overflow-hidden">
@@ -818,7 +970,7 @@ export default function TodoItem({
                 </div>
               )}
 
-              {/* Subtask list with checkboxes */}
+              {/* Subtask list */}
               {subtasks.length > 0 && (
                 <div className="space-y-2 mb-3">
                   {subtasks.map((subtask) => (
@@ -833,45 +985,25 @@ export default function TodoItem({
                 </div>
               )}
 
-              {/* Add manual subtask input */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newSubtaskText}
-                  onChange={(e) => setNewSubtaskText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addManualSubtask()}
-                  placeholder="Add a subtask..."
-                  className="input-refined flex-1 text-base sm:text-sm px-3 py-2.5 sm:py-2 min-h-[44px] sm:min-h-0 touch-manipulation text-[var(--foreground)]"
-                />
-                <button
-                  onClick={addManualSubtask}
-                  disabled={!newSubtaskText.trim()}
-                  className="px-3 py-2.5 sm:py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:bg-[var(--surface-2)] text-white disabled:text-[var(--text-light)] rounded-[var(--radius-lg)] text-sm font-medium transition-colors touch-manipulation min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          {onUpdateNotes && (
-            <div>
-              <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Notes</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                onBlur={handleNotesBlur}
-                placeholder="Add notes or context..."
-                className="input-refined w-full text-base sm:text-sm px-3 py-2.5 sm:py-2 text-[var(--foreground)] resize-none"
-                rows={2}
+              {/* Add subtask input - Enter to add, no separate button */}
+              <input
+                type="text"
+                value={newSubtaskText}
+                onChange={(e) => setNewSubtaskText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newSubtaskText.trim()) {
+                    addManualSubtask();
+                  }
+                }}
+                placeholder="Add a subtask (press Enter)..."
+                className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
               />
             </div>
           )}
 
-          {/* Attachments section */}
+          {/* SECTION 4: Attachments */}
           {onUpdateAttachments && (
-            <div className="p-3 bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] border border-[var(--accent-gold)]/10">
+            <div className="mb-4 p-3 bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] border border-[var(--accent-gold)]/10">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" />
@@ -882,35 +1014,60 @@ export default function TodoItem({
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={() => setShowAttachmentUpload(true)}
-                  disabled={(todo.attachments?.length || 0) >= MAX_ATTACHMENTS_PER_TODO}
-                  className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium flex items-center gap-1.5 transition-colors touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Add
-                </button>
+                {(todo.attachments?.length || 0) < MAX_ATTACHMENTS_PER_TODO && (
+                  <button
+                    onClick={() => setShowAttachmentUpload(true)}
+                    className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium flex items-center gap-1.5 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add
+                  </button>
+                )}
               </div>
 
-              {/* Attachment list */}
+              {/* Attachment list or drop zone */}
               {todo.attachments && todo.attachments.length > 0 ? (
                 <AttachmentList
                   attachments={todo.attachments}
                   todoId={todo.id}
                   onRemove={(attachmentId) => {
-                    // skipDbUpdate=true because the DELETE API already updated the database
                     const updated = todo.attachments?.filter(a => a.id !== attachmentId) || [];
                     onUpdateAttachments(todo.id, updated, true);
                   }}
                   canRemove={true}
                 />
               ) : (
-                <p className="text-xs text-[var(--accent-gold)]/70 text-center py-3">
-                  No attachments yet. Click &quot;Add&quot; to upload files.
-                </p>
+                <button
+                  onClick={() => setShowAttachmentUpload(true)}
+                  className="w-full p-4 border-2 border-dashed border-[var(--accent-gold)]/30 rounded-[var(--radius-md)] text-center hover:border-[var(--accent-gold)]/50 hover:bg-[var(--accent-gold)]/5 transition-colors cursor-pointer"
+                >
+                  <Paperclip className="w-5 h-5 text-[var(--accent-gold)]/50 mx-auto mb-1" />
+                  <p className="text-xs text-[var(--accent-gold)]/70">
+                    Drop files here or click to browse
+                  </p>
+                </button>
               )}
             </div>
           )}
+
+          {/* SECTION 5: Metadata footer */}
+          <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs text-[var(--text-muted)]">
+            <div className="flex items-center gap-3">
+              <span>Created by {todo.created_by}</span>
+              {todo.created_at && (
+                <span>• {new Date(todo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              )}
+              {todo.updated_at && todo.updated_by && (
+                <span className="hidden sm:inline">• Updated by {todo.updated_by}</span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-[var(--danger)] hover:text-[var(--danger)] hover:underline"
+            >
+              Delete
+            </button>
+          </div>
         </div>
       )}
 
