@@ -1,13 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
 import { Ratelimit } from '@upstash/ratelimit';
+import { isFeatureEnabled } from '@/lib/featureFlags';
 
 vi.mock('@upstash/ratelimit');
 vi.mock('@upstash/redis');
 
+// Mock feature flags - enable rate limiting for tests
+vi.mock('@/lib/featureFlags', () => ({
+  isFeatureEnabled: vi.fn((flag: string) => flag === 'server_rate_limiting'),
+}));
+
+// Mock logger to avoid Sentry issues
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
+
 describe('Rate Limiting', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Ensure rate limiting is enabled for each test
+    vi.mocked(isFeatureEnabled).mockImplementation((flag: string) => flag === 'server_rate_limiting');
   });
 
   describe('checkRateLimit', () => {

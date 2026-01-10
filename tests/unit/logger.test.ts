@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { logger, withErrorLogging } from '@/lib/logger';
 import * as Sentry from '@sentry/nextjs';
 
-vi.mock('@sentry/nextjs');
+// Mock Sentry with actual function implementations BEFORE importing logger
+vi.mock('@sentry/nextjs', () => ({
+  addBreadcrumb: vi.fn(),
+  captureException: vi.fn(),
+}));
+
+// Import logger after mocking Sentry
+import { logger, withErrorLogging } from '@/lib/logger';
 
 describe('Logger', () => {
   beforeEach(() => {

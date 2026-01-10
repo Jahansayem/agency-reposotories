@@ -8,6 +8,15 @@ vi.mock('@/lib/featureFlags', () => ({
   isFeatureEnabled: vi.fn(() => false), // Default: flags off
 }));
 
+// Mock logger to avoid Sentry issues
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
+
 describe('TodoService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -121,11 +130,21 @@ describe('TodoService', () => {
     it('should filter todos by assignedTo', async () => {
       const mockTodos = [createMockTodo({ assigned_to: 'Derrick' })];
 
+      // The query chain is: select -> order -> eq (filter applied after order)
+      // But the implementation builds: select().order() then query.eq()
+      // So order returns object with eq method that resolves final result
+      const mockQuery = {
+        eq: vi.fn().mockReturnThis(),
+      };
+      // Add the final resolution when awaited
+      (mockQuery as any).then = (resolve: (value: any) => void) => {
+        resolve({ data: mockTodos, error: null });
+        return mockQuery;
+      };
+
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({ data: mockTodos, error: null }),
-          }),
+          order: vi.fn().mockReturnValue(mockQuery),
         }),
       } as any);
 
