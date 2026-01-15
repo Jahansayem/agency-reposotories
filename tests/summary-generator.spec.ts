@@ -286,7 +286,8 @@ test.describe('Summary Generator - Date Formatting', () => {
   test('handles valid ISO date strings', async ({ page }) => {
     const validDate = '2025-01-15T10:30:00Z';
     const date = new Date(validDate);
-    expect(date.toISOString()).toBe(validDate);
+    // ISO strings may include milliseconds, so compare the date values
+    expect(new Date(date.toISOString()).getTime()).toBe(new Date(validDate).getTime());
     console.log('✓ Valid ISO date handled');
   });
 

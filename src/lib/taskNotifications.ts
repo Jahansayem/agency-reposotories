@@ -2,12 +2,13 @@
  * Task Notification System
  *
  * Automatically sends chat notifications when tasks are assigned,
- * completed, or updated.
+ * completed, or updated. Creates rich "task card" style messages
+ * with task details and clickable links.
  */
 
 import { supabase } from './supabaseClient';
 import { format, formatDistanceToNow } from 'date-fns';
-import { TodoPriority } from '@/types/todo';
+import { TodoPriority, Subtask } from '@/types/todo';
 
 export interface TaskAssignmentNotification {
   taskId: string;
@@ -16,6 +17,8 @@ export interface TaskAssignmentNotification {
   assignedBy: string;
   dueDate?: string;
   priority: TodoPriority;
+  subtasks?: Subtask[];
+  notes?: string;
 }
 
 export interface TaskCompletionNotification {
@@ -33,28 +36,30 @@ const PRIORITY_EMOJI: Record<TodoPriority, string> = {
 };
 
 /**
- * Sends a notification when a task is assigned to a user
- * Skips notification if the user is self-assigning
+ * Sends a rich "task card" notification when a task is assigned to a user.
+ * Includes task details, priority, due date, and subtask summary.
+ * Skips notification if the user is self-assigning.
  */
 export async function sendTaskAssignmentNotification(
   options: TaskAssignmentNotification
 ): Promise<{ success: boolean; error?: string }> {
-  const { taskId, taskText, assignedTo, assignedBy, dueDate, priority } = options;
+  const { taskId, taskText, assignedTo, assignedBy, dueDate, priority, subtasks, notes } = options;
 
   // Don't notify if self-assigned
   if (assignedTo === assignedBy) {
     return { success: true };
   }
 
-  // Build the notification message
-  const priorityEmoji = PRIORITY_EMOJI[priority] || '🟡';
-  let message = `📋 New task assigned to you by ${assignedBy}:\n\n`;
-  message += `${priorityEmoji} **${taskText}**`;
-
-  if (dueDate) {
-    const dueFormatted = formatDueDate(dueDate);
-    message += `\n📅 Due: ${dueFormatted}`;
-  }
+  // Build the rich task card notification message
+  const message = buildTaskCardMessage({
+    taskText,
+    assignedBy,
+    priority,
+    dueDate,
+    subtasks,
+    notes,
+    type: 'assignment',
+  });
 
   try {
     const { error } = await supabase.from('messages').insert({
@@ -78,7 +83,96 @@ export async function sendTaskAssignmentNotification(
 }
 
 /**
- * Sends a notification when a task assigned by someone else is completed
+ * Builds a rich task card message with all relevant details
+ */
+interface TaskCardMessageOptions {
+  taskText: string;
+  assignedBy?: string;
+  completedBy?: string;
+  reassignedBy?: string;
+  previousAssignee?: string;
+  newAssignee?: string;
+  priority?: TodoPriority;
+  dueDate?: string;
+  subtasks?: Subtask[];
+  notes?: string;
+  type: 'assignment' | 'completion' | 'reassignment_new' | 'reassignment_old';
+}
+
+function buildTaskCardMessage(options: TaskCardMessageOptions): string {
+  const { taskText, assignedBy, completedBy, reassignedBy, previousAssignee, newAssignee, priority, dueDate, subtasks, notes, type } = options;
+
+  const lines: string[] = [];
+
+  // Header based on notification type
+  switch (type) {
+    case 'assignment':
+      lines.push(`📋 **New Task Assigned**`);
+      lines.push(`From: ${assignedBy}`);
+      break;
+    case 'completion':
+      lines.push(`✅ **Task Completed**`);
+      lines.push(`By: ${completedBy}`);
+      break;
+    case 'reassignment_new':
+      lines.push(`📋 **Task Reassigned to You**`);
+      lines.push(`By: ${reassignedBy}`);
+      break;
+    case 'reassignment_old':
+      lines.push(`📋 **Task Reassigned**`);
+      lines.push(`From you to ${newAssignee} by ${reassignedBy}`);
+      break;
+  }
+
+  lines.push(''); // Empty line separator
+  lines.push('━━━━━━━━━━━━━━━━━━━━');
+
+  // Task title with priority
+  const priorityEmoji = priority ? PRIORITY_EMOJI[priority] || '🟡' : '';
+  const priorityLabel = priority ? ` (${priority.charAt(0).toUpperCase() + priority.slice(1)})` : '';
+  lines.push(`${priorityEmoji} **${taskText}**${priorityLabel}`);
+
+  // Due date
+  if (dueDate) {
+    const dueFormatted = formatDueDate(dueDate);
+    const isOverdue = new Date(dueDate) < new Date();
+    const dueLine = isOverdue ? `⚠️ Due: ${dueFormatted}` : `📅 Due: ${dueFormatted}`;
+    lines.push(dueLine);
+  }
+
+  // Subtasks summary
+  if (subtasks && subtasks.length > 0) {
+    const completedCount = subtasks.filter(s => s.completed).length;
+    lines.push('');
+    lines.push(`📝 Subtasks: ${completedCount}/${subtasks.length} completed`);
+
+    // Show first 3 subtasks as preview
+    const previewSubtasks = subtasks.slice(0, 3);
+    previewSubtasks.forEach(st => {
+      const checkbox = st.completed ? '✓' : '○';
+      lines.push(`  ${checkbox} ${st.text}`);
+    });
+
+    if (subtasks.length > 3) {
+      lines.push(`  ... and ${subtasks.length - 3} more`);
+    }
+  }
+
+  // Notes preview (truncated)
+  if (notes && notes.trim()) {
+    lines.push('');
+    const truncatedNotes = notes.length > 100 ? notes.substring(0, 100) + '...' : notes;
+    lines.push(`💬 Notes: ${truncatedNotes}`);
+  }
+
+  lines.push('━━━━━━━━━━━━━━━━━━━━');
+  lines.push('👆 Tap "View Task" to open');
+
+  return lines.join('\n');
+}
+
+/**
+ * Sends a rich notification when a task assigned by someone else is completed
  */
 export async function sendTaskCompletionNotification(
   options: TaskCompletionNotification
@@ -90,7 +184,11 @@ export async function sendTaskCompletionNotification(
     return { success: true };
   }
 
-  const message = `✅ Task completed by ${completedBy}:\n\n**${taskText}**`;
+  const message = buildTaskCardMessage({
+    taskText,
+    completedBy,
+    type: 'completion',
+  });
 
   try {
     const { error } = await supabase.from('messages').insert({
@@ -114,18 +212,26 @@ export async function sendTaskCompletionNotification(
 }
 
 /**
- * Sends a notification when a task is reassigned
+ * Sends rich notifications when a task is reassigned
  */
 export async function sendTaskReassignmentNotification(
   taskId: string,
   taskText: string,
   previousAssignee: string,
   newAssignee: string,
-  reassignedBy: string
+  reassignedBy: string,
+  priority?: TodoPriority,
+  dueDate?: string
 ): Promise<{ success: boolean; error?: string }> {
   // Notify new assignee (skip if self-assigning)
   if (newAssignee !== reassignedBy) {
-    const newAssigneeMessage = `📋 Task reassigned to you by ${reassignedBy}:\n\n**${taskText}**`;
+    const newAssigneeMessage = buildTaskCardMessage({
+      taskText,
+      reassignedBy,
+      priority,
+      dueDate,
+      type: 'reassignment_new',
+    });
 
     await supabase.from('messages').insert({
       text: newAssigneeMessage,
@@ -138,7 +244,14 @@ export async function sendTaskReassignmentNotification(
 
   // Notify previous assignee (skip if they did the reassignment)
   if (previousAssignee && previousAssignee !== reassignedBy) {
-    const prevAssigneeMessage = `📋 Task reassigned from you to ${newAssignee} by ${reassignedBy}:\n\n**${taskText}**`;
+    const prevAssigneeMessage = buildTaskCardMessage({
+      taskText,
+      reassignedBy,
+      newAssignee,
+      priority,
+      dueDate,
+      type: 'reassignment_old',
+    });
 
     await supabase.from('messages').insert({
       text: prevAssigneeMessage,

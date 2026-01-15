@@ -383,7 +383,6 @@ export const INSURANCE_QUICK_TASKS: QuickTaskTemplate[] = [
     text: 'Policy review for [customer]',
     category: 'policy_review',
     defaultPriority: 'medium',
-    icon: '📋',
     suggestedSubtasks: [
       'Review current coverage limits',
       'Check for discount opportunities',
@@ -395,7 +394,6 @@ export const INSURANCE_QUICK_TASKS: QuickTaskTemplate[] = [
     text: 'Add vehicle to policy - [customer]',
     category: 'vehicle_add',
     defaultPriority: 'high',
-    icon: '🚗',
     suggestedSubtasks: [
       'Collect VIN and vehicle information',
       'Verify registration',
@@ -407,7 +405,6 @@ export const INSURANCE_QUICK_TASKS: QuickTaskTemplate[] = [
     text: 'New client onboarding - [customer]',
     category: 'new_client',
     defaultPriority: 'high',
-    icon: '👤',
     suggestedSubtasks: [
       'Gather customer information',
       'Pull MVR for all drivers',
@@ -421,7 +418,6 @@ export const INSURANCE_QUICK_TASKS: QuickTaskTemplate[] = [
     text: 'Process claim for [customer]',
     category: 'claim',
     defaultPriority: 'urgent',
-    icon: '⚠️',
     suggestedSubtasks: [
       'File claim with carrier',
       'Document incident details',
@@ -434,7 +430,6 @@ export const INSURANCE_QUICK_TASKS: QuickTaskTemplate[] = [
     text: 'Quote request - [customer]',
     category: 'quote',
     defaultPriority: 'medium',
-    icon: '💰',
     suggestedSubtasks: [
       'Gather customer information',
       'Run quotes with carriers',
@@ -446,7 +441,6 @@ export const INSURANCE_QUICK_TASKS: QuickTaskTemplate[] = [
     text: 'Payment/billing issue - [customer]',
     category: 'payment',
     defaultPriority: 'high',
-    icon: '💳',
     suggestedSubtasks: [
       'Review account status',
       'Contact carrier if needed',

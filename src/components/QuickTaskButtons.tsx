@@ -2,8 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
-import { QuickTaskTemplate, TaskPattern, INSURANCE_QUICK_TASKS } from '@/types/todo';
+import {
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  ClipboardList,
+  Car,
+  UserPlus,
+  AlertTriangle,
+  CreditCard,
+  DollarSign,
+  FileText,
+  Phone,
+  Pin,
+  LucideIcon
+} from 'lucide-react';
+import { QuickTaskTemplate, TaskPattern, INSURANCE_QUICK_TASKS, TaskCategory } from '@/types/todo';
 
 interface QuickTaskButtonsProps {
   onSelectTemplate: (template: QuickTaskTemplate) => void;
@@ -11,17 +25,17 @@ interface QuickTaskButtonsProps {
   collapsed?: boolean;
 }
 
-// Map categories to icons
-const CATEGORY_ICONS: Record<string, string> = {
-  policy_review: '📋',
-  vehicle_add: '🚗',
-  new_client: '👤',
-  claim: '⚠️',
-  payment: '💳',
-  quote: '💰',
-  documentation: '📄',
-  follow_up: '📞',
-  other: '📌',
+// Map categories to Lucide icons with colors
+const CATEGORY_ICON_CONFIG: Record<TaskCategory | 'other', { icon: LucideIcon; color: string; bgColor: string }> = {
+  policy_review: { icon: ClipboardList, color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' },
+  vehicle_add: { icon: Car, color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.15)' },
+  new_client: { icon: UserPlus, color: '#8B5CF6', bgColor: 'rgba(139, 92, 246, 0.15)' },
+  claim: { icon: AlertTriangle, color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.15)' },
+  payment: { icon: CreditCard, color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)' },
+  quote: { icon: DollarSign, color: '#06B6D4', bgColor: 'rgba(6, 182, 212, 0.15)' },
+  documentation: { icon: FileText, color: '#6366F1', bgColor: 'rgba(99, 102, 241, 0.15)' },
+  follow_up: { icon: Phone, color: '#EC4899', bgColor: 'rgba(236, 72, 153, 0.15)' },
+  other: { icon: Pin, color: '#6B7280', bgColor: 'rgba(107, 114, 128, 0.15)' },
 };
 
 export function QuickTaskButtons({
@@ -42,7 +56,6 @@ export function QuickTaskButtons({
         category: p.category,
         defaultPriority: p.avg_priority,
         suggestedSubtasks: p.common_subtasks,
-        icon: CATEGORY_ICONS[p.category] || '📌',
       })),
   ];
 
@@ -80,23 +93,34 @@ export function QuickTaskButtons({
           >
             {/* Button grid */}
             <div className="grid grid-cols-2 gap-2">
-              {visibleTemplates.map((template, index) => (
-                <motion.button
-                  key={`${template.category}-${index}`}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  onClick={() => onSelectTemplate(template)}
-                  className="flex items-center gap-2 px-3 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-500 transition-all text-left group"
-                >
-                  <span className="text-lg flex-shrink-0">
-                    {template.icon || CATEGORY_ICONS[template.category] || '📌'}
-                  </span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                    {formatTemplateText(template.text)}
-                  </span>
-                </motion.button>
-              ))}
+              {visibleTemplates.map((template, index) => {
+                const iconConfig = CATEGORY_ICON_CONFIG[template.category] || CATEGORY_ICON_CONFIG.other;
+                const IconComponent = iconConfig.icon;
+
+                return (
+                  <motion.button
+                    key={`${template.category}-${index}`}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() => onSelectTemplate(template)}
+                    className="flex items-center gap-3 px-3 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl hover:bg-[var(--surface-3)] hover:border-[var(--border-hover)] transition-all text-left group"
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
+                      style={{ backgroundColor: iconConfig.bgColor }}
+                    >
+                      <IconComponent
+                        className="w-4 h-4"
+                        style={{ color: iconConfig.color }}
+                      />
+                    </div>
+                    <span className="text-sm text-[var(--foreground)] font-medium truncate">
+                      {formatTemplateText(template.text)}
+                    </span>
+                  </motion.button>
+                );
+              })}
             </div>
 
             {/* Show more/less toggle */}

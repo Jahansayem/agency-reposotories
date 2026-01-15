@@ -404,7 +404,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         },
       });
 
-      // Send chat notification if task is assigned to someone else (Feature 2)
+      // Send rich task card notification if task is assigned to someone else (Feature 2)
       if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
         sendTaskAssignmentNotification({
           taskId: newTodo.id,
@@ -413,6 +413,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           assignedBy: userName,
           dueDate: newTodo.due_date,
           priority: newTodo.priority,
+          subtasks: newTodo.subtasks,
+          notes: newTodo.notes,
         });
       }
 
