@@ -20,8 +20,8 @@ const mockChannel = vi.fn();
 const mockOn = vi.fn();
 const mockSubscribe = vi.fn();
 
-// Mock Supabase with controllable responses
-vi.mock('@/lib/supabase', () => ({
+// Mock Supabase with controllable responses - using supabaseClient path
+vi.mock('@/lib/supabaseClient', () => ({
   supabase: {
     from: vi.fn((table: string) => ({
       select: (columns?: string) => {
@@ -76,7 +76,7 @@ vi.mock('@/lib/supabase', () => ({
     channel: (name: string) => {
       mockChannel(name);
       return {
-        on: (event: string, filter: unknown, callback: (payload: unknown) => void) => {
+        on: (event: string, filter: unknown, _callback: (payload: unknown) => void) => {
           mockOn(event, filter);
           return {
             subscribe: (statusCallback?: (status: string) => void) => {
@@ -133,7 +133,7 @@ describe('useTodoData Integration Tests', () => {
 
   describe('Initialization', () => {
     it('should fetch todos on mount', async () => {
-      const { result } = renderHook(() => useTodoData(mockUser));
+      renderHook(() => useTodoData(mockUser));
 
       await waitFor(() => {
         expect(mockSelect).toHaveBeenCalledWith('todos', '*');
@@ -468,10 +468,19 @@ describe('useTodoData Error Handling', () => {
 
   // Note: Additional error handling tests would require modifying the mock
   // to return errors, which would require a more complex mock setup
-  it('should handle missing supabase gracefully', () => {
+  it('should handle missing supabase gracefully', async () => {
     // This test documents expected behavior when supabase is not configured
-    expect(() => {
-      renderHook(() => useTodoData(mockUser));
-    }).not.toThrow();
+    // The hook should not throw when rendered
+    const { result } = renderHook(() => useTodoData(mockUser));
+
+    // Wait for initial effects to settle
+    await waitFor(() => {
+      // The hook should return an object with expected methods
+      expect(result.current).toBeDefined();
+      expect(typeof result.current.createTodo).toBe('function');
+      expect(typeof result.current.updateTodo).toBe('function');
+      expect(typeof result.current.deleteTodo).toBe('function');
+      expect(typeof result.current.toggleComplete).toBe('function');
+    });
   });
 });

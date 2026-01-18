@@ -1,7 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { checkRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
-import { Ratelimit } from '@upstash/ratelimit';
+import {
+  checkRateLimit,
+  createRateLimitResponse,
+  withRateLimit,
+  addRateLimitHeaders,
+} from '@/lib/rateLimit';
 import { isFeatureEnabled } from '@/lib/featureFlags';
+import { NextResponse } from 'next/server';
 
 vi.mock('@upstash/ratelimit');
 vi.mock('@upstash/redis');
@@ -88,6 +94,184 @@ describe('Rate Limiting', () => {
 
       expect(result.status).toBe(429);
       expect(result.headers.get('Retry-After')).toBeDefined();
+    });
+
+    it('should default to 60 second retry when no reset time', () => {
+      const result = createRateLimitResponse({
+        success: false,
+      });
+
+      expect(result.status).toBe(429);
+      expect(result.headers.get('Retry-After')).toBe('60');
+    });
+
+    it('should include rate limit headers', () => {
+      const result = createRateLimitResponse({
+        success: false,
+        limit: 100,
+        remaining: 0,
+        reset: Date.now() + 30000,
+      });
+
+      expect(result.headers.get('X-RateLimit-Limit')).toBe('100');
+      expect(result.headers.get('X-RateLimit-Remaining')).toBe('0');
+    });
+  });
+
+  describe('withRateLimit', () => {
+    it('should use user ID as identifier when available', async () => {
+      const mockLimiter = {
+        limit: vi.fn().mockResolvedValue({
+          success: true,
+          limit: 100,
+          remaining: 99,
+          reset: Date.now() + 60000,
+        }),
+      } as any;
+
+      const mockRequest = {
+        headers: {
+          get: vi.fn().mockImplementation((name: string) => {
+            if (name === 'x-user-id') return 'user-123';
+            if (name === 'x-forwarded-for') return '1.2.3.4';
+            return null;
+          }),
+        },
+      } as any;
+
+      await withRateLimit(mockRequest, mockLimiter);
+
+      expect(mockLimiter.limit).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should fallback to x-forwarded-for IP', async () => {
+      const mockLimiter = {
+        limit: vi.fn().mockResolvedValue({
+          success: true,
+          limit: 100,
+          remaining: 99,
+          reset: Date.now() + 60000,
+        }),
+      } as any;
+
+      const mockRequest = {
+        headers: {
+          get: vi.fn().mockImplementation((name: string) => {
+            if (name === 'x-forwarded-for') return '1.2.3.4';
+            return null;
+          }),
+        },
+      } as any;
+
+      await withRateLimit(mockRequest, mockLimiter);
+
+      expect(mockLimiter.limit).toHaveBeenCalledWith('1.2.3.4');
+    });
+
+    it('should fallback to x-real-ip', async () => {
+      const mockLimiter = {
+        limit: vi.fn().mockResolvedValue({
+          success: true,
+          limit: 100,
+          remaining: 99,
+          reset: Date.now() + 60000,
+        }),
+      } as any;
+
+      const mockRequest = {
+        headers: {
+          get: vi.fn().mockImplementation((name: string) => {
+            if (name === 'x-real-ip') return '5.6.7.8';
+            return null;
+          }),
+        },
+      } as any;
+
+      await withRateLimit(mockRequest, mockLimiter);
+
+      expect(mockLimiter.limit).toHaveBeenCalledWith('5.6.7.8');
+    });
+
+    it('should use "unknown" when no identifiers available', async () => {
+      const mockLimiter = {
+        limit: vi.fn().mockResolvedValue({
+          success: true,
+          limit: 100,
+          remaining: 99,
+          reset: Date.now() + 60000,
+        }),
+      } as any;
+
+      const mockRequest = {
+        headers: {
+          get: vi.fn().mockReturnValue(null),
+        },
+      } as any;
+
+      await withRateLimit(mockRequest, mockLimiter);
+
+      expect(mockLimiter.limit).toHaveBeenCalledWith('unknown');
+    });
+  });
+
+  describe('addRateLimitHeaders', () => {
+    it('should add all rate limit headers when present', () => {
+      const response = NextResponse.json({ data: 'test' });
+
+      const result = addRateLimitHeaders(response, {
+        success: true,
+        limit: 100,
+        remaining: 50,
+        reset: 1234567890,
+      });
+
+      expect(result.headers.get('X-RateLimit-Limit')).toBe('100');
+      expect(result.headers.get('X-RateLimit-Remaining')).toBe('50');
+      expect(result.headers.get('X-RateLimit-Reset')).toBe('1234567890');
+    });
+
+    it('should not add headers when values are undefined', () => {
+      const response = NextResponse.json({ data: 'test' });
+
+      const result = addRateLimitHeaders(response, {
+        success: true,
+      });
+
+      expect(result.headers.get('X-RateLimit-Limit')).toBeNull();
+      expect(result.headers.get('X-RateLimit-Remaining')).toBeNull();
+      expect(result.headers.get('X-RateLimit-Reset')).toBeNull();
+    });
+
+    it('should handle partial headers', () => {
+      const response = NextResponse.json({ data: 'test' });
+
+      const result = addRateLimitHeaders(response, {
+        success: true,
+        limit: 100,
+      });
+
+      expect(result.headers.get('X-RateLimit-Limit')).toBe('100');
+      expect(result.headers.get('X-RateLimit-Remaining')).toBeNull();
+    });
+  });
+
+  describe('checkRateLimit with feature flag disabled', () => {
+    it('should allow all requests when rate limiting is disabled', async () => {
+      vi.mocked(isFeatureEnabled).mockReturnValue(false);
+
+      const mockLimiter = {
+        limit: vi.fn().mockResolvedValue({
+          success: false,
+          limit: 100,
+          remaining: 0,
+          reset: Date.now() + 60000,
+        }),
+      } as any;
+
+      const result = await checkRateLimit('user-123', mockLimiter);
+
+      expect(result.success).toBe(true);
+      expect(mockLimiter.limit).not.toHaveBeenCalled();
     });
   });
 });
