@@ -10,7 +10,6 @@ interface SortableTodoItemProps {
   todo: Todo;
   users: string[];
   currentUserName: string;
-  darkMode?: boolean;
   selected?: boolean;
   onSelect?: (id: string, selected: boolean) => void;
   onToggle: (id: string, completed: boolean) => void;
@@ -33,7 +32,6 @@ interface SortableTodoItemProps {
 export default function SortableTodoItem({
   todo,
   isDragEnabled = true,
-  darkMode,
   ...props
 }: SortableTodoItemProps) {
   const {
@@ -62,16 +60,14 @@ export default function SortableTodoItem({
         <div
           {...attributes}
           {...listeners}
-          className={`absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-grab active:cursor-grabbing z-10 ${
-            darkMode ? 'text-slate-500 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'
-          }`}
+          className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-grab active:cursor-grabbing z-10 text-[var(--text-light)] hover:text-[var(--foreground)]"
           aria-label="Drag to reorder"
         >
           <GripVertical className="w-4 h-4" />
         </div>
       )}
       <div className={isDragEnabled ? 'pl-7' : ''}>
-        <TodoItem todo={todo} darkMode={darkMode} {...props} />
+        <TodoItem todo={todo} {...props} />
       </div>
     </div>
   );
