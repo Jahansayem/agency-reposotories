@@ -1305,6 +1305,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }, [hookFilteredTodos, sortOption, customOrder]);
 
   // Stats - calculate based on filter context for dynamic counts
+  // Create a Map of todos by ID for efficient lookup (used by ChatPanel for TaskAssignmentCards)
+  const todosMap = useMemo(() => new Map(todos.map(t => [t.id, t])), [todos]);
+
   const stats = useMemo(() => {
     // Start with visible todos
     let baseSet = [...visibleTodos];
@@ -2444,6 +2447,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       <ChatPanel
         currentUser={currentUser}
         users={usersWithColors}
+        todosMap={todosMap}
         onTaskLinkClick={(taskId) => {
           // Navigate to task from chat link (Feature 2)
           const taskElement = document.getElementById(`todo-${taskId}`);

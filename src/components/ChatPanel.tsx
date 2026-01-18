@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/lib/logger';
+import { TaskAssignmentCard, SystemNotificationType } from './chat/TaskAssignmentCard';
+import { Todo } from '@/types/todo';
 import {
   sanitizeHTML,
   validateMessage,
@@ -100,6 +102,56 @@ interface ChatPanelProps {
   users: { name: string; color: string }[];
   onCreateTask?: (text: string, assignedTo?: string) => void;
   onTaskLinkClick?: (todoId: string) => void;
+  /** Map of todos for rendering system notification cards */
+  todosMap?: Map<string, Todo>;
+}
+
+/**
+ * Helper to check if a message is a system notification that should render as a card
+ */
+function isSystemNotificationMessage(message: ChatMessage): boolean {
+  return message.created_by === 'System' && !!message.related_todo_id;
+}
+
+/**
+ * Parse system message to extract notification type and metadata
+ */
+function parseSystemMessage(message: ChatMessage): {
+  notificationType: SystemNotificationType;
+  actionBy: string;
+  previousAssignee?: string;
+} | null {
+  if (!isSystemNotificationMessage(message)) return null;
+
+  const text = message.text;
+
+  // Detect notification type from message content
+  if (text.includes('New Task Assigned') || text.includes('Task Reassigned to You')) {
+    // Extract "From: Username" or "By: Username"
+    const fromMatch = text.match(/From:\s*(\w+)/);
+    const byMatch = text.match(/By:\s*(\w+)/);
+    const actionBy = fromMatch?.[1] || byMatch?.[1] || 'Unknown';
+
+    if (text.includes('Reassigned')) {
+      return { notificationType: 'task_reassignment', actionBy };
+    }
+    return { notificationType: 'task_assignment', actionBy };
+  }
+
+  if (text.includes('Task Completed')) {
+    const byMatch = text.match(/By:\s*(\w+)/);
+    return { notificationType: 'task_completion', actionBy: byMatch?.[1] || 'Unknown' };
+  }
+
+  if (text.includes('Task Reassigned')) {
+    const byMatch = text.match(/by\s+(\w+)/);
+    return {
+      notificationType: 'task_reassignment',
+      actionBy: byMatch?.[1] || 'Unknown',
+    };
+  }
+
+  return null;
 }
 
 // Typing indicator component
@@ -205,7 +257,7 @@ function ReactionsSummary({ reactions }: { reactions: MessageReaction[] }) {
   );
 }
 
-export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLinkClick }: ChatPanelProps) {
+export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLinkClick, todosMap }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -1691,37 +1743,60 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                           </div>
                                         )}
 
-                                        {/* Message bubble */}
+                                        {/* Message bubble - render as card for system notifications */}
                                         <div className="relative">
-                                          <motion.div
-                                            onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
-                                            className={`px-4 py-2.5 rounded-2xl break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
-                                              isOwn
-                                                ? 'bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] rounded-br-md shadow-lg shadow-[#72B5E8]/20'
-                                                : 'bg-white/[0.08] text-white rounded-bl-md border border-white/[0.06]'
-                                            } ${showTapbackMenu ? 'ring-2 ring-[#72B5E8]/50' : ''}`}
-                                            whileHover={{ scale: 1.01 }}
-                                          >
-                                            {renderMessageText(msg.text)}
+                                          {(() => {
+                                            // Check if this is a system notification that should render as a card
+                                            const systemMeta = parseSystemMessage(msg);
+                                            const linkedTodo = msg.related_todo_id && todosMap?.get(msg.related_todo_id);
 
-                                            {/* Task link button (Feature 2) */}
-                                            {msg.related_todo_id && onTaskLinkClick && (
-                                              <button
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  onTaskLinkClick(msg.related_todo_id!);
-                                                }}
-                                                className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                            // Render as card if: system message + has linked todo + todo data available
+                                            if (systemMeta && linkedTodo && onTaskLinkClick) {
+                                              return (
+                                                <TaskAssignmentCard
+                                                  todo={linkedTodo}
+                                                  notificationType={systemMeta.notificationType}
+                                                  actionBy={systemMeta.actionBy}
+                                                  previousAssignee={systemMeta.previousAssignee}
+                                                  onViewTask={() => onTaskLinkClick(msg.related_todo_id!)}
+                                                  isOwnMessage={isOwn}
+                                                />
+                                              );
+                                            }
+
+                                            // Fallback to regular message bubble
+                                            return (
+                                              <motion.div
+                                                onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
+                                                className={`px-4 py-2.5 rounded-2xl break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
                                                   isOwn
-                                                    ? 'bg-[#00205B]/20 text-[#00205B] hover:bg-[#00205B]/30'
-                                                    : 'bg-white/[0.1] text-white/80 hover:bg-white/[0.15]'
-                                                }`}
+                                                    ? 'bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] rounded-br-md shadow-lg shadow-[#72B5E8]/20'
+                                                    : 'bg-white/[0.08] text-white rounded-bl-md border border-white/[0.06]'
+                                                } ${showTapbackMenu ? 'ring-2 ring-[#72B5E8]/50' : ''}`}
+                                                whileHover={{ scale: 1.01 }}
                                               >
-                                                <ExternalLink className="w-3.5 h-3.5" />
-                                                View Task
-                                              </button>
-                                            )}
-                                          </motion.div>
+                                                {renderMessageText(msg.text)}
+
+                                                {/* Task link button (Feature 2) - only show for non-system messages */}
+                                                {msg.related_todo_id && onTaskLinkClick && !systemMeta && (
+                                                  <button
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      onTaskLinkClick(msg.related_todo_id!);
+                                                    }}
+                                                    className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                      isOwn
+                                                        ? 'bg-[#00205B]/20 text-[#00205B] hover:bg-[#00205B]/30'
+                                                        : 'bg-white/[0.1] text-white/80 hover:bg-white/[0.15]'
+                                                    }`}
+                                                  >
+                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                    View Task
+                                                  </button>
+                                                )}
+                                              </motion.div>
+                                            );
+                                          })()}
 
                                           {/* Action buttons on hover */}
                                           {isHovered && !showTapbackMenu && (
