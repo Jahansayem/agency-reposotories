@@ -590,3 +590,307 @@ input[type="radio"]:focus-visible {
 .no-transition, .no-transition * {
   transition: none !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACCESSIBILITY: REDUCED MOTION
+   Respects user preference for reduced animations
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Preserve essential loading indicators but make them instant */
+  .loading-spinner {
+    animation: spin 0.01ms linear 1 !important;
+  }
+
+  /* Disable decorative animations */
+  .float,
+  .pulse-glow,
+  .shimmer,
+  .gradient-animate {
+    animation: none !important;
+  }
+
+  /* Keep opacity for shimmer visible without animation */
+  .shimmer::after {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /* Disable hover transforms */
+  .btn-primary:hover,
+  .btn-sky:hover,
+  .card-elevated:hover {
+    transform: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY SCALE
+   Consistent type hierarchy using modular scale (1.125 - minor third)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Font Size Scale */
+  --font-size-xs: 0.75rem;      /* 12px - captions, badges */
+  --font-size-sm: 0.875rem;     /* 14px - body meta, timestamps */
+  --font-size-base: 1rem;       /* 16px - body text */
+  --font-size-lg: 1.125rem;     /* 18px - list items, labels */
+  --font-size-xl: 1.25rem;      /* 20px - card titles */
+  --font-size-2xl: 1.5rem;      /* 24px - section headings */
+  --font-size-3xl: 1.875rem;    /* 30px - page titles */
+  --font-size-4xl: 2.25rem;     /* 36px - hero headings */
+
+  /* Line Height Scale */
+  --line-height-tight: 1.2;     /* Headings */
+  --line-height-snug: 1.375;    /* Compact text */
+  --line-height-normal: 1.5;    /* Body text */
+  --line-height-relaxed: 1.625; /* Long-form content */
+
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* Letter Spacing */
+  --letter-spacing-tighter: -0.04em;
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: -0.01em;
+  --letter-spacing-wide: 0.025em;
+  --letter-spacing-wider: 0.05em;
+
+  /* Spacing Scale (for consistent padding/margins) */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+}
+
+/* Semantic Typography Classes */
+.text-display {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tighter);
+}
+
+.text-h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+}
+
+.text-h4 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+}
+
+.text-body {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+.text-body-sm {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+.text-caption {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.text-overline {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-normal);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TASK PRIORITY VISUAL HIERARCHY
+   Clear visual distinction for urgent/overdue tasks
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Urgent Task Card - Immediate attention needed */
+.task-urgent {
+  position: relative;
+  border-left: 4px solid var(--danger) !important;
+  background: var(--danger-light) !important;
+}
+
+.task-urgent::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--danger);
+  opacity: 0.03;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Subtle pulse for urgent tasks (respects reduced motion) */
+@keyframes urgent-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+  }
+}
+
+.task-urgent:not(.task-completed) {
+  animation: urgent-pulse 2s ease-in-out infinite;
+}
+
+/* High Priority Task Card */
+.task-high {
+  border-left: 3px solid var(--warning) !important;
+  background: var(--warning-light) !important;
+}
+
+/* Medium Priority Task Card */
+.task-medium {
+  border-left: 2px solid var(--accent) !important;
+}
+
+/* Low Priority Task Card */
+.task-low {
+  border-left: 2px solid var(--border) !important;
+}
+
+/* Overdue indicator */
+.task-overdue {
+  position: relative;
+}
+
+.task-overdue::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 24px 24px 0;
+  border-color: transparent var(--danger) transparent transparent;
+  border-radius: 0 var(--radius-md) 0 0;
+}
+
+/* Completed task styling */
+.task-completed {
+  opacity: 0.6;
+  border-left-color: var(--success) !important;
+}
+
+.task-completed .task-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ENHANCED INTERACTIVE STATES
+   Premium feel for buttons and cards
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Card hover lift effect */
+.card-interactive {
+  transition: transform var(--duration-fast) var(--ease-smooth),
+              box-shadow var(--duration-fast) var(--ease-smooth);
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Button press feedback */
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Focus ring for cards */
+.card-focusable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Smooth background transition for task items */
+.task-item {
+  transition: background-color var(--duration-fast) var(--ease-smooth),
+              border-color var(--duration-fast) var(--ease-smooth),
+              transform var(--duration-fast) var(--ease-smooth);
+}
+
+.task-item:hover {
+  background-color: var(--surface-2);
+}
+
+/* Premium glass card variant */
+.glass-card-premium {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border: 1px solid rgba(0, 51, 160, 0.08);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+}
+
+:root.dark .glass-card-premium {
+  background: rgba(22, 34, 54, 0.95);
+  border-color: rgba(114, 181, 232, 0.1);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+/* Modal overlay enhancement */
+.modal-overlay {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+:root.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* Modal card with depth */
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl), 0 0 0 1px var(--border-subtle);
+}
