@@ -3,23 +3,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronDown,
-  ChevronUp,
-  Sparkles,
-  ClipboardList,
-  Car,
-  UserPlus,
   AlertTriangle,
-  CreditCard,
-  DollarSign,
-  FileText,
+  X,
+  ChevronUp,
+  ChevronDown,
+  ClipboardList,
   Phone,
-  Pin,
-  LucideIcon,
-  X
+  Car,
+  CreditCard,
+  FileText,
+  AlertCircle,
+  DollarSign,
+  UserPlus,
+  FileX,
+  Send,
 } from 'lucide-react';
 import { QuickTaskTemplate, TaskPattern, INSURANCE_QUICK_TASKS, TaskCategory } from '@/types/todo';
 import { CATEGORY_COMPLETION_RATES } from '@/lib/insurancePatterns';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 interface QuickTaskButtonsProps {
   onSelectTemplate: (template: QuickTaskTemplate) => void;
@@ -27,37 +28,65 @@ interface QuickTaskButtonsProps {
   collapsed?: boolean;
 }
 
-// Map categories to Lucide icons with colors
-// Based on task analysis data: ordered by frequency
-const CATEGORY_ICON_CONFIG: Record<TaskCategory, { icon: LucideIcon; color: string; bgColor: string }> = {
-  // Top categories by frequency
-  policy_review: { icon: ClipboardList, color: '#3B82F6', bgColor: 'rgba(59, 130, 246, 0.15)' }, // 42%
-  follow_up: { icon: Phone, color: '#EC4899', bgColor: 'rgba(236, 72, 153, 0.15)' }, // 40%
-  vehicle_add: { icon: Car, color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.15)' }, // 25%
-  payment: { icon: CreditCard, color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.15)' }, // 18% - 100% completion!
-  endorsement: { icon: FileText, color: '#6366F1', bgColor: 'rgba(99, 102, 241, 0.15)' }, // 18%
-  documentation: { icon: FileText, color: '#6366F1', bgColor: 'rgba(99, 102, 241, 0.15)' }, // 12%
-  claim: { icon: AlertTriangle, color: '#F59E0B', bgColor: 'rgba(245, 158, 11, 0.15)' }, // 10.5%
-  quote: { icon: DollarSign, color: '#06B6D4', bgColor: 'rgba(6, 182, 212, 0.15)' }, // 10.5% - 50% completion
-  cancellation: { icon: AlertTriangle, color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.15)' }, // 6.6%
-  new_client: { icon: UserPlus, color: '#8B5CF6', bgColor: 'rgba(139, 92, 246, 0.15)' }, // 2.6% - 100% completion!
-  other: { icon: Pin, color: '#6B7280', bgColor: 'rgba(107, 114, 128, 0.15)' },
+/**
+ * Category icon mapping using Lucide icons
+ */
+const CATEGORY_ICONS: Record<TaskCategory, React.ElementType> = {
+  policy_review: ClipboardList,
+  follow_up: Phone,
+  vehicle_add: Car,
+  payment: CreditCard,
+  endorsement: FileText,
+  documentation: Send,
+  claim: AlertCircle,
+  quote: DollarSign,
+  cancellation: FileX,
+  new_client: UserPlus,
+  other: FileText,
 };
 
 /**
- * Get completion rate badge for a category
- * Returns emoji badge based on historical completion rate:
- * - 💯 for >=90% (excellent performance)
- * - ⚠️ for <60% (needs improvement)
- * - null for middle range (no badge)
+ * Category color mapping using CSS variables
  */
-function getCompletionBadge(category: TaskCategory): { badge: string; tooltip: string } | null {
+const CATEGORY_COLORS: Record<TaskCategory, { icon: string; bg: string }> = {
+  policy_review: { icon: 'var(--accent)', bg: 'var(--accent-light)' },
+  follow_up: { icon: '#E87722', bg: 'rgba(232, 119, 34, 0.12)' },
+  vehicle_add: { icon: '#DC2626', bg: 'rgba(220, 38, 38, 0.12)' },
+  payment: { icon: '#059669', bg: 'rgba(5, 150, 105, 0.12)' },
+  endorsement: { icon: '#7C3AED', bg: 'rgba(124, 58, 237, 0.12)' },
+  documentation: { icon: 'var(--accent)', bg: 'var(--accent-light)' },
+  claim: { icon: '#DC2626', bg: 'rgba(220, 38, 38, 0.12)' },
+  quote: { icon: '#D97706', bg: 'rgba(217, 119, 6, 0.12)' },
+  cancellation: { icon: '#DC2626', bg: 'rgba(220, 38, 38, 0.12)' },
+  new_client: { icon: '#059669', bg: 'rgba(5, 150, 105, 0.12)' },
+  other: { icon: 'var(--text-muted)', bg: 'var(--surface-2)' },
+};
+
+/**
+ * Short, readable labels for each category
+ */
+const CATEGORY_LABELS: Record<TaskCategory, string> = {
+  policy_review: 'Policy Review',
+  follow_up: 'Follow Up Call',
+  vehicle_add: 'Add Vehicle',
+  payment: 'Payment Issue',
+  endorsement: 'Endorsement',
+  documentation: 'Send Documents',
+  claim: 'Process Claim',
+  quote: 'Quote Request',
+  cancellation: 'Cancellation',
+  new_client: 'New Client',
+  other: 'Other',
+};
+
+/**
+ * Get completion indicator type for a category
+ * Returns 'high' for >=90%, 'low' for <60%, null for middle range
+ */
+function getCompletionIndicator(category: TaskCategory): 'high' | 'low' | null {
   const rate = CATEGORY_COMPLETION_RATES[category];
-  if (rate >= 90) {
-    return { badge: '💯', tooltip: `${rate}% completion rate` };
-  } else if (rate < 60) {
-    return { badge: '⚠️', tooltip: `Only ${rate}% completion rate - break into smaller steps` };
-  }
+  if (rate >= 90) return 'high';
+  if (rate < 60) return 'low';
   return null;
 }
 
@@ -71,21 +100,11 @@ function isLowCompletionQuote(category: TaskCategory): boolean {
 export function QuickTaskButtons({
   onSelectTemplate,
   patterns = [],
-  collapsed: initialCollapsed = false,
+  collapsed: initialCollapsed = true,
 }: QuickTaskButtonsProps) {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
-  const [showAll, setShowAll] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [showQuoteWarning, setShowQuoteWarning] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<QuickTaskTemplate | null>(null);
-
-  // Detect mobile viewport
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Handle template selection with quote warning
   const handleTemplateSelect = useCallback((template: QuickTaskTemplate) => {
@@ -116,7 +135,7 @@ export function QuickTaskButtons({
   const allTemplates: QuickTaskTemplate[] = [
     ...INSURANCE_QUICK_TASKS,
     ...patterns
-      .filter(p => p.occurrence_count >= 3) // Only show frequent patterns
+      .filter(p => p.occurrence_count >= 3)
       .map(p => ({
         text: p.pattern_text,
         category: p.category,
@@ -125,37 +144,41 @@ export function QuickTaskButtons({
       })),
   ];
 
-  // Responsive default: 6 on desktop, 4 on mobile
-  const defaultVisible = isMobile ? 4 : 6;
-  const visibleTemplates = showAll ? allTemplates : allTemplates.slice(0, defaultVisible);
-
   if (allTemplates.length === 0) {
     return null;
   }
 
   return (
     <div className="mb-4">
-      {/* Header with collapse toggle */}
+      {/* Collapsible Header */}
       <button
+        type="button"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors mb-2 group"
+        className="w-full flex items-center justify-between px-1 py-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors group"
+        aria-expanded={!isCollapsed}
+        aria-controls="quick-add-templates"
       >
-        <Sparkles className="w-4 h-4" />
-        <span className="font-medium">Quick Add</span>
+        <span className="flex items-center gap-2">
+          <span>Quick Add</span>
+          <span className="text-xs text-[var(--text-light)]">
+            ({allTemplates.length} templates)
+          </span>
+        </span>
         {isCollapsed ? (
-          <ChevronDown className="w-4 h-4 opacity-50 group-hover:opacity-100" />
+          <ChevronDown className="w-4 h-4 text-[var(--text-light)] group-hover:text-[var(--text-muted)] transition-colors" />
         ) : (
-          <ChevronUp className="w-4 h-4 opacity-50 group-hover:opacity-100" />
+          <ChevronUp className="w-4 h-4 text-[var(--text-light)] group-hover:text-[var(--text-muted)] transition-colors" />
         )}
       </button>
 
       <AnimatePresence>
         {!isCollapsed && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            id="quick-add-templates"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
             className="overflow-hidden"
           >
             {/* Quote Warning Toast */}
@@ -165,28 +188,28 @@ export function QuickTaskButtons({
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-lg"
+                  className="mb-3 p-3 bg-[var(--warning-light)] border border-[var(--warning)]/30 rounded-xl"
+                  role="alert"
                 >
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-[var(--warning)] flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[var(--foreground)]">
                         Quote tasks have a 50% completion rate
                       </p>
-                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                        Consider breaking this into smaller steps for better follow-through.
-                        All suggested subtasks will be added automatically.
+                      <p className="text-xs text-[var(--text-muted)] mt-1">
+                        Subtasks will be added to help break this into smaller steps.
                       </p>
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-3">
                         <button
                           onClick={confirmQuoteSelection}
-                          className="px-3 py-1 text-xs font-medium bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors"
+                          className="px-3 py-1.5 text-xs font-medium bg-[var(--warning)] text-white rounded-lg hover:brightness-110 transition-all min-h-[32px]"
                         >
-                          Continue Anyway
+                          Continue
                         </button>
                         <button
                           onClick={dismissQuoteWarning}
-                          className="px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-300 hover:underline"
+                          className="px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors min-h-[32px]"
                         >
                           Cancel
                         </button>
@@ -194,7 +217,8 @@ export function QuickTaskButtons({
                     </div>
                     <button
                       onClick={dismissQuoteWarning}
-                      className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200"
+                      className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+                      aria-label="Dismiss warning"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -203,68 +227,72 @@ export function QuickTaskButtons({
               )}
             </AnimatePresence>
 
-            {/* Button grid - responsive: 2 cols on mobile, 3 cols on desktop */}
+            {/* Template Grid - 2 columns on mobile, 3 on desktop */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {visibleTemplates.map((template, index) => {
-                const iconConfig = CATEGORY_ICON_CONFIG[template.category] ?? CATEGORY_ICON_CONFIG.other;
-                const IconComponent = iconConfig.icon;
-                const completionBadge = getCompletionBadge(template.category);
+              {allTemplates.map((template, index) => {
+                const Icon = CATEGORY_ICONS[template.category] || FileText;
+                const colors = CATEGORY_COLORS[template.category] || CATEGORY_COLORS.other;
+                const indicator = getCompletionIndicator(template.category);
+                const rate = CATEGORY_COMPLETION_RATES[template.category];
+                const label = CATEGORY_LABELS[template.category] || template.category;
 
                 return (
-                  <motion.button
+                  <button
                     key={`${template.category}-${index}`}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
                     onClick={() => handleTemplateSelect(template)}
-                    className="flex items-center gap-3 px-3 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl hover:bg-[var(--surface-3)] hover:border-[var(--border-hover)] transition-all text-left group relative"
-                    title={completionBadge?.tooltip}
+                    className="group relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)] transition-all text-left min-h-[44px]"
+                    title={`${label} - ${rate}% completion rate`}
+                    aria-label={`Create ${label} task`}
                   >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
-                      style={{ backgroundColor: iconConfig.bgColor }}
+                    {/* Icon */}
+                    <span
+                      className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
+                      style={{ backgroundColor: colors.bg }}
                     >
-                      <IconComponent
+                      <Icon
                         className="w-4 h-4"
-                        style={{ color: iconConfig.color }}
+                        style={{ color: colors.icon }}
                       />
-                    </div>
-                    <span className="text-sm text-[var(--foreground)] font-medium truncate flex-1">
-                      {formatTemplateText(template.text)}
                     </span>
-                    {/* Completion rate badge */}
-                    {completionBadge && (
-                      <span className="text-xs flex-shrink-0" title={completionBadge.tooltip}>
-                        {completionBadge.badge}
+
+                    {/* Label */}
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium text-[var(--foreground)] truncate">
+                        {label}
                       </span>
+                    </span>
+
+                    {/* Completion Indicator (subtle dot) */}
+                    {indicator && (
+                      <span
+                        className={`
+                          absolute top-1.5 right-1.5 w-2 h-2 rounded-full
+                          ${indicator === 'high' ? 'bg-[var(--success)]' : 'bg-[var(--warning)]'}
+                        `}
+                        title={indicator === 'high' ? 'High completion rate' : 'Low completion rate'}
+                      />
                     )}
-                  </motion.button>
+                  </button>
                 );
               })}
             </div>
 
-            {/* Show more/less toggle */}
-            {allTemplates.length > defaultVisible && (
-              <button
-                onClick={() => setShowAll(!showAll)}
-                className="mt-2 w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-              >
-                {showAll ? `Show less` : `Show ${allTemplates.length - defaultVisible} more`}
-              </button>
-            )}
+            {/* Subtle legend */}
+            <div className="flex items-center justify-end gap-4 mt-2 px-1">
+              <span className="flex items-center gap-1.5 text-xs text-[var(--text-light)]">
+                <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
+                High completion
+              </span>
+              <span className="flex items-center gap-1.5 text-xs text-[var(--text-light)]">
+                <span className="w-2 h-2 rounded-full bg-[var(--warning)]" />
+                Needs focus
+              </span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
-}
-
-/**
- * Formats template text for display, removing placeholder brackets
- */
-function formatTemplateText(text: string): string {
-  // Replace [customer] and similar placeholders with ellipsis
-  return text.replace(/\[[\w\s]+\]/g, '...').trim();
 }
 
 /**
@@ -277,7 +305,7 @@ export function useTaskPatterns(): { patterns: TaskPattern[]; loading: boolean }
   useEffect(() => {
     async function fetchPatterns() {
       try {
-        const response = await fetch('/api/patterns/suggestions');
+        const response = await fetchWithCsrf('/api/patterns/suggestions');
         if (response.ok) {
           const data = await response.json();
           // Flatten grouped patterns
