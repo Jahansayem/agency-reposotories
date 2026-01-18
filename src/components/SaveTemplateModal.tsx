@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { X, FileText, Loader2, Share2, Lock } from 'lucide-react';
-import { Todo, TodoPriority, PRIORITY_CONFIG } from '@/types/todo';
+import { Todo, PRIORITY_CONFIG } from '@/types/todo';
+import { useEscapeKey } from '@/hooks';
 
 interface SaveTemplateModalProps {
   todo: Todo;
-  currentUserName: string;
   darkMode?: boolean;
   onClose: () => void;
   onSave: (name: string, isShared: boolean) => Promise<void>;
@@ -14,7 +14,6 @@ interface SaveTemplateModalProps {
 
 export default function SaveTemplateModal({
   todo,
-  currentUserName,
   darkMode = true,
   onClose,
   onSave,
@@ -26,6 +25,9 @@ export default function SaveTemplateModal({
 
   const priorityConfig = PRIORITY_CONFIG[todo.priority || 'medium'];
   const subtasks = todo.subtasks || [];
+
+  // Handle Escape key to close modal
+  useEscapeKey(onClose);
 
   const handleSave = async () => {
     if (!name.trim()) {
