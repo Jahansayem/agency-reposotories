@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { ChatMessage, AuthUser, ChatConversation, TapbackType, MessageReaction, PresenceStatus, Todo } from '@/types/todo';
+import { ChatMessage, AuthUser, ChatConversation, TapbackType, MessageReaction, PresenceStatus } from '@/types/todo';
 import { v4 as uuidv4 } from 'uuid';
 import {
   MessageSquare, Send, X, Minimize2, Maximize2, ChevronDown,
@@ -12,6 +12,17 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/lib/logger';
+import {
+  sanitizeHTML,
+  validateMessage,
+  extractAndValidateMentions,
+  checkRateLimit,
+  recordMessageSend,
+  CHAT_LIMITS,
+  getMessageAriaLabel,
+  getReactionAriaLabel,
+  truncateText,
+} from '@/lib/chatUtils';
 
 // Notification sound (short, pleasant chime)
 const NOTIFICATION_SOUND_URL = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleTs1WpbOzq1fMUJFk8zSrGg/V0Bml8jRzaZ4g2pqmaW4zc7Mu7/Fz8q9rZ2WnqWyxdLOv62WiaOxyb6kkXuNqL+2pJZ7cn2ftLaylnuFjJmnq52Xjn5/gI+dn6OZj4KGjJGVl5qakIuIhYaHiYuOkJGQj42Lh4OCgoKEhoeIiIiHhoWDgoGBgYGCg4SEhISDgoGAgICAgIGBgoKCgoKBgYCAgICAgICBgYGBgYGBgICAgICAgICAgYGBgYGBgYCAgICAgA==';
@@ -87,7 +98,6 @@ const PRESENCE_CONFIG: Record<PresenceStatus, { color: string; label: string }> 
 interface ChatPanelProps {
   currentUser: AuthUser;
   users: { name: string; color: string }[];
-  todos?: Todo[];
   onCreateTask?: (text: string, assignedTo?: string) => void;
   onTaskLinkClick?: (todoId: string) => void;
 }
@@ -172,7 +182,7 @@ function MentionAutocomplete({
 }
 
 // Reactions summary tooltip
-function ReactionsSummary({ reactions, users }: { reactions: MessageReaction[]; users: { name: string; color: string }[] }) {
+function ReactionsSummary({ reactions }: { reactions: MessageReaction[] }) {
   const groupedByReaction = reactions.reduce((acc, r) => {
     if (!acc[r.reaction]) acc[r.reaction] = [];
     acc[r.reaction].push(r.user);
@@ -195,7 +205,7 @@ function ReactionsSummary({ reactions, users }: { reactions: MessageReaction[]; 
   );
 }
 
-export default function ChatPanel({ currentUser, users, todos = [], onCreateTask, onTaskLinkClick }: ChatPanelProps) {
+export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLinkClick }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -212,7 +222,12 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
   const [tapbackMessageId, setTapbackMessageId] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Record<string, boolean>>({});
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission === 'granted';
+    }
+    return false;
+  });
 
   // New feature states
   const [searchQuery, setSearchQuery] = useState('');
@@ -241,18 +256,14 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
   const lastTypingBroadcastRef = useRef<number>(0);
   const presenceIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitialScrolled = useRef<string | null>(null); // Track which conversation we scrolled for
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Initialize audio element for notification sound
   useEffect(() => {
     audioRef.current = new Audio(NOTIFICATION_SOUND_URL);
     audioRef.current.volume = 0.5;
-  }, []);
-
-  // Check notification permission on mount
-  useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationsEnabled(Notification.permission === 'granted');
-    }
   }, []);
 
   // Function to play notification sound
@@ -450,6 +461,7 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
   useEffect(() => { playNotificationSoundRef.current = playNotificationSound; }, [playNotificationSound]);
   useEffect(() => { mutedConversationsRef.current = mutedConversations; }, [mutedConversations]);
   useEffect(() => { isDndModeRef.current = isDndMode; }, [isDndMode]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const getMessageConversationKey = useCallback((msg: ChatMessage): string | null => {
     if (!msg.recipient) {
@@ -464,23 +476,26 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
     return null;
   }, [currentUser.name]);
 
-  // Update presence periodically
+  // Update presence periodically - uses ref to ensure channel is subscribed first
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
     const updatePresence = () => {
-      supabase.channel('presence-channel').send({
-        type: 'broadcast',
-        event: 'presence',
-        payload: {
-          user: currentUser.name,
-          status: isDndMode ? 'dnd' : 'online',
-          timestamp: Date.now()
-        }
-      });
+      // Only send if channel exists and is subscribed
+      if (presenceChannelRef.current) {
+        presenceChannelRef.current.send({
+          type: 'broadcast',
+          event: 'presence',
+          payload: {
+            user: currentUser.name,
+            status: isDndMode ? 'dnd' : 'online',
+            timestamp: Date.now()
+          }
+        });
+      }
     };
 
-    updatePresence();
+    // Initial presence update will be triggered after channel subscription
     presenceIntervalRef.current = setInterval(updatePresence, 30000);
 
     return () => {
@@ -491,6 +506,7 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
   }, [currentUser.name, isDndMode]);
 
   // Real-time subscription for messages, typing, and presence
+  // fetchMessages calls setState - this is the correct data loading pattern
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
@@ -569,20 +585,28 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
         setConnected(status === 'SUBSCRIBED');
       });
 
-    // Typing indicator channel
+    // Typing indicator channel - track timeouts for cleanup
     const typingChannel = supabase
       .channel('typing-channel')
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.user !== currentUser.name) {
           setTypingUsers(prev => ({ ...prev, [payload.user]: true }));
-          setTimeout(() => {
+          // Clear any existing timeout for this user
+          const existingTimeout = typingTimeoutsRef.current.get(payload.user);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+          }
+          // Set new timeout and store reference
+          const timeout = setTimeout(() => {
             setTypingUsers(prev => ({ ...prev, [payload.user]: false }));
+            typingTimeoutsRef.current.delete(payload.user);
           }, 3000);
+          typingTimeoutsRef.current.set(payload.user, timeout);
         }
       })
       .subscribe();
 
-    // Presence channel
+    // Presence channel - store in ref for use by presence update effect
     const presenceChannel = supabase
       .channel('presence-channel')
       .on('broadcast', { event: 'presence' }, ({ payload }) => {
@@ -590,12 +614,30 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
           setUserPresence(prev => ({ ...prev, [payload.user]: payload.status }));
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          // Store ref and send initial presence
+          presenceChannelRef.current = presenceChannel;
+          presenceChannel.send({
+            type: 'broadcast',
+            event: 'presence',
+            payload: {
+              user: currentUser.name,
+              status: isDndModeRef.current ? 'dnd' : 'online',
+              timestamp: Date.now()
+            }
+          });
+        }
+      });
 
     return () => {
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(typingChannel);
       supabase.removeChannel(presenceChannel);
+      presenceChannelRef.current = null;
+      // Clean up all typing timeouts
+      typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
     };
   }, [fetchMessages, currentUser.name, getMessageConversationKey]);
 
@@ -692,16 +734,39 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
     const text = newMessage.trim();
     if (!text || !conversation) return;
 
-    const mentions = extractMentions(text);
+    // Check rate limiting
+    const rateLimitStatus = checkRateLimit(currentUser.id);
+    if (rateLimitStatus.isLimited) {
+      const waitSeconds = Math.ceil(rateLimitStatus.remainingMs / 1000);
+      logger.warn('Rate limit exceeded', { waitSeconds, component: 'ChatPanel' });
+      // Could show a toast notification here
+      return;
+    }
+
+    // Validate message
+    const userNames = users.map(u => u.name);
+    const validation = validateMessage(text, [], userNames);
+
+    if (!validation.isValid) {
+      logger.warn('Message validation failed', { errors: validation.errors, component: 'ChatPanel' });
+      // Could show validation errors to user here
+      return;
+    }
+
+    // Extract and validate mentions
+    const mentions = extractAndValidateMentions(text, userNames);
+
+    // Record the message send for rate limiting
+    recordMessageSend(currentUser.id);
 
     const message: ChatMessage = {
       id: uuidv4(),
-      text,
+      text: validation.sanitizedText || text,
       created_by: currentUser.name,
       created_at: new Date().toISOString(),
       recipient: conversation.type === 'dm' ? conversation.userName : null,
       reply_to_id: replyingTo?.id || null,
-      reply_to_text: replyingTo ? replyingTo.text.slice(0, 100) : null,
+      reply_to_text: replyingTo ? truncateText(sanitizeHTML(replyingTo.text), 100) : null,
       reply_to_user: replyingTo?.created_by || null,
       mentions: mentions.length > 0 ? mentions : undefined,
     };
@@ -795,6 +860,7 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
   const saveEdit = async () => {
     if (!editingMessage || !editText.trim()) return;
 
+    const originalMessage = editingMessage;
     const updatedMessage = {
       ...editingMessage,
       text: editText.trim(),
@@ -814,11 +880,18 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
 
     if (error) {
       logger.error('Error editing message', error, { component: 'ChatPanel' });
+      // Rollback on error
+      setMessages(prev => prev.map(m =>
+        m.id === originalMessage.id ? originalMessage : m
+      ));
     }
   };
 
   // Delete message (soft delete)
   const deleteMessage = async (messageId: string) => {
+    // Store original for rollback
+    const originalMessage = messagesRef.current.find(m => m.id === messageId);
+
     setMessages(prev => prev.map(m =>
       m.id === messageId ? { ...m, deleted_at: new Date().toISOString() } : m
     ));
@@ -831,12 +904,24 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
 
     if (error) {
       logger.error('Error deleting message', error, { component: 'ChatPanel' });
+      // Rollback on error
+      if (originalMessage) {
+        setMessages(prev => prev.map(m =>
+          m.id === messageId ? originalMessage : m
+        ));
+      }
     }
   };
 
   // Pin/unpin message
   const togglePin = async (message: ChatMessage) => {
     const isPinned = !message.is_pinned;
+    // Store original pin state for rollback
+    const originalPinState = {
+      is_pinned: message.is_pinned,
+      pinned_by: message.pinned_by,
+      pinned_at: message.pinned_at
+    };
 
     setMessages(prev => prev.map(m =>
       m.id === message.id ? {
@@ -859,6 +944,10 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
 
     if (error) {
       logger.error('Error pinning message', error, { component: 'ChatPanel' });
+      // Rollback on error
+      setMessages(prev => prev.map(m =>
+        m.id === message.id ? { ...m, ...originalPinState } : m
+      ));
     }
   };
 
@@ -903,20 +992,28 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
       return m;
     }));
 
-    for (const messageId of messageIds) {
-      const message = messages.find(m => m.id === messageId);
-      if (message && message.created_by !== currentUser.name) {
-        const readBy = message.read_by || [];
-        if (!readBy.includes(currentUser.name)) {
-          await supabase
-            .from('messages')
-            .update({ read_by: [...readBy, currentUser.name] })
-            .eq('id', messageId);
+    // Use ref to get current messages to avoid stale closure
+    const currentMessages = messagesRef.current;
+    const updatePromises = messageIds
+      .map(messageId => {
+        const message = currentMessages.find(m => m.id === messageId);
+        if (message && message.created_by !== currentUser.name) {
+          const readBy = message.read_by || [];
+          if (!readBy.includes(currentUser.name)) {
+            return supabase
+              .from('messages')
+              .update({ read_by: [...readBy, currentUser.name] })
+              .eq('id', messageId);
+          }
         }
-      }
-    }
-  }, [messages, currentUser.name]);
+        return null;
+      })
+      .filter(Boolean);
 
+    await Promise.all(updatePromises);
+  }, [currentUser.name]);
+
+  // Mark messages as read when viewing conversation - intentional side effect
   useEffect(() => {
     if (isOpen && !showConversationList && conversation && filteredMessages.length > 0) {
       const unreadMessageIds = filteredMessages
@@ -980,9 +1077,11 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Render message text with mentions highlighted
+  // Render message text with mentions highlighted and XSS protection
   const renderMessageText = (text: string) => {
-    const parts = text.split(/(@\w+)/g);
+    // Sanitize text first to prevent XSS
+    const sanitizedText = sanitizeHTML(text);
+    const parts = sanitizedText.split(/(@\w+)/g);
     return parts.map((part, i) => {
       if (part.startsWith('@')) {
         const userName = part.slice(1);
@@ -998,6 +1097,8 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
                   ? 'bg-[#72B5E8]/30 text-[#72B5E8]'
                   : 'bg-[#0033A0]/30 text-[#0033A0] dark:text-[#72B5E8]'
               }`}
+              role="mark"
+              aria-label={`Mention of ${userName}`}
             >
               {part}
             </span>
@@ -1008,14 +1109,16 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
     });
   };
 
-  const groupedMessages = filteredMessages.reduce((acc, msg, idx) => {
-    const prevMsg = filteredMessages[idx - 1];
-    const isGrouped = prevMsg && prevMsg.created_by === msg.created_by &&
-      new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 60000 &&
-      !msg.reply_to_id;
+  const groupedMessages = useMemo(() => {
+    return filteredMessages.reduce((acc, msg, idx) => {
+      const prevMsg = filteredMessages[idx - 1];
+      const isGrouped = prevMsg && prevMsg.created_by === msg.created_by &&
+        new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 60000 &&
+        !msg.reply_to_id;
 
-    return [...acc, { ...msg, isGrouped }];
-  }, [] as (ChatMessage & { isGrouped: boolean })[]);
+      return [...acc, { ...msg, isGrouped }];
+    }, [] as (ChatMessage & { isGrouped: boolean })[]);
+  }, [filteredMessages]);
 
   const selectConversation = (conv: ChatConversation) => {
     setConversation(conv);
@@ -1728,6 +1831,7 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
                                                 {(Object.keys(TAPBACK_EMOJIS) as TapbackType[]).map((reaction) => {
                                                   const myReaction = reactions.find(r => r.user === currentUser.name);
                                                   const isSelected = myReaction?.reaction === reaction;
+                                                  const reactionCount = reactions.filter(r => r.reaction === reaction).length;
                                                   return (
                                                     <motion.button
                                                       key={reaction}
@@ -1735,6 +1839,8 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
                                                         e.stopPropagation();
                                                         toggleTapback(msg.id, reaction);
                                                       }}
+                                                      aria-label={getReactionAriaLabel(reaction, reactionCount, isSelected)}
+                                                      aria-pressed={isSelected}
                                                       className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 text-xl ${
                                                         isSelected
                                                           ? 'bg-[#72B5E8]/30 ring-2 ring-[#72B5E8]'
@@ -1779,7 +1885,7 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
                                                     exit={{ opacity: 0, y: 5 }}
                                                     className={`absolute bottom-full mb-2 z-30 ${isOwn ? 'right-0' : 'left-0'}`}
                                                   >
-                                                    <ReactionsSummary reactions={reactions} users={users} />
+                                                    <ReactionsSummary reactions={reactions} />
                                                   </motion.div>
                                                 )}
                                               </AnimatePresence>
@@ -2002,34 +2108,52 @@ export default function ChatPanel({ currentUser, users, todos = [], onCreateTask
                               <AtSign className="w-5 h-5" />
                             </motion.button>
 
-                            <textarea
-                              ref={inputRef}
-                              value={newMessage}
-                              onChange={handleInputChange}
-                              onKeyDown={handleKeyDown}
-                              placeholder={
-                                !tableExists
-                                  ? "Chat not available"
-                                  : !conversation
-                                  ? "Select a conversation"
-                                  : conversation.type === 'team'
-                                  ? "Message team..."
-                                  : `Message ${conversation.userName}...`
-                              }
-                              disabled={!tableExists}
-                              rows={1}
-                              className="flex-1 px-5 py-3 rounded-2xl border border-white/[0.1] bg-white/[0.04] text-white placeholder:text-white/30 focus:outline-none focus:border-[#72B5E8]/50 focus:ring-2 focus:ring-[#72B5E8]/20 resize-none max-h-28 transition-all text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
-                              style={{
-                                height: 'auto',
-                                minHeight: '48px',
-                                maxHeight: '112px'
-                              }}
-                              onInput={(e) => {
-                                const target = e.target as HTMLTextAreaElement;
-                                target.style.height = 'auto';
-                                target.style.height = Math.min(target.scrollHeight, 112) + 'px';
-                              }}
-                            />
+                            <div className="flex-1 relative">
+                              <textarea
+                                ref={inputRef}
+                                value={newMessage}
+                                onChange={handleInputChange}
+                                onKeyDown={handleKeyDown}
+                                maxLength={CHAT_LIMITS.MAX_MESSAGE_LENGTH}
+                                placeholder={
+                                  !tableExists
+                                    ? "Chat not available"
+                                    : !conversation
+                                    ? "Select a conversation"
+                                    : conversation.type === 'team'
+                                    ? "Message team..."
+                                    : `Message ${conversation.userName}...`
+                                }
+                                disabled={!tableExists}
+                                rows={1}
+                                aria-label={conversation ? `Message input for ${conversation.type === 'team' ? 'team chat' : conversation.userName}` : 'Message input'}
+                                aria-describedby="char-counter"
+                                className="w-full px-5 py-3 rounded-2xl border border-white/[0.1] bg-white/[0.04] text-white placeholder:text-white/30 focus:outline-none focus:border-[#72B5E8]/50 focus:ring-2 focus:ring-[#72B5E8]/20 resize-none max-h-28 transition-all text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{
+                                  height: 'auto',
+                                  minHeight: '48px',
+                                  maxHeight: '112px'
+                                }}
+                                onInput={(e) => {
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = Math.min(target.scrollHeight, 112) + 'px';
+                                }}
+                              />
+                              {/* Character counter - shows when approaching limit */}
+                              {newMessage.length > CHAT_LIMITS.MAX_MESSAGE_LENGTH * 0.8 && (
+                                <span
+                                  id="char-counter"
+                                  className={`absolute bottom-1 right-2 text-xs ${
+                                    newMessage.length > CHAT_LIMITS.MAX_MESSAGE_LENGTH * 0.95
+                                      ? 'text-red-400'
+                                      : 'text-white/40'
+                                  }`}
+                                >
+                                  {newMessage.length}/{CHAT_LIMITS.MAX_MESSAGE_LENGTH}
+                                </span>
+                              )}
+                            </div>
                             <motion.button
                               onClick={sendMessage}
                               disabled={!newMessage.trim() || !tableExists}
