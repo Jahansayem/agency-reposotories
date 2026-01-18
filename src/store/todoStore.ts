@@ -72,6 +72,7 @@ export interface UIState {
   showMergeModal: boolean;
   showDuplicateModal: boolean;
   showEmailModal: boolean;
+  focusMode: boolean;
 }
 
 export interface TodoState {
@@ -141,6 +142,8 @@ export interface TodoState {
   setShowMergeModal: (show: boolean) => void;
   setShowDuplicateModal: (show: boolean) => void;
   setShowEmailModal: (show: boolean) => void;
+  setFocusMode: (enabled: boolean) => void;
+  toggleFocusMode: () => void;
 
   // Actions - Custom order
   setCustomOrder: (order: string[]) => void;
@@ -181,6 +184,7 @@ const defaultUI: UIState = {
   showMergeModal: false,
   showDuplicateModal: false,
   showEmailModal: false,
+  focusMode: false, // Will be hydrated from localStorage
 };
 
 export const useTodoStore = create<TodoState>()(
@@ -454,6 +458,40 @@ export const useTodoStore = create<TodoState>()(
         'setShowEmailModal'
       ),
 
+      setFocusMode: (focusMode) => {
+        // Persist to localStorage
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('focusMode', String(focusMode));
+          } catch {
+            // Ignore localStorage errors
+          }
+        }
+        set(
+          (state) => ({ ui: { ...state.ui, focusMode } }),
+          false,
+          'setFocusMode'
+        );
+      },
+
+      toggleFocusMode: () => {
+        const currentFocusMode = useTodoStore.getState().ui.focusMode;
+        const newFocusMode = !currentFocusMode;
+        // Persist to localStorage
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('focusMode', String(newFocusMode));
+          } catch {
+            // Ignore localStorage errors
+          }
+        }
+        set(
+          (state) => ({ ui: { ...state.ui, focusMode: newFocusMode } }),
+          false,
+          'toggleFocusMode'
+        );
+      },
+
       // Custom order
       setCustomOrder: (customOrder) => set({ customOrder }, false, 'setCustomOrder'),
     })),
@@ -589,6 +627,20 @@ export const selectTodoStats = (todos: Todo[]) => {
   const urgent = todos.filter((t) => (t.priority === 'urgent' || t.priority === 'high') && !t.completed).length;
 
   return { total, completed, overdue, dueToday, urgent };
+};
+
+// Hydrate focus mode from localStorage on client side
+export const hydrateFocusMode = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('focusMode');
+      if (stored === 'true') {
+        useTodoStore.getState().setFocusMode(true);
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
 };
 
 // Export helper functions for use in components

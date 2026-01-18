@@ -40,6 +40,12 @@ const shortcutGroups: ShortcutGroup[] = [
       { keys: ['⌘', 'Enter'], description: 'Submit with AI enhancement' },
     ],
   },
+  {
+    title: 'View Modes',
+    shortcuts: [
+      { keys: ['⌘', 'Shift', 'F'], description: 'Toggle focus mode' },
+    ],
+  },
 ];
 
 export default function KeyboardShortcutsModal({

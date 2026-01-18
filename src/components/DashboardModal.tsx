@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 import { useEscapeKey } from '@/hooks';
+// Re-export utilities for backwards compatibility
+export { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
 
 interface DashboardModalProps {
   isOpen: boolean;
@@ -42,26 +44,6 @@ interface UpcomingTask {
   text: string;
   due_date: string;
   priority: string;
-}
-
-const DAILY_VISIT_KEY = 'bealer-last-dashboard-visit';
-
-export function shouldShowDailyDashboard(): boolean {
-  if (typeof window === 'undefined') return false;
-
-  const lastVisit = localStorage.getItem(DAILY_VISIT_KEY);
-  if (!lastVisit) return true;
-
-  const lastVisitDate = new Date(lastVisit);
-  const today = new Date();
-
-  // Check if it's a different day
-  return lastVisitDate.toDateString() !== today.toDateString();
-}
-
-export function markDailyDashboardShown(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(DAILY_VISIT_KEY, new Date().toISOString());
 }
 
 export default function DashboardModal({

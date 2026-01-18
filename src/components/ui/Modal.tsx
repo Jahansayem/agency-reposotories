@@ -3,6 +3,13 @@
 import { useEffect, useRef, ReactNode, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
+import {
+  backdropVariants,
+  modalVariants,
+  modalTransition,
+  prefersReducedMotion,
+  DURATION,
+} from '@/lib/animations';
 
 export interface ModalProps {
   /** Whether the modal is open */
@@ -136,14 +143,18 @@ export function Modal({
     }
   };
 
+  // Respect reduced motion preference
+  const reducedMotion = prefersReducedMotion();
+
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          variants={reducedMotion ? undefined : backdropVariants}
+          initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+          animate={reducedMotion ? { opacity: 1 } : 'visible'}
+          exit={reducedMotion ? { opacity: 0 } : 'exit'}
+          transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
@@ -156,6 +167,7 @@ export function Modal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             aria-hidden="true"
           />
@@ -163,13 +175,11 @@ export function Modal({
           {/* Modal container */}
           <motion.div
             ref={modalRef}
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{
-              duration: 0.2,
-              ease: [0.4, 0, 0.2, 1]
-            }}
+            variants={reducedMotion ? undefined : modalVariants}
+            initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+            animate={reducedMotion ? { opacity: 1 } : 'visible'}
+            exit={reducedMotion ? { opacity: 0 } : 'exit'}
+            transition={reducedMotion ? { duration: 0 } : modalTransition}
             className={`
               relative w-full ${sizeClasses[size]}
               bg-[var(--surface)] rounded-2xl shadow-2xl

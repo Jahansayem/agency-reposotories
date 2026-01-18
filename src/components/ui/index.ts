@@ -6,8 +6,8 @@
  */
 
 // Button components
-export { Button, IconButton } from './Button';
-export type { ButtonProps, IconButtonProps } from './Button';
+export { Button, IconButton, MotionButton, MotionIconButton } from './Button';
+export type { ButtonProps, IconButtonProps, MotionButtonProps, MotionIconButtonProps } from './Button';
 
 // Modal components
 export { Modal, ModalHeader, ModalBody, ModalFooter } from './Modal';
@@ -122,3 +122,17 @@ export type {
   SkeletonListProps,
   SkeletonInlineProps,
 } from './Skeleton';
+
+// Animated list components
+export {
+  AnimatedList,
+  AnimatedListItem,
+  AnimatedListContainer,
+} from './AnimatedList';
+
+// Animated checkbox components
+export {
+  AnimatedCheckbox,
+  SubtaskCheckbox,
+} from './AnimatedCheckbox';
+export type { default as AnimatedCheckboxProps } from './AnimatedCheckbox';

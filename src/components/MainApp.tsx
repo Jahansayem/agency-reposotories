@@ -1,11 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import TodoList from './TodoList';
-import DashboardModal, { shouldShowDailyDashboard, markDailyDashboardShown } from './DashboardModal';
+import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
+import { DashboardModalSkeleton } from './LoadingSkeletons';
 import { AuthUser, Todo, QuickFilter } from '@/types/todo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
+
+// Lazy load DashboardModal for better initial load performance
+const DashboardModal = dynamic(() => import('./DashboardModal'), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
 
 interface MainAppProps {
   currentUser: AuthUser;

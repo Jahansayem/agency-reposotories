@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
+import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, OWNER_USERNAME } from '@/types/todo';
 import SortableTodoItem from './SortableTodoItem';
 import AddTodo from './AddTodo';
 import KanbanBoard from './KanbanBoard';
 import { logger } from '@/lib/logger';
-import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder } from '@/store/todoStore';
+import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder, hydrateFocusMode } from '@/store/todoStore';
 import { useTodoData, useFilters, useBulkActions } from '@/hooks';
 import {
   DndContext,
@@ -29,12 +32,12 @@ import ProgressSummary from './ProgressSummary';
 import WelcomeBackNotification from './WelcomeBackNotification';
 import ConfirmDialog from './ConfirmDialog';
 import EmptyState from './EmptyState';
-import WeeklyProgressChart from './WeeklyProgressChart';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import PullToRefresh from './PullToRefresh';
 import AppMenu from './AppMenu';
 import StatusLine from './StatusLine';
 import BottomTabs from './BottomTabs';
+import FocusModeToggle, { ExitFocusModeButton } from './FocusModeToggle';
 import { v4 as uuidv4 } from 'uuid';
 import {
   LayoutList, LayoutGrid, Wifi, WifiOff, Search,
@@ -44,10 +47,7 @@ import {
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import UserSwitcher from './UserSwitcher';
-import ChatPanel from './ChatPanel';
 import TemplatePicker from './TemplatePicker';
-import ActivityFeed from './ActivityFeed';
-import StrategicDashboard from './StrategicDashboard';
 import SaveTemplateModal from './SaveTemplateModal';
 import ArchivedTaskModal from './ArchivedTaskModal';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -61,6 +61,34 @@ import CustomerEmailModal from './CustomerEmailModal';
 import { CompletionCelebration } from './CompletionCelebration';
 import { TaskCompletionSummary } from './TaskCompletionSummary';
 import { CelebrationData, ActivityLogEntry } from '@/types/todo';
+import {
+  ChatPanelSkeleton,
+  StrategicDashboardSkeleton,
+  ActivityFeedSkeleton,
+  WeeklyProgressChartSkeleton,
+} from './LoadingSkeletons';
+
+// Lazy load secondary features for better initial load performance
+// These components are not needed immediately on page load
+const ChatPanel = dynamic(() => import('./ChatPanel'), {
+  ssr: false,
+  loading: () => <ChatPanelSkeleton />,
+});
+
+const StrategicDashboard = dynamic(() => import('./StrategicDashboard'), {
+  ssr: false,
+  loading: () => <StrategicDashboardSkeleton />,
+});
+
+const ActivityFeed = dynamic(() => import('./ActivityFeed'), {
+  ssr: false,
+  loading: () => <ActivityFeedSkeleton />,
+});
+
+const WeeklyProgressChart = dynamic(() => import('./WeeklyProgressChart'), {
+  ssr: false,
+  loading: () => <WeeklyProgressChartSkeleton />,
+});
 
 interface TodoListProps {
   currentUser: AuthUser;
@@ -150,8 +178,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     dateRangeFilter,
   } = filters;
 
-  // Get showAdvancedFilters from UI state (not part of filters in store)
-  const { showAdvancedFilters } = useTodoStore((state) => state.ui);
+  // Get showAdvancedFilters and focusMode from UI state (not part of filters in store)
+  const { showAdvancedFilters, focusMode } = useTodoStore((state) => state.ui);
+  const toggleFocusMode = useTodoStore((state) => state.toggleFocusMode);
+  const setFocusMode = useTodoStore((state) => state.setFocusMode);
 
   // Apply initial filter from props
   useEffect(() => {
@@ -261,11 +291,23 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         if (search) search.focus();
       }
 
-      // 'Escape' - clear selection
+      // 'Escape' - clear selection or exit focus mode
       if (e.key === 'Escape') {
+        // If in focus mode, exit it first
+        const currentFocusMode = useTodoStore.getState().ui.focusMode;
+        if (currentFocusMode) {
+          setFocusMode(false);
+          return;
+        }
         clearSelection();
         setSearchQuery('');
         setShowBulkActions(false);
+      }
+
+      // Cmd/Ctrl + Shift + F - toggle focus mode
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFocusMode();
       }
 
       // '1-4' - quick filter shortcuts
@@ -292,6 +334,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       setArchiveTick((tick) => tick + 1);
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Hydrate focus mode from localStorage on mount
+  useEffect(() => {
+    hydrateFocusMode();
   }, []);
 
   // Fetch activity log for streak calculation (useTodoData handles todos/users/real-time)
@@ -1441,48 +1488,57 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </div>
 
             <div className="flex items-center gap-1.5">
-              {/* View toggle with labels */}
-              <div className={`flex backdrop-blur-sm rounded-xl p-1 border ${
-                darkMode
-                  ? 'bg-white/8 border-white/10'
-                  : 'bg-[var(--surface-2)] border-[var(--border)]'
-              }`}>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                    viewMode === 'list'
-                      ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                      : darkMode
-                        ? 'text-white/70 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
-                  aria-pressed={viewMode === 'list'}
-                  aria-label="List view"
-                >
-                  <LayoutList className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">List</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                    viewMode === 'kanban'
-                      ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                      : darkMode
-                        ? 'text-white/70 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
-                  aria-pressed={viewMode === 'kanban'}
-                  aria-label="Board view"
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Board</span>
-                </button>
-              </div>
+              {/* View toggle with labels - hidden in focus mode */}
+              {!focusMode && (
+                <div className={`flex backdrop-blur-sm rounded-xl p-1 border ${
+                  darkMode
+                    ? 'bg-white/8 border-white/10'
+                    : 'bg-[var(--surface-2)] border-[var(--border)]'
+                }`}>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      viewMode === 'list'
+                        ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
+                        : darkMode
+                          ? 'text-white/70 hover:text-white hover:bg-white/10'
+                          : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
+                    }`}
+                    aria-pressed={viewMode === 'list'}
+                    aria-label="List view"
+                  >
+                    <LayoutList className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">List</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('kanban')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                      viewMode === 'kanban'
+                        ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
+                        : darkMode
+                          ? 'text-white/70 hover:text-white hover:bg-white/10'
+                          : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
+                    }`}
+                    aria-pressed={viewMode === 'kanban'}
+                    aria-label="Board view"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Board</span>
+                  </button>
+                </div>
+              )}
 
-              <UserSwitcher currentUser={currentUser} onUserChange={onUserChange} />
+              {/* Focus Mode Toggle */}
+              <FocusModeToggle />
 
-              {/* Hamburger Menu - contains Activity, Archive, Goals, Chart, Theme, Shortcuts */}
-              <AppMenu
+              {/* User Switcher - hidden in focus mode */}
+              {!focusMode && (
+                <UserSwitcher currentUser={currentUser} onUserChange={onUserChange} />
+              )}
+
+              {/* Hamburger Menu - hidden in focus mode */}
+              {!focusMode && (
+                <AppMenu
                 userName={userName}
                 canViewArchive={canViewArchive}
                 onShowActivityFeed={() => setShowActivityFeed(true)}
@@ -1491,40 +1547,46 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 onShowArchive={() => setShowArchiveView(true)}
                 onShowShortcuts={() => setShowShortcuts(true)}
                 onShowAdvancedFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                onResetFilters={() => {
-                  setQuickFilter('all');
-                  setShowCompleted(false);
-                  setHighPriorityOnly(false);
-                  setSearchQuery('');
-                  setStatusFilter('all');
-                  setAssignedToFilter('all');
-                  setCustomerFilter('all');
-                  setHasAttachmentsFilter(false);
-                  setDateRangeFilter({ start: '', end: '' });
-                }}
-                showAdvancedFilters={showAdvancedFilters}
-              />
+                  onResetFilters={() => {
+                    setQuickFilter('all');
+                    setShowCompleted(false);
+                    setHighPriorityOnly(false);
+                    setSearchQuery('');
+                    setStatusFilter('all');
+                    setAssignedToFilter('all');
+                    setCustomerFilter('all');
+                    setHasAttachmentsFilter(false);
+                    setDateRangeFilter({ start: '', end: '' });
+                  }}
+                  showAdvancedFilters={showAdvancedFilters}
+                />
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Connection status - floating indicator (positioned above chat button) */}
-      <div className="fixed bottom-24 right-6 z-30">
-        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-[var(--shadow-md)] backdrop-blur-sm ${
-          connected
-            ? 'bg-[var(--success-light)] text-[var(--success)] border border-[var(--success)]/20'
-            : 'bg-[var(--danger-light)] text-[var(--danger)] border border-[var(--danger)]/20'
-        }`}>
-          {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-          {connected ? 'Live' : 'Offline'}
+      {/* Connection status - floating indicator (positioned above chat button) - hidden in focus mode */}
+      {!focusMode && (
+        <div className="fixed bottom-24 right-6 z-30">
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-[var(--shadow-md)] backdrop-blur-sm ${
+            connected
+              ? 'bg-[var(--success-light)] text-[var(--success)] border border-[var(--success)]/20'
+              : 'bg-[var(--danger-light)] text-[var(--danger)] border border-[var(--danger)]/20'
+          }`}>
+            {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+            {connected ? 'Live' : 'Offline'}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Exit Focus Mode button - shown only in focus mode */}
+      <ExitFocusModeButton />
 
       {/* Main */}
       <main id="main-content" className={`mx-auto px-4 sm:px-6 py-6 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-4xl'}`}>
-        {/* Context label when filtered */}
-        {(quickFilter !== 'all' || highPriorityOnly) && (
+        {/* Context label when filtered - hidden in focus mode */}
+        {!focusMode && (quickFilter !== 'all' || highPriorityOnly) && (
           <div className="text-xs text-[var(--text-muted)] mb-2 flex items-center gap-2">
             <span>Showing:</span>
             {quickFilter === 'my_tasks' && <span className="font-medium text-[var(--accent)]">My Tasks</span>}
@@ -1535,35 +1597,40 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           </div>
         )}
 
-        {/* Compact Status Line - Replaces large stats cards */}
-        <div className="mb-4">
-          <StatusLine
-            stats={stats}
-            quickFilter={quickFilter}
-            highPriorityOnly={highPriorityOnly}
-            showCompleted={showCompleted}
-            onFilterAll={() => { setQuickFilter('all'); setShowCompleted(false); }}
-            onFilterDueToday={() => setQuickFilter('due_today')}
-            onFilterOverdue={() => setQuickFilter('overdue')}
-          />
-        </div>
-
-        {/* Add todo with template picker */}
-        <div className="mb-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <TemplatePicker
-              currentUserName={userName}
-              users={users}
-              darkMode={darkMode}
-              onSelectTemplate={(text, priority, assignedTo, subtasks) => {
-                addTodo(text, priority, undefined, assignedTo, subtasks);
-              }}
+        {/* Compact Status Line - hidden in focus mode */}
+        {!focusMode && (
+          <div className="mb-4">
+            <StatusLine
+              stats={stats}
+              quickFilter={quickFilter}
+              highPriorityOnly={highPriorityOnly}
+              showCompleted={showCompleted}
+              onFilterAll={() => { setQuickFilter('all'); setShowCompleted(false); }}
+              onFilterDueToday={() => setQuickFilter('due_today')}
+              onFilterOverdue={() => setQuickFilter('overdue')}
             />
           </div>
+        )}
+
+        {/* Add todo with template picker - template picker hidden in focus mode */}
+        <div className="mb-6 space-y-3">
+          {!focusMode && (
+            <div className="flex items-center gap-2">
+              <TemplatePicker
+                currentUserName={userName}
+                users={users}
+                darkMode={darkMode}
+                onSelectTemplate={(text, priority, assignedTo, subtasks) => {
+                  addTodo(text, priority, undefined, assignedTo, subtasks);
+                }}
+              />
+            </div>
+          )}
           <AddTodo onAdd={addTodo} users={users} darkMode={darkMode} currentUserId={currentUser.id} autoFocus={autoFocusAddTask} />
         </div>
 
-        {/* Unified Filter Bar - Premium */}
+        {/* Unified Filter Bar - Premium - hidden in focus mode */}
+        {!focusMode && (
         <div className="rounded-[var(--radius-xl)] p-4 mb-4 bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-sm)]">
           {/* Search Row */}
           <div className="flex gap-2 mb-3">
@@ -1702,8 +1769,16 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           </div>
 
           {/* Advanced Filters Panel */}
-          {showAdvancedFilters && (
-            <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <AnimatePresence>
+            {showAdvancedFilters && (
+              <motion.div
+                initial={prefersReducedMotion() ? false : { opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: DURATION.normal }}
+                className="overflow-hidden"
+              >
+                <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] grid grid-cols-2 sm:grid-cols-4 gap-3">
               {/* Status filter */}
               <div>
                 <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Status</label>
@@ -1787,11 +1862,15 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   />
                 </div>
               </div>
-            </div>
-          )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+        )}
 
-        {/* Bulk Select Toggle */}
+        {/* Bulk Select Toggle - hidden in focus mode */}
+        {!focusMode && (
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={() => {
@@ -1815,6 +1894,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </span>
           )}
         </div>
+        )}
 
         {/* List or Kanban */}
         {viewMode === 'list' ? (
@@ -1828,61 +1908,83 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-2" role="list" aria-label="Task list">
-                {filteredAndSortedTodos.length === 0 ? (
-                  <EmptyState
-                    variant={
-                      searchQuery
-                        ? 'no-results'
-                        : quickFilter === 'due_today'
-                          ? 'no-due-today'
-                          : quickFilter === 'overdue'
-                            ? 'no-overdue'
-                            : stats.total === 0
-                              ? 'no-tasks'
-                              : stats.completed === stats.total && stats.total > 0
-                                ? 'all-done'
-                                : 'no-tasks'
-                    }
-                    darkMode={darkMode}
-                    searchQuery={searchQuery}
-                    onAddTask={() => {
-                      const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
-                      if (input) input.focus();
-                    }}
-                    onClearSearch={() => setSearchQuery('')}
-                    userName={userName}
-                  />
-                ) : (
-                  filteredAndSortedTodos.map((todo) => (
-                    <SortableTodoItem
-                      key={todo.id}
-                      todo={todo}
-                      users={users}
-                      currentUserName={userName}
-                      selected={selectedTodos.has(todo.id)}
-                      onSelect={showBulkActions ? handleSelectTodo : undefined}
-                      onToggle={toggleTodo}
-                      onDelete={confirmDeleteTodo}
-                      onAssign={assignTodo}
-                      onSetDueDate={setDueDate}
-                      onSetReminder={setReminder}
-                      onSetPriority={setPriority}
-                      onStatusChange={updateStatus}
-                      onUpdateText={updateText}
-                      onDuplicate={duplicateTodo}
-                      onUpdateNotes={updateNotes}
-                      onSetRecurrence={setRecurrence}
-                      onUpdateSubtasks={updateSubtasks}
-                      onUpdateAttachments={updateAttachments}
-                      onSaveAsTemplate={(t) => setTemplateTodo(t)}
-                      onEmailCustomer={(todo) => {
-                        setEmailTargetTodos([todo]);
-                        setShowEmailModal(true);
-                      }}
-                      isDragEnabled={!showBulkActions && sortOption === 'custom'}
-                    />
-                  ))
-                )}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {filteredAndSortedTodos.length === 0 ? (
+                    <motion.div
+                      key="empty-state"
+                      initial={prefersReducedMotion() ? false : { opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: DURATION.fast }}
+                    >
+                      <EmptyState
+                        variant={
+                          searchQuery
+                            ? 'no-results'
+                            : quickFilter === 'due_today'
+                              ? 'no-due-today'
+                              : quickFilter === 'overdue'
+                                ? 'no-overdue'
+                                : stats.total === 0
+                                  ? 'no-tasks'
+                                  : stats.completed === stats.total && stats.total > 0
+                                    ? 'all-done'
+                                    : 'no-tasks'
+                        }
+                        darkMode={darkMode}
+                        searchQuery={searchQuery}
+                        onAddTask={() => {
+                          const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
+                          if (input) input.focus();
+                        }}
+                        onClearSearch={() => setSearchQuery('')}
+                        userName={userName}
+                      />
+                    </motion.div>
+                  ) : (
+                    filteredAndSortedTodos.map((todo, index) => (
+                      <motion.div
+                        key={todo.id}
+                        layout={!prefersReducedMotion()}
+                        variants={prefersReducedMotion() ? undefined : listItemVariants}
+                        initial={prefersReducedMotion() ? false : 'hidden'}
+                        animate="visible"
+                        exit="exit"
+                        transition={{
+                          layout: { type: 'spring', stiffness: 350, damping: 25 },
+                          delay: Math.min(index * 0.02, 0.1),
+                        }}
+                      >
+                        <SortableTodoItem
+                          todo={todo}
+                          users={users}
+                          currentUserName={userName}
+                          selected={selectedTodos.has(todo.id)}
+                          onSelect={showBulkActions ? handleSelectTodo : undefined}
+                          onToggle={toggleTodo}
+                          onDelete={confirmDeleteTodo}
+                          onAssign={assignTodo}
+                          onSetDueDate={setDueDate}
+                          onSetReminder={setReminder}
+                          onSetPriority={setPriority}
+                          onStatusChange={updateStatus}
+                          onUpdateText={updateText}
+                          onDuplicate={duplicateTodo}
+                          onUpdateNotes={updateNotes}
+                          onSetRecurrence={setRecurrence}
+                          onUpdateSubtasks={updateSubtasks}
+                          onUpdateAttachments={updateAttachments}
+                          onSaveAsTemplate={(t) => setTemplateTodo(t)}
+                          onEmailCustomer={(todo) => {
+                            setEmailTargetTodos([todo]);
+                            setShowEmailModal(true);
+                          }}
+                          isDragEnabled={!showBulkActions && sortOption === 'custom'}
+                        />
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
               </div>
             </SortableContext>
           </DndContext>
@@ -1915,24 +2017,26 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           />
         )}
 
-        {/* Keyboard shortcuts hint */}
-        <button
-          onClick={() => setShowShortcuts(true)}
-          className={`mt-8 w-full text-center text-xs py-2 rounded-lg transition-colors ${
-            darkMode
-              ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800'
-              : 'text-slate-400 hover:text-slate-500 hover:bg-slate-100'
-          }`}
-        >
-          <span className="hidden sm:inline">
-            <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>N</kbd> new
-            <span className="mx-2">|</span>
-            <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>/</kbd> search
-            <span className="mx-2">|</span>
-            <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>?</kbd> all shortcuts
-          </span>
-          <span className="sm:hidden">Tap for keyboard shortcuts</span>
-        </button>
+        {/* Keyboard shortcuts hint - hidden in focus mode */}
+        {!focusMode && (
+          <button
+            onClick={() => setShowShortcuts(true)}
+            className={`mt-8 w-full text-center text-xs py-2 rounded-lg transition-colors ${
+              darkMode
+                ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800'
+                : 'text-slate-400 hover:text-slate-500 hover:bg-slate-100'
+            }`}
+          >
+            <span className="hidden sm:inline">
+              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>N</kbd> new
+              <span className="mx-2">|</span>
+              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>/</kbd> search
+              <span className="mx-2">|</span>
+              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>?</kbd> all shortcuts
+            </span>
+            <span className="sm:hidden">Tap for keyboard shortcuts</span>
+          </button>
+        )}
       </main>
 
       <CelebrationEffect
@@ -2444,34 +2548,39 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         </div>
       )}
 
-      <ChatPanel
-        currentUser={currentUser}
-        users={usersWithColors}
-        todosMap={todosMap}
-        onTaskLinkClick={(taskId) => {
-          // Navigate to task from chat link (Feature 2)
-          const taskElement = document.getElementById(`todo-${taskId}`);
-          if (taskElement) {
-            taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            taskElement.classList.add('ring-2', 'ring-blue-500');
-            setTimeout(() => {
-              taskElement.classList.remove('ring-2', 'ring-blue-500');
-            }, 2000);
-          }
-        }}
-      />
+      {/* ChatPanel - hidden in focus mode */}
+      {!focusMode && (
+        <ChatPanel
+          currentUser={currentUser}
+          users={usersWithColors}
+          todosMap={todosMap}
+          onTaskLinkClick={(taskId) => {
+            // Navigate to task from chat link (Feature 2)
+            const taskElement = document.getElementById(`todo-${taskId}`);
+            if (taskElement) {
+              taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              taskElement.classList.add('ring-2', 'ring-blue-500');
+              setTimeout(() => {
+                taskElement.classList.remove('ring-2', 'ring-blue-500');
+              }, 2000);
+            }
+          }}
+        />
+      )}
 
-      {/* Bottom Tabs for Mobile Navigation */}
-      <BottomTabs
-        stats={stats}
-        quickFilter={quickFilter}
-        showCompleted={showCompleted}
-        onFilterChange={setQuickFilter}
-        onShowCompletedChange={setShowCompleted}
-      />
+      {/* Bottom Tabs for Mobile Navigation - hidden in focus mode */}
+      {!focusMode && (
+        <BottomTabs
+          stats={stats}
+          quickFilter={quickFilter}
+          showCompleted={showCompleted}
+          onFilterChange={setQuickFilter}
+          onShowCompletedChange={setShowCompleted}
+        />
+      )}
 
-      {/* Spacer for bottom tabs on mobile */}
-      <div className="h-16 md:hidden" />
+      {/* Spacer for bottom tabs on mobile - hidden in focus mode */}
+      {!focusMode && <div className="h-16 md:hidden" />}
       </div>
     </PullToRefresh>
   );

@@ -1,9 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, Loader2, Share2, Lock } from 'lucide-react';
 import { Todo, PRIORITY_CONFIG } from '@/types/todo';
 import { useEscapeKey } from '@/hooks';
+import {
+  backdropVariants,
+  modalVariants,
+  modalTransition,
+  prefersReducedMotion,
+  DURATION,
+} from '@/lib/animations';
 
 interface SaveTemplateModalProps {
   todo: Todo;
@@ -48,11 +56,37 @@ export default function SaveTemplateModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Save as Template">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+  const reducedMotion = prefersReducedMotion();
 
-      <div className={`relative w-full max-w-md rounded-2xl shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+  return (
+    <motion.div
+      variants={reducedMotion ? undefined : backdropVariants}
+      initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+      animate={reducedMotion ? { opacity: 1 } : 'visible'}
+      exit={reducedMotion ? { opacity: 0 } : 'exit'}
+      transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Save as Template"
+    >
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <motion.div
+        variants={reducedMotion ? undefined : modalVariants}
+        initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+        animate={reducedMotion ? { opacity: 1 } : 'visible'}
+        exit={reducedMotion ? { opacity: 0 } : 'exit'}
+        transition={reducedMotion ? { duration: 0 } : modalTransition}
+        className={`relative w-full max-w-md rounded-2xl shadow-2xl ${darkMode ? 'bg-slate-800' : 'bg-white'}`}
+      >
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
           <div className="flex items-center gap-2">
@@ -186,9 +220,11 @@ export default function SaveTemplateModal({
           >
             Cancel
           </button>
-          <button
+          <motion.button
             onClick={handleSave}
             disabled={isSaving || !name.trim()}
+            whileHover={prefersReducedMotion() || isSaving ? undefined : { scale: 1.02 }}
+            whileTap={prefersReducedMotion() || isSaving ? undefined : { scale: 0.98 }}
             className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
@@ -202,9 +238,9 @@ export default function SaveTemplateModal({
                 Save Template
               </>
             )}
-          </button>
+          </motion.button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

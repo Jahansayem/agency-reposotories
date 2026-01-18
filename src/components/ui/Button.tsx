@@ -1,7 +1,9 @@
 'use client';
 
 import { forwardRef, ButtonHTMLAttributes, ReactNode } from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { buttonHoverVariants, iconButtonVariants, prefersReducedMotion } from '@/lib/animations';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Button variant */
@@ -196,5 +198,141 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
 );
 
 IconButton.displayName = 'IconButton';
+
+/**
+ * Motion-enhanced Button with Framer Motion animations
+ * Use this for primary CTAs where polished hover effects are desired
+ */
+export interface MotionButtonProps extends Omit<HTMLMotionProps<'button'>, 'ref' | 'children'> {
+  /** Button variant */
+  variant?: 'primary' | 'secondary' | 'danger' | 'warning' | 'ghost' | 'outline' | 'brand' | 'success';
+  /** Button size */
+  size?: 'sm' | 'md' | 'lg';
+  /** Show loading spinner */
+  loading?: boolean;
+  /** Icon to show before text */
+  leftIcon?: ReactNode;
+  /** Icon to show after text */
+  rightIcon?: ReactNode;
+  /** Make button full width */
+  fullWidth?: boolean;
+  /** Button content */
+  children?: ReactNode;
+}
+
+export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
+  (
+    {
+      variant = 'primary',
+      size = 'md',
+      loading = false,
+      leftIcon,
+      rightIcon,
+      fullWidth = false,
+      disabled,
+      className = '',
+      children,
+      ...props
+    },
+    ref
+  ) => {
+    const isDisabled = disabled || loading;
+    const reducedMotion = prefersReducedMotion();
+
+    return (
+      <motion.button
+        ref={ref}
+        disabled={isDisabled}
+        variants={reducedMotion ? undefined : buttonHoverVariants}
+        initial="idle"
+        whileHover={isDisabled ? undefined : 'hover'}
+        whileTap={isDisabled ? undefined : 'tap'}
+        className={`
+          inline-flex items-center justify-center
+          font-medium
+          transition-colors duration-150 ease-out
+          focus-visible:outline-none focus-visible:ring-2
+          focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+          touch-manipulation
+          ${variantClasses[variant]}
+          ${sizeClasses[size]}
+          ${fullWidth ? 'w-full' : ''}
+          ${className}
+        `}
+        {...props}
+      >
+        {loading && (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        )}
+        {!loading && leftIcon}
+        {children}
+        {!loading && rightIcon}
+      </motion.button>
+    );
+  }
+);
+
+MotionButton.displayName = 'MotionButton';
+
+/**
+ * Motion-enhanced Icon Button with Framer Motion animations
+ */
+export interface MotionIconButtonProps extends Omit<HTMLMotionProps<'button'>, 'ref'> {
+  /** Icon to display */
+  icon: ReactNode;
+  /** Accessible label (required for icon-only buttons) */
+  'aria-label': string;
+  /** Button variant */
+  variant?: 'primary' | 'secondary' | 'danger' | 'warning' | 'ghost' | 'outline' | 'brand' | 'success';
+  /** Button size */
+  size?: 'sm' | 'md' | 'lg';
+  /** Show loading spinner */
+  loading?: boolean;
+}
+
+export const MotionIconButton = forwardRef<HTMLButtonElement, MotionIconButtonProps>(
+  (
+    {
+      variant = 'ghost',
+      size = 'md',
+      loading = false,
+      icon,
+      disabled,
+      className = '',
+      ...props
+    },
+    ref
+  ) => {
+    const isDisabled = disabled || loading;
+    const reducedMotion = prefersReducedMotion();
+
+    return (
+      <motion.button
+        ref={ref}
+        disabled={isDisabled}
+        variants={reducedMotion ? undefined : iconButtonVariants}
+        initial="idle"
+        whileHover={isDisabled ? undefined : 'hover'}
+        whileTap={isDisabled ? undefined : 'tap'}
+        className={`
+          inline-flex items-center justify-center
+          rounded-xl
+          transition-colors duration-150 ease-out
+          focus-visible:outline-none focus-visible:ring-2
+          focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+          touch-manipulation
+          ${variantClasses[variant]}
+          ${iconSizeClasses[size]}
+          ${className}
+        `}
+        {...props}
+      >
+        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : icon}
+      </motion.button>
+    );
+  }
+);
+
+MotionIconButton.displayName = 'MotionIconButton';
 
 export default Button;

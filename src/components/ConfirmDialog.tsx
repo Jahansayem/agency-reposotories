@@ -1,7 +1,15 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
+import {
+  backdropVariants,
+  modalVariants,
+  modalTransition,
+  prefersReducedMotion,
+  DURATION,
+} from '@/lib/animations';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -66,7 +74,7 @@ export default function ConfirmDialog({
     };
   }, [isOpen, onCancel]);
 
-  if (!isOpen) return null;
+  const reducedMotion = prefersReducedMotion();
 
   const iconBgColor = variant === 'danger' ? 'bg-red-100' : 'bg-amber-100';
   const iconColor = variant === 'danger' ? 'text-red-600' : 'text-amber-600';
@@ -75,25 +83,41 @@ export default function ConfirmDialog({
     : 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      aria-describedby="confirm-dialog-message"
-    >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onCancel}
-        aria-hidden="true"
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          variants={reducedMotion ? undefined : backdropVariants}
+          initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+          animate={reducedMotion ? { opacity: 1 } : 'visible'}
+          exit={reducedMotion ? { opacity: 0 } : 'exit'}
+          transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+          aria-describedby="confirm-dialog-message"
+        >
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onCancel}
+            aria-hidden="true"
+          />
 
-      {/* Dialog */}
-      <div
-        ref={dialogRef}
-        className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
-      >
+          {/* Dialog */}
+          <motion.div
+            ref={dialogRef}
+            variants={reducedMotion ? undefined : modalVariants}
+            initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+            animate={reducedMotion ? { opacity: 1 } : 'visible'}
+            exit={reducedMotion ? { opacity: 0 } : 'exit'}
+            transition={reducedMotion ? { duration: 0 } : modalTransition}
+            className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm overflow-hidden"
+          >
         {/* Close button */}
         <button
           onClick={onCancel}
@@ -129,22 +153,28 @@ export default function ConfirmDialog({
 
           {/* Actions */}
           <div className="flex gap-3">
-            <button
+            <motion.button
               onClick={onCancel}
+              whileHover={reducedMotion ? undefined : { scale: 1.02 }}
+              whileTap={reducedMotion ? undefined : { scale: 0.98 }}
               className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg transition-colors min-h-[44px]"
             >
               {cancelLabel}
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               ref={confirmButtonRef}
               onClick={onConfirm}
+              whileHover={reducedMotion ? undefined : { scale: 1.02 }}
+              whileTap={reducedMotion ? undefined : { scale: 0.98 }}
               className={`flex-1 py-2.5 px-4 ${confirmBgColor} text-white font-medium rounded-lg transition-colors min-h-[44px]`}
             >
               {confirmLabel}
-            </button>
+            </motion.button>
           </div>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

@@ -15,3 +15,4 @@ export { default as CommandPalette } from './CommandPalette';
 // Task Components
 export { default as TaskCard, TaskCardSkeleton } from './TaskCard';
 export { default as TaskDetailPanel } from './TaskDetailPanel';
+export { default as TaskBottomSheet } from './TaskBottomSheet';

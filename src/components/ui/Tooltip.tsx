@@ -15,6 +15,7 @@ import {
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
+import { prefersReducedMotion, DURATION } from '@/lib/animations';
 
 /**
  * Tooltip position options
@@ -381,6 +382,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
       : children;
 
     const animation = positionAnimations[position];
+    const reducedMotion = prefersReducedMotion();
 
     const tooltipContent = (
       <AnimatePresence>
@@ -397,10 +399,10 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
             id="tooltip"
             role="tooltip"
             aria-label={accessibleLabel}
-            initial={animation.initial}
-            animate={animation.animate}
-            exit={animation.exit}
-            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+            initial={reducedMotion ? { opacity: 0 } : animation.initial}
+            animate={reducedMotion ? { opacity: 1 } : animation.animate}
+            exit={reducedMotion ? { opacity: 0 } : animation.exit}
+            transition={{ duration: reducedMotion ? 0 : DURATION.fast, ease: [0.4, 0, 0.2, 1] }}
             className={`
               fixed z-[100] pointer-events-none
               px-3 py-2

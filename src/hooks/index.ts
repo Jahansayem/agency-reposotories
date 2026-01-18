@@ -29,6 +29,9 @@ export type { UseEscapeKeyOptions } from './useEscapeKey';
 // Motion & Animation Hooks
 export { useReducedMotion, useMotionConfig } from './useReducedMotion';
 
+// Responsive Hooks
+export { useIsMobile } from './useIsMobile';
+
 export {
   useKeyboardShortcuts,
   getShortcutDisplayString,

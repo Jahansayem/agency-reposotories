@@ -1,9 +1,17 @@
 'use client';
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Plus, GitMerge, X, Calendar, Flag, Paperclip, ListChecks } from 'lucide-react';
 import { TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
 import { DuplicateMatch } from '@/lib/duplicateDetection';
 import { useEscapeKey } from '@/hooks';
+import {
+  backdropVariants,
+  modalVariants,
+  modalTransition,
+  prefersReducedMotion,
+  DURATION,
+} from '@/lib/animations';
 
 interface DuplicateDetectionModalProps {
   isOpen: boolean;
@@ -38,17 +46,39 @@ export default function DuplicateDetectionModal({
   // Handle Escape key to close modal
   useEscapeKey(onCancel, { enabled: isOpen });
 
-  if (!isOpen) return null;
-
   const priorityConfig = PRIORITY_CONFIG[newTaskPriority];
+  const reducedMotion = prefersReducedMotion();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Duplicate Detection">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onCancel}
-      />
-      <div className={`relative w-full max-w-xl rounded-[var(--radius-xl)] shadow-xl overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          variants={reducedMotion ? undefined : backdropVariants}
+          initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+          animate={reducedMotion ? { opacity: 1 } : 'visible'}
+          exit={reducedMotion ? { opacity: 0 } : 'exit'}
+          transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Duplicate Detection"
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onCancel}
+          />
+          <motion.div
+            variants={reducedMotion ? undefined : modalVariants}
+            initial={reducedMotion ? { opacity: 1 } : 'hidden'}
+            animate={reducedMotion ? { opacity: 1 } : 'visible'}
+            exit={reducedMotion ? { opacity: 0 } : 'exit'}
+            transition={reducedMotion ? { duration: 0 } : modalTransition}
+            className={`relative w-full max-w-xl rounded-[var(--radius-xl)] shadow-xl overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-white'}`}
+          >
         {/* Header */}
         <div className={`px-6 py-4 border-b ${darkMode ? 'border-slate-700' : 'border-[var(--border)]'}`}>
           <div className="flex items-center gap-3">
@@ -207,16 +237,20 @@ export default function DuplicateDetectionModal({
             >
               Cancel
             </button>
-            <button
+            <motion.button
               onClick={onCreateAnyway}
+              whileHover={prefersReducedMotion() ? undefined : { scale: 1.02 }}
+              whileTap={prefersReducedMotion() ? undefined : { scale: 0.98 }}
               className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
               Create New Task
-            </button>
+            </motion.button>
           </div>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
