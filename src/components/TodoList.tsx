@@ -1771,7 +1771,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value as SortOption)}
                 aria-label="Sort tasks"
-                className="input-refined appearance-none pl-3 pr-9 py-2.5 text-sm text-[var(--foreground)] cursor-pointer"
+                className="input-refined appearance-none pl-3 pr-10 py-2.5 text-sm text-[var(--foreground)] cursor-pointer min-w-[110px]"
               >
                 <option value="created">Newest</option>
                 <option value="due_date">Due Date</option>
@@ -1780,7 +1780,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 <option value="alphabetical">A-Z</option>
                 <option value="custom">Manual</option>
               </select>
-              <ArrowUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+              <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
             </div>
           </div>
 
@@ -1791,15 +1791,15 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               <select
                 value={quickFilter}
                 onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
-                className="input-refined appearance-none pl-9 pr-8 py-2 text-sm font-medium cursor-pointer min-w-[140px]"
+                className="input-refined appearance-none pl-10 pr-9 py-2 text-sm font-medium cursor-pointer min-w-[150px]"
               >
                 <option value="all">All Tasks</option>
                 <option value="my_tasks">My Tasks</option>
                 <option value="due_today">Due Today</option>
                 <option value="overdue">Overdue</option>
               </select>
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
             </div>
 
             {/* High Priority toggle - more compact */}
