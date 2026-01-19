@@ -234,6 +234,7 @@ export default function AppShell({
           </main>
 
           {/* ═══ RIGHT PANEL (Desktop) ═══ */}
+          {/* Panel is visible on xl+ screens, with responsive width */}
           <AnimatePresence mode="wait">
             {rightPanel && rightPanelContent && (
               <motion.aside
@@ -243,7 +244,8 @@ export default function AppShell({
                 transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                 className={`
                   hidden lg:flex flex-col overflow-hidden
-                  border-l
+                  border-l flex-shrink-0
+                  lg:w-[340px] xl:w-[380px] 2xl:w-[420px]
                   ${darkMode
                     ? 'bg-[var(--surface)] border-white/10'
                     : 'bg-white border-[var(--border)]'

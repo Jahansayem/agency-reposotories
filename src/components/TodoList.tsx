@@ -11,7 +11,7 @@ import AddTodo from './AddTodo';
 import KanbanBoard from './KanbanBoard';
 import { logger } from '@/lib/logger';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder, hydrateFocusMode } from '@/store/todoStore';
-import { useTodoData, useFilters, useBulkActions } from '@/hooks';
+import { useTodoData, useFilters, useBulkActions, useIsDesktopWide } from '@/hooks';
 import {
   DndContext,
   closestCenter,
@@ -118,6 +118,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
   const canViewArchive = currentUser.role === 'admin' || ['derrick', 'adrian'].includes(userName.toLowerCase());
+
+  // Detect wide desktop for persistent sidebar layout (xl+ screens = 1280px+)
+  const isWideDesktop = useIsDesktopWide(1280);
 
   // Core data from Zustand store (managed by useTodoData hook)
   const {
@@ -1457,7 +1460,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             ? 'bg-[var(--gradient-hero)] border-white/5'
             : 'bg-white border-[var(--border)]'
         }`}>
-        <div className={`mx-auto px-4 sm:px-6 py-4 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-4xl'}`}>
+        <div className={`mx-auto px-4 sm:px-6 py-4 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
           <div className="flex items-center justify-between gap-3">
             {/* Logo & Context Info */}
             <div className="flex items-center gap-3 min-w-0">
@@ -1583,8 +1586,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       {/* Exit Focus Mode button - shown only in focus mode */}
       <ExitFocusModeButton />
 
+      {/* Content Layout - Flex container for wide desktop with docked sidebar */}
+      <div className={`flex ${isWideDesktop && !focusMode ? 'xl:pr-[380px] 2xl:pr-[420px]' : ''}`}>
+
       {/* Main */}
-      <main id="main-content" className={`mx-auto px-4 sm:px-6 py-6 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-4xl'}`}>
+      <main id="main-content" className={`flex-1 min-w-0 mx-auto px-4 sm:px-6 py-6 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
         {/* Context label when filtered - hidden in focus mode */}
         {!focusMode && (quickFilter !== 'all' || highPriorityOnly) && (
           <div className="text-xs text-[var(--text-muted)] mb-2 flex items-center gap-2">
@@ -2039,6 +2045,41 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         )}
       </main>
 
+      {/* Docked Chat Panel for wide desktop - persistent sidebar */}
+      {isWideDesktop && !focusMode && (
+        <aside
+          className={`
+            hidden xl:block fixed top-0 right-0 h-screen
+            w-[380px] 2xl:w-[420px]
+            border-l
+            ${darkMode
+              ? 'bg-[var(--surface)] border-white/10'
+              : 'bg-white border-[var(--border)]'
+            }
+          `}
+          aria-label="Team chat sidebar"
+        >
+          <ChatPanel
+            currentUser={currentUser}
+            users={usersWithColors}
+            todosMap={todosMap}
+            docked={true}
+            onTaskLinkClick={(taskId) => {
+              const taskElement = document.getElementById(`todo-${taskId}`);
+              if (taskElement) {
+                taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                taskElement.classList.add('ring-2', 'ring-blue-500');
+                setTimeout(() => {
+                  taskElement.classList.remove('ring-2', 'ring-blue-500');
+                }, 2000);
+              }
+            }}
+          />
+        </aside>
+      )}
+
+      </div>{/* End content layout flex container */}
+
       <CelebrationEffect
         show={showCelebration}
         onComplete={() => setShowCelebration(false)}
@@ -2459,7 +2500,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       {showBulkActions && selectedTodos.size > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
           <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
-            <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-4xl'}`}>
+            <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
               <div className="flex items-center justify-between gap-4">
                 {/* Left side - selection info with dismiss button */}
                 <div className="flex items-center gap-3">
@@ -2548,8 +2589,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         </div>
       )}
 
-      {/* ChatPanel - hidden in focus mode */}
-      {!focusMode && (
+      {/* ChatPanel - floating version for smaller screens, hidden in focus mode or on wide desktop */}
+      {!focusMode && !isWideDesktop && (
         <ChatPanel
           currentUser={currentUser}
           users={usersWithColors}

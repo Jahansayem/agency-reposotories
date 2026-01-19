@@ -65,7 +65,7 @@ export function StrategicDashboardSkeleton({ darkMode = true }: SkeletonProps) {
     <div className={`fixed inset-0 ${bgClass} z-50 flex flex-col`}>
       {/* Header skeleton */}
       <div className={`${cardClass} p-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px] mx-auto flex items-center justify-between">
           <div className={`h-8 w-48 ${pulseClass} rounded animate-pulse`} />
           <div className={`h-8 w-8 ${pulseClass} rounded animate-pulse`} />
         </div>
@@ -73,7 +73,7 @@ export function StrategicDashboardSkeleton({ darkMode = true }: SkeletonProps) {
 
       {/* Content skeleton */}
       <div className="flex-1 overflow-auto p-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px] mx-auto">
           {/* Stats row */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             {[1, 2, 3, 4].map((i) => (

@@ -30,7 +30,7 @@ export type { UseEscapeKeyOptions } from './useEscapeKey';
 export { useReducedMotion, useMotionConfig } from './useReducedMotion';
 
 // Responsive Hooks
-export { useIsMobile } from './useIsMobile';
+export { useIsMobile, useIsDesktopWide } from './useIsMobile';
 
 export {
   useKeyboardShortcuts,

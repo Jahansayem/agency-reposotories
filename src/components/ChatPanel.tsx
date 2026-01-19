@@ -104,6 +104,8 @@ interface ChatPanelProps {
   onTaskLinkClick?: (todoId: string) => void;
   /** Map of todos for rendering system notification cards */
   todosMap?: Map<string, Todo>;
+  /** Whether the chat is docked in a sidebar (changes styling from floating) */
+  docked?: boolean;
 }
 
 /**
@@ -257,10 +259,11 @@ function ReactionsSummary({ reactions }: { reactions: MessageReaction[] }) {
   );
 }
 
-export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLinkClick, todosMap }: ChatPanelProps) {
+export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLinkClick, todosMap, docked = false }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+  // When docked, always show open state; otherwise start closed
+  const [isOpen, setIsOpen] = useState(docked);
   const [isMinimized, setIsMinimized] = useState(false);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -1194,6 +1197,190 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
       .map(([user]) => user);
   }, [typingUsers, conversation, currentUser.name]);
 
+  // For docked mode, render a simplified layout that fills the sidebar
+  if (docked) {
+    return (
+      <div className="h-full flex flex-col bg-gradient-to-b from-[#00205B] to-[#050A12]">
+        {/* Docked Header */}
+        <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-[#00205B]" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 className="text-white font-semibold text-sm">Team Chat</h2>
+              <p className="text-white/50 text-xs">
+                {connected ? 'Connected' : 'Connecting...'}
+              </p>
+            </div>
+          </div>
+          {totalUnreadCount > 0 && (
+            <span className="px-2 py-0.5 bg-red-500 rounded-full text-xs font-bold text-white">
+              {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+            </span>
+          )}
+        </div>
+
+        {/* Conversation List or Chat Content */}
+        <div className="flex-1 overflow-hidden">
+          {showConversationList ? (
+            <div className="h-full overflow-y-auto p-3 space-y-2">
+              {/* Team Chat */}
+              <button
+                onClick={() => {
+                  setConversation({ type: 'team' });
+                  setShowConversationList(false);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
+              >
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#72B5E8]/30 to-[#72B5E8]/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[#72B5E8]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium text-sm">Team Chat</p>
+                  <p className="text-white/40 text-xs truncate">All team messages</p>
+                </div>
+                {unreadCounts['team'] > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 rounded-full text-xs font-bold text-white">
+                    {unreadCounts['team']}
+                  </span>
+                )}
+              </button>
+
+              {/* DM Users */}
+              {users.filter(u => u.name !== currentUser.name).map(user => (
+                <button
+                  key={user.name}
+                  onClick={() => {
+                    setConversation({ type: 'dm', userName: user.name });
+                    setShowConversationList(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+                    style={{ backgroundColor: user.color }}
+                  >
+                    {user.name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium text-sm">{user.name}</p>
+                    <p className="text-white/40 text-xs">Direct message</p>
+                  </div>
+                  {unreadCounts[user.name] > 0 && (
+                    <span className="px-2 py-0.5 bg-red-500 rounded-full text-xs font-bold text-white">
+                      {unreadCounts[user.name]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="h-full flex flex-col">
+              {/* Back button */}
+              <button
+                onClick={() => setShowConversationList(true)}
+                className="flex items-center gap-2 px-4 py-2 text-white/60 hover:text-white transition-colors text-sm"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Back to conversations
+              </button>
+
+              {/* Messages */}
+              <div
+                ref={messagesContainerRef}
+                className="flex-1 overflow-y-auto px-3 py-2 space-y-2"
+              >
+                {filteredMessages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-white/40 text-sm">
+                    No messages yet
+                  </div>
+                ) : (
+                  filteredMessages.map((message, index) => {
+                    const isOwn = message.created_by === currentUser.name;
+                    const showAvatar = !isOwn && (index === 0 || filteredMessages[index - 1]?.created_by !== message.created_by);
+
+                    // Handle system notification messages as cards
+                    if (isSystemNotificationMessage(message)) {
+                      const parsed = parseSystemMessage(message);
+                      const todo = message.related_todo_id ? todosMap?.get(message.related_todo_id) : undefined;
+                      if (parsed && todo) {
+                        return (
+                          <div key={message.id} className="py-1">
+                            <TaskAssignmentCard
+                              todo={todo}
+                              notificationType={parsed.notificationType}
+                              actionBy={parsed.actionBy}
+                              previousAssignee={parsed.previousAssignee}
+                              onViewTask={() => onTaskLinkClick?.(todo.id)}
+                            />
+                          </div>
+                        );
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                      >
+                        {!isOwn && showAvatar && (
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                            style={{ backgroundColor: getUserColor(message.created_by) }}
+                          >
+                            {message.created_by[0]}
+                          </div>
+                        )}
+                        {!isOwn && !showAvatar && <div className="w-7" />}
+                        <div
+                          className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                            isOwn
+                              ? 'bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B]'
+                              : 'bg-white/10 text-white'
+                          }`}
+                        >
+                          {message.text}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Input */}
+              <div className="p-3 border-t border-white/10">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    placeholder="Type a message..."
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/40 text-sm border border-white/10 focus:border-[#72B5E8]/50 focus:outline-none"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim()}
+                    className="p-2.5 rounded-xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] disabled:opacity-50 transition-opacity"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Original floating chat panel
   return (
     <>
       {/* Chat Toggle Button - Cinematic Design */}

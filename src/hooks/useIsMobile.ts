@@ -48,4 +48,49 @@ export function useIsMobile(breakpoint: number = 768): boolean {
   return isMobile;
 }
 
+/**
+ * useIsDesktopWide Hook
+ *
+ * Detects if the current viewport is wide enough for a three-column desktop layout.
+ * This is used to determine when to show persistent sidebar panels.
+ *
+ * @param breakpoint - The min-width in pixels to consider "wide desktop" (default: 1280 = xl)
+ * @returns boolean indicating if viewport is wide enough for persistent sidebars
+ *
+ * Usage:
+ * ```tsx
+ * const isWideDesktop = useIsDesktopWide();
+ *
+ * if (isWideDesktop) {
+ *   return <DockedChatPanel />;
+ * }
+ * return <FloatingChatPanel />;
+ * ```
+ */
+export function useIsDesktopWide(breakpoint: number = 1280): boolean {
+  const [isWide, setIsWide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia(`(min-width: ${breakpoint}px)`);
+
+    // Set initial value
+    setIsWide(mediaQuery.matches);
+
+    // Listen for changes
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsWide(event.matches);
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange);
+    };
+  }, [breakpoint]);
+
+  return isWide;
+}
+
 export default useIsMobile;

@@ -49,7 +49,7 @@ function TodoHeader({
         ? 'bg-[var(--gradient-hero)] border-white/5'
         : 'bg-white border-[var(--border)]'
     }`}>
-      <div className={`mx-auto px-4 sm:px-6 py-4 ${viewMode === 'kanban' ? 'max-w-6xl' : 'max-w-4xl'}`}>
+      <div className={`mx-auto px-4 sm:px-6 py-4 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
         <div className="flex items-center justify-between gap-3">
           {/* Logo & Context Info */}
           <div className="flex items-center gap-3 min-w-0">

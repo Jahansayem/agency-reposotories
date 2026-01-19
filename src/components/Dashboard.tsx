@@ -188,7 +188,7 @@ export default function Dashboard({
           }}
         />
 
-        <div className="relative max-w-4xl mx-auto px-5 sm:px-6 py-8 sm:py-10">
+        <div className="relative max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-6 py-8 sm:py-10">
           {/* Greeting row */}
           <div className="flex items-center gap-2 mb-1">
             <greeting.Icon className="w-4 h-4 text-white/60" />
@@ -208,7 +208,7 @@ export default function Dashboard({
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-5 sm:px-6 py-6 space-y-5">
+      <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-6 py-6 space-y-5">
         {/* Overdue Alert - Primary CTA when there are overdue tasks */}
         {stats.overdue > 0 && (
           <motion.div
