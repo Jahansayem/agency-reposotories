@@ -414,6 +414,32 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
     return Object.values(unreadCounts).reduce((sum, count) => sum + count, 0);
   }, [unreadCounts]);
 
+  // Load more (older) messages - defined before handleScroll which uses it
+  const loadMoreMessages = useCallback(async () => {
+    if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || messages.length === 0) return;
+
+    setIsLoadingMore(true);
+    const oldestMessage = messages[0];
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .lt('created_at', oldestMessage.created_at)
+      .order('created_at', { ascending: false })
+      .limit(MESSAGES_PER_PAGE);
+
+    if (error) {
+      logger.error('Error loading more messages', error, { component: 'ChatPanel' });
+    } else {
+      const olderMessages = (data || []).reverse();
+      if (olderMessages.length > 0) {
+        setMessages(prev => [...olderMessages, ...prev]);
+      }
+      setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
+    }
+    setIsLoadingMore(false);
+  }, [isLoadingMore, hasMoreMessages, messages]);
+
   const handleScroll = useCallback(() => {
     if (!messagesContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
@@ -557,32 +583,6 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
     }
     setLoading(false);
   }, [currentUser.name]);
-
-  // Load more (older) messages
-  const loadMoreMessages = useCallback(async () => {
-    if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || messages.length === 0) return;
-
-    setIsLoadingMore(true);
-    const oldestMessage = messages[0];
-
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .lt('created_at', oldestMessage.created_at)
-      .order('created_at', { ascending: false })
-      .limit(MESSAGES_PER_PAGE);
-
-    if (error) {
-      logger.error('Error loading more messages', error, { component: 'ChatPanel' });
-    } else {
-      const olderMessages = (data || []).reverse();
-      if (olderMessages.length > 0) {
-        setMessages(prev => [...olderMessages, ...prev]);
-      }
-      setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
-    }
-    setIsLoadingMore(false);
-  }, [isLoadingMore, hasMoreMessages, messages]);
 
   // Track state in refs to avoid re-subscribing
   const isOpenRef = useRef(isOpen);

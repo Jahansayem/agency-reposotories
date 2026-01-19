@@ -21,6 +21,12 @@ import {
   Flame,
   Award,
   Brain,
+  Users,
+  UserCheck,
+  BarChart3,
+  AlertOctagon,
+  Send,
+  RefreshCw,
 } from 'lucide-react';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
 import { useEscapeKey } from '@/hooks';
@@ -29,6 +35,11 @@ import {
   NeglectedTask,
   ProductivityInsight,
 } from '@/lib/aiDashboardInsights';
+import {
+  generateManagerDashboardData,
+  TeamMemberStats,
+  TeamBottleneck,
+} from '@/lib/managerDashboardInsights';
 // Re-export utilities for backwards compatibility
 export { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
 
@@ -43,6 +54,8 @@ interface DashboardModalProps {
   onFilterDueToday: () => void;
   activityLog?: ActivityLogEntry[];
   darkMode?: boolean;
+  users?: string[]; // Team members list for manager view
+  onReassignTask?: (taskId: string, newAssignee: string) => void;
 }
 
 interface WeekDay {
@@ -71,9 +84,14 @@ export default function DashboardModal({
   onFilterDueToday,
   activityLog = [],
   darkMode = true,
+  users = [],
+  onReassignTask,
 }: DashboardModalProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [activeTab, setActiveTab] = useState<'overview' | 'insights'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'team'>('overview');
+
+  // Check if user has team members (is a manager)
+  const hasTeam = users.length > 1;
 
   // Handle Escape key to close modal
   useEscapeKey(onClose, { enabled: isOpen });
@@ -88,6 +106,12 @@ export default function DashboardModal({
   const aiData = useMemo(() => {
     return generateDashboardAIData(todos, activityLog, currentUser.name);
   }, [todos, activityLog, currentUser.name]);
+
+  // Generate manager/team insights (only if user has team members)
+  const managerData = useMemo(() => {
+    if (!hasTeam) return null;
+    return generateManagerDashboardData(todos, currentUser.name, users);
+  }, [todos, currentUser.name, users, hasTeam]);
 
   const stats = useMemo(() => {
     const today = new Date();
@@ -361,7 +385,7 @@ export default function DashboardModal({
                   `}
                 >
                   <Sparkles className="w-4 h-4" />
-                  AI Insights
+                  AI
                   {(aiData.neglectedTasks.length > 0 || aiData.insights.length > 0) && (
                     <span className={`
                       w-2 h-2 rounded-full
@@ -369,6 +393,31 @@ export default function DashboardModal({
                     `} />
                   )}
                 </button>
+                {hasTeam && (
+                  <button
+                    onClick={() => setActiveTab('team')}
+                    className={`
+                      flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2
+                      ${activeTab === 'team'
+                        ? darkMode
+                          ? 'bg-[#0033A0] text-white'
+                          : 'bg-[#0033A0] text-white'
+                        : darkMode
+                          ? 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      }
+                    `}
+                  >
+                    <Users className="w-4 h-4" />
+                    Team
+                    {managerData && managerData.bottlenecks.length > 0 && (
+                      <span className={`
+                        w-2 h-2 rounded-full
+                        ${activeTab === 'team' ? 'bg-white' : 'bg-amber-500'}
+                      `} />
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Content */}
@@ -730,7 +779,269 @@ export default function DashboardModal({
                         </p>
                       </div>
                     </motion.div>
-                  )}
+                  ) : activeTab === 'team' && managerData ? (
+                    <motion.div
+                      key="team"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-4"
+                    >
+                      {/* Team Overview Stats */}
+                      <div className={`rounded-xl p-4 ${
+                        darkMode
+                          ? 'bg-[#1E293B] border border-[#334155]'
+                          : 'bg-white border border-slate-200'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <BarChart3 className="w-4 h-4 text-[#0033A0]" />
+                          <h3 className={`text-xs font-semibold uppercase tracking-wide ${
+                            darkMode ? 'text-slate-400' : 'text-slate-500'
+                          }`}>
+                            Team Overview
+                          </h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
+                            <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {managerData.teamOverview.totalActive}
+                            </p>
+                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Active Tasks</p>
+                          </div>
+                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
+                            <p className={`text-2xl font-bold ${
+                              managerData.teamOverview.totalOverdue > 0
+                                ? 'text-red-500'
+                                : darkMode ? 'text-emerald-400' : 'text-emerald-600'
+                            }`}>
+                              {managerData.teamOverview.totalOverdue}
+                            </p>
+                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Overdue</p>
+                          </div>
+                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
+                            <p className={`text-2xl font-bold text-[#0033A0]`}>
+                              {managerData.teamOverview.weeklyTeamCompleted}
+                            </p>
+                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>This Week</p>
+                          </div>
+                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
+                            <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {managerData.teamOverview.teamCompletionRate}%
+                            </p>
+                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Completion</p>
+                          </div>
+                        </div>
+
+                        {/* Highlights */}
+                        {(managerData.teamOverview.topPerformer || managerData.teamOverview.needsAttention) && (
+                          <div className="mt-3 space-y-2">
+                            {managerData.teamOverview.topPerformer && (
+                              <div className={`flex items-center gap-2 text-xs ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                <Award className="w-3.5 h-3.5" />
+                                <span><strong>{managerData.teamOverview.topPerformer}</strong> is crushing it this week!</span>
+                              </div>
+                            )}
+                            {managerData.teamOverview.needsAttention && (
+                              <div className={`flex items-center gap-2 text-xs ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+                                <AlertCircle className="w-3.5 h-3.5" />
+                                <span><strong>{managerData.teamOverview.needsAttention}</strong> may need support</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Team Member Workload */}
+                      <div className={`rounded-xl p-4 ${
+                        darkMode
+                          ? 'bg-[#1E293B] border border-[#334155]'
+                          : 'bg-white border border-slate-200'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Users className="w-4 h-4 text-[#0033A0]" />
+                          <h3 className={`text-xs font-semibold uppercase tracking-wide ${
+                            darkMode ? 'text-slate-400' : 'text-slate-500'
+                          }`}>
+                            Team Workload
+                          </h3>
+                        </div>
+
+                        <div className="space-y-3">
+                          {managerData.memberStats.slice(0, 5).map((member) => (
+                            <div key={member.name} className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                                    {member.name}
+                                  </span>
+                                  {member.workloadLevel === 'overloaded' && (
+                                    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-red-500/20 text-red-500">
+                                      OVERLOADED
+                                    </span>
+                                  )}
+                                  {member.workloadLevel === 'heavy' && (
+                                    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-500/20 text-amber-500">
+                                      HEAVY
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {member.activeTasks} active
+                                  {member.overdueTasks > 0 && (
+                                    <span className="text-red-500 ml-1">({member.overdueTasks} overdue)</span>
+                                  )}
+                                </span>
+                              </div>
+                              {/* Workload bar */}
+                              <div className={`h-2 rounded-full ${darkMode ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    member.workloadLevel === 'overloaded' ? 'bg-red-500' :
+                                    member.workloadLevel === 'heavy' ? 'bg-amber-500' :
+                                    member.workloadLevel === 'normal' ? 'bg-[#0033A0]' :
+                                    'bg-emerald-500'
+                                  }`}
+                                  style={{ width: `${Math.min(member.activeTasks / 15 * 100, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Bottlenecks & Alerts */}
+                      {managerData.bottlenecks.length > 0 && (
+                        <div className={`rounded-xl p-4 ${
+                          darkMode
+                            ? 'bg-[#1E293B] border border-[#334155]'
+                            : 'bg-white border border-slate-200'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <AlertOctagon className="w-4 h-4 text-amber-500" />
+                            <h3 className={`text-xs font-semibold uppercase tracking-wide ${
+                              darkMode ? 'text-slate-400' : 'text-slate-500'
+                            }`}>
+                              Needs Attention
+                            </h3>
+                          </div>
+
+                          <div className="space-y-3">
+                            {managerData.bottlenecks.slice(0, 3).map((bottleneck, index) => (
+                              <div
+                                key={index}
+                                className={`p-3 rounded-lg border ${
+                                  bottleneck.severity === 'critical'
+                                    ? darkMode ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'
+                                    : bottleneck.severity === 'warning'
+                                      ? darkMode ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200'
+                                      : darkMode ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200'
+                                }`}
+                              >
+                                <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                                  {bottleneck.title}
+                                </p>
+                                <p className={`text-xs mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                                  {bottleneck.description}
+                                </p>
+                                <p className={`text-xs mt-2 italic ${
+                                  darkMode ? 'text-slate-400' : 'text-slate-500'
+                                }`}>
+                                  <Lightbulb className="w-3 h-3 inline mr-1" />
+                                  {bottleneck.suggestion}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Delegation Stats */}
+                      {managerData.delegationStats.totalDelegated > 0 && (
+                        <div className={`rounded-xl p-4 ${
+                          darkMode
+                            ? 'bg-gradient-to-br from-indigo-900/20 to-violet-900/20 border border-indigo-500/20'
+                            : 'bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Send className="w-4 h-4 text-indigo-500" />
+                            <h3 className={`text-xs font-semibold uppercase tracking-wide ${
+                              darkMode ? 'text-indigo-300' : 'text-indigo-600'
+                            }`}>
+                              Your Delegations
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm">
+                            <div>
+                              <span className={`font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                                {managerData.delegationStats.pendingDelegated}
+                              </span>
+                              <span className={`ml-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>pending</span>
+                            </div>
+                            <div>
+                              <span className={`font-bold text-emerald-500`}>
+                                {managerData.delegationStats.completedDelegated}
+                              </span>
+                              <span className={`ml-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>completed</span>
+                            </div>
+                            {managerData.delegationStats.overdueDelegated > 0 && (
+                              <div>
+                                <span className="font-bold text-red-500">
+                                  {managerData.delegationStats.overdueDelegated}
+                                </span>
+                                <span className={`ml-1 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>overdue</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recent Team Completions */}
+                      {managerData.recentTeamCompletions.length > 0 && (
+                        <div className={`rounded-xl p-4 ${
+                          darkMode
+                            ? 'bg-[#1E293B] border border-[#334155]'
+                            : 'bg-white border border-slate-200'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <UserCheck className="w-4 h-4 text-emerald-500" />
+                            <h3 className={`text-xs font-semibold uppercase tracking-wide ${
+                              darkMode ? 'text-slate-400' : 'text-slate-500'
+                            }`}>
+                              Recent Wins
+                            </h3>
+                          </div>
+
+                          <div className="space-y-2">
+                            {managerData.recentTeamCompletions.slice(0, 3).map((task) => (
+                              <div
+                                key={task.id}
+                                className={`flex items-center gap-2 text-sm ${
+                                  darkMode ? 'text-slate-300' : 'text-slate-700'
+                                }`}
+                              >
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                                <span className="truncate flex-1">{task.text}</span>
+                                <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                  {task.assigned_to}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Empty state for team tab */}
+                      {managerData.memberStats.length === 0 && (
+                        <div className={`text-center py-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                          <p className="text-sm font-medium">No team data yet</p>
+                          <p className="text-xs mt-1">Assign tasks to team members to see their stats here.</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  ) : null}
                 </AnimatePresence>
 
                 {/* Action Buttons */}

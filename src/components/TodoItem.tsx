@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
@@ -221,9 +221,25 @@ export default function TodoItem({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
+  const menuRef = useRef<HTMLDivElement>(null);
   const priority = todo.priority || 'medium';
   const status = todo.status || 'todo';
   void status; // Used for status-based logic elsewhere
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!showActionsMenu) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowActionsMenu(false);
+        setShowSnoozeMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActionsMenu]);
 
   // Helper to get date offset for snooze
   const getSnoozeDate = (days: number) => {
@@ -354,7 +370,7 @@ export default function TodoItem({
   return (
     <div
       role="listitem"
-      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${showActionsMenu ? 'z-40' : ''}`}
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${showActionsMenu ? 'z-[100]' : ''}`}
     >
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <div className="flex items-center gap-3 px-4 py-3">
@@ -641,7 +657,7 @@ export default function TodoItem({
           />
 
           {/* Three-dot menu */}
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <IconButton
               variant="ghost"
               size="md"
@@ -655,7 +671,7 @@ export default function TodoItem({
 
             {showActionsMenu && (
               <div
-                className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-lg z-50 py-1 min-w-[180px]"
+                className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl z-[110] py-1 min-w-[180px]"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Edit */}
