@@ -168,7 +168,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   const [useSectionedView, setUseSectionedView] = useState(true);
 
   // Simplified add task input toggle (use InlineAddTask vs AddTodo)
-  const [useSimplifiedInput, setUseSimplifiedInput] = useState(true);
+  // Default to false to show full AI-featured AddTodo component
+  const [useSimplifiedInput, setUseSimplifiedInput] = useState(false);
 
   // Filter state from useFilters hook (manages search, sort, quick filters, and advanced filters)
   const {
