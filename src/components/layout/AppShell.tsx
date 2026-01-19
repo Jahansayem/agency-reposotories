@@ -56,6 +56,10 @@ interface AppShellContextType {
   openMobileSheet: (content: 'menu' | 'filters' | 'chat') => void;
   closeMobileSheet: () => void;
 
+  // New task trigger
+  triggerNewTask: () => void;
+  onNewTaskTrigger: (callback: () => void) => void;
+
   // User info
   currentUser: AuthUser | null;
 }
@@ -101,6 +105,9 @@ export default function AppShell({
   // Mobile sheet state
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [mobileSheetContent, setMobileSheetContent] = useState<'menu' | 'filters' | 'chat' | null>(null);
+
+  // New task trigger callback - allows child components to register handlers
+  const [newTaskCallback, setNewTaskCallback] = useState<(() => void) | null>(null);
 
   // Handle responsive sidebar
   useEffect(() => {
@@ -177,6 +184,22 @@ export default function AppShell({
     setMobileSheetContent(null);
   }, []);
 
+  // New task trigger - calls registered callback and switches to tasks view
+  const triggerNewTask = useCallback(() => {
+    setActiveView('tasks');
+    // Small delay to ensure view is switched before triggering callback
+    setTimeout(() => {
+      if (newTaskCallback) {
+        newTaskCallback();
+      }
+    }, 50);
+  }, [newTaskCallback]);
+
+  // Allow child components to register their new task handler
+  const onNewTaskTrigger = useCallback((callback: () => void) => {
+    setNewTaskCallback(() => callback);
+  }, []);
+
   const contextValue: AppShellContextType = {
     activeView,
     setActiveView,
@@ -193,6 +216,8 @@ export default function AppShell({
     mobileSheetContent,
     openMobileSheet,
     closeMobileSheet,
+    triggerNewTask,
+    onNewTaskTrigger,
     currentUser,
   };
 

@@ -36,9 +36,13 @@
   --accent: var(--brand-blue);
   --accent-hover: var(--brand-navy);
   --accent-light: rgba(0, 51, 160, 0.08);
+  --accent-dark: var(--brand-navy);
   --accent-vivid: var(--brand-blue-vivid);
   --accent-sky: var(--brand-sky);
   --accent-sky-light: rgba(114, 181, 232, 0.15);
+
+  /* ─── Surface Colors for Chat/Panels ─── */
+  --surface-dark: var(--brand-navy);
   /* Legacy gold mapped to sky for backward compatibility */
   --accent-gold: var(--brand-sky);
   --accent-gold-light: rgba(114, 181, 232, 0.12);
@@ -109,9 +113,13 @@
   --accent: #72B5E8;
   --accent-hover: #A8D4F5;
   --accent-light: rgba(114, 181, 232, 0.15);
+  --accent-dark: #1E2D47;
   --accent-vivid: #60A5FA;
   --accent-sky: #72B5E8;
   --accent-sky-light: rgba(114, 181, 232, 0.2);
+
+  /* ─── Surface Colors for Chat/Panels ─── */
+  --surface-dark: #0A1628;
   /* Legacy gold mapped to sky for backward compatibility */
   --accent-gold: #72B5E8;
   --accent-gold-light: rgba(114, 181, 232, 0.18);
@@ -149,9 +157,13 @@
     --accent: #72B5E8;
     --accent-hover: #A8D4F5;
     --accent-light: rgba(114, 181, 232, 0.15);
+    --accent-dark: #1E2D47;
     --accent-vivid: #60A5FA;
     --accent-sky: #72B5E8;
     --accent-sky-light: rgba(114, 181, 232, 0.2);
+
+    /* ─── Surface Colors for Chat/Panels ─── */
+    --surface-dark: #0A1628;
     /* Legacy gold mapped to sky for backward compatibility */
     --accent-gold: #72B5E8;
     --accent-gold-light: rgba(114, 181, 232, 0.18);

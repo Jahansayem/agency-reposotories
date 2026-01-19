@@ -38,7 +38,7 @@ interface MainAppProps {
  * MainAppContent - Inner component that uses AppShell context
  */
 function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
-  const { activeView, setActiveView } = useAppShell();
+  const { activeView, setActiveView, onNewTaskTrigger } = useAppShell();
   const usersWithColors = useTodoStore((state) => state.usersWithColors);
 
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -135,6 +135,22 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     }, 100);
   }, [setActiveView]);
 
+  // Handle dashboard view - open modal and switch back to tasks
+  // Must be before any conditional returns to follow React hooks rules
+  useEffect(() => {
+    if (activeView === 'dashboard') {
+      setShowDashboard(true);
+      setActiveView('tasks');
+    }
+  }, [activeView, setActiveView]);
+
+  // Register the new task trigger callback with AppShell
+  useEffect(() => {
+    onNewTaskTrigger(() => {
+      setShowAddTask(true);
+    });
+  }, [onNewTaskTrigger]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
@@ -159,12 +175,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onTaskLinkClick={handleTaskLinkClick}
           />
         );
-
-      case 'dashboard':
-        // Dashboard is still a modal overlay, not a separate view
-        setShowDashboard(true);
-        setActiveView('tasks');
-        return null;
 
       case 'activity':
         // Activity feed is handled by TodoList internally

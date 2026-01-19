@@ -72,6 +72,7 @@ export default function NavigationSidebar({
     toggleSidebar,
     openCommandPalette,
     openRightPanel,
+    triggerNewTask,
   } = useAppShell();
 
   const [hovering, setHovering] = useState(false);
@@ -226,7 +227,7 @@ export default function NavigationSidebar({
       {/* ─── Quick Add Button ─── */}
       <div className="px-3 pb-2">
         <button
-          onClick={() => setActiveView('tasks')}
+          onClick={triggerNewTask}
           className={`
             w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
             font-medium text-sm transition-all

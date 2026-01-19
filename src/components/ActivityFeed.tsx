@@ -1,19 +1,25 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ActivityFeedProps {
   currentUserName: string;
   darkMode?: boolean;
   onClose?: () => void;
 }
+
+// Constants for pagination and memory management
+const INITIAL_LOAD_LIMIT = 50;
+const LOAD_MORE_LIMIT = 25;
+const MAX_ACTIVITIES_IN_MEMORY = 200; // Prevent unbounded memory growth
 
 // Local storage key for notification settings
 const NOTIFICATION_SETTINGS_KEY = 'activityNotificationSettings';
@@ -62,13 +68,33 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981' },
 };
 
-export default function ActivityFeed({ currentUserName, darkMode = true, onClose }: ActivityFeedProps) {
+// Activity type filter options
+type ActivityFilterType = 'all' | 'tasks' | 'subtasks' | 'assignments' | 'templates';
+
+const FILTER_OPTIONS: { value: ActivityFilterType; label: string; actions: ActivityAction[] }[] = [
+  { value: 'all', label: 'All Activity', actions: [] },
+  { value: 'tasks', label: 'Task Changes', actions: ['task_created', 'task_updated', 'task_deleted', 'task_completed', 'task_reopened', 'status_changed', 'priority_changed', 'due_date_changed', 'notes_updated', 'tasks_merged'] },
+  { value: 'subtasks', label: 'Subtasks', actions: ['subtask_added', 'subtask_completed', 'subtask_deleted'] },
+  { value: 'assignments', label: 'Assignments', actions: ['assigned_to_changed'] },
+  { value: 'templates', label: 'Templates', actions: ['template_created', 'template_used'] },
+];
+
+export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, onClose }: ActivityFeedProps) {
+  // Use theme context if darkMode prop not explicitly provided
+  const { theme } = useTheme();
+  const darkMode = darkModeProp ?? theme === 'dark';
+
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notificationSettings, setNotificationSettings] = useState<ActivityNotificationSettings>(DEFAULT_NOTIFICATION_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
+  const [filterType, setFilterType] = useState<ActivityFilterType>('all');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const lastActivityIdRef = useRef<string | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape key press
   useEscapeKey(() => onClose?.(), { enabled: !!onClose });
@@ -138,16 +164,34 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
     }
   };
 
-  const fetchActivities = useCallback(async () => {
-    setIsLoading(true);
+  const fetchActivities = useCallback(async (reset = true) => {
+    if (reset) {
+      setIsLoading(true);
+      setHasMore(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     setError(null);
 
     try {
-      const response = await fetchWithCsrf(`/api/activity?userName=${encodeURIComponent(currentUserName)}&limit=100`);
+      const offset = reset ? 0 : activities.length;
+      const limit = reset ? INITIAL_LOAD_LIMIT : LOAD_MORE_LIMIT;
+      const response = await fetchWithCsrf(
+        `/api/activity?userName=${encodeURIComponent(currentUserName)}&limit=${limit}&offset=${offset}`
+      );
       if (response.ok) {
         const data = await response.json();
-        setActivities(data);
-        if (data.length > 0) {
+
+        if (reset) {
+          setActivities(data);
+        } else {
+          setActivities(prev => [...prev, ...data]);
+        }
+
+        // Check if we have more to load
+        setHasMore(data.length === limit);
+
+        if (data.length > 0 && reset) {
           lastActivityIdRef.current = data[0].id;
         }
       } else {
@@ -158,12 +202,20 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
       setError('Unable to connect to server');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  }, [currentUserName]);
+  }, [currentUserName, activities.length]);
+
+  const loadMore = useCallback(() => {
+    if (!isLoadingMore && hasMore) {
+      fetchActivities(false);
+    }
+  }, [fetchActivities, isLoadingMore, hasMore]);
 
   useEffect(() => {
-    fetchActivities();
-  }, [fetchActivities]);
+    fetchActivities(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserName]);
 
   // Subscribe to real-time updates with notifications
   useEffect(() => {
@@ -189,7 +241,12 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
             showBrowserNotification(newActivity);
           }
 
-          setActivities((prev) => [newActivity, ...prev]);
+          // Add to activities with memory limit to prevent unbounded growth
+          setActivities((prev) => {
+            const updated = [newActivity, ...prev];
+            // Trim to max size to prevent memory issues
+            return updated.slice(0, MAX_ACTIVITIES_IN_MEMORY);
+          });
 
           // Log for debugging
           logger.debug('Received realtime activity', { component: 'ActivityFeed', action: newActivity.action, from: newActivity.user_name, shouldNotify });
@@ -204,15 +261,25 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
     };
   }, [currentUserName, notificationSettings.enabled, notificationSettings.notifyOwnActions, playNotificationSound, showBrowserNotification]);
 
-  // Group activities by date
-  const groupedActivities = activities.reduce((groups, activity) => {
-    const date = new Date(activity.created_at).toLocaleDateString();
-    if (!groups[date]) {
-      groups[date] = [];
-    }
-    groups[date].push(activity);
-    return groups;
-  }, {} as Record<string, ActivityLogEntry[]>);
+  // Filter activities based on selected filter type
+  const filteredActivities = useMemo(() => {
+    if (filterType === 'all') return activities;
+    const filterConfig = FILTER_OPTIONS.find(f => f.value === filterType);
+    if (!filterConfig) return activities;
+    return activities.filter(a => filterConfig.actions.includes(a.action));
+  }, [activities, filterType]);
+
+  // Group activities by date (memoized for performance)
+  const groupedActivities = useMemo(() => {
+    return filteredActivities.reduce((groups, activity) => {
+      const date = new Date(activity.created_at).toLocaleDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(activity);
+      return groups;
+    }, {} as Record<string, ActivityLogEntry[]>);
+  }, [filteredActivities]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -226,21 +293,58 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
   };
 
   return (
-    <div className={`h-full flex flex-col ${darkMode ? 'bg-[#162236]' : 'bg-white'}`}>
+    <div className={`h-full flex flex-col ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
       {/* Header */}
-      <div className={`px-4 py-3 border-b flex items-center justify-between ${darkMode ? 'border-[#334155]' : 'border-slate-200'}`}>
+      <div className={`px-4 py-3 border-b flex items-center justify-between ${darkMode ? 'border-[var(--border)]' : 'border-[var(--border)]'}`}>
         <div className="flex items-center gap-2">
-          <Activity className={`w-5 h-5 ${darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'}`} />
-          <h2 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Activity Feed</h2>
+          <Activity className="w-5 h-5 text-[var(--accent)]" />
+          <h2 className={`font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>Activity Feed</h2>
+          <span className="text-xs text-[var(--text-muted)]">
+            ({filteredActivities.length}{hasMore ? '+' : ''})
+          </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* Filter dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+              className={`p-1.5 rounded-lg transition-colors flex items-center gap-1 ${
+                filterType !== 'all'
+                  ? 'text-[var(--accent)] bg-[var(--accent)]/10'
+                  : darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]' : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'
+              }`}
+              title="Filter activities"
+            >
+              <Filter className="w-4 h-4" />
+              {filterType !== 'all' && <ChevronDown className="w-3 h-3" />}
+            </button>
+            {showFilterMenu && (
+              <div className={`absolute right-0 top-full mt-1 z-10 w-40 rounded-lg border shadow-lg ${
+                darkMode ? 'bg-[var(--surface)] border-[var(--border)]' : 'bg-white border-[var(--border)]'
+              }`}>
+                {FILTER_OPTIONS.map(option => (
+                  <button
+                    key={option.value}
+                    onClick={() => { setFilterType(option.value); setShowFilterMenu(false); }}
+                    className={`w-full px-3 py-2 text-left text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                      filterType === option.value
+                        ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                        : darkMode ? 'hover:bg-[var(--surface-2)] text-white' : 'hover:bg-[var(--surface-2)] text-[var(--foreground)]'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {/* Notification toggle button */}
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-[#1E2D47]' : 'hover:bg-slate-100'} ${
+            className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-[var(--surface-2)]' : 'hover:bg-[var(--surface-2)]'} ${
               notificationSettings.enabled
-                ? darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'
-                : darkMode ? 'text-slate-500' : 'text-slate-400'
+                ? 'text-[var(--accent)]'
+                : 'text-[var(--text-muted)]'
             }`}
             title="Notification settings"
           >
@@ -249,7 +353,7 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
           {onClose && (
             <button
               onClick={onClose}
-              className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-[#1E2D47] text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}
+              className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]' : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -259,7 +363,7 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
 
       {/* Notification Settings Panel */}
       {showSettings && (
-        <div className={`px-4 py-3 border-b ${darkMode ? 'border-[#334155] bg-[#0F1D32]/50' : 'border-slate-200 bg-slate-50'}`}>
+        <div className={`px-4 py-3 border-b ${darkMode ? 'border-[var(--border)] bg-[var(--surface-2)]/50' : 'border-[var(--border)] bg-[var(--surface-2)]'}`}>
           <p className={`text-xs font-medium uppercase tracking-wide mb-3 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
             Notification Settings
           </p>
@@ -355,50 +459,79 @@ export default function ActivityFeed({ currentUserName, darkMode = true, onClose
       )}
 
       {/* Activity List */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className={`w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto ${darkMode ? 'border-[#72B5E8]' : 'border-[#0033A0]'}`} />
-            <p className={`mt-3 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Loading activity...</p>
+            <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin mx-auto border-[var(--accent)]" />
+            <p className="mt-3 text-sm text-[var(--text-muted)]">Loading activity...</p>
           </div>
         ) : error ? (
-          <div className={`p-8 text-center ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <div className="p-8 text-center text-[var(--text-muted)]">
             <Activity className="w-10 h-10 mx-auto mb-3 opacity-50 text-red-400" />
             <p className="font-medium text-red-400">{error}</p>
             <button
-              onClick={fetchActivities}
-              className={`mt-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                darkMode
-                  ? 'bg-[#1E2D47] hover:bg-[#263852] text-slate-200'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-              }`}
+              onClick={() => fetchActivities(true)}
+              className="mt-3 px-4 py-2 text-sm rounded-lg transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]"
             >
               Try Again
             </button>
           </div>
-        ) : activities.length === 0 ? (
-          <div className={`p-8 text-center ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+        ) : filteredActivities.length === 0 ? (
+          <div className="p-8 text-center text-[var(--text-muted)]">
             <Activity className="w-10 h-10 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">No activity yet</p>
-            <p className="text-sm mt-1">Task changes will appear here</p>
+            <p className="font-medium">
+              {filterType !== 'all' ? 'No matching activity' : 'No activity yet'}
+            </p>
+            <p className="text-sm mt-1">
+              {filterType !== 'all' ? 'Try a different filter' : 'Task changes will appear here'}
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-[#334155]/50">
+          <div className="divide-y divide-[var(--border)]/50">
             {Object.entries(groupedActivities).map(([date, dayActivities]) => (
               <div key={date}>
                 {/* Date Header */}
-                <div className={`px-4 py-2 text-xs font-medium uppercase tracking-wide sticky top-0 ${darkMode ? 'bg-[#0F1D32]/80 text-slate-400 backdrop-blur-sm' : 'bg-slate-50 text-slate-500'}`}>
+                <div className={`px-4 py-2 text-xs font-medium uppercase tracking-wide sticky top-0 backdrop-blur-sm ${
+                  darkMode ? 'bg-[var(--surface)]/80 text-[var(--text-muted)]' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
+                }`}>
                   {formatDate(date)}
                 </div>
 
                 {/* Activities for this date */}
-                <div className="divide-y divide-[#334155]/30">
+                <div className="divide-y divide-[var(--border)]/30">
                   {dayActivities.map((activity) => (
                     <ActivityItem key={activity.id} activity={activity} darkMode={darkMode} />
                   ))}
                 </div>
               </div>
             ))}
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="p-4 text-center">
+                <button
+                  onClick={loadMore}
+                  disabled={isLoadingMore}
+                  className="px-4 py-2 text-sm rounded-lg transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] disabled:opacity-50"
+                >
+                  {isLoadingMore ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin border-[var(--accent)]" />
+                      Loading...
+                    </span>
+                  ) : (
+                    'Load More'
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* End of list indicator */}
+            {!hasMore && activities.length > 0 && (
+              <div className="p-4 text-center text-xs text-[var(--text-muted)]">
+                End of activity history
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -416,7 +549,7 @@ function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; dark
       case 'status_changed':
         return (
           <span className="flex items-center gap-1">
-            <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>{details.from}</span>
+            <span className="text-[var(--text-muted)]">{details.from}</span>
             <ArrowRight className="w-3 h-3" />
             <span className="font-medium" style={{ color: config.color }}>{details.to}</span>
           </span>
@@ -434,7 +567,7 @@ function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; dark
       case 'assigned_to_changed':
         return (
           <span className="flex items-center gap-1">
-            <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>{details.from || 'Unassigned'}</span>
+            <span className="text-[var(--text-muted)]">{details.from || 'Unassigned'}</span>
             <ArrowRight className="w-3 h-3" />
             <span className="font-medium" style={{ color: config.color }}>{details.to || 'Unassigned'}</span>
           </span>
@@ -442,7 +575,7 @@ function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; dark
       case 'due_date_changed':
         return (
           <span className="flex items-center gap-1">
-            <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>{details.from || 'No date'}</span>
+            <span className="text-[var(--text-muted)]">{details.from || 'No date'}</span>
             <ArrowRight className="w-3 h-3" />
             <span className="font-medium" style={{ color: config.color }}>{details.to || 'No date'}</span>
           </span>
@@ -451,14 +584,14 @@ function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; dark
       case 'subtask_completed':
       case 'subtask_deleted':
         return details.subtask_text ? (
-          <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <span className="text-xs text-[var(--text-muted)]">
             &quot;{details.subtask_text}&quot;
           </span>
         ) : null;
       case 'template_created':
       case 'template_used':
         return details.template_name ? (
-          <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <span className="text-xs text-[var(--text-muted)]">
             Template: {details.template_name}
           </span>
         ) : null;
@@ -468,7 +601,7 @@ function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; dark
   };
 
   return (
-    <div className={`px-4 py-3 flex items-start gap-3 ${darkMode ? 'hover:bg-[#1E2D47]/30' : 'hover:bg-slate-50'} transition-colors`}>
+    <div className="px-4 py-3 flex items-start gap-3 hover:bg-[var(--surface-2)]/50 transition-colors">
       {/* Icon */}
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
@@ -480,16 +613,16 @@ function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; dark
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`font-medium ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+          <span className="font-medium text-[var(--foreground)]">
             {activity.user_name}
           </span>
-          <span className={darkMode ? 'text-slate-400' : 'text-slate-500'}>
+          <span className="text-[var(--text-muted)]">
             {config.label}
           </span>
         </div>
 
         {activity.todo_text && (
-          <p className={`text-sm truncate mt-0.5 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+          <p className="text-sm truncate mt-0.5 text-[var(--text-secondary)]">
             {activity.todo_text}
           </p>
         )}
@@ -500,7 +633,7 @@ function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; dark
           </div>
         )}
 
-        <div className={`flex items-center gap-1 mt-1 text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+        <div className="flex items-center gap-1 mt-1 text-xs text-[var(--text-light)]">
           <Clock className="w-3 h-3" />
           {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
         </div>

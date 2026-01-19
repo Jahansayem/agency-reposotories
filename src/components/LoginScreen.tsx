@@ -52,107 +52,27 @@ function AnimatedGrid() {
   );
 }
 
-// Floating geometric shapes
+// Static geometric shapes (no animation)
 function FloatingShapes() {
-  const shapes = [
-    { type: 'circle', size: 120, x: '15%', y: '20%', delay: 0, duration: 20 },
-    { type: 'circle', size: 80, x: '80%', y: '15%', delay: 2, duration: 18 },
-    { type: 'circle', size: 60, x: '70%', y: '70%', delay: 1, duration: 22 },
-    { type: 'square', size: 40, x: '25%', y: '75%', delay: 3, duration: 25 },
-    { type: 'square', size: 30, x: '85%', y: '45%', delay: 1.5, duration: 20 },
-    { type: 'triangle', size: 50, x: '10%', y: '50%', delay: 2.5, duration: 23 },
-  ];
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {shapes.map((shape, i) => (
-        <motion.div
-          key={i}
-          className="absolute"
-          style={{ left: shape.x, top: shape.y }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{
-            opacity: [0, 0.15, 0.1, 0.15, 0],
-            scale: [0.8, 1, 0.9, 1, 0.8],
-            y: [-30, 30, -20, 25, -30],
-            x: [-20, 25, -15, 20, -20],
-            rotate: shape.type === 'square' ? [0, 90, 180, 270, 360] : [0, 10, -10, 5, 0],
-          }}
-          transition={{
-            duration: shape.duration,
-            delay: shape.delay,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        >
-          {shape.type === 'circle' && (
-            <div
-              className="rounded-full border border-[var(--brand-sky)]/30"
-              style={{ width: shape.size, height: shape.size }}
-            />
-          )}
-          {shape.type === 'square' && (
-            <div
-              className="border border-[var(--brand-sky)]/20 rounded-lg"
-              style={{ width: shape.size, height: shape.size }}
-            />
-          )}
-          {shape.type === 'triangle' && (
-            <svg width={shape.size} height={shape.size} viewBox="0 0 100 100">
-              <polygon
-                points="50,10 90,90 10,90"
-                fill="none"
-                stroke="rgba(114,181,232,0.2)"
-                strokeWidth="2"
-              />
-            </svg>
-          )}
-        </motion.div>
-      ))}
-    </div>
-  );
+  return null; // Removed cheesy floating animations
 }
 
-// Enhanced 3D logo with depth
+// Clean logo without excessive animations
 function Logo3D() {
   return (
     <motion.div
       className="relative"
-      initial={{ scale: 0.5, opacity: 0, rotateY: -30 }}
-      animate={{ scale: 1, opacity: 1, rotateY: 0 }}
-      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-      style={{ perspective: 1000 }}
+      initial={{ scale: 0.9, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.4 }}
     >
-      {/* Multiple glow layers for depth */}
-      <motion.div
-        className="absolute -inset-12 rounded-full blur-3xl"
-        style={{ background: 'radial-gradient(circle, rgba(114,181,232,0.3) 0%, transparent 70%)' }}
-        animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className="absolute -inset-8 rounded-full blur-2xl"
-        style={{ background: 'radial-gradient(circle, rgba(0,51,160,0.4) 0%, transparent 70%)' }}
-        animate={{ scale: [1.1, 1, 1.1], opacity: [0.3, 0.6, 0.3] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-      />
-
-      {/* Main logo with 3D transform */}
-      <motion.div
+      {/* Main logo */}
+      <div
         className="relative w-24 h-24 rounded-3xl flex items-center justify-center overflow-hidden"
         style={{
           background: 'linear-gradient(135deg, #A8D4F5 0%, #72B5E8 25%, #0033A0 60%, #00205B 100%)',
-          boxShadow: `
-            0 25px 80px -15px rgba(0,51,160,0.6),
-            0 15px 40px -10px rgba(0,0,0,0.4),
-            inset 0 -6px 30px rgba(0,0,0,0.2),
-            inset 0 6px 30px rgba(255,255,255,0.25),
-            0 0 0 1px rgba(255,255,255,0.1)
-          `,
-          transform: 'translateZ(0)',
+          boxShadow: '0 20px 40px -10px rgba(0,51,160,0.4)',
         }}
-        whileHover={{ scale: 1.08, rotateY: 10, rotateX: -5 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       >
         {/* Inner highlight */}
         <div
@@ -161,31 +81,9 @@ function Logo3D() {
             background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%)',
           }}
         />
-
-        {/* Animated shine sweep */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%)',
-          }}
-          animate={{ x: ['-150%', '150%'] }}
-          transition={{ duration: 3, repeat: Infinity, repeatDelay: 4, ease: 'easeInOut' }}
-        />
-
         {/* Icon */}
         <CheckSquare className="w-12 h-12 text-white relative z-10 drop-shadow-lg" strokeWidth={2.5} />
-      </motion.div>
-
-      {/* Orbiting dot */}
-      <motion.div
-        className="absolute w-3 h-3 rounded-full bg-[var(--brand-sky)] shadow-[0_0_15px_rgba(114,181,232,0.8)]"
-        style={{ top: '50%', left: '50%' }}
-        animate={{
-          x: [40, 0, -40, 0, 40],
-          y: [0, -40, 0, 40, 0],
-        }}
-        transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-      />
+      </div>
     </motion.div>
   );
 }
@@ -435,29 +333,10 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           animate={{ opacity: 1 }}
         >
           <Logo3D />
-          <motion.div
-            className="flex items-center gap-3"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="w-3 h-3 rounded-full bg-gradient-to-r from-[var(--brand-sky-light)] to-[var(--brand-sky)]"
-                animate={{ y: [-10, 10, -10], opacity: [0.4, 1, 0.4] }}
-                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
-              />
-            ))}
-          </motion.div>
-          <motion.p
-            className="text-white/50 text-sm font-medium tracking-wider uppercase"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-          >
+          <div className="w-8 h-8 border-2 border-[var(--brand-sky)]/30 border-t-[var(--brand-sky)] rounded-full animate-spin" />
+          <p className="text-white/50 text-sm font-medium tracking-wider uppercase">
             Loading workspace...
-          </motion.p>
+          </p>
         </motion.div>
       </div>
     );
@@ -473,19 +352,15 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       <AnimatedGrid />
       <FloatingShapes />
 
-      {/* Ambient light effects */}
+      {/* Static ambient light effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
+        <div
           className="absolute -top-1/4 -right-1/4 w-[800px] h-[800px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(114,181,232,0.15) 0%, transparent 60%)' }}
-          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ background: 'radial-gradient(circle, rgba(114,181,232,0.1) 0%, transparent 60%)' }}
         />
-        <motion.div
+        <div
           className="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(0,51,160,0.2) 0%, transparent 60%)' }}
-          animate={{ x: [0, -30, 0], y: [0, -40, 0] }}
-          transition={{ duration: 15, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ background: 'radial-gradient(circle, rgba(0,51,160,0.15) 0%, transparent 60%)' }}
         />
       </div>
 
@@ -514,7 +389,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.4 }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     Team Workspace
                   </motion.div>
                   <h2 className="text-2xl font-bold text-white tracking-tight">Bealer Agency</h2>
@@ -758,25 +633,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     </motion.button>
 
                     <div className="text-center mb-8">
-                      <motion.div
-                        className="relative inline-block mb-6"
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 0.5 }}
-                      >
-                        <motion.div
-                          className="absolute inset-0 rounded-2xl blur-xl opacity-50"
-                          style={{ backgroundColor: selectedUser.color }}
-                          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-                          transition={{ duration: 3, repeat: Infinity }}
-                        />
+                      <div className="relative inline-block mb-6">
                         <div
-                          className="relative w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-2xl ring-2 ring-white/20"
+                          className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-2 ring-white/20"
                           style={{ backgroundColor: selectedUser.color }}
                         >
                           {getUserInitials(selectedUser.name)}
                         </div>
-                      </motion.div>
+                      </div>
 
                       <h2 className="text-xl font-bold text-white">{selectedUser.name}</h2>
                       <p className="text-sm text-white/40 mt-2 flex items-center justify-center gap-2">
@@ -805,20 +669,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     >
                       <div className="flex justify-center gap-3 mb-6" role="group" aria-label="Enter your 4-digit PIN">
                         {pin.map((digit, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 + index * 0.05 }}
-                            className="relative"
-                          >
-                            {digit && (
-                              <motion.div
-                                className="absolute inset-0 rounded-xl bg-[var(--brand-sky)]/30 blur-md"
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1.1 }}
-                              />
-                            )}
+                          <div key={index} className="relative">
                             <input
                               ref={(el) => { pinRefs.current[index] = el; }}
                               type="password"
@@ -830,7 +681,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                               disabled={lockoutSeconds > 0 || isSubmitting}
                               aria-label={`PIN digit ${index + 1} of 4`}
                               autoComplete="one-time-code"
-                              className={`relative w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 focus:ring-offset-2 focus:ring-offset-transparent ${
+                              className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${
                                 lockoutSeconds > 0
                                   ? 'border-red-500/50 bg-red-500/10 text-red-400'
                                   : digit
@@ -838,7 +689,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                                     : 'border-white/10 bg-white/5 text-white focus:border-[var(--brand-sky)] focus:bg-white/10'
                               }`}
                             />
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     </form>

@@ -24,6 +24,7 @@ import {
   getMessageAriaLabel,
   getReactionAriaLabel,
   truncateText,
+  debounce,
 } from '@/lib/chatUtils';
 
 // Notification sound (short, pleasant chime)
@@ -171,7 +172,7 @@ function TypingIndicator({ userName }: { userName: string }) {
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-1.5 h-1.5 rounded-full bg-[#72B5E8]"
+              className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]"
               animate={{
                 y: [0, -4, 0],
                 opacity: [0.4, 1, 0.4]
@@ -285,6 +286,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
   });
 
   // New feature states
+  const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
@@ -295,13 +297,30 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionCursorPos, setMentionCursorPos] = useState(0);
   const [userPresence, setUserPresence] = useState<Record<string, PresenceStatus>>({});
-  const [mutedConversations, setMutedConversations] = useState<Set<string>>(new Set());
-  const [isDndMode, setIsDndMode] = useState(false);
+  const [mutedConversations, setMutedConversations] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem('chat_muted_conversations');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const [isDndMode, setIsDndMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('chat_dnd_mode') === 'true';
+  });
+  const [rateLimitWarning, setRateLimitWarning] = useState<string | null>(null);
   const [showPinnedMessages, setShowPinnedMessages] = useState(false);
   const [showReactionsSummary, setShowReactionsSummary] = useState<string | null>(null);
   const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [taskFromMessage, setTaskFromMessage] = useState<ChatMessage | null>(null);
+
+  // Pagination state
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const MESSAGES_PER_PAGE = 50;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -314,12 +333,41 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
   const messagesRef = useRef<ChatMessage[]>(messages);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastPresenceTimestamps = useRef<Map<string, number>>(new Map());
+  const PRESENCE_TIMEOUT_MS = 60000; // Mark offline after 60 seconds without presence
 
   // Initialize audio element for notification sound
   useEffect(() => {
     audioRef.current = new Audio(NOTIFICATION_SOUND_URL);
     audioRef.current.volume = 0.5;
   }, []);
+
+  // Persist muted conversations to localStorage
+  useEffect(() => {
+    localStorage.setItem('chat_muted_conversations', JSON.stringify([...mutedConversations]));
+  }, [mutedConversations]);
+
+  // Persist DND mode to localStorage
+  useEffect(() => {
+    localStorage.setItem('chat_dnd_mode', isDndMode.toString());
+  }, [isDndMode]);
+
+  // Auto-clear rate limit warning
+  useEffect(() => {
+    if (rateLimitWarning) {
+      const timer = setTimeout(() => setRateLimitWarning(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [rateLimitWarning]);
+
+  // Debounce search input to avoid filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+    }, CHAT_LIMITS.DEBOUNCE_TYPING_MS);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // Function to play notification sound
   const playNotificationSound = useCallback(() => {
@@ -371,11 +419,17 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
     const isBottom = scrollHeight - scrollTop - clientHeight < 50;
     setIsAtBottom(isBottom);
+
+    // Load more messages when scrolling near the top
+    if (scrollTop < 100 && hasMoreMessages && !isLoadingMore) {
+      loadMoreMessages();
+    }
+
     if (isBottom && isOpen && conversation) {
       const key = getConversationKey(conversation);
       setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
     }
-  }, [isOpen, conversation, getConversationKey]);
+  }, [isOpen, conversation, getConversationKey, hasMoreMessages, isLoadingMore, loadMoreMessages]);
 
   // Filter messages for current conversation (excluding deleted)
   const filteredMessages = useMemo(() => {
@@ -450,16 +504,18 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
     return { type: 'team' };
   }, [sortedConversations]);
 
-  // Fetch all messages and calculate initial unread counts
+  // Fetch initial messages (most recent) with pagination support
   const fetchMessages = useCallback(async () => {
     if (!isSupabaseConfigured()) return;
 
     setLoading(true);
+
+    // Fetch most recent messages first (descending order), then reverse for display
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .order('created_at', { ascending: true })
-      .limit(500);
+      .order('created_at', { ascending: false })
+      .limit(MESSAGES_PER_PAGE);
 
     if (error) {
       logger.error('Error fetching messages', error, { component: 'ChatPanel' });
@@ -467,9 +523,11 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
         setTableExists(false);
       }
     } else {
-      const messages = data || [];
+      // Reverse to get chronological order for display
+      const messages = (data || []).reverse();
       setMessages(messages);
       setTableExists(true);
+      setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
 
       const initialUnreadCounts: Record<string, number> = {};
       let firstUnread: string | null = null;
@@ -499,6 +557,32 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
     }
     setLoading(false);
   }, [currentUser.name]);
+
+  // Load more (older) messages
+  const loadMoreMessages = useCallback(async () => {
+    if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || messages.length === 0) return;
+
+    setIsLoadingMore(true);
+    const oldestMessage = messages[0];
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .lt('created_at', oldestMessage.created_at)
+      .order('created_at', { ascending: false })
+      .limit(MESSAGES_PER_PAGE);
+
+    if (error) {
+      logger.error('Error loading more messages', error, { component: 'ChatPanel' });
+    } else {
+      const olderMessages = (data || []).reverse();
+      if (olderMessages.length > 0) {
+        setMessages(prev => [...olderMessages, ...prev]);
+      }
+      setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
+    }
+    setIsLoadingMore(false);
+  }, [isLoadingMore, hasMoreMessages, messages]);
 
   // Track state in refs to avoid re-subscribing
   const isOpenRef = useRef(isOpen);
@@ -560,6 +644,41 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
     };
   }, [currentUser.name, isDndMode]);
 
+  // Check for stale presence and mark users offline after timeout
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    const checkStalePresence = () => {
+      const now = Date.now();
+      const staleUsers: string[] = [];
+
+      lastPresenceTimestamps.current.forEach((timestamp, userName) => {
+        if (now - timestamp > PRESENCE_TIMEOUT_MS) {
+          staleUsers.push(userName);
+        }
+      });
+
+      if (staleUsers.length > 0) {
+        setUserPresence(prev => {
+          const updated = { ...prev };
+          staleUsers.forEach(user => {
+            if (updated[user] !== 'offline') {
+              updated[user] = 'offline';
+            }
+          });
+          return updated;
+        });
+      }
+    };
+
+    // Check every 15 seconds for stale presence
+    const presenceCheckInterval = setInterval(checkStalePresence, 15000);
+
+    return () => {
+      clearInterval(presenceCheckInterval);
+    };
+  }, []);
+
   // Real-time subscription for messages, typing, and presence
   // fetchMessages calls setState - this is the correct data loading pattern
   useEffect(() => {
@@ -583,7 +702,12 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
 
             setTypingUsers(prev => ({ ...prev, [newMsg.created_by]: false }));
 
+            // Skip notifications for own messages
             if (newMsg.created_by === currentUser.name) return;
+
+            // Skip notifications for messages already read by current user
+            const readBy = newMsg.read_by || [];
+            if (readBy.includes(currentUser.name)) return;
 
             let msgConvKey: string | null = null;
             if (!newMsg.recipient) {
@@ -667,6 +791,8 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
       .on('broadcast', { event: 'presence' }, ({ payload }) => {
         if (payload.user !== currentUser.name) {
           setUserPresence(prev => ({ ...prev, [payload.user]: payload.status }));
+          // Track the timestamp of the last presence update
+          lastPresenceTimestamps.current.set(payload.user, payload.timestamp || Date.now());
         }
       })
       .subscribe((status) => {
@@ -794,7 +920,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
     if (rateLimitStatus.isLimited) {
       const waitSeconds = Math.ceil(rateLimitStatus.remainingMs / 1000);
       logger.warn('Rate limit exceeded', { waitSeconds, component: 'ChatPanel' });
-      // Could show a toast notification here
+      setRateLimitWarning(`Slow down! You can send another message in ${waitSeconds}s`);
       return;
     }
 
@@ -1149,8 +1275,8 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
               key={i}
               className={`px-1.5 py-0.5 rounded-md font-medium ${
                 isMe
-                  ? 'bg-[#72B5E8]/30 text-[#72B5E8]'
-                  : 'bg-[#0033A0]/30 text-[#0033A0] dark:text-[#72B5E8]'
+                  ? 'bg-[var(--accent)]/30 text-[var(--accent)]'
+                  : 'bg-[var(--accent-dark)]/30 text-[var(--accent-dark)] dark:text-[var(--accent)]'
               }`}
               role="mark"
               aria-label={`Mention of ${userName}`}
@@ -1200,12 +1326,12 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
   // For docked mode, render a simplified layout that fills the sidebar
   if (docked) {
     return (
-      <div className="h-full flex flex-col bg-gradient-to-b from-[#00205B] to-[#050A12]">
+      <div className="h-full flex flex-col bg-gradient-to-b from-[var(--surface-dark)] to-[#050A12]">
         {/* Docked Header */}
         <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] flex items-center justify-center">
-              <MessageSquare className="w-4 h-4 text-[#00205B]" strokeWidth={2.5} />
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-[var(--surface-dark)]" strokeWidth={2.5} />
             </div>
             <div>
               <h2 className="text-white font-semibold text-sm">Team Chat</h2>
@@ -1233,8 +1359,8 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                 }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#72B5E8]/30 to-[#72B5E8]/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-[#72B5E8]" />
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--accent)]/30 to-[var(--accent)]/10 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-[var(--accent)]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium text-sm">Team Chat</p>
@@ -1336,7 +1462,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                         <div
                           className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
                             isOwn
-                              ? 'bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B]'
+                              ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] text-[var(--surface-dark)]'
                               : 'bg-white/10 text-white'
                           }`}
                         >
@@ -1362,12 +1488,12 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                       }
                     }}
                     placeholder="Type a message..."
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/40 text-sm border border-white/10 focus:border-[#72B5E8]/50 focus:outline-none"
+                    className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/40 text-sm border border-white/10 focus:border-[var(--accent)]/50 focus:outline-none"
                   />
                   <button
                     onClick={sendMessage}
                     disabled={!newMessage.trim()}
-                    className="p-2.5 rounded-xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] disabled:opacity-50 transition-opacity"
+                    className="p-2.5 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] text-[var(--surface-dark)] disabled:opacity-50 transition-opacity"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -1387,9 +1513,10 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
       <AnimatePresence>
         {!isOpen && (
           <motion.button
-            initial={{ scale: 0, opacity: 0 }}
+            initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={() => {
               setIsOpen(true);
               if (messages.length > 0) {
@@ -1402,39 +1529,16 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
             className="fixed bottom-6 right-6 z-50 group"
             aria-label={`Open chat${totalUnreadCount > 0 ? `, ${totalUnreadCount} unread messages` : ''}`}
           >
-            {/* Outer glow ring */}
-            <motion.div
-              className="absolute inset-0 rounded-2xl bg-[#72B5E8]/20 blur-xl"
-              animate={{
-                scale: [1, 1.3, 1],
-                opacity: [0.3, 0.5, 0.3]
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            />
-
             {/* Main button */}
-            <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#72B5E8]/30 transition-all duration-300">
-              {/* Shimmer effect */}
-              <motion.div
-                className="absolute inset-0 rounded-2xl overflow-hidden"
-                style={{
-                  background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%)',
-                }}
-                animate={{ x: ['-100%', '200%'] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
-              />
-              <MessageSquare className="w-6 h-6 text-[#00205B] relative z-10" strokeWidth={2.5} />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-200">
+              <MessageSquare className="w-6 h-6 text-[var(--surface-dark)]" strokeWidth={2.5} />
             </div>
 
             {/* Unread badge */}
             {totalUnreadCount > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 min-w-[1.75rem] h-7 px-2 bg-gradient-to-br from-red-500 to-red-600 rounded-full text-xs font-bold flex items-center justify-center text-white shadow-lg border-2 border-[#00205B]"
-              >
+              <span className="absolute -top-2 -right-2 min-w-[1.75rem] h-7 px-2 bg-red-500 rounded-full text-xs font-bold flex items-center justify-center text-white shadow-lg border-2 border-[var(--surface-dark)]">
                 {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-              </motion.span>
+              </span>
             )}
           </motion.button>
         )}
@@ -1458,29 +1562,19 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
             aria-label="Chat panel"
           >
             {/* Outer glow */}
-            <div className="absolute -inset-[1px] bg-gradient-to-b from-[#72B5E8]/30 via-white/[0.08] to-white/[0.02] rounded-[28px] blur-[1px]" />
+            <div className="absolute -inset-[1px] bg-gradient-to-b from-[var(--accent)]/30 via-white/[0.08] to-white/[0.02] rounded-[28px] blur-[1px]" />
 
             {/* Main container */}
-            <div className="relative bg-gradient-to-b from-[#00205B] to-[#050A12] rounded-[28px] border border-white/[0.1] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col h-full">
+            <div className="relative bg-gradient-to-b from-[var(--surface-dark)] to-[#050A12] rounded-[28px] border border-white/[0.1] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col h-full">
 
               {/* Header */}
-              <div className="relative flex items-center justify-between px-5 py-4 overflow-hidden">
-                {/* Header background effects */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#72B5E8]/10 via-transparent to-[#72B5E8]/5" />
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-px"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(201,162,39,0.4), transparent)',
-                  }}
-                  animate={{ opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                />
+              <div className="relative flex items-center justify-between px-5 py-4 border-b border-white/[0.08]">
 
                 <div className="flex items-center gap-3 relative z-10">
                   {showConversationList ? (
                     <>
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] flex items-center justify-center shadow-lg shadow-[#72B5E8]/20">
-                        <MessageSquare className="w-5 h-5 text-[#00205B]" strokeWidth={2.5} />
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] flex items-center justify-center shadow-lg shadow-[var(--accent)]/20">
+                        <MessageSquare className="w-5 h-5 text-[var(--surface-dark)]" strokeWidth={2.5} />
                       </div>
                       <span className="font-bold text-white text-lg tracking-tight">Messages</span>
                     </>
@@ -1508,13 +1602,13 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                           </div>
                           {/* Presence indicator */}
                           <div
-                            className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#00205B]"
+                            className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--surface-dark)]"
                             style={{ backgroundColor: PRESENCE_CONFIG[userPresence[conversation.userName] || 'offline'].color }}
                             title={PRESENCE_CONFIG[userPresence[conversation.userName] || 'offline'].label}
                           />
                         </div>
                       ) : (
-                        <MessageSquare className="w-5 h-5 text-[#72B5E8]" />
+                        <MessageSquare className="w-5 h-5 text-[var(--accent)]" />
                       )}
                       <span className="font-bold text-white text-lg tracking-tight">{getConversationTitle()}</span>
                     </>
@@ -1527,7 +1621,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                     <motion.button
                       onClick={() => setShowSearch(!showSearch)}
                       className={`p-2 rounded-xl transition-all duration-200 ${
-                        showSearch ? 'bg-[#72B5E8]/20 text-[#72B5E8]' : 'hover:bg-white/[0.08] text-white/50 hover:text-white'
+                        showSearch ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-white/[0.08] text-white/50 hover:text-white'
                       }`}
                       title="Search messages"
                       whileHover={{ scale: 1.05 }}
@@ -1542,14 +1636,14 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                     <motion.button
                       onClick={() => setShowPinnedMessages(!showPinnedMessages)}
                       className={`p-2 rounded-xl transition-all duration-200 relative ${
-                        showPinnedMessages ? 'bg-[#72B5E8]/20 text-[#72B5E8]' : 'hover:bg-white/[0.08] text-white/50 hover:text-white'
+                        showPinnedMessages ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-white/[0.08] text-white/50 hover:text-white'
                       }`}
                       title="Pinned messages"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
                       <Pin className="w-4 h-4" />
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#72B5E8] rounded-full text-[9px] flex items-center justify-center text-[#00205B] font-bold">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full text-[9px] flex items-center justify-center text-[var(--surface-dark)] font-bold">
                         {pinnedMessages.length}
                       </span>
                     </motion.button>
@@ -1636,22 +1730,22 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                         <input
                           type="text"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          value={searchInput}
+                          onChange={(e) => setSearchInput(e.target.value)}
                           placeholder="Search messages..."
-                          className="w-full pl-11 pr-10 py-3 rounded-xl border border-white/[0.1] bg-white/[0.04] text-white placeholder:text-white/30 text-sm focus:outline-none focus:border-[#72B5E8]/50 focus:ring-2 focus:ring-[#72B5E8]/20 transition-all duration-200"
+                          className="w-full pl-11 pr-10 py-3 rounded-xl border border-white/[0.1] bg-white/[0.04] text-white placeholder:text-white/30 text-sm focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 transition-all duration-200"
                           autoFocus
                         />
-                        {searchQuery && (
+                        {searchInput && (
                           <button
-                            onClick={() => setSearchQuery('')}
+                            onClick={() => { setSearchInput(''); setSearchQuery(''); }}
                             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/[0.1] rounded-lg transition-colors"
                           >
                             <X className="w-4 h-4 text-white/40" />
                           </button>
                         )}
                       </div>
-                      {searchQuery && (
+                      {searchInput && (
                         <div className="mt-2 text-xs text-white/40 px-1">
                           {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''}
                         </div>
@@ -1668,10 +1762,10 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="border-b border-white/[0.06] bg-[#72B5E8]/5 max-h-36 overflow-y-auto"
+                    className="border-b border-white/[0.06] bg-[var(--accent)]/5 max-h-36 overflow-y-auto"
                   >
                     <div className="p-3">
-                      <div className="flex items-center gap-2 text-xs text-[#72B5E8]/70 mb-2 font-medium">
+                      <div className="flex items-center gap-2 text-xs text-[var(--accent)]/70 mb-2 font-medium">
                         <Pin className="w-3.5 h-3.5" />
                         <span>Pinned Messages</span>
                       </div>
@@ -1715,8 +1809,8 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.05, duration: 0.3 }}
                             className={`px-4 py-4 flex items-center gap-4 transition-all duration-200 border-b border-white/[0.04] ${
-                              isSelected ? 'bg-[#72B5E8]/10' : 'hover:bg-white/[0.04]'
-                            } ${unreadCount > 0 && !isMuted ? 'bg-[#72B5E8]/5' : ''}`}
+                              isSelected ? 'bg-[var(--accent)]/10' : 'hover:bg-white/[0.04]'
+                            } ${unreadCount > 0 && !isMuted ? 'bg-[var(--accent)]/5' : ''}`}
                           >
                             <button
                               onClick={() => selectConversation(conv)}
@@ -1733,7 +1827,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                 {/* Presence indicator for DMs */}
                                 {!isTeam && presence && (
                                   <div
-                                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[#00205B]"
+                                    className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--surface-dark)]"
                                     style={{ backgroundColor: PRESENCE_CONFIG[presence].color }}
                                   />
                                 )}
@@ -1741,7 +1835,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                   <motion.span
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1.5 bg-gradient-to-br from-red-500 to-red-600 rounded-full text-[10px] font-bold flex items-center justify-center text-white shadow-lg border border-[#00205B]"
+                                    className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1.5 bg-gradient-to-br from-red-500 to-red-600 rounded-full text-[10px] font-bold flex items-center justify-center text-white shadow-lg border border-[var(--surface-dark)]"
                                   >
                                     {unreadCount > 99 ? '99+' : unreadCount}
                                   </motion.span>
@@ -1750,13 +1844,13 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                               <div className="flex-1 min-w-0 text-left">
                                 <div className="flex items-center justify-between gap-2">
                                   <span className={`font-semibold text-white truncate ${
-                                    unreadCount > 0 && !isMuted ? 'text-[#72B5E8]' : ''
+                                    unreadCount > 0 && !isMuted ? 'text-[var(--accent)]' : ''
                                   }`}>
                                     {isTeam ? 'Team Chat' : userName}
                                   </span>
                                   {lastMessage && (
                                     <span className={`text-xs flex-shrink-0 ${
-                                      unreadCount > 0 && !isMuted ? 'text-[#72B5E8] font-medium' : 'text-white/40'
+                                      unreadCount > 0 && !isMuted ? 'text-[var(--accent)] font-medium' : 'text-white/40'
                                     }`}>
                                       {formatRelativeTime(lastMessage.created_at)}
                                     </span>
@@ -1817,7 +1911,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                           <div className="flex items-center justify-center h-full">
                             <div className="flex flex-col items-center gap-4">
                               <motion.div
-                                className="w-10 h-10 border-3 border-[#72B5E8]/20 border-t-[#72B5E8] rounded-full"
+                                className="w-10 h-10 border-3 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full"
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                               />
@@ -1839,7 +1933,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                               animate={{ y: [-4, 4, -4] }}
                               transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                             >
-                              <Sparkles className="w-10 h-10 text-[#72B5E8]/60" />
+                              <Sparkles className="w-10 h-10 text-[var(--accent)]/60" />
                             </motion.div>
                             <p className="font-semibold text-white text-lg">
                               {searchQuery ? 'No messages found' : 'No messages yet'}
@@ -1856,6 +1950,28 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                           </div>
                         ) : (
                           <>
+                            {/* Load more indicator at top */}
+                            {hasMoreMessages && (
+                              <div className="flex justify-center py-3">
+                                {isLoadingMore ? (
+                                  <div className="flex items-center gap-2 text-white/40 text-xs">
+                                    <motion.div
+                                      className="w-4 h-4 border-2 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full"
+                                      animate={{ rotate: 360 }}
+                                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                    />
+                                    <span>Loading older messages...</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={loadMoreMessages}
+                                    className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors px-3 py-1.5 rounded-lg hover:bg-[var(--accent)]/10"
+                                  >
+                                    Load earlier messages
+                                  </button>
+                                )}
+                              </div>
+                            )}
                             {groupedMessages.map((msg, msgIndex) => {
                               const isOwn = msg.created_by === currentUser.name;
                               const userColor = getUserColor(msg.created_by);
@@ -1876,9 +1992,9 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                   {/* Unread divider */}
                                   {isFirstUnread && (
                                     <div className="flex items-center gap-3 my-4">
-                                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#72B5E8]/50 to-transparent" />
-                                      <span className="text-xs text-[#72B5E8] font-semibold px-3 py-1 bg-[#72B5E8]/10 rounded-full">New Messages</span>
-                                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[#72B5E8]/50 to-transparent" />
+                                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[var(--accent)]/50 to-transparent" />
+                                      <span className="text-xs text-[var(--accent)] font-semibold px-3 py-1 bg-[var(--accent)]/10 rounded-full">New Messages</span>
+                                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-[var(--accent)]/50 to-transparent" />
                                     </div>
                                   )}
 
@@ -1917,15 +2033,15 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                               <span className="text-white/30 italic">(edited)</span>
                                             )}
                                             {msg.is_pinned && (
-                                              <Pin className="w-3 h-3 text-[#72B5E8]" />
+                                              <Pin className="w-3 h-3 text-[var(--accent)]" />
                                             )}
                                           </div>
                                         )}
 
                                         {/* Reply preview */}
                                         {msg.reply_to_text && (
-                                          <div className={`text-xs px-3 py-1.5 mb-1.5 rounded-lg border-l-2 border-[#72B5E8] bg-white/[0.04] text-white/50 max-w-full truncate`}>
-                                            <span className="font-medium text-[#72B5E8]">{msg.reply_to_user}: </span>
+                                          <div className={`text-xs px-3 py-1.5 mb-1.5 rounded-lg border-l-2 border-[var(--accent)] bg-white/[0.04] text-white/50 max-w-full truncate`}>
+                                            <span className="font-medium text-[var(--accent)]">{msg.reply_to_user}: </span>
                                             {msg.reply_to_text}
                                           </div>
                                         )}
@@ -1957,9 +2073,9 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                                 onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
                                                 className={`px-4 py-2.5 rounded-2xl break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
                                                   isOwn
-                                                    ? 'bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] rounded-br-md shadow-lg shadow-[#72B5E8]/20'
+                                                    ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] text-[var(--surface-dark)] rounded-br-md shadow-lg shadow-[var(--accent)]/20'
                                                     : 'bg-white/[0.08] text-white rounded-bl-md border border-white/[0.06]'
-                                                } ${showTapbackMenu ? 'ring-2 ring-[#72B5E8]/50' : ''}`}
+                                                } ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''}`}
                                                 whileHover={{ scale: 1.01 }}
                                               >
                                                 {renderMessageText(msg.text)}
@@ -1973,7 +2089,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                                     }}
                                                     className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                                       isOwn
-                                                        ? 'bg-[#00205B]/20 text-[#00205B] hover:bg-[#00205B]/30'
+                                                        ? 'bg-[var(--surface-dark)]/20 text-[var(--surface-dark)] hover:bg-[var(--surface-dark)]/30'
                                                         : 'bg-white/[0.1] text-white/80 hover:bg-white/[0.15]'
                                                     }`}
                                                   >
@@ -1990,7 +2106,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                             <motion.div
                                               initial={{ opacity: 0, scale: 0.9 }}
                                               animate={{ opacity: 1, scale: 1 }}
-                                              className={`absolute top-0 flex gap-0.5 bg-[#00205B] border border-white/[0.1] rounded-xl shadow-xl p-1 ${
+                                              className={`absolute top-0 flex gap-0.5 bg-[var(--surface-dark)] border border-white/[0.1] rounded-xl shadow-xl p-1 ${
                                                 isOwn ? 'right-full mr-2' : 'left-full ml-2'
                                               }`}
                                             >
@@ -2024,7 +2140,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                                 initial={{ opacity: 0, scale: 0.95, y: 5 }}
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.95, y: 5 }}
-                                                className={`absolute top-full mt-2 z-30 bg-[#00205B] border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden min-w-[160px] backdrop-blur-xl ${
+                                                className={`absolute top-full mt-2 z-30 bg-[var(--surface-dark)] border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden min-w-[160px] backdrop-blur-xl ${
                                                   isOwn ? 'right-0' : 'left-0'
                                                 }`}
                                               >
@@ -2088,7 +2204,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.9, y: 8 }}
                                                 transition={{ duration: 0.15 }}
-                                                className={`absolute ${isOwn ? 'right-0' : 'left-0'} bottom-full mb-2 z-20 bg-[#00205B] border border-white/[0.1] rounded-2xl shadow-2xl px-2 py-1.5 flex gap-1`}
+                                                className={`absolute ${isOwn ? 'right-0' : 'left-0'} bottom-full mb-2 z-20 bg-[var(--surface-dark)] border border-white/[0.1] rounded-2xl shadow-2xl px-2 py-1.5 flex gap-1`}
                                               >
                                                 {(Object.keys(TAPBACK_EMOJIS) as TapbackType[]).map((reaction) => {
                                                   const myReaction = reactions.find(r => r.user === currentUser.name);
@@ -2105,7 +2221,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                                       aria-pressed={isSelected}
                                                       className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 text-xl ${
                                                         isSelected
-                                                          ? 'bg-[#72B5E8]/30 ring-2 ring-[#72B5E8]'
+                                                          ? 'bg-[var(--accent)]/30 ring-2 ring-[var(--accent)]'
                                                           : 'hover:bg-white/[0.08]'
                                                       }`}
                                                       whileHover={{ scale: 1.15 }}
@@ -2126,7 +2242,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                               onMouseEnter={() => setShowReactionsSummary(msg.id)}
                                               onMouseLeave={() => setShowReactionsSummary(null)}
                                             >
-                                              <div className="bg-[#00205B] border border-white/[0.1] rounded-full px-2 py-1 flex items-center gap-1 shadow-lg cursor-pointer">
+                                              <div className="bg-[var(--surface-dark)] border border-white/[0.1] rounded-full px-2 py-1 flex items-center gap-1 shadow-lg cursor-pointer">
                                                 {(Object.entries(reactionCounts) as [TapbackType, number][]).map(([reaction, count]) => (
                                                   <span key={reaction} className="flex items-center text-sm">
                                                     {TAPBACK_EMOJIS[reaction]}
@@ -2164,7 +2280,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                                 Sent
                                               </span>
                                             ) : (
-                                              <span className="flex items-center gap-1 text-[#72B5E8]">
+                                              <span className="flex items-center gap-1 text-[var(--accent)]">
                                                 <CheckCheck className="w-3 h-3" />
                                                 {conversation?.type === 'dm' ? 'Read' : `Read by ${readBy.length}`}
                                               </span>
@@ -2197,7 +2313,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
                             onClick={() => scrollToBottom()}
-                            className="absolute bottom-[130px] left-1/2 -translate-x-1/2 bg-[#00205B] border border-white/[0.1] rounded-full px-4 py-2 shadow-xl flex items-center gap-2 text-sm text-white hover:bg-white/[0.06] transition-all"
+                            className="absolute bottom-[130px] left-1/2 -translate-x-1/2 bg-[var(--surface-dark)] border border-white/[0.1] rounded-full px-4 py-2 shadow-xl flex items-center gap-2 text-sm text-white hover:bg-white/[0.06] transition-all"
                           >
                             <ChevronDown className="w-4 h-4" />
                             <span>New messages</span>
@@ -2212,11 +2328,11 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="border-t border-white/[0.06] bg-[#72B5E8]/5 px-4 py-3"
+                            className="border-t border-white/[0.06] bg-[var(--accent)]/5 px-4 py-3"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2 text-sm">
-                                <Reply className="w-4 h-4 text-[#72B5E8]" />
+                                <Reply className="w-4 h-4 text-[var(--accent)]" />
                                 <span className="text-white/50">Replying to</span>
                                 <span className="font-semibold text-white">{replyingTo.created_by}</span>
                               </div>
@@ -2241,11 +2357,11 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="border-t border-white/[0.06] bg-[#72B5E8]/10 px-4 py-3"
+                            className="border-t border-white/[0.06] bg-[var(--accent)]/10 px-4 py-3"
                           >
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2 text-sm">
-                                <Edit3 className="w-4 h-4 text-[#72B5E8]" />
+                                <Edit3 className="w-4 h-4 text-[var(--accent)]" />
                                 <span className="font-semibold text-white">Editing message</span>
                               </div>
                               <button
@@ -2264,13 +2380,13 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                 value={editText}
                                 onChange={(e) => setEditText(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                className="flex-1 px-4 py-3 rounded-xl border border-white/[0.1] bg-white/[0.04] text-white text-sm focus:outline-none focus:border-[#72B5E8]/50 focus:ring-2 focus:ring-[#72B5E8]/20 transition-all"
+                                className="flex-1 px-4 py-3 rounded-xl border border-white/[0.1] bg-white/[0.04] text-white text-sm focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 transition-all"
                                 autoFocus
                               />
                               <motion.button
                                 onClick={saveEdit}
                                 disabled={!editText.trim()}
-                                className="px-5 py-3 bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-[#72B5E8]/20"
+                                className="px-5 py-3 bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] text-[var(--surface-dark)] rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-[var(--accent)]/20"
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                               >
@@ -2280,6 +2396,16 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                           </motion.div>
                         )}
                       </AnimatePresence>
+
+                      {/* Rate Limit Warning */}
+                      {rateLimitWarning && (
+                        <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          {rateLimitWarning}
+                        </div>
+                      )}
 
                       {/* Input Area */}
                       {!editingMessage && (
@@ -2304,7 +2430,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                className="mb-3 bg-[#00205B] border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden"
+                                className="mb-3 bg-[var(--surface-dark)] border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden"
                               >
                                 <div className="flex border-b border-white/[0.06]">
                                   {(Object.keys(EMOJI_CATEGORIES) as (keyof typeof EMOJI_CATEGORIES)[]).map((cat) => (
@@ -2313,7 +2439,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                       onClick={() => setEmojiCategory(cat)}
                                       className={`flex-1 py-3 text-xs font-semibold capitalize transition-all duration-200 ${
                                         emojiCategory === cat
-                                          ? 'bg-[#72B5E8]/20 text-[#72B5E8] border-b-2 border-[#72B5E8]'
+                                          ? 'bg-[var(--accent)]/20 text-[var(--accent)] border-b-2 border-[var(--accent)]'
                                           : 'text-white/40 hover:bg-white/[0.04] hover:text-white/60'
                                       }`}
                                     >
@@ -2345,7 +2471,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                               disabled={!tableExists}
                               className={`p-3 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-                                showEmojiPicker ? 'bg-[#72B5E8]/20 text-[#72B5E8]' : 'hover:bg-white/[0.06] text-white/40 hover:text-white/70'
+                                showEmojiPicker ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-white/[0.06] text-white/40 hover:text-white/70'
                               }`}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
@@ -2390,7 +2516,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                 rows={1}
                                 aria-label={conversation ? `Message input for ${conversation.type === 'team' ? 'team chat' : conversation.userName}` : 'Message input'}
                                 aria-describedby="char-counter"
-                                className="w-full px-5 py-3 rounded-2xl border border-white/[0.1] bg-white/[0.04] text-white placeholder:text-white/30 focus:outline-none focus:border-[#72B5E8]/50 focus:ring-2 focus:ring-[#72B5E8]/20 resize-none max-h-28 transition-all text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-5 py-3 rounded-2xl border border-white/[0.1] bg-white/[0.04] text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 resize-none max-h-28 transition-all text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
                                 style={{
                                   height: 'auto',
                                   minHeight: '48px',
@@ -2419,7 +2545,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                             <motion.button
                               onClick={sendMessage}
                               disabled={!newMessage.trim() || !tableExists}
-                              className="p-3 rounded-xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-[#72B5E8]/20 disabled:shadow-none"
+                              className="p-3 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] text-[var(--surface-dark)] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-[var(--accent)]/20 disabled:shadow-none"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -2452,7 +2578,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#00205B] border border-white/[0.1] rounded-2xl shadow-2xl p-6 max-w-md w-full"
+              className="bg-[var(--surface-dark)] border border-white/[0.1] rounded-2xl shadow-2xl p-6 max-w-md w-full"
             >
               <h3 className="text-xl font-bold text-white mb-5">Create Task from Message</h3>
               <div className="p-4 bg-white/[0.04] border border-white/[0.08] rounded-xl mb-5">
@@ -2470,7 +2596,7 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                 </motion.button>
                 <motion.button
                   onClick={handleCreateTask}
-                  className="px-5 py-3 rounded-xl bg-gradient-to-br from-[#72B5E8] to-[#A8D4F5] text-[#00205B] font-semibold shadow-lg shadow-[#72B5E8]/20 hover:opacity-90 transition-all"
+                  className="px-5 py-3 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-light)] text-[var(--surface-dark)] font-semibold shadow-lg shadow-[var(--accent)]/20 hover:opacity-90 transition-all"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
