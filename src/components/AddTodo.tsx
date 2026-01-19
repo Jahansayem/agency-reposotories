@@ -6,9 +6,8 @@ import SmartParseModal from './SmartParseModal';
 import ReminderPicker from './ReminderPicker';
 import VoiceRecordingIndicator from './VoiceRecordingIndicator';
 import FileImporter from './FileImporter';
-import { QuickTaskButtons, useTaskPatterns } from './QuickTaskButtons';
 import { CategoryConfidenceIndicator } from './CategoryConfidenceIndicator';
-import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate } from '@/types/todo';
+import { TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
 import { getUserPreferences, updateLastTaskDefaults } from '@/lib/userPreferences';
 import { analyzeTaskPattern } from '@/lib/insurancePatterns';
 import { logger } from '@/lib/logger';
@@ -123,7 +122,6 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
   const [showFileImporter, setShowFileImporter] = useState(false);
 
   // Quick task template state (Feature 4)
-  const { patterns } = useTaskPatterns();
   const [suggestedSubtasks, setSuggestedSubtasks] = useState<string[]>([]);
 
   // AI Pattern detection state (Feature 4 - CategoryConfidenceIndicator)
@@ -428,35 +426,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
 
   const priorityConfig = PRIORITY_CONFIG[priority];
 
-  // Handle quick task template selection (Feature 4)
-  const handleQuickTaskSelect = (template: QuickTaskTemplate) => {
-    setText(template.text);
-    setPriority(template.defaultPriority);
-    setSuggestedSubtasks(template.suggestedSubtasks);
-    setShowOptions(true);
-    // Focus the textarea so user can edit the placeholder
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      // Select the [customer] placeholder if present
-      const placeholderMatch = template.text.match(/\[[\w\s]+\]/);
-      if (placeholderMatch) {
-        const start = template.text.indexOf(placeholderMatch[0]);
-        const end = start + placeholderMatch[0].length;
-        setTimeout(() => {
-          textareaRef.current?.setSelectionRange(start, end);
-        }, 0);
-      }
-    }
-  };
-
   return (
     <>
-      {/* Quick Task Buttons (Feature 4) */}
-      <QuickTaskButtons
-        onSelectTemplate={handleQuickTaskSelect}
-        patterns={patterns}
-      />
-
       {/* AI Pattern Detection Indicator (Feature 4) */}
       <CategoryConfidenceIndicator
         patternMatch={patternMatch}
