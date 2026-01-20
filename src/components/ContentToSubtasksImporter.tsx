@@ -266,9 +266,12 @@ export default function ContentToSubtasksImporter({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('audio/') && !file.name.match(/\.(mp3|wav|m4a|ogg|webm|aac|flac)$/i)) {
-      setError('Please select an audio file (MP3, WAV, M4A, etc.)');
+    // Validate file type - accept audio MIME types or known audio extensions
+    // Also accept video/mp4 and video/webm as they can contain audio
+    const isAudioMime = file.type.startsWith('audio/') || file.type === 'video/mp4' || file.type === 'video/webm';
+    const hasAudioExtension = file.name.match(/\.(mp3|mp4|wav|m4a|ogg|webm|aac|flac|mpeg|mpga)$/i);
+    if (!isAudioMime && !hasAudioExtension) {
+      setError('Please select an audio file (MP3, WAV, M4A, MP4, etc.)');
       return;
     }
 
