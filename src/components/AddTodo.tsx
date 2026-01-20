@@ -479,6 +479,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
           isDraggingFile ? 'ring-2 ring-[var(--accent)] border-[var(--accent)]' : 'hover:shadow-[var(--shadow-lg)] hover:border-[var(--accent)]/40 focus-within:border-[var(--accent)]/60 focus-within:shadow-[var(--shadow-lg)]'
         }`}
       >
+        {/* Brand accent bar - adds visual warmth */}
+        <div className="h-1 bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-sky)] to-[var(--brand-blue)]" />
         {/* File drop overlay */}
         {isDraggingFile && (
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[var(--radius-xl)] bg-[var(--accent-light)] backdrop-blur-sm">
@@ -495,8 +497,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
         )}
 
         {/* Main input area */}
-        <div className="p-4">
-          <div className="flex gap-2">
+        <div className="p-4 pt-5">
+          <div className="flex gap-3">
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
@@ -511,11 +513,11 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                   setTimeout(() => setIsInputFocused(false), 150);
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder={isRecording ? "Speak your task..." : "Add a task... (paste text for AI help)"}
+                placeholder={isRecording ? "Speak your task..." : "What needs to be done?"}
                 rows={1}
                 disabled={isProcessing}
                 aria-label="New task description"
-                className={`input-refined w-full px-4 py-4 pr-10 resize-none text-base min-h-[56px] text-[var(--foreground)] placeholder-[var(--text-muted)] font-medium ${
+                className={`w-full px-4 py-4 pr-10 resize-none text-base min-h-[56px] text-[var(--foreground)] placeholder-[var(--text-light)] font-medium rounded-[var(--radius-lg)] border-2 border-[var(--border)] bg-[var(--surface)] transition-all duration-200 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-4 focus:ring-[var(--accent-light)] focus:shadow-[inset_0_2px_4px_rgba(0,51,160,0.03)] ${
                   isRecording ? 'border-[var(--danger)] ring-2 ring-[var(--danger-light)]' : ''
                 }`}
                 style={{ maxHeight: '120px' }}
@@ -534,69 +536,75 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
               )}
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-1.5 flex-shrink-0">
-              {/* File import button (voicemail, PDF, image) */}
-              <button
-                type="button"
-                onClick={() => setShowFileImporter(true)}
-                disabled={isProcessing}
-                className="p-2.5 rounded-[var(--radius-lg)] transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation bg-[var(--accent-light)] text-[var(--accent)] hover:bg-[var(--accent)]/20 active:scale-95 disabled:opacity-50"
-                aria-label="Import file"
-                title="Import voicemail, PDF, or image to create task"
-              >
-                <Upload className="w-5 h-5" />
-              </button>
-
-              {/* Voice input - only show if supported */}
-              {speechSupported && (
+            {/* Action buttons - grouped dock style */}
+            <div className="flex gap-2 flex-shrink-0 items-center">
+              {/* Secondary actions grouped in a subtle container */}
+              <div className="flex items-center gap-0.5 p-1 rounded-full bg-[var(--surface-2)] border border-[var(--border-subtle)]">
+                {/* File import button */}
                 <button
                   type="button"
-                  onClick={toggleRecording}
+                  onClick={() => setShowFileImporter(true)}
                   disabled={isProcessing}
-                  className={`p-2.5 rounded-[var(--radius-lg)] transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation ${
-                    isRecording
-                      ? 'bg-[var(--danger)] text-white animate-pulse'
-                      : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
-                  } active:scale-95 disabled:opacity-50`}
-                  aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
-                  aria-pressed={isRecording}
+                  className="p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] active:scale-95 disabled:opacity-50"
+                  aria-label="Import file"
+                  title="Import voicemail, PDF, or image"
                 >
-                  {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  <Upload className="w-4.5 h-4.5" />
                 </button>
-              )}
 
-              {/* AI button - prominent when complex input detected */}
-              {text.trim() && (
-                <button
-                  type="button"
-                  onClick={handleAiClick}
-                  disabled={isProcessing}
-                  className={`p-2.5 rounded-[var(--radius-lg)] transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation ${
-                    isComplexInput()
-                      ? 'bg-[var(--accent)] text-white hover:opacity-90 shadow-[var(--shadow-blue)]'
-                      : 'bg-[var(--accent-light)] text-[var(--accent)] hover:bg-[var(--accent)]/20'
-                  } active:scale-95 disabled:opacity-50`}
-                  aria-label="Parse with AI"
-                  title={isComplexInput() ? 'Complex input detected - AI can help' : 'Parse with AI'}
-                >
-                  {isProcessing ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-5 h-5" />
-                  )}
-                </button>
-              )}
+                {/* Voice input - only show if supported */}
+                {speechSupported && (
+                  <button
+                    type="button"
+                    onClick={toggleRecording}
+                    disabled={isProcessing}
+                    className={`p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation ${
+                      isRecording
+                        ? 'bg-[var(--danger)] text-white animate-pulse'
+                        : 'text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
+                    } active:scale-95 disabled:opacity-50`}
+                    aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
+                    aria-pressed={isRecording}
+                  >
+                    {isRecording ? <MicOff className="w-4.5 h-4.5" /> : <Mic className="w-4.5 h-4.5" />}
+                  </button>
+                )}
 
-              {/* Add button */}
+                {/* Separator and AI button when text is present */}
+                {text.trim() && (
+                  <>
+                    <div className="w-px h-6 bg-[var(--border)] mx-0.5" />
+                    <button
+                      type="button"
+                      onClick={handleAiClick}
+                      disabled={isProcessing}
+                      className={`p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation ${
+                        isComplexInput()
+                          ? 'bg-[var(--accent)] text-white shadow-sm'
+                          : 'text-[var(--accent)] hover:bg-[var(--accent-light)]'
+                      } active:scale-95 disabled:opacity-50`}
+                      aria-label="Parse with AI"
+                      title={isComplexInput() ? 'Complex input - AI can help organize' : 'Use AI to parse'}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4.5 h-4.5" />
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Primary Add button - remains prominent */}
               <button
                 type="submit"
                 disabled={!text.trim() || isProcessing}
-                className="px-5 py-2.5 rounded-[var(--radius-lg)] bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-all duration-200 min-h-[48px] flex items-center gap-2 touch-manipulation shadow-[var(--shadow-blue)] active:scale-95"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] hover:from-[var(--brand-navy)] hover:to-[var(--brand-blue)] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-all duration-200 min-h-[48px] flex items-center gap-2 touch-manipulation shadow-[var(--shadow-blue)] active:scale-95"
                 aria-label="Add task"
               >
                 <Plus className="w-5 h-5" />
-                <span className="hidden sm:inline">Add</span>
+                <span className="hidden sm:inline tracking-tight">Add</span>
               </button>
             </div>
           </div>
@@ -633,21 +641,21 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
         {/* Options row - visible when focused or has content */}
         {(showOptions || text) && (
           <div className="px-4 pb-4 pt-3 border-t border-[var(--border-subtle)]">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Priority - pill style */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Priority - improved pill proportions */}
               <div
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm"
                 style={{
                   borderColor: priorityConfig.color + '40',
-                  backgroundColor: priorityConfig.color + '10'
+                  backgroundColor: priorityConfig.color + '08'
                 }}
               >
-                <Flag className="w-3.5 h-3.5 flex-shrink-0" style={{ color: priorityConfig.color }} />
+                <Flag className="w-4 h-4 flex-shrink-0" style={{ color: priorityConfig.color }} />
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as TodoPriority)}
                   aria-label="Priority"
-                  className="bg-transparent text-xs font-semibold cursor-pointer focus:outline-none appearance-none pr-1"
+                  className="bg-transparent text-sm font-semibold cursor-pointer focus:outline-none appearance-none pr-1"
                   style={{ color: priorityConfig.color }}
                 >
                   <option value="low" className="text-[var(--foreground)] bg-[var(--surface)]">Low</option>
@@ -657,36 +665,36 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                 </select>
               </div>
 
-              {/* Due date - pill style */}
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm ${
+              {/* Due date - improved pill with quick date chips */}
+              <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm ${
                 dueDate
-                  ? 'border-[var(--accent)]/30 bg-[var(--accent-light)]'
+                  ? 'border-[var(--accent)]/40 bg-[var(--accent-light)]'
                   : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
               }`}>
-                <Calendar className={`w-3.5 h-3.5 flex-shrink-0 ${dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
+                <Calendar className={`w-4 h-4 flex-shrink-0 ${dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   aria-label="Due date"
-                  className={`bg-transparent text-xs font-medium cursor-pointer focus:outline-none w-[90px] ${
+                  className={`bg-transparent text-sm font-medium cursor-pointer focus:outline-none w-[100px] ${
                     dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
                   }`}
                 />
               </div>
 
-              {/* Assignee - pill style */}
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm ${
+              {/* Assignee - improved pill proportions */}
+              <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm ${
                 assignedTo
-                  ? 'border-[var(--success)]/30 bg-[var(--success)]/10'
+                  ? 'border-[var(--success)]/40 bg-[var(--success)]/08'
                   : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
               }`}>
-                <User className={`w-3.5 h-3.5 flex-shrink-0 ${assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`} />
+                <User className={`w-4 h-4 flex-shrink-0 ${assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`} />
                 <select
                   value={assignedTo}
                   onChange={(e) => setAssignedTo(e.target.value)}
                   aria-label="Assign to"
-                  className={`bg-transparent text-xs font-medium cursor-pointer focus:outline-none appearance-none pr-1 ${
+                  className={`bg-transparent text-sm font-medium cursor-pointer focus:outline-none appearance-none pr-1 ${
                     assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'
                   }`}
                 >
@@ -708,35 +716,47 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
           </div>
         )}
 
-        {/* Suggested Subtasks (Feature 4) */}
+        {/* Suggested Subtasks with visual hierarchy */}
         {suggestedSubtasks.length > 0 && (
           <div className="px-4 pb-4 border-t border-[var(--border-subtle)]">
-            <div className="flex items-center justify-between mb-2 pt-3">
-              <span className="text-xs font-medium text-[var(--text-muted)]">
-                Suggested Subtasks
-              </span>
+            <div className="flex items-center justify-between mb-3 pt-3">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                <span className="text-sm font-semibold text-[var(--foreground)]">
+                  Suggested Subtasks
+                </span>
+                <span className="text-xs text-[var(--text-muted)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full">
+                  {suggestedSubtasks.length}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setSuggestedSubtasks([])}
-                className="text-xs text-[var(--text-light)] hover:text-[var(--text-muted)] transition-colors"
+                className="text-xs text-[var(--text-light)] hover:text-[var(--danger)] transition-colors flex items-center gap-1"
               >
-                Clear
+                <X className="w-3 h-3" />
+                Clear all
               </button>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {suggestedSubtasks.map((subtask, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-2 text-sm text-[var(--text-muted)] px-2 py-1.5 rounded-lg bg-[var(--surface-2)]"
+                  className="flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl border-l-3 transition-all hover:bg-[var(--surface-2)]"
+                  style={{
+                    borderLeftColor: `rgba(0, 51, 160, ${0.4 + index * 0.15})`,
+                    background: `linear-gradient(90deg, rgba(0, 51, 160, 0.03) 0%, transparent 50%)`
+                  }}
                 >
-                  <span className="w-4 h-4 rounded border border-[var(--border)] flex items-center justify-center text-xs">
+                  <span className="w-5 h-5 rounded-full bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-sm">
                     {index + 1}
                   </span>
-                  <span className="flex-1">{subtask}</span>
+                  <span className="flex-1 text-[var(--foreground)]">{subtask}</span>
                 </div>
               ))}
-              <p className="text-xs text-[var(--text-light)] mt-2">
-                These subtasks will be added when you create the task
+              <p className="text-xs text-[var(--text-muted)] mt-3 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-[var(--accent)]" />
+                These will be added automatically when you create the task
               </p>
             </div>
           </div>
@@ -758,17 +778,24 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
         />
       )}
 
-      {/* Loading modal while processing */}
+      {/* Loading modal with brand personality */}
       {showModal && !parsedResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Processing">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] p-8 bg-[var(--surface)]">
-            <div className="text-center">
-              <div className="relative inline-block">
-                <Loader2 className="w-10 h-10 text-[var(--accent)] animate-spin mx-auto mb-3" />
-                <div className="absolute inset-0 bg-[var(--accent)]/20 rounded-full blur-xl animate-pulse" />
+          <div className="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] p-8 bg-[var(--surface)] min-w-[280px]">
+            <div className="text-center space-y-4">
+              {/* Animated brand rings */}
+              <div className="relative mx-auto w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-2 border-[var(--brand-sky)] animate-ping opacity-20" />
+                <div className="absolute inset-2 rounded-full border-2 border-[var(--brand-blue)] animate-ping opacity-30 animation-delay-150" />
+                <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center shadow-[var(--shadow-blue)]">
+                  <Sparkles className="w-7 h-7 text-white animate-pulse" />
+                </div>
               </div>
-              <p className="text-[var(--text-muted)]">Analyzing your input...</p>
+              <div>
+                <p className="font-semibold text-[var(--foreground)]">Understanding your task...</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">We'll suggest subtasks and priority</p>
+              </div>
             </div>
           </div>
         </div>
