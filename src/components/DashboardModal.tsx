@@ -486,9 +486,7 @@ export default function DashboardModal({
                       <QuickActions
                         darkMode={darkMode}
                         onAddTask={() => handleAction(onAddTask)}
-                        onViewCalendar={onViewCalendar ? () => handleAction(onViewCalendar) : undefined}
                         onOpenChat={onOpenChat ? () => handleAction(onOpenChat) : undefined}
-                        onViewReport={onViewReport ? () => handleAction(onViewReport) : undefined}
                       />
 
                       {/* Today's Focus (AI Suggested) */}

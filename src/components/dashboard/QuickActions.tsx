@@ -1,30 +1,33 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Plus, Calendar, MessageCircle, BarChart3, LucideIcon } from 'lucide-react';
+import { Plus, AlertCircle, Play, MessageCircle, LucideIcon } from 'lucide-react';
 
 interface QuickAction {
   id: string;
   label: string;
   icon: LucideIcon;
   onClick: () => void;
-  variant?: 'default' | 'primary';
+  variant?: 'default' | 'primary' | 'warning';
+  badge?: number;
 }
 
 interface QuickActionsProps {
   onAddTask?: () => void;
-  onViewCalendar?: () => void;
+  onFilterOverdue?: () => void;
+  onStartFocus?: () => void;
   onOpenChat?: () => void;
-  onViewReport?: () => void;
   darkMode?: boolean;
+  overdueCount?: number;
 }
 
 export default function QuickActions({
   onAddTask,
-  onViewCalendar,
+  onFilterOverdue,
+  onStartFocus,
   onOpenChat,
-  onViewReport,
   darkMode = false,
+  overdueCount = 0,
 }: QuickActionsProps) {
   const actions: QuickAction[] = [
     {
@@ -35,22 +38,24 @@ export default function QuickActions({
       variant: 'primary',
     },
     {
-      id: 'calendar',
-      label: 'Calendar',
-      icon: Calendar,
-      onClick: onViewCalendar || (() => {}),
+      id: 'my-overdue',
+      label: 'My Overdue',
+      icon: AlertCircle,
+      onClick: onFilterOverdue || (() => {}),
+      variant: overdueCount > 0 ? 'warning' : 'default',
+      badge: overdueCount > 0 ? overdueCount : undefined,
+    },
+    {
+      id: 'start-focus',
+      label: 'Start Focus',
+      icon: Play,
+      onClick: onStartFocus || (() => {}),
     },
     {
       id: 'chat',
       label: 'Team Chat',
       icon: MessageCircle,
       onClick: onOpenChat || (() => {}),
-    },
-    {
-      id: 'report',
-      label: 'Weekly Report',
-      icon: BarChart3,
-      onClick: onViewReport || (() => {}),
     },
   ];
 
@@ -64,6 +69,7 @@ export default function QuickActions({
       {actions.map((action, index) => {
         const Icon = action.icon;
         const isPrimary = action.variant === 'primary';
+        const isWarning = action.variant === 'warning';
 
         return (
           <motion.button
@@ -75,7 +81,7 @@ export default function QuickActions({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className={`
-              flex items-center justify-center gap-2
+              relative flex items-center justify-center gap-2
               px-3 py-2.5 rounded-lg
               text-sm font-medium
               transition-colors duration-150
@@ -83,21 +89,38 @@ export default function QuickActions({
                 ? darkMode
                   ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90'
                   : 'bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90'
-                : darkMode
-                  ? 'bg-white/5 text-white/80 hover:bg-white/10 hover:text-white'
-                  : 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]'
+                : isWarning
+                  ? darkMode
+                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'
+                  : darkMode
+                    ? 'bg-white/5 text-white/80 hover:bg-white/10 hover:text-white'
+                    : 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]'
               }
               border
               ${isPrimary
                 ? 'border-transparent'
-                : darkMode
-                  ? 'border-white/10'
-                  : 'border-[var(--border)]'
+                : isWarning
+                  ? '' // border color set above
+                  : darkMode
+                    ? 'border-white/10'
+                    : 'border-[var(--border)]'
               }
             `}
           >
             <Icon className="w-4 h-4" />
             <span className="hidden sm:inline">{action.label}</span>
+            {action.badge !== undefined && (
+              <span className={`
+                absolute -top-1.5 -right-1.5
+                min-w-[18px] h-[18px]
+                flex items-center justify-center
+                text-xs font-bold rounded-full
+                ${darkMode ? 'bg-red-500 text-white' : 'bg-red-500 text-white'}
+              `}>
+                {action.badge}
+              </span>
+            )}
           </motion.button>
         );
       })}

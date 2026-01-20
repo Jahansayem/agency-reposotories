@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser } from '@/types/todo';
@@ -120,9 +120,10 @@ export default function AppShell({
   // New task trigger callback - allows child components to register handlers
   const [newTaskCallback, setNewTaskCallback] = useState<(() => void) | null>(null);
 
-  // Modal trigger callbacks - allows child components to register handlers
-  const [weeklyChartCallback, setWeeklyChartCallback] = useState<(() => void) | null>(null);
-  const [shortcutsCallback, setShortcutsCallback] = useState<(() => void) | null>(null);
+  // Modal trigger callbacks - use refs to avoid stale closure issues
+  // When NavigationSidebar calls triggerWeeklyChart/triggerShortcuts, the ref always has the latest callback
+  const weeklyChartCallbackRef = useRef<(() => void) | null>(null);
+  const shortcutsCallbackRef = useRef<(() => void) | null>(null);
 
   // Handle responsive sidebar
   useEffect(() => {
@@ -234,28 +235,28 @@ export default function AppShell({
     setNewTaskCallback(() => callback);
   }, []);
 
-  // Weekly chart trigger - calls registered callback
+  // Weekly chart trigger - calls registered callback via ref (avoids stale closure)
   const triggerWeeklyChart = useCallback(() => {
-    if (weeklyChartCallback) {
-      weeklyChartCallback();
+    if (weeklyChartCallbackRef.current) {
+      weeklyChartCallbackRef.current();
     }
-  }, [weeklyChartCallback]);
+  }, []);
 
   // Allow child components to register their weekly chart handler
   const onWeeklyChartTrigger = useCallback((callback: () => void) => {
-    setWeeklyChartCallback(() => callback);
+    weeklyChartCallbackRef.current = callback;
   }, []);
 
-  // Shortcuts trigger - calls registered callback
+  // Shortcuts trigger - calls registered callback via ref (avoids stale closure)
   const triggerShortcuts = useCallback(() => {
-    if (shortcutsCallback) {
-      shortcutsCallback();
+    if (shortcutsCallbackRef.current) {
+      shortcutsCallbackRef.current();
     }
-  }, [shortcutsCallback]);
+  }, []);
 
   // Allow child components to register their shortcuts handler
   const onShortcutsTrigger = useCallback((callback: () => void) => {
-    setShortcutsCallback(() => callback);
+    shortcutsCallbackRef.current = callback;
   }, []);
 
   const contextValue: AppShellContextType = {

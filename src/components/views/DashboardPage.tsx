@@ -6,12 +6,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
-  Plus,
   ChevronRight,
   Sun,
   Moon,
   Sunrise,
-  Clock,
   Sparkles,
   TrendingUp,
   AlertCircle,
@@ -21,22 +19,13 @@ import {
   Award,
   Brain,
   Users,
-  UserCheck,
-  BarChart3,
-  AlertOctagon,
-  Send,
-  RefreshCw,
   Calendar,
-  ListTodo,
   FileText,
   Phone,
   DollarSign,
   Shield,
   Car,
-  CalendarDays,
 } from 'lucide-react';
-import AnimatedProgressRing from '@/components/dashboard/AnimatedProgressRing';
-import StatCard from '@/components/dashboard/StatCard';
 import QuickActions from '@/components/dashboard/QuickActions';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -65,8 +54,7 @@ interface DashboardPageProps {
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;
   onOpenChat?: () => void;
-  onViewCalendar?: () => void;
-  onViewReport?: () => void;
+  onStartFocus?: () => void;
 }
 
 interface WeekDay {
@@ -87,8 +75,7 @@ export default function DashboardPage({
   onFilterOverdue,
   onFilterDueToday,
   onOpenChat,
-  onViewCalendar,
-  onViewReport,
+  onStartFocus,
 }: DashboardPageProps) {
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
@@ -279,20 +266,14 @@ export default function DashboardPage({
     }
   }, [onOpenChat, setActiveView]);
 
-  const handleViewCalendar = useCallback(() => {
-    if (onViewCalendar) {
-      onViewCalendar();
+  const handleStartFocus = useCallback(() => {
+    if (onStartFocus) {
+      onStartFocus();
     } else {
-      // Calendar view is opened via tasks view with calendar layout
+      // Default: navigate to tasks to start working on top priority
       setActiveView('tasks');
     }
-  }, [onViewCalendar, setActiveView]);
-
-  const handleViewReport = useCallback(() => {
-    if (onViewReport) {
-      onViewReport();
-    }
-  }, [onViewReport]);
+  }, [onStartFocus, setActiveView]);
 
   const getInsightIcon = (type: ProductivityInsight['type']) => {
     switch (type) {
@@ -365,45 +346,14 @@ export default function DashboardPage({
               <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
                 {currentUser.name}
               </h1>
-              {aiData.streakMessage ? (
-                <div className="flex items-center gap-2 text-amber-300 text-sm font-medium">
-                  <Flame className="w-4 h-4" />
-                  {aiData.streakMessage}
-                </div>
-              ) : (
-                <p className="text-white/70 text-sm">
-                  {stats.weeklyCompleted} completed this week • {stats.totalActive} active tasks
-                </p>
-              )}
-            </div>
-
-            {/* Productivity Score */}
-            <div className="flex flex-col items-center">
-              <AnimatedProgressRing
-                progress={aiData.productivityScore}
-                size={72}
-                strokeWidth={6}
-                darkMode={true}
-                gradientId="dashboardPageProgressGradient"
-              >
-                <div className="flex flex-col items-center">
-                  <span className={`text-xl font-bold ${
-                    aiData.productivityScore >= 70
-                      ? 'text-emerald-400'
-                      : aiData.productivityScore >= 40
-                        ? 'text-amber-400'
-                        : 'text-red-400'
-                  }`}>
-                    {aiData.productivityScore}
-                  </span>
-                </div>
-              </AnimatedProgressRing>
-              <span className="text-white/40 text-xs mt-2">Productivity</span>
+              <p className="text-white/70 text-sm">
+                {stats.totalActive} active tasks
+              </p>
             </div>
           </div>
 
-          {/* Quick Stats Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+          {/* Quick Stats Row - Reordered: Overdue (critical) -> Due Today (urgent) -> Due This Week */}
+          <div className="grid grid-cols-3 gap-3 mt-6">
             <motion.button
               onClick={handleFilterOverdue}
               whileHover={{ scale: 1.02 }}
@@ -424,9 +374,15 @@ export default function DashboardPage({
               onClick={handleFilterDueToday}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="p-4 rounded-xl text-left bg-white/10 hover:bg-white/15 transition-all"
+              className={`p-4 rounded-xl text-left transition-all ${
+                stats.dueToday > 0
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30'
+                  : 'bg-white/10 hover:bg-white/15'
+              }`}
             >
-              <p className="text-2xl font-bold text-white">{stats.dueToday}</p>
+              <p className={`text-2xl font-bold ${stats.dueToday > 0 ? 'text-amber-400' : 'text-white'}`}>
+                {stats.dueToday}
+              </p>
               <p className="text-white/60 text-xs">Due Today</p>
             </motion.button>
 
@@ -436,18 +392,8 @@ export default function DashboardPage({
               transition={{ delay: 0.2 }}
               className="p-4 rounded-xl text-left bg-white/10"
             >
-              <p className="text-2xl font-bold text-amber-400">{stats.highPriority}</p>
-              <p className="text-white/60 text-xs">High Priority</p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="p-4 rounded-xl text-left bg-white/10"
-            >
-              <p className="text-2xl font-bold text-emerald-400">{stats.weeklyCompleted}</p>
-              <p className="text-white/60 text-xs">This Week</p>
+              <p className="text-2xl font-bold text-white">{stats.upcoming}</p>
+              <p className="text-white/60 text-xs">Due This Week</p>
             </motion.div>
           </div>
         </div>
@@ -455,15 +401,65 @@ export default function DashboardPage({
 
       {/* Main Content Grid */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Quick Actions */}
+        {/* Critical Alerts - FIRST thing users should see */}
+        {(stats.overdue > 0 || aiData.neglectedTasks.length > 0) && (
+          <Card className="mb-6">
+            <SectionTitle icon={AlertTriangle} title="Critical Alerts" />
+            <div className="space-y-3">
+              {stats.overdue > 0 && (
+                <button
+                  onClick={handleFilterOverdue}
+                  className="w-full flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors group"
+                >
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <div className="flex-1 text-left">
+                    <span className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                      {stats.overdue} overdue tasks
+                    </span>
+                    <span className={`text-sm ml-2 ${darkMode ? 'text-white/60' : 'text-slate-500'}`}>
+                      need immediate attention
+                    </span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-red-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                </button>
+              )}
+
+              {aiData.neglectedTasks.slice(0, 2).map((item) => (
+                <div
+                  key={item.todo.id}
+                  className={`p-4 rounded-xl border ${getUrgencyBg(item.urgencyLevel)}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${getUrgencyColor(item.urgencyLevel)}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {item.todo.text}
+                      </p>
+                      <p className={`text-xs mt-1 ${darkMode ? 'text-white/60' : 'text-slate-500'}`}>
+                        {item.daysSinceActivity} days without activity
+                      </p>
+                      <p className={`text-xs mt-2 italic ${darkMode ? 'text-white/50' : 'text-slate-600'}`}>
+                        <Brain className="w-3 h-3 inline mr-1" />
+                        {item.aiSuggestion}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Quick Actions - Actionable buttons below alerts */}
         <Card className="mb-6">
           <SectionTitle icon={Sparkles} title="Quick Actions" />
           <QuickActions
             darkMode={darkMode}
             onAddTask={handleAddTask}
-            onViewCalendar={handleViewCalendar}
+            onFilterOverdue={handleFilterOverdue}
+            onStartFocus={handleStartFocus}
             onOpenChat={handleOpenChat}
-            onViewReport={handleViewReport}
+            overdueCount={stats.overdue}
           />
         </Card>
 
@@ -471,55 +467,6 @@ export default function DashboardPage({
 
           {/* Left Column - Tasks */}
           <div className="lg:col-span-2 space-y-6">
-
-            {/* Critical Alerts */}
-            {(stats.overdue > 0 || aiData.neglectedTasks.length > 0) && (
-              <Card>
-                <SectionTitle icon={AlertTriangle} title="Critical Alerts" />
-                <div className="space-y-3">
-                  {stats.overdue > 0 && (
-                    <button
-                      onClick={handleFilterOverdue}
-                      className="w-full flex items-center gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 hover:bg-red-500/20 transition-colors group"
-                    >
-                      <AlertTriangle className="w-5 h-5 text-red-500" />
-                      <div className="flex-1 text-left">
-                        <span className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {stats.overdue} overdue tasks
-                        </span>
-                        <span className={`text-sm ml-2 ${darkMode ? 'text-white/60' : 'text-slate-500'}`}>
-                          need immediate attention
-                        </span>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-red-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-                    </button>
-                  )}
-
-                  {aiData.neglectedTasks.slice(0, 2).map((item) => (
-                    <div
-                      key={item.todo.id}
-                      className={`p-4 rounded-xl border ${getUrgencyBg(item.urgencyLevel)}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`w-2 h-2 mt-2 rounded-full flex-shrink-0 ${getUrgencyColor(item.urgencyLevel)}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                            {item.todo.text}
-                          </p>
-                          <p className={`text-xs mt-1 ${darkMode ? 'text-white/60' : 'text-slate-500'}`}>
-                            {item.daysSinceActivity} days without activity
-                          </p>
-                          <p className={`text-xs mt-2 italic ${darkMode ? 'text-white/50' : 'text-slate-600'}`}>
-                            <Brain className="w-3 h-3 inline mr-1" />
-                            {item.aiSuggestion}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            )}
 
             {/* Today's Focus */}
             <Card>
@@ -589,83 +536,6 @@ export default function DashboardPage({
                   </span>
                 </div>
               )}
-            </Card>
-
-            {/* This Week Progress */}
-            <Card>
-              <SectionTitle icon={BarChart3} title="This Week's Progress" />
-
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                    {stats.weeklyCompleted}
-                  </span>
-                  <span className={`text-sm ml-2 ${darkMode ? 'text-white/60' : 'text-slate-500'}`}>
-                    of {stats.weeklyTotal} tasks ({stats.weeklyRatio}%)
-                  </span>
-                </div>
-                <div className={`text-right ${darkMode ? 'text-white/60' : 'text-slate-500'}`}>
-                  <p className="text-xs">Best day</p>
-                  <p className="font-semibold">{stats.maxDaily} {stats.maxDaily === 1 ? 'task' : 'tasks'}</p>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div className={`h-3 rounded-full mb-6 ${darkMode ? 'bg-white/10' : 'bg-slate-100'}`}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.max(stats.weeklyRatio, 2)}%` }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className={`h-full rounded-full ${
-                    stats.weeklyRatio >= 50 ? 'bg-emerald-500' :
-                    stats.weeklyRatio >= 25 ? 'bg-amber-500' :
-                    'bg-[#0033A0]'
-                  }`}
-                />
-              </div>
-
-              {/* Daily chart */}
-              <div className="flex items-end justify-between gap-3 h-32">
-                {stats.weekData.map((day, index) => {
-                  const height = stats.maxDaily > 0 ? (day.completed / stats.maxDaily) * 100 : 0;
-                  // Minimum bar height for visibility: 12px for empty, 24px for non-empty
-                  // Max height is ~80px (leaving room for labels below in h-32 container)
-                  const maxBarHeight = 80;
-                  const barHeight = day.completed > 0
-                    ? Math.max((height / 100) * maxBarHeight, 24)
-                    : 12;
-                  return (
-                    <div key={day.dayName} className="flex-1 flex flex-col items-center gap-2">
-                      <div className="w-full flex-1 flex flex-col justify-end">
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: barHeight }}
-                          transition={{ delay: 0.3 + index * 0.05, duration: 0.3 }}
-                          className={`w-full rounded-t-lg ${
-                            day.isToday
-                              ? 'bg-[#0033A0]'
-                              : day.completed > 0
-                                ? darkMode ? 'bg-[#0033A0]/60' : 'bg-[#0033A0]/30'
-                                : darkMode ? 'bg-white/10' : 'bg-slate-200'
-                          }`}
-                        />
-                      </div>
-                      <div className="text-center">
-                        <p className={`text-xs font-medium ${
-                          day.isToday
-                            ? darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'
-                            : darkMode ? 'text-white/60' : 'text-slate-500'
-                        }`}>
-                          {day.dayName}
-                        </p>
-                        <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                          {day.completed}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </Card>
 
             {/* Upcoming This Week */}
@@ -739,25 +609,6 @@ export default function DashboardPage({
                   <p className="text-sm">All caught up! No insights right now.</p>
                 </div>
               )}
-
-              {/* Daily Tip */}
-              <div className={`mt-4 p-4 rounded-xl ${
-                darkMode
-                  ? 'bg-gradient-to-br from-violet-900/20 to-indigo-900/20 border border-violet-500/20'
-                  : 'bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Lightbulb className="w-4 h-4 text-violet-500" />
-                  <span className={`text-xs font-semibold uppercase ${
-                    darkMode ? 'text-violet-300' : 'text-violet-600'
-                  }`}>
-                    Daily Tip
-                  </span>
-                </div>
-                <p className={`text-sm italic ${darkMode ? 'text-white/70' : 'text-slate-700'}`}>
-                  "{aiData.motivationalQuote}"
-                </p>
-              </div>
             </Card>
 
             {/* Team Overview (if manager) */}
@@ -879,30 +730,6 @@ export default function DashboardPage({
               </Card>
             )}
 
-            {/* Quick Actions */}
-            <Card>
-              <SectionTitle icon={ListTodo} title="Quick Actions" />
-              <div className="space-y-2">
-                <button
-                  onClick={handleAddTask}
-                  className="w-full flex items-center justify-center gap-2 p-4 rounded-xl bg-[#0033A0] text-white font-semibold hover:bg-[#0028A0] transition-colors"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add New Task
-                </button>
-                <button
-                  onClick={handleNavigateToTasks}
-                  className={`w-full flex items-center justify-center gap-2 p-4 rounded-xl font-semibold transition-colors ${
-                    darkMode
-                      ? 'bg-white/10 text-white hover:bg-white/15'
-                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
-                  }`}
-                >
-                  View All Tasks
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </Card>
           </div>
         </div>
       </div>
