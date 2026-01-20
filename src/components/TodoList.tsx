@@ -519,13 +519,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       });
 
       // Send rich task card notification if task is assigned to someone else (Feature 2)
-      console.log('[TodoList] Checking notification condition:', {
-        assigned_to: newTodo.assigned_to,
-        userName,
-        shouldNotify: newTodo.assigned_to && newTodo.assigned_to !== userName,
-      });
       if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
-        console.log('[TodoList] Calling sendTaskAssignmentNotification');
         sendTaskAssignmentNotification({
           taskId: newTodo.id,
           taskText: newTodo.text,
