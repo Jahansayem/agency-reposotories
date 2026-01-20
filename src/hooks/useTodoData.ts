@@ -15,6 +15,7 @@ import { logActivity } from '@/lib/activityLogger';
 import { shouldShowWelcomeNotification } from '@/components/WelcomeBackNotification';
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 
 export function useTodoData(currentUser: AuthUser) {
   const {
@@ -181,6 +182,19 @@ export function useTodoData(currentUser: AuthUser) {
         has_transcription: !!transcription,
       },
     });
+
+    // Send notification if task is assigned to someone else
+    if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
+      sendTaskAssignmentNotification({
+        taskId: newTodo.id,
+        taskText: newTodo.text,
+        assignedTo: newTodo.assigned_to,
+        assignedBy: userName,
+        dueDate: newTodo.due_date,
+        priority: newTodo.priority,
+        subtasks: newTodo.subtasks,
+      });
+    }
 
     // Auto-attach source file if provided
     if (sourceFile) {

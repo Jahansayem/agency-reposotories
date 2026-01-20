@@ -746,6 +746,19 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logger.error('Error duplicating todo', insertError, { component: 'TodoList' });
       // Rollback optimistic update
       deleteTodoFromStore(newTodo.id);
+    } else {
+      // Send notification if the duplicated task is assigned to someone else
+      if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
+        sendTaskAssignmentNotification({
+          taskId: newTodo.id,
+          taskText: newTodo.text,
+          assignedTo: newTodo.assigned_to,
+          assignedBy: userName,
+          dueDate: newTodo.due_date,
+          priority: newTodo.priority,
+          notes: newTodo.notes,
+        });
+      }
     }
   };
 
@@ -876,7 +889,22 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
     if (newTodo.notes) insertData.notes = newTodo.notes;
 
-    await supabase.from('todos').insert([insertData]);
+    const { error: insertError } = await supabase.from('todos').insert([insertData]);
+
+    if (!insertError) {
+      // Send notification for recurring task if assigned to someone else
+      if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
+        sendTaskAssignmentNotification({
+          taskId: newTodo.id,
+          taskText: newTodo.text,
+          assignedTo: newTodo.assigned_to,
+          assignedBy: userName,
+          dueDate: newTodo.due_date,
+          priority: newTodo.priority,
+          notes: newTodo.notes,
+        });
+      }
+    }
   };
 
   const toggleTodo = async (id: string, completed: boolean) => {

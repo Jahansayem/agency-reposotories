@@ -91,7 +91,7 @@ export default function AddTaskModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed inset-x-4 top-[10vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 w-auto sm:w-full sm:max-w-lg"
+            className="fixed inset-x-4 top-[8vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 w-auto sm:w-full sm:max-w-2xl"
             role="dialog"
             aria-modal="true"
             aria-label="Add new task"
@@ -108,13 +108,13 @@ export default function AddTaskModal({
               {/* Header */}
               <div
                 className={`
-                  flex items-center justify-between px-5 py-4 border-b
+                  flex items-center justify-between px-6 py-5 border-b
                   ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
                 `}
               >
                 <h2
                   className={`
-                    text-lg font-semibold
+                    text-xl font-semibold
                     ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
                   `}
                 >
@@ -136,7 +136,7 @@ export default function AddTaskModal({
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-6 pt-4">
                 <AddTodo
                   onAdd={handleAdd}
                   users={users}

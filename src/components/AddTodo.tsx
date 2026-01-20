@@ -157,7 +157,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
+      const newHeight = Math.min(textareaRef.current.scrollHeight, 200);
       textareaRef.current.style.height = `${newHeight}px`;
     }
   }, [text]);
@@ -497,8 +497,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
         )}
 
         {/* Main input area */}
-        <div className="p-4 pt-5">
-          <div className="flex gap-3">
+        <div className="p-5 pt-6">
+          <div className="flex flex-col gap-4">
             <div className="flex-1 relative">
               <textarea
                 ref={textareaRef}
@@ -513,21 +513,21 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                   setTimeout(() => setIsInputFocused(false), 150);
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder={isRecording ? "Speak your task..." : "What needs to be done?"}
-                rows={1}
+                placeholder={isRecording ? "Speak your task..." : "What needs to be done? Describe your task here..."}
+                rows={3}
                 disabled={isProcessing}
                 aria-label="New task description"
-                className={`w-full px-4 py-4 pr-10 resize-none text-base min-h-[56px] text-[var(--foreground)] placeholder-[var(--text-light)] font-medium rounded-[var(--radius-lg)] border border-white/10 bg-[var(--surface)] transition-all duration-200 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-4 focus:ring-[var(--accent-light)] focus:shadow-[inset_0_2px_4px_rgba(0,51,160,0.03)] ${
+                className={`w-full px-5 py-4 pr-12 resize-none text-base min-h-[100px] text-[var(--foreground)] placeholder-[var(--text-light)] font-medium rounded-[var(--radius-lg)] border border-white/10 bg-[var(--surface)] transition-all duration-200 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-4 focus:ring-[var(--accent-light)] focus:shadow-[inset_0_2px_4px_rgba(0,51,160,0.03)] ${
                   isRecording ? 'border-[var(--danger)] ring-2 ring-[var(--danger-light)]' : ''
                 }`}
-                style={{ maxHeight: '120px' }}
+                style={{ maxHeight: '200px' }}
               />
               {/* Clear button - appears when there's text */}
               {text.trim() && !isProcessing && (
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-[var(--text-light)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-all"
+                  className="absolute right-3 top-3 p-1.5 rounded-full text-[var(--text-light)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-all"
                   aria-label="Clear form"
                   title="Clear form"
                 >
@@ -537,7 +537,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
             </div>
 
             {/* Action buttons - grouped dock style */}
-            <div className="flex gap-2 flex-shrink-0 items-center">
+            <div className="flex gap-3 flex-shrink-0 items-center justify-between">
               {/* Secondary actions grouped in a subtle container */}
               <div className="flex items-center gap-0.5 p-1 rounded-full bg-[var(--surface-2)] border border-[var(--border-subtle)]">
                 {/* File import button */}
