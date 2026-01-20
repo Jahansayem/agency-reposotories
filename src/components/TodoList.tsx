@@ -55,7 +55,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAppShell } from './layout/AppShell';
 import { logActivity } from '@/lib/activityLogger';
 import { findPotentialDuplicates, shouldCheckForDuplicates, DuplicateMatch } from '@/lib/duplicateDetection';
-import { sendTaskAssignmentNotification, sendTaskCompletionNotification } from '@/lib/taskNotifications';
+import { sendTaskAssignmentNotification, sendTaskCompletionNotification, sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { getNextSuggestedTasks, calculateCompletionStreak, getEncouragementMessage } from '@/lib/taskSuggestions';
 import DuplicateDetectionModal from './DuplicateDetectionModal';
@@ -136,7 +136,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   const canViewArchive = currentUser.role === 'admin' || ['derrick', 'adrian'].includes(userName.toLowerCase());
 
   // Get navigation state from AppShell context
-  const { activeView, setActiveView } = useAppShell();
+  const { activeView, setActiveView, onWeeklyChartTrigger, onShortcutsTrigger } = useAppShell();
 
   // NOTE: isWideDesktop removed - no longer using UtilitySidebar or conditional chat layouts
   // const isWideDesktop = useIsDesktopWide(1280);
@@ -417,6 +417,15 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   useEffect(() => {
     hydrateFocusMode();
   }, []);
+
+  // Register modal triggers with AppShell (for sidebar navigation buttons)
+  useEffect(() => {
+    onWeeklyChartTrigger(() => setShowWeeklyChart(true));
+  }, [onWeeklyChartTrigger]);
+
+  useEffect(() => {
+    onShortcutsTrigger(() => setShowShortcuts(true));
+  }, [onShortcutsTrigger]);
 
   // Fetch activity log for streak calculation (useTodoData handles todos/users/real-time)
   const fetchActivityLog = useCallback(async () => {
@@ -1037,6 +1046,34 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         todoText: oldTodo.text,
         details: { from: oldTodo.assigned_to || null, to: assignedTo },
       });
+
+      // Send notification for task assignment/reassignment
+      if (assignedTo) {
+        // If there was a previous assignee, use reassignment notification
+        if (oldTodo.assigned_to) {
+          sendTaskReassignmentNotification(
+            id,
+            oldTodo.text,
+            oldTodo.assigned_to,
+            assignedTo,
+            userName,
+            oldTodo.priority,
+            oldTodo.due_date || undefined
+          );
+        } else {
+          // First-time assignment, use assignment notification
+          sendTaskAssignmentNotification({
+            taskId: id,
+            taskText: oldTodo.text,
+            assignedTo,
+            assignedBy: userName,
+            dueDate: oldTodo.due_date || undefined,
+            priority: oldTodo.priority || 'medium',
+            subtasks: oldTodo.subtasks,
+            notes: oldTodo.notes,
+          });
+        }
+      }
     }
   };
 

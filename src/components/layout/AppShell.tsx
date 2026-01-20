@@ -62,6 +62,12 @@ interface AppShellContextType {
   triggerNewTask: () => void;
   onNewTaskTrigger: (callback: () => void) => void;
 
+  // Modal triggers (Weekly Progress, Keyboard Shortcuts)
+  triggerWeeklyChart: () => void;
+  onWeeklyChartTrigger: (callback: () => void) => void;
+  triggerShortcuts: () => void;
+  onShortcutsTrigger: (callback: () => void) => void;
+
   // User info
   currentUser: AuthUser | null;
 }
@@ -113,6 +119,10 @@ export default function AppShell({
 
   // New task trigger callback - allows child components to register handlers
   const [newTaskCallback, setNewTaskCallback] = useState<(() => void) | null>(null);
+
+  // Modal trigger callbacks - allows child components to register handlers
+  const [weeklyChartCallback, setWeeklyChartCallback] = useState<(() => void) | null>(null);
+  const [shortcutsCallback, setShortcutsCallback] = useState<(() => void) | null>(null);
 
   // Handle responsive sidebar
   useEffect(() => {
@@ -224,6 +234,30 @@ export default function AppShell({
     setNewTaskCallback(() => callback);
   }, []);
 
+  // Weekly chart trigger - calls registered callback
+  const triggerWeeklyChart = useCallback(() => {
+    if (weeklyChartCallback) {
+      weeklyChartCallback();
+    }
+  }, [weeklyChartCallback]);
+
+  // Allow child components to register their weekly chart handler
+  const onWeeklyChartTrigger = useCallback((callback: () => void) => {
+    setWeeklyChartCallback(() => callback);
+  }, []);
+
+  // Shortcuts trigger - calls registered callback
+  const triggerShortcuts = useCallback(() => {
+    if (shortcutsCallback) {
+      shortcutsCallback();
+    }
+  }, [shortcutsCallback]);
+
+  // Allow child components to register their shortcuts handler
+  const onShortcutsTrigger = useCallback((callback: () => void) => {
+    setShortcutsCallback(() => callback);
+  }, []);
+
   const contextValue: AppShellContextType = {
     activeView,
     setActiveView,
@@ -242,6 +276,10 @@ export default function AppShell({
     closeMobileSheet,
     triggerNewTask,
     onNewTaskTrigger,
+    triggerWeeklyChart,
+    onWeeklyChartTrigger,
+    triggerShortcuts,
+    onShortcutsTrigger,
     currentUser,
   };
 
@@ -267,6 +305,8 @@ export default function AppShell({
           <NavigationSidebar
             currentUser={currentUser}
             onUserChange={onUserChange}
+            onShowWeeklyChart={triggerWeeklyChart}
+            onShowShortcuts={triggerShortcuts}
           />
 
           {/* ═══ MAIN CONTENT AREA ═══ */}

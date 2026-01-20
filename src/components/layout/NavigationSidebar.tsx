@@ -9,13 +9,13 @@ import {
   Archive,
   ChevronLeft,
   ChevronRight,
-  Search,
   LogOut,
   Moon,
   Sun,
   Plus,
-  Command,
   Inbox,
+  BarChart2,
+  Keyboard,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser, OWNER_USERNAME } from '@/types/todo';
@@ -30,6 +30,8 @@ import { useAppShell, ActiveView } from './AppShell';
 interface NavigationSidebarProps {
   currentUser: AuthUser;
   onUserChange?: (user: AuthUser | null) => void;
+  onShowWeeklyChart?: () => void;
+  onShowShortcuts?: () => void;
 }
 
 interface NavItem {
@@ -55,6 +57,8 @@ const secondaryNavItems: NavItem[] = [
 export default function NavigationSidebar({
   currentUser,
   onUserChange,
+  onShowWeeklyChart,
+  onShowShortcuts,
 }: NavigationSidebarProps) {
   const { theme, toggleTheme } = useTheme();
   const darkMode = theme === 'dark';
@@ -184,39 +188,8 @@ export default function NavigationSidebar({
         )}
       </div>
 
-      {/* ─── Search / Command Bar ─── */}
-      <div className="px-3 py-3">
-        <button
-          onClick={openCommandPalette}
-          className={`
-            w-full flex items-center gap-2 px-3 py-2.5 rounded-xl
-            transition-all border
-            ${darkMode
-              ? 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white/60'
-              : 'bg-[var(--surface-2)] border-transparent text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
-            }
-          `}
-        >
-          <Search className="w-4 h-4 flex-shrink-0" />
-          {isExpanded && (
-            <>
-              <span className="flex-1 text-left text-sm">Search...</span>
-              <kbd className={`
-                hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium
-                ${darkMode
-                  ? 'bg-white/10 text-white/40'
-                  : 'bg-[var(--surface)] text-[var(--text-light)]'
-                }
-              `}>
-                <Command className="w-3 h-3" />K
-              </kbd>
-            </>
-          )}
-        </button>
-      </div>
-
       {/* ─── Quick Add Button ─── */}
-      <div className="px-3 pb-2">
+      <div className="px-3 py-3">
         <button
           onClick={triggerNewTask}
           className={`
@@ -284,6 +257,50 @@ export default function NavigationSidebar({
             );
           })}
       </nav>
+
+      {/* ─── Utility Actions ─── */}
+      <div className="px-3 py-2 space-y-1">
+        {/* Weekly Progress */}
+        {onShowWeeklyChart && (
+          <button
+            onClick={onShowWeeklyChart}
+            className={`
+              w-full flex items-center gap-3 px-3 py-2 rounded-xl
+              font-medium text-sm transition-all duration-150
+              ${darkMode
+                ? 'text-white/60 hover:text-white hover:bg-white/5'
+                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+              }
+            `}
+          >
+            <BarChart2 className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+            {isExpanded && <span>Weekly Progress</span>}
+          </button>
+        )}
+
+        {/* Keyboard Shortcuts */}
+        {onShowShortcuts && (
+          <button
+            onClick={onShowShortcuts}
+            className={`
+              w-full flex items-center gap-3 px-3 py-2 rounded-xl
+              font-medium text-sm transition-all duration-150
+              ${darkMode
+                ? 'text-white/60 hover:text-white hover:bg-white/5'
+                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+              }
+            `}
+          >
+            <Keyboard className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+            {isExpanded && (
+              <>
+                <span className="flex-1 text-left">Shortcuts</span>
+                <span className={`text-xs ${darkMode ? 'text-white/30' : 'text-[var(--text-light)]'}`}>?</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
 
       {/* ─── Footer / User Section ─── */}
       <div className={`
