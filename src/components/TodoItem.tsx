@@ -510,25 +510,27 @@ export default function TodoItem({
               )}
             </div>
 
-            {/* Separator - only show if there are metadata badges */}
+            {/* Separator - only show if there are metadata badges (hidden on mobile) */}
             {(todo.assigned_to || subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0)) && (
-              <div className="w-px h-4 bg-[var(--border)] mx-1" />
+              <div className="w-px h-4 bg-[var(--border)] mx-1 hidden sm:block" />
             )}
 
-            {/* Assignment + Metadata group */}
+            {/* Assignment + Metadata group - secondary items hidden on mobile for density */}
             <div className="flex items-center gap-2">
-              {/* Assigned to */}
+              {/* Assigned to - hidden on mobile, shown in expanded view */}
               {todo.assigned_to && (
-                <Badge
-                  variant="brand"
-                  size="sm"
-                  icon={<User className="w-3 h-3" />}
-                >
-                  {todo.assigned_to}
-                </Badge>
+                <span className="hidden sm:inline-flex">
+                  <Badge
+                    variant="brand"
+                    size="sm"
+                    icon={<User className="w-3 h-3" />}
+                  >
+                    {todo.assigned_to}
+                  </Badge>
+                </span>
               )}
 
-              {/* Subtasks indicator */}
+              {/* Subtasks indicator - always visible as it's actionable */}
               {subtasks.length > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowSubtasks(!showSubtasks); }}
@@ -546,7 +548,7 @@ export default function TodoItem({
                 </button>
               )}
 
-              {/* Notes indicator */}
+              {/* Notes indicator - icon-only on mobile */}
               {todo.notes && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
@@ -558,12 +560,12 @@ export default function TodoItem({
                     icon={<MessageSquare className="w-3 h-3" />}
                     interactive
                   >
-                    Note
+                    <span className="hidden sm:inline">Note</span>
                   </Badge>
                 </button>
               )}
 
-              {/* Transcription indicator */}
+              {/* Transcription indicator - icon-only on mobile */}
               {todo.transcription && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowTranscription(!showTranscription); }}
@@ -575,12 +577,12 @@ export default function TodoItem({
                     icon={<Mic className="w-3 h-3" />}
                     interactive
                   >
-                    Voicemail
+                    <span className="hidden sm:inline">Voicemail</span>
                   </Badge>
                 </button>
               )}
 
-              {/* Attachments indicator */}
+              {/* Attachments indicator - always show count as it's important */}
               {todo.attachments && todo.attachments.length > 0 && (() => {
                 const hasAudio = todo.attachments.some(a => a.file_type === 'audio');
                 const AttachmentIcon = hasAudio ? Music : Paperclip;

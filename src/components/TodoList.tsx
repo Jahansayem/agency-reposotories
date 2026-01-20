@@ -1520,16 +1520,15 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           Skip to main content
         </a>
 
-        {/* Unified Header - single row */}
+        {/* Unified Header - single row with integrated search */}
+        {/* NOTE: Activity, Archive, Strategic Goals now in NavigationSidebar */}
         <TodoHeader
           currentUser={currentUser}
           onUserChange={onUserChange}
           viewMode={viewMode}
           setViewMode={setViewMode}
-          canViewArchive={canViewArchive}
-          setShowActivityFeed={setShowActivityFeed}
-          setShowArchiveView={setShowArchiveView}
-          setShowStrategicDashboard={setShowStrategicDashboard}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
           setShowWeeklyChart={setShowWeeklyChart}
           setShowShortcuts={setShowShortcuts}
           showAdvancedFilters={showAdvancedFilters}
@@ -1622,33 +1621,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         {/* Compact Filter Bar - hidden in focus mode */}
         {!focusMode && (
         <div className="mb-4">
-          {/* Single Row: All filters, search, sort, select */}
+          {/* Single Row: All filters, sort, select (search moved to header) */}
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* Always-Visible Search Field */}
-            <div className="relative flex items-center">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-light)] pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search tasks..."
-                aria-label="Search tasks"
-                className="w-[160px] sm:w-[200px] pl-8 pr-7 py-1.5 text-xs rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:outline-none focus:border-[var(--accent)]/50 transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Divider */}
-            <div className="w-px h-4 bg-[var(--border-subtle)] hidden sm:block" />
-
             {/* Quick filter dropdown - compact */}
             <div className="relative">
               <select

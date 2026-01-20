@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
-import { LayoutList, LayoutGrid, Bell } from 'lucide-react';
+import { LayoutList, LayoutGrid, Bell, Search, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AuthUser, ViewMode, ActivityLogEntry } from '@/types/todo';
 import UserSwitcher from '../UserSwitcher';
@@ -13,31 +13,33 @@ import { useTodoStore } from '@/store/todoStore';
 import { useAppShell } from '../layout/AppShell';
 import { supabase } from '@/lib/supabaseClient';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// UNIFIED TODO HEADER - Single header row with integrated search
+// Layout:
+// - Left side: View toggle (List/Board), Search field, Focus mode toggle
+// - Right side: Notifications bell, User switcher, Menu button
+//
+// NOTE: Activity, Archive, and Strategic Goals are now in NavigationSidebar
+// The AppMenu only contains: Weekly Progress, Keyboard Shortcuts, Filters
+// ═══════════════════════════════════════════════════════════════════════════
+
 interface TodoHeaderProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
-  canViewArchive: boolean;
-  setShowActivityFeed: (show: boolean) => void;
-  setShowArchiveView: (show: boolean) => void;
-  setShowStrategicDashboard: (show: boolean) => void;
+  // Search integration
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  // Modal triggers - only for items NOT in sidebar
   setShowWeeklyChart: (show: boolean) => void;
   setShowShortcuts: (show: boolean) => void;
+  // Filter controls
   showAdvancedFilters: boolean;
   setShowAdvancedFilters: (show: boolean) => void;
   onResetFilters: () => void;
 }
 
-/**
- * TodoHeader - Unified single-row header component
- *
- * Layout:
- * - Left side: View toggle (List/Board), Focus mode toggle
- * - Right side: User switcher, Menu button
- *
- * Hidden in focus mode except for the focus mode toggle button.
- */
 // Local storage key for last seen notification
 const LAST_SEEN_KEY = 'notificationLastSeenAt';
 
@@ -46,10 +48,8 @@ function TodoHeader({
   onUserChange,
   viewMode,
   setViewMode,
-  canViewArchive,
-  setShowActivityFeed,
-  setShowArchiveView,
-  setShowStrategicDashboard,
+  searchQuery,
+  setSearchQuery,
   setShowWeeklyChart,
   setShowShortcuts,
   showAdvancedFilters,
@@ -58,7 +58,6 @@ function TodoHeader({
 }: TodoHeaderProps) {
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
-  const userName = currentUser.name;
   const { focusMode } = useTodoStore((state) => state.ui);
   const { setActiveView } = useAppShell();
 
@@ -159,14 +158,14 @@ function TodoHeader({
           : 'bg-white border-[var(--border)]'
       }`}
     >
-      <div className="mx-auto px-3 sm:px-4 md:px-6 py-2.5 sm:py-3 max-w-5xl xl:max-w-6xl 2xl:max-w-7xl">
+      <div className="mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 max-w-5xl xl:max-w-6xl 2xl:max-w-7xl">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
-          {/* Left side: View toggle & Focus mode toggle */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Left side: View toggle, Search & Focus mode toggle */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
             {/* View toggle - hidden in focus mode */}
             {!focusMode && (
               <div
-                className={`flex backdrop-blur-sm rounded-lg sm:rounded-xl p-0.5 sm:p-1 border ${
+                className={`flex backdrop-blur-sm rounded-lg p-0.5 border flex-shrink-0 ${
                   darkMode
                     ? 'bg-white/8 border-white/10'
                     : 'bg-[var(--surface-2)] border-[var(--border)]'
@@ -174,7 +173,7 @@ function TodoHeader({
               >
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                     viewMode === 'list'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : darkMode
@@ -189,7 +188,7 @@ function TodoHeader({
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                     viewMode === 'kanban'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : darkMode
@@ -205,20 +204,48 @@ function TodoHeader({
               </div>
             )}
 
+            {/* Integrated Search Field - hidden in focus mode */}
+            {!focusMode && (
+              <div className="relative flex items-center flex-1 max-w-[240px]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-light)] pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search tasks..."
+                  aria-label="Search tasks"
+                  className={`w-full pl-8 pr-7 py-1.5 text-xs rounded-md border transition-colors ${
+                    darkMode
+                      ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-[var(--accent)]/50'
+                      : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:border-[var(--accent)]/50'
+                  } focus:outline-none`}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Focus Mode Toggle - always visible */}
             <FocusModeToggle />
           </div>
 
           {/* Right side: Notifications, User switcher & Menu - hidden in focus mode */}
           {!focusMode && (
-            <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
               {/* Notification Bell - Top right like Facebook/LinkedIn */}
               <div className="relative">
                 <button
                   ref={notificationButtonRef}
                   onClick={() => setNotificationModalOpen(!notificationModalOpen)}
                   className={`
-                    relative p-2 rounded-lg transition-colors
+                    relative p-1.5 sm:p-2 rounded-lg transition-colors
                     ${notificationModalOpen
                       ? darkMode
                         ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
@@ -230,12 +257,12 @@ function TodoHeader({
                   `}
                   aria-label={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                   {unreadNotifications > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
+                      className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] flex items-center justify-center px-1 rounded-full text-[9px] font-bold bg-[var(--danger)] text-white"
                     >
                       {unreadNotifications > 99 ? '99+' : unreadNotifications}
                     </motion.span>
@@ -257,12 +284,7 @@ function TodoHeader({
               <UserSwitcher currentUser={currentUser} onUserChange={onUserChange} />
 
               <AppMenu
-                userName={userName}
-                canViewArchive={canViewArchive}
-                onShowActivityFeed={() => setShowActivityFeed(true)}
                 onShowWeeklyChart={() => setShowWeeklyChart(true)}
-                onShowStrategicDashboard={() => setShowStrategicDashboard(true)}
-                onShowArchive={() => setShowArchiveView(true)}
                 onShowShortcuts={() => setShowShortcuts(true)}
                 onShowAdvancedFilters={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 onResetFilters={onResetFilters}
