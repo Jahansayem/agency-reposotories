@@ -110,6 +110,7 @@ interface TodoListProps {
   onOpenDashboard?: () => void;
   initialFilter?: QuickFilter | null;
   autoFocusAddTask?: boolean;
+  onAddTaskModalOpened?: () => void;
 }
 
 // Helper to get completion timestamp in ms
@@ -127,7 +128,7 @@ const getCompletedAtMs = (todo: Todo): number | null => {
   return null;
 };
 
-export default function TodoList({ currentUser, onUserChange, onOpenDashboard, initialFilter, autoFocusAddTask }: TodoListProps) {
+export default function TodoList({ currentUser, onUserChange, onOpenDashboard, initialFilter, autoFocusAddTask, onAddTaskModalOpened }: TodoListProps) {
   const userName = currentUser.name;
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
@@ -229,8 +230,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   useEffect(() => {
     if (autoFocusAddTask) {
       setShowAddTaskModal(true);
+      // Notify parent so it can reset the trigger state
+      onAddTaskModalOpened?.();
     }
-  }, [autoFocusAddTask]);
+  }, [autoFocusAddTask, onAddTaskModalOpened]);
 
   // Sync navigation activeView with internal panel states
   // This connects the sidebar navigation to the view panels

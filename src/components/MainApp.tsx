@@ -137,6 +137,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     setShowDashboard(true);
   }, []);
 
+  // Reset the add task trigger after modal opens
+  const handleAddTaskModalOpened = useCallback(() => {
+    setShowAddTask(false);
+  }, []);
+
   // Handle task link click from chat (navigate to tasks view and scroll to task)
   const handleTaskLinkClick = useCallback((taskId: string) => {
     setActiveView('tasks');
@@ -286,6 +291,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
+            onAddTaskModalOpened={handleAddTaskModalOpened}
             onOpenDashboard={handleOpenDashboard}
           />
         );
@@ -298,6 +304,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
+            onAddTaskModalOpened={handleAddTaskModalOpened}
             onOpenDashboard={handleOpenDashboard}
           />
         );
@@ -343,6 +350,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
+            onAddTaskModalOpened={handleAddTaskModalOpened}
             onOpenDashboard={handleOpenDashboard}
           />
         );
