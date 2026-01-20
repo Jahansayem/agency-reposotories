@@ -49,10 +49,12 @@ export default function ChatView({
       const taskElement = document.getElementById(`todo-${taskId}`);
       if (taskElement) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        taskElement.classList.add('ring-2', 'ring-blue-500');
+        // Add animated highlight class
+        taskElement.classList.add('notification-highlight');
+        // Remove the class after animation completes
         setTimeout(() => {
-          taskElement.classList.remove('ring-2', 'ring-blue-500');
-        }, 2000);
+          taskElement.classList.remove('notification-highlight');
+        }, 3000);
       }
     }
   };

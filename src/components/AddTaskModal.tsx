@@ -123,15 +123,15 @@ export default function AddTaskModal({
                 <button
                   onClick={onClose}
                   className={`
-                    p-2 rounded-lg transition-colors
+                    p-2.5 rounded-lg transition-colors
                     ${darkMode
-                      ? 'text-white/60 hover:text-white hover:bg-white/10'
+                      ? 'text-white/70 hover:text-white hover:bg-white/10'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
                     }
                   `}
                   aria-label="Close modal"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" strokeWidth={2.5} />
                 </button>
               </div>
 

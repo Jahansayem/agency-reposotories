@@ -145,12 +145,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       const taskElement = document.getElementById(`todo-${taskId}`);
       if (taskElement) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        taskElement.classList.add('ring-2', 'ring-blue-500');
+        // Add animated highlight class
+        taskElement.classList.add('notification-highlight');
+        // Remove the class after animation completes
         setTimeout(() => {
-          taskElement.classList.remove('ring-2', 'ring-blue-500');
-        }, 2000);
+          taskElement.classList.remove('notification-highlight');
+        }, 3000);
       }
-    }, 100);
+    }, 150);
   }, [setActiveView]);
 
   // Handle restoring an archived task

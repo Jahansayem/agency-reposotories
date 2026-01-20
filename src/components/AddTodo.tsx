@@ -517,7 +517,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                 rows={1}
                 disabled={isProcessing}
                 aria-label="New task description"
-                className={`w-full px-4 py-4 pr-10 resize-none text-base min-h-[56px] text-[var(--foreground)] placeholder-[var(--text-light)] font-medium rounded-[var(--radius-lg)] border-2 border-[var(--border)] bg-[var(--surface)] transition-all duration-200 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-4 focus:ring-[var(--accent-light)] focus:shadow-[inset_0_2px_4px_rgba(0,51,160,0.03)] ${
+                className={`w-full px-4 py-4 pr-10 resize-none text-base min-h-[56px] text-[var(--foreground)] placeholder-[var(--text-light)] font-medium rounded-[var(--radius-lg)] border border-white/10 bg-[var(--surface)] transition-all duration-200 focus:outline-none focus:border-[var(--brand-blue)] focus:ring-4 focus:ring-[var(--accent-light)] focus:shadow-[inset_0_2px_4px_rgba(0,51,160,0.03)] ${
                   isRecording ? 'border-[var(--danger)] ring-2 ring-[var(--danger-light)]' : ''
                 }`}
                 style={{ maxHeight: '120px' }}
@@ -596,11 +596,11 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                 )}
               </div>
 
-              {/* Primary Add button - remains prominent */}
+              {/* Primary Add button - elevated with shadow for prominence */}
               <button
                 type="submit"
                 disabled={!text.trim() || isProcessing}
-                className="px-5 py-2.5 rounded-full bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] hover:from-[var(--brand-navy)] hover:to-[var(--brand-blue)] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-all duration-200 min-h-[48px] flex items-center gap-2 touch-manipulation shadow-[var(--shadow-blue)] active:scale-95"
+                className="px-5 py-2.5 rounded-full bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] hover:from-[var(--brand-navy)] hover:to-[var(--brand-blue)] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-all duration-200 min-h-[48px] flex items-center gap-2 touch-manipulation shadow-[0_2px_8px_rgba(0,51,160,0.35)] hover:shadow-[0_4px_12px_rgba(0,51,160,0.45)] active:scale-95"
                 aria-label="Add task"
               >
                 <Plus className="w-5 h-5" />

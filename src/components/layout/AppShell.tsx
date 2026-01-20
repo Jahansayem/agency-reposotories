@@ -200,6 +200,25 @@ export default function AppShell({
     }, 50);
   }, [newTaskCallback]);
 
+  // Handle task link click from chat - navigate to task and highlight it
+  const handleTaskLinkClick = useCallback((taskId: string) => {
+    // Navigate to tasks view
+    setActiveView('tasks');
+    // Small delay to ensure view switches, then scroll to task
+    setTimeout(() => {
+      const taskElement = document.getElementById(`todo-${taskId}`);
+      if (taskElement) {
+        taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add animated highlight class
+        taskElement.classList.add('notification-highlight');
+        // Remove the class after animation completes
+        setTimeout(() => {
+          taskElement.classList.remove('notification-highlight');
+        }, 3000);
+      }
+    }, 150);
+  }, []);
+
   // Allow child components to register their new task handler
   const onNewTaskTrigger = useCallback((callback: () => void) => {
     setNewTaskCallback(() => callback);
@@ -296,6 +315,7 @@ export default function AppShell({
         <FloatingChatButton
           currentUser={currentUser}
           users={users}
+          onTaskLinkClick={handleTaskLinkClick}
         />
 
         {/* ═══ COMMAND PALETTE ═══ */}
