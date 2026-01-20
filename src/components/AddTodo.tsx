@@ -627,7 +627,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="overflow-hidden border-t border-[var(--border-subtle)]"
             >
-              <div className="px-5 pt-4 pb-4">
+              <div className="px-5 pt-5 pb-5">
                 <QuickTaskButtons
                   onSelectTemplate={handleQuickTaskSelect}
                   patterns={patterns}
@@ -640,8 +640,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
 
         {/* Options row - visible when focused or has content */}
         {(showOptions || text) && (
-          <div className="px-5 pb-5 pt-4 border-t border-[var(--border-subtle)]">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="px-5 pb-6 pt-5 border-t border-[var(--border-subtle)]">
+            <div className="flex flex-wrap items-center gap-4">
               {/* Priority - improved pill proportions */}
               <div
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm"
@@ -718,8 +718,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
 
         {/* Suggested Subtasks with visual hierarchy */}
         {suggestedSubtasks.length > 0 && (
-          <div className="px-4 pb-4 border-t border-[var(--border-subtle)]">
-            <div className="flex items-center justify-between mb-3 pt-3">
+          <div className="px-5 pb-5 border-t border-[var(--border-subtle)]">
+            <div className="flex items-center justify-between mb-4 pt-4">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
                 <span className="text-sm font-semibold text-[var(--foreground)]">
@@ -738,11 +738,11 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                 Clear all
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {suggestedSubtasks.map((subtask, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 text-sm px-3 py-2.5 rounded-xl border-l-3 transition-all hover:bg-[var(--surface-2)]"
+                  className="flex items-center gap-3 text-sm px-4 py-3 rounded-xl border-l-3 transition-all hover:bg-[var(--surface-2)]"
                   style={{
                     borderLeftColor: `rgba(0, 51, 160, ${0.4 + index * 0.15})`,
                     background: `linear-gradient(90deg, rgba(0, 51, 160, 0.03) 0%, transparent 50%)`
