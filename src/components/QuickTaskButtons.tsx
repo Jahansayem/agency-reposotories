@@ -153,7 +153,7 @@ export function QuickTaskButtons({
 
   // Render the template grid (shared between inline and normal mode)
   const renderTemplateGrid = () => (
-    <div className={`flex flex-wrap ${inline ? 'gap-2' : 'gap-2.5'}`}>
+    <div className={`flex flex-wrap ${inline ? 'gap-2.5' : 'gap-3'}`}>
       {allTemplates.map((template, index) => {
         const Icon = CATEGORY_ICONS[template.category] || FileText;
         const colors = CATEGORY_COLORS[template.category] || CATEGORY_COLORS.other;
@@ -168,8 +168,8 @@ export function QuickTaskButtons({
             onClick={() => handleTemplateSelect(template)}
             className={`group relative inline-flex items-center gap-2 rounded-full border bg-[var(--surface)] hover:bg-[var(--surface-2)] active:scale-[0.97] transition-all text-left touch-manipulation shadow-sm hover:shadow-md ${
               inline
-                ? 'px-3 py-1.5 border-[var(--border)]'
-                : 'px-4 py-2 border-[var(--border)] hover:border-[var(--border-hover)]'
+                ? 'px-3.5 py-2 border-[var(--border)]'
+                : 'px-4 py-2.5 border-[var(--border)] hover:border-[var(--border-hover)]'
             }`}
             style={{
               borderColor: indicator === 'high' ? colors.icon + '40' : undefined,

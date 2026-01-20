@@ -136,7 +136,7 @@ export default function AddTaskModal({
               </div>
 
               {/* Content */}
-              <div className="p-5">
+              <div className="p-6">
                 <AddTodo
                   onAdd={handleAdd}
                   users={users}

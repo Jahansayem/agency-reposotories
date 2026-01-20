@@ -627,7 +627,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="overflow-hidden border-t border-[var(--border-subtle)]"
             >
-              <div className="px-4 pt-3 pb-3">
+              <div className="px-5 pt-4 pb-4">
                 <QuickTaskButtons
                   onSelectTemplate={handleQuickTaskSelect}
                   patterns={patterns}
@@ -640,8 +640,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
 
         {/* Options row - visible when focused or has content */}
         {(showOptions || text) && (
-          <div className="px-4 pb-4 pt-3 border-t border-[var(--border-subtle)]">
-            <div className="flex flex-wrap items-center gap-2.5">
+          <div className="px-5 pb-5 pt-4 border-t border-[var(--border-subtle)]">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Priority - improved pill proportions */}
               <div
                 className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm"
