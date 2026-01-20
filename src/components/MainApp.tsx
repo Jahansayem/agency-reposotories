@@ -275,6 +275,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onFilterOverdue={() => handleNavigateToTasks('overdue')}
             onFilterDueToday={() => handleNavigateToTasks('due_today')}
             onOpenChat={() => setActiveView('chat')}
+            onStartFocus={() => handleNavigateToTasks()}
           />
         );
 
