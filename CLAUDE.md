@@ -1544,16 +1544,69 @@ A **detailed 12-week plan** to address technical debt and architectural issues h
 
 This section provides guidance for multi-agent orchestrator systems working on this codebase.
 
+> **📚 Detailed Agent Instructions**: See [docs/AGENT_WORKFLOWS.md](./docs/AGENT_WORKFLOWS.md) for comprehensive role-specific workflows, templates, and checklists.
+
+### Quick Agent Dispatch
+
+```
+User Request → Dispatch to Agent
+─────────────────────────────────
+"Fix bug..."      → Code Reviewer → Engineer
+"Add feature..."  → Business Analyst → Tech Lead → Engineers
+"Review PR..."    → Code Reviewer
+"Security audit"  → Security Reviewer
+"Analyze data..." → Data Scientist
+"Deploy..."       → Tech Lead
+```
+
 ### Agent Roles & Responsibilities
 
-| Agent Type | Primary Focus | Key Files |
-|------------|---------------|-----------|
-| **Backend Engineer** | API routes, database operations, server logic | `src/app/api/`, `src/lib/db/`, `supabase/migrations/` |
-| **Frontend Engineer** | React components, UI/UX, state management | `src/components/`, `src/hooks/`, `src/store/` |
-| **Code Reviewer** | Code quality, patterns, security review | All source files |
-| **Security Reviewer** | Auth, validation, data protection | `src/lib/auth.ts`, `src/lib/fileValidator.ts`, `src/middleware.ts` |
-| **Tech Lead** | Architecture decisions, refactoring, integration | `ORCHESTRATOR.md`, `REFACTORING_PLAN.md` |
-| **Business Analyst** | Requirements, user workflows, feature specs | `PRD.md`, `docs/` |
+| Agent Type | Primary Focus | Key Files | Entry Document |
+|------------|---------------|-----------|----------------|
+| **Business Analyst** | Requirements, user stories | `PRD.md`, `docs/` | [AGENT_WORKFLOWS.md#business-analyst](./docs/AGENT_WORKFLOWS.md#business-analyst) |
+| **Tech Lead** | Architecture, design decisions | `ORCHESTRATOR.md`, `REFACTORING_PLAN.md` | [AGENT_WORKFLOWS.md#tech-lead](./docs/AGENT_WORKFLOWS.md#tech-lead) |
+| **Database Engineer** | Schema, migrations | `supabase/migrations/`, `src/types/todo.ts` | [AGENT_WORKFLOWS.md#database-engineer](./docs/AGENT_WORKFLOWS.md#database-engineer) |
+| **Backend Engineer** | API routes, server logic | `src/app/api/`, `src/lib/db/` | [AGENT_WORKFLOWS.md#backend-engineer](./docs/AGENT_WORKFLOWS.md#backend-engineer) |
+| **Frontend Engineer** | React components, UI/UX | `src/components/`, `src/hooks/`, `src/store/` | [AGENT_WORKFLOWS.md#frontend-engineer](./docs/AGENT_WORKFLOWS.md#frontend-engineer) |
+| **Code Reviewer** | Code quality, patterns | All source files | [AGENT_WORKFLOWS.md#code-reviewer](./docs/AGENT_WORKFLOWS.md#code-reviewer) |
+| **Security Reviewer** | Auth, vulnerabilities | `src/lib/auth.ts`, `src/middleware.ts` | [AGENT_WORKFLOWS.md#security-reviewer](./docs/AGENT_WORKFLOWS.md#security-reviewer) |
+| **Data Scientist** | Analytics, patterns | `docs/DATA_SCIENCE_*.md` | [AGENT_WORKFLOWS.md#data-scientist](./docs/AGENT_WORKFLOWS.md#data-scientist) |
+
+### Pipeline Stages
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Stage 1: REQUIREMENTS  → Business Analyst                  │
+│  Stage 2: ARCHITECTURE  → Tech Lead + Database Engineer     │
+│  Stage 3: IMPLEMENTATION → Backend + Frontend Engineers     │
+│  Stage 4: VALIDATION    → Code Reviewer + Security Reviewer │
+│  Stage 5: ANALYSIS      → Data Scientist (optional)         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Agent Handoff Protocol
+
+When completing work, create a handoff document in `docs/`:
+
+```markdown
+# Agent Handoff: [Feature Name]
+**Date**: YYYY-MM-DD | **Agent**: [Role] | **Status**: [Complete/Blocked]
+
+## Completed
+- [List of completed items]
+
+## Files Modified
+| File | Changes |
+|------|---------|
+
+## Next Steps for [Next Agent Role]
+1. [Specific instruction]
+
+## Context for Next Agent
+[Key information they need]
+```
+
+See [docs/PIPELINE_CONTEXT_NEXT_AGENT.md](./docs/PIPELINE_CONTEXT_NEXT_AGENT.md) for a real example.
 
 ### Critical Constraints
 
@@ -1625,13 +1678,21 @@ await logActivity({
 
 ---
 
-**Last Updated:** 2026-01-18
-**Version:** 2.2
+**Last Updated:** 2026-01-20
+**Version:** 2.3 (Multi-Agent Enhanced)
 **Maintained by:** Development Team
 
-For questions or issues, refer to this document first, then check:
-- README.md for user-facing documentation
-- SETUP.md for installation instructions
-- tests/ directory for testing documentation
-- **[REFACTORING_PLAN.md](./REFACTORING_PLAN.md)** for improvement roadmap ⭐
-- **[ORCHESTRATOR.md](./ORCHESTRATOR.md)** for multi-agent orchestrator context ⭐
+## Related Documentation
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| [README.md](./README.md) | User-facing documentation | End users |
+| [ORCHESTRATOR.md](./ORCHESTRATOR.md) | Quick reference for orchestrators | Multi-agent systems |
+| [docs/AGENT_WORKFLOWS.md](./docs/AGENT_WORKFLOWS.md) | Detailed agent instructions | Individual agents |
+| [PRD.md](./PRD.md) | Product requirements | Business Analysts |
+| [REFACTORING_PLAN.md](./REFACTORING_PLAN.md) | 12-week improvement roadmap | Tech Leads |
+| [SETUP.md](./SETUP.md) | Installation instructions | New developers |
+| [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | Deploy process | DevOps |
+| [SECURITY_IMPROVEMENT_CHECKLIST.md](./SECURITY_IMPROVEMENT_CHECKLIST.md) | Security tasks | Security Reviewers |
+
+For questions or issues, refer to this document first, then check the table above for specialized documentation.

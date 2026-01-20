@@ -29,6 +29,12 @@ const AIInbox = dynamic(() => import('./views/AIInbox'), {
   loading: () => <AIInboxSkeleton />,
 });
 
+// Lazy load DashboardPage for the full dashboard view
+const DashboardPage = dynamic(() => import('./views/DashboardPage'), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
+
 interface MainAppProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
@@ -141,14 +147,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     }, 100);
   }, [setActiveView]);
 
-  // Handle dashboard view - open modal and switch back to tasks
-  // Must be before any conditional returns to follow React hooks rules
-  useEffect(() => {
-    if (activeView === 'dashboard') {
-      setShowDashboard(true);
-      setActiveView('tasks');
-    }
-  }, [activeView, setActiveView]);
+  // Dashboard view is now a full page, no longer triggers modal
+  // The modal is only shown on daily login check
 
   // Register the new task trigger callback with AppShell
   useEffect(() => {
@@ -172,6 +172,19 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   // Render different views based on activeView from AppShell context
   const renderActiveView = () => {
     switch (activeView) {
+      case 'dashboard':
+        return (
+          <DashboardPage
+            currentUser={currentUser}
+            todos={todos}
+            users={users}
+            onNavigateToTasks={() => handleNavigateToTasks()}
+            onAddTask={handleAddTask}
+            onFilterOverdue={() => handleNavigateToTasks('overdue')}
+            onFilterDueToday={() => handleNavigateToTasks('due_today')}
+          />
+        );
+
       case 'chat':
         return (
           <ChatView

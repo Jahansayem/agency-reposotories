@@ -235,44 +235,86 @@ export function AIInboxSkeleton({ darkMode = true }: SkeletonProps) {
  * Displays a modal placeholder with stats and task previews
  */
 export function DashboardModalSkeleton({ darkMode = true }: SkeletonProps) {
-  const bgClass = darkMode ? 'bg-slate-900' : 'bg-white';
-  const cardClass = darkMode ? 'bg-slate-800' : 'bg-slate-50';
-  const pulseClass = darkMode ? 'bg-slate-700' : 'bg-slate-200';
+  const bgClass = darkMode ? 'bg-[var(--background)]' : 'bg-slate-50';
+  const cardClass = darkMode ? 'bg-[var(--surface)]' : 'bg-white';
+  const pulseClass = darkMode ? 'bg-[var(--surface-2)]' : 'bg-slate-200';
+  const borderClass = darkMode ? 'border-white/10' : 'border-slate-200';
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className={`${bgClass} rounded-2xl p-6 w-full max-w-md mx-4`}>
-        {/* Greeting skeleton */}
-        <div className="text-center mb-6">
-          <div className={`h-4 w-24 ${pulseClass} rounded animate-pulse mx-auto mb-2`} />
-          <div className={`h-8 w-48 ${pulseClass} rounded animate-pulse mx-auto mb-1`} />
-          <div className={`h-4 w-32 ${pulseClass} rounded animate-pulse mx-auto`} />
-        </div>
-
-        {/* Stats cards skeleton */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className={`${cardClass} p-3 rounded-xl`}>
-              <div className={`h-8 w-8 ${pulseClass} rounded animate-pulse mb-2`} />
-              <div className={`h-6 w-12 ${pulseClass} rounded animate-pulse mb-1`} />
-              <div className={`h-3 w-20 ${pulseClass} rounded animate-pulse`} />
+    <div className={`min-h-full ${bgClass}`}>
+      {/* Header skeleton */}
+      <div className="relative overflow-hidden">
+        <div
+          className="absolute inset-0"
+          style={{
+            background: darkMode
+              ? 'linear-gradient(135deg, #0A1628 0%, #0033A0 50%, #1E3A5F 100%)'
+              : 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
+          }}
+        />
+        <div className="relative px-6 py-8 max-w-7xl mx-auto">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className={`h-4 w-24 bg-white/20 rounded animate-pulse mb-2`} />
+              <div className={`h-10 w-48 bg-white/30 rounded animate-pulse mb-2`} />
+              <div className={`h-4 w-64 bg-white/20 rounded animate-pulse`} />
             </div>
-          ))}
-        </div>
+            <div className={`w-16 h-16 rounded-2xl bg-white/20 animate-pulse`} />
+          </div>
 
-        {/* Task preview skeleton */}
-        <div className={`${cardClass} p-4 rounded-xl mb-4`}>
-          <div className={`h-4 w-24 ${pulseClass} rounded animate-pulse mb-3`} />
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-2 mb-2">
-              <div className={`w-4 h-4 ${pulseClass} rounded animate-pulse`} />
-              <div className={`h-4 flex-1 ${pulseClass} rounded animate-pulse`} />
-            </div>
-          ))}
+          {/* Quick Stats Row skeleton */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="p-4 rounded-xl bg-white/10">
+                <div className={`h-8 w-12 bg-white/20 rounded animate-pulse mb-2`} />
+                <div className={`h-3 w-16 bg-white/10 rounded animate-pulse`} />
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
 
-        {/* Action button skeleton */}
-        <div className={`h-12 w-full ${pulseClass} rounded-xl animate-pulse`} />
+      {/* Main Content Grid skeleton */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Card skeleton */}
+            {[1, 2, 3].map((i) => (
+              <div key={i} className={`${cardClass} rounded-2xl p-5 border ${borderClass}`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`w-5 h-5 ${pulseClass} rounded animate-pulse`} />
+                  <div className={`h-4 w-32 ${pulseClass} rounded animate-pulse`} />
+                </div>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((j) => (
+                    <div key={j} className="flex items-center gap-3">
+                      <div className={`w-3 h-3 ${pulseClass} rounded-full animate-pulse`} />
+                      <div className={`h-4 flex-1 ${pulseClass} rounded animate-pulse`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            {[1, 2].map((i) => (
+              <div key={i} className={`${cardClass} rounded-2xl p-5 border ${borderClass}`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`w-5 h-5 ${pulseClass} rounded animate-pulse`} />
+                  <div className={`h-4 w-24 ${pulseClass} rounded animate-pulse`} />
+                </div>
+                <div className="space-y-3">
+                  {[1, 2].map((j) => (
+                    <div key={j} className={`p-3 rounded-xl ${pulseClass} animate-pulse h-16`} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

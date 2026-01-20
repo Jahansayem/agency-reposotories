@@ -1,6 +1,40 @@
 # Orchestrator Context Guide
 
-This document provides structured context for AI orchestrator agents working on the Shared Todo List codebase. It's designed for quick parsing and reliable decision-making.
+> **For Multi-Agent Orchestrators**: This document provides structured context for AI orchestrator agents working on the Shared Todo List codebase. It's designed for quick parsing, reliable decision-making, and seamless agent handoffs.
+
+---
+
+## 🚀 Quick Start for Orchestrators
+
+### Immediate Context
+```yaml
+project: Bealer Agency Shared Todo List
+type: Collaborative task management (insurance agency)
+stack: Next.js 16 + React 19 + TypeScript + Supabase + Tailwind
+status: Production (https://shared-todo-list-production.up.railway.app)
+users: Derrick (owner), Sefra (team member)
+```
+
+### Agent Dispatch Decision Tree
+```
+User Request
+    │
+    ├─ "Fix bug in..."           → Code Reviewer → Backend/Frontend Engineer
+    ├─ "Add feature..."          → Business Analyst → Tech Lead → Engineers
+    ├─ "Review security..."      → Security Reviewer
+    ├─ "Analyze data..."         → Data Scientist
+    ├─ "Improve performance..."  → Tech Lead → Backend Engineer
+    ├─ "Update UI..."            → Frontend Engineer (check Design spec)
+    ├─ "Database changes..."     → Database Engineer → Backend Engineer
+    └─ "Deploy/release..."       → Tech Lead (check DEPLOYMENT_GUIDE.md)
+```
+
+### Critical Constraints (ALL AGENTS MUST FOLLOW)
+1. **Always log activity** - Call `logActivity()` for ALL database mutations
+2. **Clean up subscriptions** - Return cleanup function in all `useEffect` with subscriptions  
+3. **Owner-only guard** - Check `currentUser?.name === 'Derrick'` for strategic features
+4. **TypeScript strict** - All types in `src/types/todo.ts`
+5. **Optimistic updates** - Update UI immediately, persist async, rollback on error
 
 ---
 
@@ -735,6 +769,211 @@ await logActivity({
 
 ---
 
+## 🤖 Multi-Agent Orchestration
+
+### Pipeline Stages
+
+Standard feature development follows this pipeline:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    AGENT PIPELINE STAGES                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Stage 1: REQUIREMENTS                                              │
+│  ├─ Business Analyst    - Gather requirements, write specs          │
+│  └─ Output: PRD section, user stories, acceptance criteria          │
+│                                                                     │
+│  Stage 2: ARCHITECTURE                                              │
+│  ├─ Tech Lead           - Design solution, identify files           │
+│  ├─ Database Engineer   - Schema changes (if needed)                │
+│  └─ Output: Tech spec, file list, API contracts                     │
+│                                                                     │
+│  Stage 3: IMPLEMENTATION                                            │
+│  ├─ Backend Engineer    - API routes, database operations           │
+│  ├─ Frontend Engineer   - Components, hooks, state                  │
+│  └─ Output: Working code, unit tests                                │
+│                                                                     │
+│  Stage 4: VALIDATION                                                │
+│  ├─ Code Reviewer       - Code quality, patterns                    │
+│  ├─ Security Reviewer   - Vulnerabilities, auth                     │
+│  └─ Output: Approved PR, security sign-off                          │
+│                                                                     │
+│  Stage 5: ANALYSIS (Optional)                                       │
+│  ├─ Data Scientist      - Analytics, metrics, patterns              │
+│  └─ Output: Dashboards, reports, ML models                          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Agent Handoff Protocol
+
+When completing work, each agent MUST create a handoff document:
+
+```markdown
+# Agent Handoff: [Feature Name]
+
+## Session Summary
+- **Date**: YYYY-MM-DD
+- **Agent Role**: [Your Role]
+- **Status**: [Complete/Blocked/In Progress]
+
+## What Was Done
+- [List completed items]
+
+## Files Modified/Created
+| File | Status | Changes |
+|------|--------|---------|
+| path/to/file | ✅ Complete | Description |
+
+## What's NOT Done (Next Steps)
+1. [Next task for subsequent agent]
+
+## Blocking Issues
+- [Any blockers]
+
+## Next Agent Instructions
+### If Next Agent is [Role]
+- Start with [file/document]
+- Key context: [important info]
+
+## Quick Reference
+[Code snippets, types, or patterns the next agent needs]
+```
+
+### Agent Message Format
+
+For inter-agent communication, use this structured format:
+
+```yaml
+---
+from_agent: [role]
+to_agent: [role]
+priority: [high/medium/low]
+context_files:
+  - docs/RELEVANT_DOC.md
+  - src/relevant/file.ts
+blocking: [true/false]
+---
+
+## Request
+[Clear description of what's needed]
+
+## Context
+[Relevant background]
+
+## Expected Output
+[What the receiving agent should produce]
+
+## Deadline/Urgency
+[Any time constraints]
+```
+
+### Orchestrator Decision Matrix
+
+Use this matrix to route tasks to the correct agent:
+
+| Task Pattern | Primary Agent | Secondary Agent | Key Files |
+|-------------|---------------|-----------------|-----------|
+| "Add API endpoint for X" | Backend Engineer | Code Reviewer | `src/app/api/` |
+| "Create component for X" | Frontend Engineer | Code Reviewer | `src/components/` |
+| "Fix bug where X" | Code Reviewer | Backend/Frontend | Varies |
+| "Analyze data for X" | Data Scientist | Tech Lead | `docs/`, data files |
+| "Improve security of X" | Security Reviewer | Backend Engineer | `src/lib/auth.ts` |
+| "Design solution for X" | Tech Lead | Business Analyst | `docs/` |
+| "Add database table for X" | Database Engineer | Backend Engineer | `supabase/migrations/` |
+| "Optimize performance of X" | Tech Lead | Backend Engineer | Profile first |
+| "Add tests for X" | Code Reviewer | Original author | `tests/` |
+
+### Context Loading for Agents
+
+Each agent should load these contexts based on their role:
+
+```typescript
+const agentContexts = {
+  'business-analyst': [
+    'PRD.md',
+    'docs/user-stories/',
+    'README.md'
+  ],
+  'tech-lead': [
+    'ORCHESTRATOR.md',
+    'CLAUDE.md', 
+    'REFACTORING_PLAN.md',
+    'src/types/todo.ts'
+  ],
+  'backend-engineer': [
+    'ORCHESTRATOR.md#api-endpoints',
+    'src/app/api/',
+    'src/lib/db/',
+    'src/lib/activityLogger.ts'
+  ],
+  'frontend-engineer': [
+    'ORCHESTRATOR.md#component-architecture',
+    'src/components/',
+    'src/hooks/',
+    'src/store/todoStore.ts',
+    'src/types/todo.ts'
+  ],
+  'database-engineer': [
+    'supabase/migrations/',
+    'ORCHESTRATOR.md#database-schema',
+    'src/types/todo.ts'
+  ],
+  'code-reviewer': [
+    'ORCHESTRATOR.md#critical-constraints',
+    '.eslintrc',
+    'tsconfig.json'
+  ],
+  'security-reviewer': [
+    'src/lib/auth.ts',
+    'src/lib/fileValidator.ts',
+    'src/middleware.ts',
+    'SECURITY_IMPROVEMENT_CHECKLIST.md'
+  ],
+  'data-scientist': [
+    'docs/DATA_SCIENCE_ANALYTICS_SCHEMA.md',
+    'src/app/api/patterns/',
+    'docs/TASK_CATEGORY_ANALYSIS_REPORT.md'
+  ]
+};
+```
+
+### Pipeline Status Tracking
+
+Track pipeline progress using this format:
+
+```
+Feature: [Feature Name]
+Status: [Planning/In Progress/Review/Complete]
+
+┌──────────────────────────────────────────────────────────────┐
+│ [✓] Business Analyst   - Requirements complete               │
+│ [✓] Tech Lead          - Architecture defined                │
+│ [~] Database Engineer  - Schema in progress                  │
+│ [ ] Backend Engineer   - Waiting on schema                   │
+│ [ ] Frontend Engineer  - Waiting on API                      │
+│ [ ] Code Reviewer      - Pending                             │
+│ [ ] Security Reviewer  - Pending                             │
+└──────────────────────────────────────────────────────────────┘
+
+Legend: [✓] Complete  [~] In Progress  [ ] Pending  [!] Blocked
+```
+
+### Parallel vs Sequential Work
+
+**Can Run in Parallel:**
+- Frontend Engineer + Backend Engineer (if API contract defined)
+- Code Reviewer + Security Reviewer
+- Data Scientist (usually independent)
+
+**Must Run Sequentially:**
+- Business Analyst → Tech Lead (requirements before architecture)
+- Database Engineer → Backend Engineer (schema before queries)
+- Implementation → Code Review (code before review)
+
+---
+
 ## Agent-Specific Guidelines
 
 ### Backend Engineer
@@ -823,9 +1062,102 @@ await logActivity({
 
 ---
 
+## Orchestrator Tools & Utilities
+
+### MCP Server Integration (Serena)
+
+This project supports the Serena MCP server for enhanced code navigation:
+
+```yaml
+# Available Serena Tools
+- find_symbol: Find code symbols by name path
+- find_referencing_symbols: Find all references to a symbol
+- get_symbols_overview: Get high-level file structure
+- replace_symbol_body: Replace entire function/class bodies
+- insert_after_symbol: Add code after a symbol
+- search_for_pattern: Regex search across codebase
+- read_memory / write_memory: Persist agent context
+```
+
+### Memory Files for Context Persistence
+
+Agents can persist important context using memory files:
+
+| Memory File | Purpose |
+|-------------|---------|
+| `project_overview.md` | High-level project context |
+| `suggested_commands.md` | Development commands reference |
+| `code_style_conventions.md` | Coding patterns and standards |
+| `task_completion_checklist.md` | Post-task verification steps |
+| `codebase_structure.md` | Directory structure guide |
+| `agent_handoffs.md` | Recent handoff summaries |
+
+### Useful Commands for Orchestrators
+
+```bash
+# Check project health
+npm run build && npm run lint && npm run test
+
+# View recent changes
+git log --oneline -20
+
+# Check for uncommitted changes
+git status
+
+# Search codebase
+grep -r "pattern" src/
+
+# Find files
+find src -name "*.tsx" | head -20
+```
+
+---
+
+## Quick Reference Cards
+
+### Card 1: Creating a New Feature
+
+```
+1. Check PRD.md for requirements
+2. Read REFACTORING_PLAN.md for constraints
+3. Create docs/FEATURE_NAME_SPEC.md
+4. Identify files to modify (use Serena tools)
+5. Implement with activity logging
+6. Add tests in tests/
+7. Create handoff doc in docs/
+```
+
+### Card 2: Bug Fix Workflow
+
+```
+1. Reproduce the bug
+2. Find relevant code (grep/Serena)
+3. Understand data flow
+4. Fix with minimal changes
+5. Add regression test
+6. Log in activity_log if data changed
+7. Update WHATS_NEW.md
+```
+
+### Card 3: Code Review Checklist
+
+```
+[ ] Real-time subscriptions cleaned up
+[ ] Activity logging on all mutations
+[ ] TypeScript strict compliance
+[ ] Owner-only guards where needed
+[ ] Optimistic updates with rollback
+[ ] Error handling with user messages
+[ ] Mobile responsive (test with DevTools)
+[ ] Dark mode supported
+```
+
+---
+
 ## Version Info
 
-- **Last Updated**: 2026-01-18
+- **Last Updated**: 2026-01-20
+- **Document Version**: 3.0 (Multi-Agent Enhanced)
 - **App Version**: 2.1
 - **Next.js**: 16.0.10
 - **React**: 19.2.0
@@ -834,5 +1166,19 @@ await logActivity({
 
 ---
 
-*For detailed developer documentation, see [CLAUDE.md](./CLAUDE.md)*
-*For product requirements, see [PRD.md](./PRD.md)*
+## Related Documentation
+
+| Document | Purpose | When to Read |
+|----------|---------|--------------|
+| [CLAUDE.md](./CLAUDE.md) | Detailed developer guide | Deep implementation |
+| [PRD.md](./PRD.md) | Product requirements | Business context |
+| [REFACTORING_PLAN.md](./REFACTORING_PLAN.md) | 12-week improvement roadmap | Before major changes |
+| [SETUP.md](./SETUP.md) | Installation guide | Environment setup |
+| [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | Deploy process | Releasing changes |
+| [SECURITY_IMPROVEMENT_CHECKLIST.md](./SECURITY_IMPROVEMENT_CHECKLIST.md) | Security tasks | Security reviews |
+| [docs/FRONTEND_ENGINEER_HANDOFF.md](./docs/FRONTEND_ENGINEER_HANDOFF.md) | Frontend patterns | UI implementation |
+| [docs/PIPELINE_CONTEXT_NEXT_AGENT.md](./docs/PIPELINE_CONTEXT_NEXT_AGENT.md) | Pipeline example | Agent handoffs |
+
+---
+
+*This document is optimized for multi-agent orchestrator systems. For single-agent use, see [CLAUDE.md](./CLAUDE.md)*
