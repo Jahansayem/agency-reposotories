@@ -70,7 +70,7 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog Secret Scan (PR)
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.sha != github.event.pull_request.head.sha
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
@@ -79,7 +79,7 @@ jobs:
           extra_args: --only-verified
 
       - name: TruffleHog Secret Scan (Push)
-        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000' && github.event.before != github.sha
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
@@ -87,12 +87,16 @@ jobs:
           head: ${{ github.sha }}
           extra_args: --only-verified
 
-      - name: TruffleHog Secret Scan (Scheduled/Manual)
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == '0000000000000000000000000000000000000000')
+      - name: TruffleHog Secret Scan (Scheduled/Manual/Full)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.event.before == '0000000000000000000000000000000000000000' || github.event.before == github.sha))
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
           extra_args: --only-verified
+
+      - name: Skip notification
+        if: github.event_name == 'pull_request' && github.event.pull_request.base.sha == github.event.pull_request.head.sha
+        run: echo "Skipping TruffleHog scan - BASE and HEAD commits are identical"
 
   # SAST scanning
   semgrep:
