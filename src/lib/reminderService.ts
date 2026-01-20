@@ -7,6 +7,7 @@
 
 import { supabase } from './supabaseClient';
 import { format, formatDistanceToNow, startOfDay } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 import type { TaskReminder, ReminderType, TodoPriority } from '@/types/todo';
 
 const SYSTEM_SENDER = 'System';
@@ -140,8 +141,10 @@ export async function sendReminderChatNotification(
 
   try {
     const { error } = await supabase.from('messages').insert({
+      id: uuidv4(),
       text: message,
       created_by: SYSTEM_SENDER,
+      created_at: new Date().toISOString(),
       related_todo_id: todoId,
       recipient: recipientUserName,
       mentions: [recipientUserName],

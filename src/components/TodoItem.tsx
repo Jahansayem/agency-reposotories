@@ -371,7 +371,7 @@ export default function TodoItem({
     <div
       id={`todo-${todo.id}`}
       role="listitem"
-      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${showActionsMenu ? 'z-[100]' : ''}`}
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${showActionsMenu ? 'z-[9999]' : ''}`}
     >
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <div className="flex items-center gap-3 px-4 py-3">
@@ -674,7 +674,7 @@ export default function TodoItem({
 
             {showActionsMenu && (
               <div
-                className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl z-[110] py-1 min-w-[180px]"
+                className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl z-[9999] py-1 min-w-[180px]"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Edit */}
