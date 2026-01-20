@@ -12,7 +12,7 @@ import AddTaskModal from './AddTaskModal';
 import KanbanBoard from './KanbanBoard';
 import { logger } from '@/lib/logger';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder, hydrateFocusMode } from '@/store/todoStore';
-import { useTodoData, useFilters, useBulkActions, useIsDesktopWide, useEscapeKey } from '@/hooks';
+import { useTodoData, useFilters, useBulkActions, useIsDesktopWide, useEscapeKey, useTodoModals } from '@/hooks';
 import {
   DndContext,
   closestCenter,
@@ -38,12 +38,12 @@ import PullToRefresh from './PullToRefresh';
 import StatusLine from './StatusLine';
 import BottomTabs from './BottomTabs';
 import { ExitFocusModeButton } from './FocusModeToggle';
-import TodoHeader from './todo/TodoHeader';
+import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, TodoModals } from './todo';
 import TaskSections, { useShouldUseSections } from './TaskSections';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  Wifi, WifiOff, Search,
-  ArrowUpDown, User, AlertTriangle, CheckSquare,
+  Search, AlertTriangle,
+  ArrowUpDown, User, CheckSquare,
   Trash2, X, ChevronDown, GitMerge, Layers,
   Paperclip, Filter, RotateCcw, Check, FileText, MoreHorizontal
 } from 'lucide-react';
@@ -238,31 +238,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   }, [autoFocusAddTask, onAddTaskModalOpened]);
 
-  // Sync navigation activeView with internal panel states
-  // This connects the sidebar navigation to the view panels
-  useEffect(() => {
-    if (activeView === 'activity') {
-      setShowActivityFeed(true);
-      setShowStrategicDashboard(false);
-      setShowArchiveView(false);
-    } else if (activeView === 'goals') {
-      setShowActivityFeed(false);
-      setShowStrategicDashboard(true);
-      setShowArchiveView(false);
-    } else if (activeView === 'archive') {
-      // Archive is now handled by MainApp with dedicated ArchiveView component
-      // This case should not render TodoList, but close overlays just in case
-      setShowActivityFeed(false);
-      setShowStrategicDashboard(false);
-      setShowArchiveView(false);
-    } else if (activeView === 'tasks') {
-      // Close all overlay panels when returning to tasks view
-      setShowActivityFeed(false);
-      setShowStrategicDashboard(false);
-      setShowArchiveView(false);
-    }
-  }, [activeView]);
-
   // Bulk actions from hook
   const {
     selectedTodos,
@@ -277,54 +252,124 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     getDateOffset,
   } = useBulkActions(userName);
 
-  // Celebration and notifications
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [celebrationText, setCelebrationText] = useState('');
-  const [showProgressSummary, setShowProgressSummary] = useState(false);
-  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
-  const [showWeeklyChart, setShowWeeklyChart] = useState(false);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showActivityFeed, setShowActivityFeed] = useState(false);
-  const [showStrategicDashboard, setShowStrategicDashboard] = useState(false);
-  const [templateTodo, setTemplateTodo] = useState<Todo | null>(null);
-  const [showArchiveView, setShowArchiveView] = useState(false);
-  const [selectedArchivedTodo, setSelectedArchivedTodo] = useState<Todo | null>(null);
-  const [archiveQuery, setArchiveQuery] = useState('');
-  // showSearchExpanded removed - search is now always visible
-  const [, setArchiveTick] = useState(0); // tick value unused, only setter needed for refresh
+  // Modal state management via useTodoModals hook
+  const {
+    // Celebration state
+    showCelebration,
+    celebrationText,
+    showEnhancedCelebration,
+    celebrationData,
+    // Progress & welcome state
+    showProgressSummary,
+    showWelcomeBack,
+    showWeeklyChart,
+    // Utility modals state
+    showShortcuts,
+    showActivityFeed,
+    showStrategicDashboard,
+    // Template state
+    templateTodo,
+    // Confirm dialog state
+    confirmDialog,
+    // Completion summary state
+    showCompletionSummary,
+    completedTaskForSummary,
+    // Duplicate detection state
+    showDuplicateModal,
+    duplicateMatches,
+    pendingTask,
+    // Email modal state
+    showEmailModal,
+    emailTargetTodos,
+    // Archive state
+    showArchiveView,
+    selectedArchivedTodo,
+    archiveQuery,
+    // Merge modal state
+    showMergeModal,
+    mergeTargets,
+    selectedPrimaryId,
+    isMerging,
+    // Activity log state
+    activityLog,
+    // Actions - Celebration
+    triggerCelebration,
+    dismissCelebration,
+    triggerEnhancedCelebration,
+    dismissEnhancedCelebration,
+    // Actions - Progress & welcome
+    openProgressSummary,
+    closeProgressSummary,
+    closeWelcomeBack,
+    openWeeklyChart,
+    closeWeeklyChart,
+    // Actions - Utility modals
+    openShortcuts,
+    closeShortcuts,
+    openActivityFeed,
+    closeActivityFeed,
+    openStrategicDashboard,
+    closeStrategicDashboard,
+    // Actions - Template
+    openTemplateModal,
+    closeTemplateModal,
+    // Actions - Confirm dialog
+    openConfirmDialog,
+    closeConfirmDialog,
+    // Actions - Completion summary
+    openCompletionSummary,
+    closeCompletionSummary,
+    // Actions - Duplicate detection
+    openDuplicateModal,
+    clearDuplicateState,
+    // Actions - Email
+    openEmailModal,
+    closeEmailModal,
+    // Actions - Archive
+    openArchiveView,
+    closeArchiveView,
+    selectArchivedTodo,
+    setArchiveQuery,
+    incrementArchiveTick,
+    // Actions - Merge
+    openMergeModal,
+    closeMergeModal,
+    setMergePrimaryId,
+    setMergingState,
+    // Actions - Activity log
+    setActivityLog,
+  } = useTodoModals();
+
+  // Sync navigation activeView with internal panel states
+  // This connects the sidebar navigation to the view panels
+  useEffect(() => {
+    if (activeView === 'activity') {
+      openActivityFeed();
+      closeStrategicDashboard();
+      closeArchiveView();
+    } else if (activeView === 'goals') {
+      closeActivityFeed();
+      openStrategicDashboard();
+      closeArchiveView();
+    } else if (activeView === 'archive') {
+      // Archive is now handled by MainApp with dedicated ArchiveView component
+      // This case should not render TodoList, but close overlays just in case
+      closeActivityFeed();
+      closeStrategicDashboard();
+      closeArchiveView();
+    } else if (activeView === 'tasks') {
+      // Close all overlay panels when returning to tasks view
+      closeActivityFeed();
+      closeStrategicDashboard();
+      closeArchiveView();
+    }
+  }, [activeView, openActivityFeed, closeActivityFeed, openStrategicDashboard, closeStrategicDashboard, openArchiveView, closeArchiveView]);
+
+  // Custom order for drag-and-drop sorting (component-specific, not in modal hook)
   const [customOrder, setCustomOrder] = useState<string[]>([]);
-  const [showMergeModal, setShowMergeModal] = useState(false);
-  const [mergeTargets, setMergeTargets] = useState<Todo[]>([]);
-  const [selectedPrimaryId, setSelectedPrimaryId] = useState<string | null>(null);
-  const [isMerging, setIsMerging] = useState(false);
 
-  // Duplicate detection state
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([]);
-  const [pendingTask, setPendingTask] = useState<{
-    text: string;
-    priority: TodoPriority;
-    dueDate?: string;
-    assignedTo?: string;
-    subtasks?: Subtask[];
-    transcription?: string;
-    sourceFile?: File;
-    reminderAt?: string;
-  } | null>(null);
-
-  // Customer email modal state
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailTargetTodos, setEmailTargetTodos] = useState<Todo[]>([]);
-
-  // Add Task modal state
+  // Add Task modal state (separate from useTodoModals as it's a different concern)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
-
-  // Enhanced celebration state (Features 1 & 3)
-  const [showEnhancedCelebration, setShowEnhancedCelebration] = useState(false);
-  const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
-  const [showCompletionSummary, setShowCompletionSummary] = useState(false);
-  const [completedTaskForSummary, setCompletedTaskForSummary] = useState<Todo | null>(null);
-  const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
 
   // DnD sensors for drag-and-drop reordering
   const sensors = useSensors(
@@ -337,14 +382,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  // Confirm dialog state
-  const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -396,7 +433,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       // '?' - show keyboard shortcuts help
       if (e.key === '?' || (e.shiftKey && e.key === '/')) {
         e.preventDefault();
-        setShowShortcuts(true);
+        openShortcuts();
       }
     };
 
@@ -408,10 +445,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setArchiveTick((tick) => tick + 1);
+      incrementArchiveTick();
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [incrementArchiveTick]);
 
   // Hydrate focus mode from localStorage on mount
   useEffect(() => {
@@ -420,12 +457,12 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
   // Register modal triggers with AppShell (for sidebar navigation buttons)
   useEffect(() => {
-    onWeeklyChartTrigger(() => setShowWeeklyChart(true));
-  }, [onWeeklyChartTrigger]);
+    onWeeklyChartTrigger(() => openWeeklyChart());
+  }, [onWeeklyChartTrigger, openWeeklyChart]);
 
   useEffect(() => {
-    onShortcutsTrigger(() => setShowShortcuts(true));
-  }, [onShortcutsTrigger]);
+    onShortcutsTrigger(() => openShortcuts());
+  }, [onShortcutsTrigger, openShortcuts]);
 
   // Fetch activity log for streak calculation (useTodoData handles todos/users/real-time)
   const fetchActivityLog = useCallback(async () => {
@@ -440,7 +477,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     if (data) {
       setActivityLog(data as ActivityLogEntry[]);
     }
-  }, []);
+  }, [setActivityLog]);
 
   // Fetch activity log on mount
   useEffect(() => {
@@ -455,9 +492,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       const duplicates = findPotentialDuplicates(combinedText, todos);
       if (duplicates.length > 0) {
         // Store pending task and show modal
-        setPendingTask({ text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt });
-        setDuplicateMatches(duplicates);
-        setShowDuplicateModal(true);
+        openDuplicateModal({ text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile }, duplicates);
         return;
       }
     }
@@ -595,13 +630,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         pendingTask.assignedTo,
         pendingTask.subtasks,
         pendingTask.transcription,
-        pendingTask.sourceFile,
-        pendingTask.reminderAt
+        pendingTask.sourceFile
       );
     }
-    setShowDuplicateModal(false);
-    setPendingTask(null);
-    setDuplicateMatches([]);
+    clearDuplicateState();
   };
 
   // Handle adding to existing task (merge with existing)
@@ -709,16 +741,12 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       });
     }
 
-    setShowDuplicateModal(false);
-    setPendingTask(null);
-    setDuplicateMatches([]);
+    clearDuplicateState();
   };
 
   // Cancel duplicate detection
   const handleCancelDuplicateDetection = () => {
-    setShowDuplicateModal(false);
-    setPendingTask(null);
-    setDuplicateMatches([]);
+    clearDuplicateState();
   };
 
   const duplicateTodo = async (todo: Todo) => {
@@ -786,17 +814,15 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       const encouragementMessage = getEncouragementMessage(streakCount);
 
       const updatedTodo = { ...oldTodo, completed: true, status: 'done' as TodoStatus, updated_at };
-      setCelebrationData({
+      triggerEnhancedCelebration({
         completedTask: updatedTodo,
         nextTasks,
         streakCount,
         encouragementMessage,
       });
-      setShowEnhancedCelebration(true);
 
       // Also keep original celebration for confetti
-      setCelebrationText(oldTodo.text);
-      setShowCelebration(true);
+      triggerCelebration(oldTodo.text);
 
       // Handle recurring tasks
       if (oldTodo.recurrence) {
@@ -932,17 +958,15 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       const encouragementMessage = getEncouragementMessage(streakCount);
 
       const updatedTodo = { ...todoItem, completed: true, updated_at };
-      setCelebrationData({
+      triggerEnhancedCelebration({
         completedTask: updatedTodo,
         nextTasks,
         streakCount,
         encouragementMessage,
       });
-      setShowEnhancedCelebration(true);
 
       // Also keep original celebration for confetti
-      setCelebrationText(todoItem.text);
-      setShowCelebration(true);
+      triggerCelebration(todoItem.text);
 
       // Handle recurring tasks
       if (todoItem.recurrence) {
@@ -1010,15 +1034,14 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
   const confirmDeleteTodo = (id: string) => {
     const todo = todos.find(t => t.id === id);
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Delete Task',
-      message: `Are you sure you want to delete "${todo?.text}"? This cannot be undone.`,
-      onConfirm: () => {
+    openConfirmDialog(
+      'Delete Task',
+      `Are you sure you want to delete "${todo?.text}"? This cannot be undone.`,
+      () => {
         deleteTodo(id);
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-      },
-    });
+        closeConfirmDialog();
+      }
+    );
   };
 
   const assignTodo = async (id: string, assignedTo: string | null) => {
@@ -1325,15 +1348,14 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   // Bulk action wrappers (use hook functions with confirmation dialog integration)
   const bulkDelete = () => {
     hookBulkDelete((count, action) => {
-      setConfirmDialog({
-        isOpen: true,
-        title: 'Delete Tasks',
-        message: `Are you sure you want to delete ${count} task${count > 1 ? 's' : ''}? This cannot be undone.`,
-        onConfirm: async () => {
+      openConfirmDialog(
+        'Delete Tasks',
+        `Are you sure you want to delete ${count} task${count > 1 ? 's' : ''}? This cannot be undone.`,
+        async () => {
           await action();
-          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        },
-      });
+          closeConfirmDialog();
+        }
+      );
     });
   };
 
@@ -1346,8 +1368,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   const initiateMerge = () => {
     if (selectedTodos.size < 2) return;
     const todosToMerge = todos.filter(t => selectedTodos.has(t.id));
-    setMergeTargets(todosToMerge);
-    setShowMergeModal(true);
+    openMergeModal(todosToMerge);
   };
 
   const mergeTodos = async (primaryTodoId: string) => {
@@ -1358,7 +1379,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
     if (!primaryTodo) return;
 
-    setIsMerging(true);
+    setMergingState(true);
 
     try {
       // Combine data from all todos
@@ -1409,7 +1430,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       if (updateError) {
         logger.error('Error updating merged todo', updateError, { component: 'TodoList' });
         alert('Failed to merge tasks. Please try again.');
-        setIsMerging(false);
+        setMergingState(false);
         return;
       }
 
@@ -1423,7 +1444,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         logger.error('Error deleting merged todos', deleteError, { component: 'TodoList' });
         alert('Merge partially failed. Refreshing...');
         refreshTodos();
-        setIsMerging(false);
+        setMergingState(false);
         return;
       }
 
@@ -1454,15 +1475,13 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       // Clear selection and close modal
       clearSelection();
       setShowBulkActions(false);
-      setShowMergeModal(false);
-      setMergeTargets([]);
-      setSelectedPrimaryId(null);
+      closeMergeModal();
     } catch (error) {
       logger.error('Error during merge', error, { component: 'TodoList' });
       alert('An unexpected error occurred. Please try again.');
       refreshTodos();
     } finally {
-      setIsMerging(false);
+      setMergingState(false);
     }
   };
 
@@ -1543,46 +1562,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)] relative overflow-hidden">
-        {/* Ambient gradient orbs */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/4 right-1/3 w-[500px] h-[500px] bg-[var(--accent-gold)]/8 rounded-full blur-[120px]" />
-          <div className="absolute bottom-1/3 left-1/4 w-[400px] h-[400px] bg-[var(--accent)]/10 rounded-full blur-[100px]" />
-        </div>
-        <div className="relative z-10 flex flex-col items-center gap-5">
-          <div className="relative">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center shadow-lg" style={{ boxShadow: '0 8px 24px rgba(0, 51, 160, 0.3)' }}>
-              <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 11l3 3L22 4" />
-                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-              </svg>
-            </div>
-            <div className="absolute -inset-3 bg-[var(--accent)]/20 rounded-3xl blur-xl animate-pulse" />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-[var(--accent-sky)] animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-2 h-2 rounded-full bg-[var(--accent-sky)] animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-2 h-2 rounded-full bg-[var(--accent-sky)] animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
-        <div className="p-8 rounded-[var(--radius-xl)] shadow-[var(--shadow-lg)] border border-[var(--border)] bg-[var(--surface)] max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-[var(--danger-light)] rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-[var(--danger)]" />
-          </div>
-          <h2 className="text-xl font-bold mb-2 text-[var(--foreground)]">Setup Required</h2>
-          <p className="text-sm mb-4 text-[var(--text-muted)]">{error}</p>
-          <p className="text-xs text-[var(--text-light)]">See SETUP.md for instructions</p>
-        </div>
-      </div>
-    );
+    return <ErrorState error={error} />;
   }
 
   return (
@@ -1618,18 +1602,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         />
 
       {/* Connection status - floating indicator (bottom right) - hidden in focus mode */}
-      {!focusMode && (
-        <div className="fixed bottom-6 right-6 z-30">
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-[var(--shadow-md)] backdrop-blur-sm ${
-            connected
-              ? 'bg-[var(--success-light)] text-[var(--success)] border border-[var(--success)]/20'
-              : 'bg-[var(--danger-light)] text-[var(--danger)] border border-[var(--danger)]/20'
-          }`}>
-            {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            {connected ? 'Live' : 'Offline'}
-          </div>
-        </div>
-      )}
+      {!focusMode && <ConnectionStatus connected={connected} />}
 
       {/* Exit Focus Mode button - shown only in focus mode */}
       <ExitFocusModeButton />
@@ -2054,10 +2027,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                       onSetRecurrence={setRecurrence}
                       onUpdateSubtasks={updateSubtasks}
                       onUpdateAttachments={updateAttachments}
-                      onSaveAsTemplate={(t) => setTemplateTodo(t)}
+                      onSaveAsTemplate={(t) => openTemplateModal(t)}
                       onEmailCustomer={(todo) => {
-                        setEmailTargetTodos([todo]);
-                        setShowEmailModal(true);
+                        openEmailModal([todo]);
                       }}
                       isDragEnabled={!showBulkActions && sortOption === 'custom'}
                       renderTodoItem={(todo, index) => (
@@ -2092,10 +2064,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                             onSetRecurrence={setRecurrence}
                             onUpdateSubtasks={updateSubtasks}
                             onUpdateAttachments={updateAttachments}
-                            onSaveAsTemplate={(t) => setTemplateTodo(t)}
+                            onSaveAsTemplate={(t) => openTemplateModal(t)}
                             onEmailCustomer={(todo) => {
-                              setEmailTargetTodos([todo]);
-                              setShowEmailModal(true);
+                              openEmailModal([todo]);
                             }}
                             isDragEnabled={!showBulkActions && sortOption === 'custom'}
                           />
@@ -2204,10 +2175,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                                 onSetRecurrence={setRecurrence}
                                 onUpdateSubtasks={updateSubtasks}
                                 onUpdateAttachments={updateAttachments}
-                                onSaveAsTemplate={(t) => setTemplateTodo(t)}
+                                onSaveAsTemplate={(t) => openTemplateModal(t)}
                                 onEmailCustomer={(todo) => {
-                                  setEmailTargetTodos([todo]);
-                                  setShowEmailModal(true);
+                                  openEmailModal([todo]);
                                 }}
                                 isDragEnabled={!showBulkActions && sortOption === 'custom'}
                               />
@@ -2245,10 +2215,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 onDuplicate={duplicateTodo}
                 onSetRecurrence={setRecurrence}
                 onUpdateAttachments={updateAttachments}
-                onSaveAsTemplate={(t) => setTemplateTodo(t)}
+                onSaveAsTemplate={(t) => openTemplateModal(t)}
                 onEmailCustomer={(todo) => {
-                  setEmailTargetTodos([todo]);
-                  setShowEmailModal(true);
+                  openEmailModal([todo]);
                 }}
                 showBulkActions={showBulkActions}
                 selectedTodos={selectedTodos}
@@ -2262,7 +2231,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         {/* Keyboard shortcuts hint - hidden in focus mode */}
         {!focusMode && (
           <button
-            onClick={() => setShowShortcuts(true)}
+            onClick={() => openShortcuts()}
             className={`mt-8 w-full text-center text-xs py-2 rounded-lg transition-colors ${
               darkMode
                 ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800'
@@ -2288,13 +2257,13 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
       <CelebrationEffect
         show={showCelebration}
-        onComplete={() => setShowCelebration(false)}
+        onComplete={() => dismissCelebration()}
         taskText={celebrationText}
       />
 
       <ProgressSummary
         show={showProgressSummary}
-        onClose={() => setShowProgressSummary(false)}
+        onClose={() => closeProgressSummary()}
         todos={todos}
         currentUser={currentUser}
         onUserUpdate={onUserChange}
@@ -2302,8 +2271,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
       <WelcomeBackNotification
         show={showWelcomeBack}
-        onClose={() => setShowWelcomeBack(false)}
-        onViewProgress={() => setShowProgressSummary(true)}
+        onClose={() => closeWelcomeBack()}
+        onViewProgress={() => openProgressSummary()}
         todos={todos}
         currentUser={currentUser}
         onUserUpdate={onUserChange}
@@ -2315,7 +2284,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         message={confirmDialog.message}
         confirmLabel="Delete"
         onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        onCancel={() => closeConfirmDialog()}
       />
 
       {/* Only render when shown to prevent skeleton flash during dynamic import */}
@@ -2324,13 +2293,13 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todos={visibleTodos}
           darkMode={darkMode}
           show={showWeeklyChart}
-          onClose={() => setShowWeeklyChart(false)}
+          onClose={() => closeWeeklyChart()}
         />
       )}
 
       <KeyboardShortcutsModal
         show={showShortcuts}
-        onClose={() => setShowShortcuts(false)}
+        onClose={() => closeShortcuts()}
         darkMode={darkMode}
       />
 
@@ -2352,7 +2321,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             {/* Header with back button */}
             <div className={`px-4 sm:px-6 py-4 border-b flex items-center gap-4 ${darkMode ? 'border-[var(--border)] bg-[var(--surface)]' : 'border-[var(--border)] bg-white'}`}>
               <button
-                onClick={() => { setShowActivityFeed(false); setActiveView('tasks'); }}
+                onClick={() => { closeActivityFeed(); setActiveView('tasks'); }}
                 className={`p-2 -ml-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]' : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
                 aria-label="Back to tasks"
               >
@@ -2376,7 +2345,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 <ActivityFeed
                   currentUserName={userName}
                   darkMode={darkMode}
-                  onClose={() => { setShowActivityFeed(false); setActiveView('tasks'); }}
+                  onClose={() => { closeActivityFeed(); setActiveView('tasks'); }}
                 />
               </div>
             </div>
@@ -2389,7 +2358,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         <StrategicDashboard
           userName={userName}
           darkMode={darkMode}
-          onClose={() => { setShowStrategicDashboard(false); setActiveView('tasks'); }}
+          onClose={() => { closeStrategicDashboard(); setActiveView('tasks'); }}
         />
       )}
 
@@ -2397,7 +2366,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Archived tasks">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => { setShowArchiveView(false); setActiveView('tasks'); }}
+            onClick={() => { closeArchiveView(); setActiveView('tasks'); }}
           />
           <div className="relative w-full max-w-3xl rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)]">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
@@ -2408,7 +2377,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 </p>
               </div>
               <button
-                onClick={() => { setShowArchiveView(false); setActiveView('tasks'); }}
+                onClick={() => { closeArchiveView(); setActiveView('tasks'); }}
                 className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
                 aria-label="Close archive"
               >
@@ -2451,7 +2420,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                     return (
                       <button
                         key={todo.id}
-                        onClick={() => setSelectedArchivedTodo(todo)}
+                        onClick={() => selectArchivedTodo(todo)}
                         className="w-full text-left rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-2)] p-4 hover:bg-[var(--surface-3)] hover:border-[var(--accent)] transition-all cursor-pointer group"
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -2503,7 +2472,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       {selectedArchivedTodo && (
         <ArchivedTaskModal
           todo={selectedArchivedTodo}
-          onClose={() => setSelectedArchivedTodo(null)}
+          onClose={() => selectArchivedTodo(null)}
         />
       )}
 
@@ -2512,7 +2481,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         <SaveTemplateModal
           todo={templateTodo}
           darkMode={darkMode}
-          onClose={() => setTemplateTodo(null)}
+          onClose={() => closeTemplateModal()}
           onSave={saveAsTemplate}
         />
       )}
@@ -2524,9 +2493,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => {
               if (!isMerging) {
-                setShowMergeModal(false);
-                setMergeTargets([]);
-                setSelectedPrimaryId(null);
+                closeMergeModal();
               }
             }}
           />
@@ -2552,7 +2519,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 {mergeTargets.map((todo) => (
                   <button
                     key={todo.id}
-                    onClick={() => setSelectedPrimaryId(todo.id)}
+                    onClick={() => setMergePrimaryId(todo.id)}
                     className={`w-full text-left p-3 rounded-xl border transition-all ${
                       selectedPrimaryId === todo.id
                         ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]/10 ring-1 ring-[var(--brand-blue)]/30'
@@ -2615,9 +2582,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               <button
                 onClick={() => {
                   if (!isMerging) {
-                    setShowMergeModal(false);
-                    setMergeTargets([]);
-                    setSelectedPrimaryId(null);
+                    closeMergeModal();
                   }
                 }}
                 disabled={isMerging}
@@ -2691,8 +2656,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todos={emailTargetTodos}
           currentUser={currentUser}
           onClose={() => {
-            setShowEmailModal(false);
-            setEmailTargetTodos([]);
+            closeEmailModal();
           }}
           darkMode={darkMode}
         />
@@ -2703,12 +2667,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         <CompletionCelebration
           celebrationData={celebrationData}
           onDismiss={() => {
-            setShowEnhancedCelebration(false);
-            setCelebrationData(null);
+            dismissEnhancedCelebration();
           }}
           onNextTaskClick={(taskId) => {
-            setShowEnhancedCelebration(false);
-            setCelebrationData(null);
+            dismissEnhancedCelebration();
             // Scroll to task - highlight it briefly
             const taskElement = document.getElementById(`todo-${taskId}`);
             if (taskElement) {
@@ -2720,8 +2682,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             }
           }}
           onShowSummary={() => {
-            setCompletedTaskForSummary(celebrationData.completedTask);
-            setShowCompletionSummary(true);
+            openCompletionSummary(celebrationData.completedTask);
           }}
         />
       )}
@@ -2732,8 +2693,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todo={completedTaskForSummary}
           completedBy={userName}
           onClose={() => {
-            setShowCompletionSummary(false);
-            setCompletedTaskForSummary(null);
+            closeCompletionSummary();
           }}
         />
       )}

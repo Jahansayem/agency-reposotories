@@ -249,20 +249,29 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     });
   }, [onNewTaskTrigger]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '300ms' }} />
-        </div>
-      </div>
-    );
-  }
+  // AI Inbox handlers - extracted to useCallback for memoization
+  // NOTE: These must be defined BEFORE any conditional returns to follow Rules of Hooks
+  const handleAIAccept = useCallback(async (item: unknown, editedTask: unknown) => {
+    // TODO: Implement accept logic - create task from AI suggestion
+    console.log('Accept AI item:', item, editedTask);
+  }, []);
 
-  // Render different views based on activeView from AppShell context
-  const renderActiveView = () => {
+  const handleAIDismiss = useCallback(async (itemId: string) => {
+    // TODO: Implement dismiss logic
+    console.log('Dismiss AI item:', itemId);
+  }, []);
+
+  const handleAIRefresh = useCallback(async () => {
+    // TODO: Implement refresh logic - fetch new AI items
+    console.log('Refresh AI inbox');
+  }, []);
+
+  const handleArchiveClose = useCallback(() => setActiveView('tasks'), [setActiveView]);
+  const handleChatBack = useCallback(() => setActiveView('tasks'), [setActiveView]);
+
+  // Memoized view rendering to prevent unnecessary re-renders
+  // NOTE: Must be defined BEFORE any conditional returns to follow Rules of Hooks
+  const activeViewContent = useMemo(() => {
     switch (activeView) {
       case 'dashboard':
         return (
@@ -271,7 +280,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             todos={todos}
             users={users}
             onNavigateToTasks={() => handleNavigateToTasks()}
-            onAddTask={handleAddTask}
             onFilterOverdue={() => handleNavigateToTasks('overdue')}
             onFilterDueToday={() => handleNavigateToTasks('due_today')}
           />
@@ -282,7 +290,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
           <ChatView
             currentUser={currentUser}
             users={usersWithColors}
-            onBack={() => setActiveView('tasks')}
+            onBack={handleChatBack}
             onTaskLinkClick={handleTaskLinkClick}
           />
         );
@@ -324,7 +332,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             users={users}
             onRestore={handleRestoreTask}
             onDelete={handleDeleteTask}
-            onClose={() => setActiveView('tasks')}
+            onClose={handleArchiveClose}
           />
         );
 
@@ -334,18 +342,9 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
           <AIInbox
             items={[]} // TODO: Connect to actual AI inbox state from store
             users={usersWithColors.map(u => u.name)}
-            onAccept={async (item, editedTask) => {
-              // TODO: Implement accept logic - create task from AI suggestion
-              console.log('Accept AI item:', item, editedTask);
-            }}
-            onDismiss={async (itemId) => {
-              // TODO: Implement dismiss logic
-              console.log('Dismiss AI item:', itemId);
-            }}
-            onRefresh={async () => {
-              // TODO: Implement refresh logic - fetch new AI items
-              console.log('Refresh AI inbox');
-            }}
+            onAccept={handleAIAccept}
+            onDismiss={handleAIDismiss}
+            onRefresh={handleAIRefresh}
           />
         );
 
@@ -363,11 +362,45 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
           />
         );
     }
-  };
+  }, [
+    activeView,
+    currentUser,
+    todos,
+    users,
+    usersWithColors,
+    initialFilter,
+    showAddTask,
+    handleNavigateToTasks,
+    handleTaskLinkClick,
+    handleRestoreTask,
+    handleDeleteTask,
+    handleAddTaskModalOpened,
+    handleInitialFilterApplied,
+    handleOpenDashboard,
+    handleChatBack,
+    handleArchiveClose,
+    handleAIAccept,
+    handleAIDismiss,
+    handleAIRefresh,
+    onUserChange,
+  ]);
+
+  // Loading state - rendered conditionally in JSX to avoid early return before hooks
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      {renderActiveView()}
+      {activeViewContent}
 
       {/* Only render DashboardModal when it needs to be shown - prevents skeleton flash */}
       {showDashboard && (

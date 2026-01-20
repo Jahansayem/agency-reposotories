@@ -28,7 +28,7 @@
   --border: #CBD5E1;
   --border-hover: #94A3B8;
   --border-subtle: #E2E8F0;
-  --text-muted: #64748B;
+  --text-muted: #52627A; /* Improved contrast: 5.5:1 ratio on white */
   --text-light: #94A3B8;
   --text-inverse: #FFFFFF;
 
@@ -998,6 +998,47 @@ input[type="radio"]:focus-visible {
 .card-selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+/* ─── Task Card Hover States ─── */
+.task-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-quick) var(--ease-smooth-in-out);
+}
+
+.task-card:hover {
+  background: var(--surface-2);
+  transform: var(--hover-lift-sm);
+  box-shadow: var(--elevation-2);
+  border-color: var(--border);
+}
+
+.task-card:active {
+  transform: var(--press-scale-sm);
+}
+
+.task-card-priority-high {
+  border-left: 3px solid var(--warning);
+}
+
+.task-card-priority-urgent {
+  border-left: 3px solid var(--danger);
+  box-shadow: var(--priority-urgent-glow);
+}
+
+.task-card-priority-urgent:hover {
+  box-shadow: var(--elevation-2), var(--priority-urgent-glow);
+}
+
+.task-card-overdue {
+  background: var(--danger-light);
+  border-left: 3px solid var(--danger);
+}
+
+.task-card-overdue:hover {
+  background: color-mix(in srgb, var(--danger-light) 80%, var(--surface-2) 20%);
 }
 
 /* ─── Enhanced Button Styles ─── */

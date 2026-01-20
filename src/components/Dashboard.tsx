@@ -12,9 +12,11 @@ import {
   Moon,
   Sunrise,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 import { Card, Badge, Button, ProgressRing } from '@/components/ui';
+import DailyDigestModal from '@/components/DailyDigestModal';
 
 interface DashboardProps {
   todos: Todo[];
@@ -53,6 +55,7 @@ export default function Dashboard({
   darkMode = false,
 }: DashboardProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showDailyDigest, setShowDailyDigest] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -209,6 +212,26 @@ export default function Dashboard({
 
       {/* Main Content */}
       <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-6 py-6 space-y-5">
+        {/* Daily Digest Button */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <button
+            onClick={() => setShowDailyDigest(true)}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[var(--brand-blue)]/10 to-[#C9A227]/10 border border-[var(--brand-blue)]/30 hover:border-[var(--brand-blue)]/50 transition-all group"
+          >
+            <div className="w-9 h-9 rounded-lg bg-[#C9A227]/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Sparkles className="w-5 h-5 text-[#C9A227]" />
+            </div>
+            <div className="flex-1 text-left">
+              <span className="text-sm font-semibold text-[var(--foreground)]">Daily Digest</span>
+              <span className="text-xs text-[var(--text-muted)] ml-2">AI-powered briefing</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:translate-x-1 transition-transform" />
+          </button>
+        </motion.div>
+
         {/* Overdue Alert - Primary CTA when there are overdue tasks */}
         {stats.overdue > 0 && (
           <motion.div
@@ -443,6 +466,15 @@ export default function Dashboard({
           )}
         </div>
       </div>
+
+      {/* Daily Digest Modal */}
+      <DailyDigestModal
+        isOpen={showDailyDigest}
+        onClose={() => setShowDailyDigest(false)}
+        currentUser={currentUser}
+        onFilterOverdue={onFilterOverdue}
+        onFilterDueToday={onFilterDueToday}
+      />
     </div>
   );
 }

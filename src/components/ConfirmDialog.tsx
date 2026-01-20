@@ -32,15 +32,15 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // Focus trap and escape key handling
   useEffect(() => {
     if (!isOpen) return;
 
-    // Focus the cancel button when opening (safer default)
-    confirmButtonRef.current?.focus();
+    // Focus the cancel button when opening (safer default for destructive dialogs)
+    cancelButtonRef.current?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -154,6 +154,7 @@ export default function ConfirmDialog({
           {/* Actions */}
           <div className="flex gap-3">
             <motion.button
+              ref={cancelButtonRef}
               onClick={onCancel}
               whileHover={reducedMotion ? undefined : { scale: 1.02 }}
               whileTap={reducedMotion ? undefined : { scale: 0.98 }}
@@ -162,7 +163,6 @@ export default function ConfirmDialog({
               {cancelLabel}
             </motion.button>
             <motion.button
-              ref={confirmButtonRef}
               onClick={onConfirm}
               whileHover={reducedMotion ? undefined : { scale: 1.02 }}
               whileTap={reducedMotion ? undefined : { scale: 0.98 }}

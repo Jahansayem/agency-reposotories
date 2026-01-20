@@ -58,6 +58,9 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
       {/* Checkbox */}
       <button
         onClick={() => onToggle(subtask.id)}
+        role="checkbox"
+        aria-checked={subtask.completed}
+        aria-label={`${subtask.completed ? 'Completed' : 'Incomplete'}: ${subtask.text}`}
         className={`w-6 h-6 sm:w-5 sm:h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
           subtask.completed
             ? 'bg-[var(--accent)] border-[var(--accent)]'
@@ -233,11 +236,29 @@ export default function TodoItem({
   useEffect(() => {
     if (showActionsMenu && menuButtonRef.current) {
       const rect = menuButtonRef.current.getBoundingClientRect();
-      // Position dropdown below the button, aligned to the right edge
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY + 4, // 4px gap
-        left: rect.right + window.scrollX - 180, // Align right edge (180px is min-w)
-      });
+      // For fixed positioning, use viewport-relative coordinates (no scroll offset needed)
+      // getBoundingClientRect() already returns viewport-relative values
+      const dropdownWidth = 180;
+      let left = rect.right - dropdownWidth; // Align right edge
+      let top = rect.bottom + 4; // 4px gap below button
+
+      // Ensure dropdown doesn't go off-screen on the left
+      if (left < 8) {
+        left = 8;
+      }
+
+      // Ensure dropdown doesn't go off-screen on the right
+      if (left + dropdownWidth > window.innerWidth - 8) {
+        left = window.innerWidth - dropdownWidth - 8;
+      }
+
+      // If dropdown would go below viewport, position it above the button
+      const estimatedHeight = 280; // Approximate dropdown height
+      if (top + estimatedHeight > window.innerHeight) {
+        top = rect.top - estimatedHeight - 4;
+      }
+
+      setDropdownPosition({ top, left });
     } else {
       setDropdownPosition(null);
     }
@@ -422,7 +443,20 @@ export default function TodoItem({
         </button>
 
         {/* Content */}
-        <div className="flex-1 min-w-0" onClick={() => setExpanded(!expanded)}>
+        <div
+          className="flex-1 min-w-0 cursor-pointer"
+          onClick={() => setExpanded(!expanded)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setExpanded(!expanded);
+            }
+          }}
+          tabIndex={0}
+          role="button"
+          aria-expanded={expanded}
+          aria-label={`${todo.text}. Press Enter to ${expanded ? 'collapse' : 'expand'} details`}
+        >
           {editingText ? (
             <input
               value={text}
@@ -641,13 +675,13 @@ export default function TodoItem({
                 value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                 onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
                 className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
-                title="Set due date"
+                aria-label="Set due date"
               />
               <select
                 value={todo.assigned_to || ''}
                 onChange={(e) => onAssign(todo.id, e.target.value || null)}
                 className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none min-w-[90px]"
-                title="Assign to"
+                aria-label="Assign task to user"
               >
                 <option value="">Unassigned</option>
                 {users.map((user) => (
@@ -658,7 +692,7 @@ export default function TodoItem({
                 value={priority}
                 onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
                 className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
-                title="Set priority"
+                aria-label="Set task priority"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
