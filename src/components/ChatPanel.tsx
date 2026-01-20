@@ -716,6 +716,15 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
         }
       });
 
+      // Clear unread count for currently viewed conversation (handles initial load edge case)
+      // This is a safety net in case the exclusion logic above didn't catch it
+      const viewingKey = (!showConversationListRef.current && conversationRef.current)
+        ? getConversationKey(conversationRef.current)
+        : null;
+      if (viewingKey && initialUnreadCounts[viewingKey]) {
+        initialUnreadCounts[viewingKey] = 0;
+      }
+
       setUnreadCounts(initialUnreadCounts);
       setFirstUnreadId(firstUnread);
     }
@@ -1344,18 +1353,25 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
           p_user_name: currentUser.name
         });
 
-        // If RPC doesn't exist, fall back to regular update
+        // If RPC fails (doesn't exist or other error), fall back to regular update
         // Use originalReadByMap to check if user was already in read_by BEFORE optimistic update
-        if (error?.code === '42883') { // function does not exist
+        if (error) {
+          // Log non-critical errors for debugging
+          if (error.code !== '42883') {
+            logger.debug('RPC mark_message_read failed, using fallback', { error, messageId, component: 'ChatPanel' });
+          }
+
           const originalReadBy = originalReadByMap.get(messageId) || [];
           if (!originalReadBy.includes(currentUser.name)) {
-            await supabase
+            const { error: updateError } = await supabase
               .from('messages')
               .update({ read_by: [...originalReadBy, currentUser.name] })
               .eq('id', messageId);
+
+            if (updateError) {
+              logger.error('Error in fallback mark as read', updateError, { component: 'ChatPanel', messageId });
+            }
           }
-        } else if (error) {
-          logger.error('Error marking message as read', error, { component: 'ChatPanel', messageId });
         }
       });
 

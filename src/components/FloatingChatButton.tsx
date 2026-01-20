@@ -91,10 +91,14 @@ export default function FloatingChatButton({
         const persistedConversationType = lastConversation?.type;
         const persistedDmUser = persistedConversationType === 'dm' ? lastConversation?.userName : null;
 
+        // Get list of valid user names (users we can actually show conversations for)
+        const validUserNames = new Set(users.map(u => u.name));
+
         // Count messages where:
         // 1. Current user is not in read_by array
         // 2. Message is either a team message (no recipient) OR a DM to the current user
         // 3. Message is NOT from the persisted conversation (which will be shown immediately)
+        // 4. For DMs, the sender must be a valid user (so we can show their conversation)
         const unread = data?.filter((msg) => {
           // Skip if already read
           if (msg.read_by?.includes(currentUser.name)) return false;
@@ -108,6 +112,9 @@ export default function FloatingChatButton({
 
           // DM to current user
           if (msg.recipient === currentUser.name) {
+            // Skip if sender is not in the users list (e.g., "System" messages)
+            // These can't be viewed in the UI so shouldn't show as unread
+            if (!validUserNames.has(msg.created_by)) return false;
             // Skip if this DM is from the persisted conversation user
             if (persistedDmUser && msg.created_by === persistedDmUser) return false;
             return true;
