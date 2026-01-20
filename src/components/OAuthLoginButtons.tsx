@@ -10,7 +10,16 @@ export function OAuthLoginButtons() {
   const oauthEnabled = isFeatureEnabled('oauth_login');
 
   if (!oauthEnabled) {
-    return null;
+    return (
+      <div className="text-center py-4">
+        <p className="text-sm text-white/50 mb-3">
+          Sign-in is currently configured by your administrator.
+        </p>
+        <p className="text-xs text-white/30">
+          Contact your team admin to get started.
+        </p>
+      </div>
+    );
   }
 
   const handleOAuthLogin = async (provider: 'google' | 'apple') => {

@@ -13,7 +13,7 @@ import FloatingChatButton from '../FloatingChatButton';
 // ═══════════════════════════════════════════════════════════════════════════
 // APP SHELL - CORE LAYOUT ARCHITECTURE
 // A sophisticated three-column layout with persistent navigation and panels
-// Designed for the Bealer Agency insurance task management workflow
+// Designed for the Wavezly insurance task management workflow
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type ActiveView =
@@ -91,7 +91,7 @@ export default function AppShell({
 }: AppShellProps) {
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
-  
+
   // Get users from store for FloatingChatButton
   const users = useTodoStore((state) => state.usersWithColors);
 

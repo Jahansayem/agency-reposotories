@@ -144,16 +144,14 @@ export default function OutlookSetupPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => setOutlookVersion('new')}
-              className={`group p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                outlookVersion === 'new'
+              className={`group p-4 rounded-xl border-2 text-left transition-all duration-200 ${outlookVersion === 'new'
                   ? 'border-[var(--accent)] bg-[var(--accent-light)] shadow-sm'
                   : 'border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-2)]'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
-                  outlookVersion === 'new' ? 'bg-[var(--accent)]/15' : 'bg-[var(--surface-2)]'
-                }`}>
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${outlookVersion === 'new' ? 'bg-[var(--accent)]/15' : 'bg-[var(--surface-2)]'
+                  }`}>
                   <Globe className={`w-5 h-5 ${outlookVersion === 'new' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
                 </div>
                 <div className="flex-1">
@@ -168,16 +166,14 @@ export default function OutlookSetupPage() {
 
             <button
               onClick={() => setOutlookVersion('classic')}
-              className={`group p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                outlookVersion === 'classic'
+              className={`group p-4 rounded-xl border-2 text-left transition-all duration-200 ${outlookVersion === 'classic'
                   ? 'border-[var(--accent)] bg-[var(--accent-light)] shadow-sm'
                   : 'border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-2)]'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
-                  outlookVersion === 'classic' ? 'bg-[var(--accent)]/15' : 'bg-[var(--surface-2)]'
-                }`}>
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${outlookVersion === 'classic' ? 'bg-[var(--accent)]/15' : 'bg-[var(--surface-2)]'
+                  }`}>
                   <Monitor className={`w-5 h-5 ${outlookVersion === 'classic' ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
                 </div>
                 <div className="flex-1">
@@ -357,7 +353,7 @@ export default function OutlookSetupPage() {
         {/* Footer */}
         <div className="text-center">
           <p className="text-[var(--text-muted)] text-sm">
-            Questions? Contact the Bealer Agency team for help.
+            Questions? Contact the Wavezly team for help.
           </p>
         </div>
       </div>

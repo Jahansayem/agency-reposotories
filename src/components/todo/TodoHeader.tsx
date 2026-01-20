@@ -44,11 +44,10 @@ function TodoHeader({
   const userName = currentUser.name;
 
   return (
-    <header className={`sticky top-0 z-40 shadow-[var(--shadow-lg)] border-b ${
-      darkMode
+    <header className={`sticky top-0 z-40 shadow-[var(--shadow-lg)] border-b ${darkMode
         ? 'bg-[var(--gradient-hero)] border-white/5'
         : 'bg-white border-[var(--border)]'
-    }`}>
+      }`}>
       <div className={`mx-auto px-4 sm:px-6 py-4 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
         <div className="flex items-center justify-between gap-3">
           {/* Logo & Context Info */}
@@ -57,11 +56,10 @@ function TodoHeader({
             {onOpenDashboard && (
               <button
                 onClick={onOpenDashboard}
-                className={`p-2 rounded-xl transition-all flex-shrink-0 ${
-                  darkMode
+                className={`p-2 rounded-xl transition-all flex-shrink-0 ${darkMode
                     ? 'hover:bg-white/10 text-white/70 hover:text-white'
                     : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                }`}
+                  }`}
                 title="Daily Summary"
               >
                 <Home className="w-5 h-5" />
@@ -71,7 +69,7 @@ function TodoHeader({
               <span className="text-white font-bold text-base">B</span>
             </div>
             <div className="min-w-0">
-              <h1 className={`text-base font-bold truncate tracking-tight ${darkMode ? 'text-white' : 'text-[var(--brand-navy)]'}`}>Bealer Agency</h1>
+              <h1 className={`text-base font-bold truncate tracking-tight ${darkMode ? 'text-white' : 'text-[var(--brand-navy)]'}`}>Wavezly</h1>
               <p className={`text-xs truncate ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>
                 {stats.active} active{stats.dueToday > 0 && ` • ${stats.dueToday} due today`}{stats.overdue > 0 && ` • ${stats.overdue} overdue`}
               </p>
@@ -80,20 +78,18 @@ function TodoHeader({
 
           <div className="flex items-center gap-1.5">
             {/* View toggle with labels */}
-            <div className={`flex backdrop-blur-sm rounded-xl p-1 border ${
-              darkMode
+            <div className={`flex backdrop-blur-sm rounded-xl p-1 border ${darkMode
                 ? 'bg-white/8 border-white/10'
                 : 'bg-[var(--surface-2)] border-[var(--border)]'
-            }`}>
+              }`}>
               <button
                 onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                  viewMode === 'list'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${viewMode === 'list'
                     ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                     : darkMode
                       ? 'text-white/70 hover:text-white hover:bg-white/10'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                }`}
+                  }`}
                 aria-pressed={viewMode === 'list'}
                 aria-label="List view"
               >
@@ -102,13 +98,12 @@ function TodoHeader({
               </button>
               <button
                 onClick={() => setViewMode('kanban')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                  viewMode === 'kanban'
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${viewMode === 'kanban'
                     ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                     : darkMode
                       ? 'text-white/70 hover:text-white hover:bg-white/10'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                }`}
+                  }`}
                 aria-pressed={viewMode === 'kanban'}
                 aria-label="Board view"
               >
@@ -120,11 +115,10 @@ function TodoHeader({
             {/* Activity Feed - accessible to all users */}
             <button
               onClick={() => setShowActivityFeed(true)}
-              className={`p-2 rounded-xl transition-all duration-200 ${
-                darkMode
+              className={`p-2 rounded-xl transition-all duration-200 ${darkMode
                   ? 'text-white/60 hover:text-white hover:bg-white/10'
                   : 'text-[var(--text-muted)] hover:text-[var(--brand-blue)] hover:bg-[var(--surface-2)]'
-              }`}
+                }`}
               aria-label="View activity feed"
             >
               <Activity className="w-4 h-4" />
@@ -133,11 +127,10 @@ function TodoHeader({
             {canViewArchive && (
               <button
                 onClick={() => setShowArchiveView(true)}
-                className={`p-2 rounded-xl transition-all duration-200 ${
-                  darkMode
+                className={`p-2 rounded-xl transition-all duration-200 ${darkMode
                     ? 'text-white/60 hover:text-white hover:bg-white/10'
                     : 'text-[var(--text-muted)] hover:text-[var(--brand-blue)] hover:bg-[var(--surface-2)]'
-                }`}
+                  }`}
                 aria-label="View archive"
                 title="Archived tasks"
               >
@@ -149,11 +142,10 @@ function TodoHeader({
             {userName === OWNER_USERNAME && (
               <button
                 onClick={() => setShowStrategicDashboard(true)}
-                className={`p-2 rounded-xl transition-all duration-200 ${
-                  darkMode
+                className={`p-2 rounded-xl transition-all duration-200 ${darkMode
                     ? 'text-white/60 hover:text-white hover:bg-white/10'
                     : 'text-[var(--text-muted)] hover:text-[var(--brand-blue)] hover:bg-[var(--surface-2)]'
-                }`}
+                  }`}
                 aria-label="Strategic Goals Dashboard"
                 title="Strategic Goals"
               >
@@ -164,11 +156,10 @@ function TodoHeader({
             {/* Weekly progress chart */}
             <button
               onClick={() => setShowWeeklyChart(true)}
-              className={`p-2 rounded-xl transition-all duration-200 ${
-                darkMode
+              className={`p-2 rounded-xl transition-all duration-200 ${darkMode
                   ? 'text-white/60 hover:text-white hover:bg-white/10'
                   : 'text-[var(--text-muted)] hover:text-[var(--brand-blue)] hover:bg-[var(--surface-2)]'
-              }`}
+                }`}
               aria-label="View weekly progress"
             >
               <BarChart2 className="w-4 h-4" />
@@ -177,11 +168,10 @@ function TodoHeader({
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
-              className={`p-2 rounded-xl transition-all duration-200 ${
-                darkMode
+              className={`p-2 rounded-xl transition-all duration-200 ${darkMode
                   ? 'text-white/60 hover:text-white hover:bg-white/10'
                   : 'text-[var(--text-muted)] hover:text-[var(--brand-blue)] hover:bg-[var(--surface-2)]'
-              }`}
+                }`}
               aria-label={`Switch to ${darkMode ? 'light' : 'dark'} mode`}
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}

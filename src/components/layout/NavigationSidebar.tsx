@@ -242,7 +242,7 @@ export default function NavigationSidebar({
               </div>
               <div className="overflow-hidden">
                 <h1 className={`font-semibold text-sm truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
-                  Bealer Agency
+                  Wavezly
                 </h1>
                 <p className={`text-xs truncate ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
                   Task Manager

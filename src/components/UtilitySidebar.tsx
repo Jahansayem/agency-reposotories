@@ -161,7 +161,7 @@ export default function UtilitySidebar({
           </div>
           <div>
             <h1 className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
-              Bealer Agency
+              Wavezly
             </h1>
             <p className={`text-xs ${darkMode ? 'text-white/50' : 'text-[var(--text-muted)]'}`}>
               {format(new Date(), 'EEEE, MMM d')}

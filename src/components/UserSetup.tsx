@@ -83,7 +83,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
               transition={{ delay: 0.3 }}
               className="text-2xl font-bold text-slate-900 dark:text-white mb-1"
             >
-              Bealer Agency
+              Wavezly
             </motion.h1>
 
             <motion.p
@@ -167,11 +167,10 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
                 disabled={!name.trim()}
                 whileHover={{ scale: name.trim() ? 1.01 : 1 }}
                 whileTap={{ scale: name.trim() ? 0.99 : 1 }}
-                className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
-                  name.trim()
+                className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-all ${name.trim()
                     ? 'bg-[#0033A0] hover:bg-[#002878] text-white shadow-lg shadow-[#0033A0]/20'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 Get Started
                 <ArrowRight className={`w-5 h-5 transition-transform ${name.trim() ? 'group-hover:translate-x-1' : ''}`} />

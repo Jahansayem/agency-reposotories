@@ -392,7 +392,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     Team Workspace
                   </motion.div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Bealer Agency</h2>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Wavezly</h2>
                 </div>
               </motion.div>
 
@@ -507,7 +507,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <div className="inline-flex mb-4">
                       <Logo3D />
                     </div>
-                    <h1 className="text-2xl font-bold text-white">Bealer Agency</h1>
+                    <h1 className="text-2xl font-bold text-white">Wavezly</h1>
                     <p className="text-sm text-white/50 mt-1">Task Management Platform</p>
                   </motion.div>
 
@@ -586,26 +586,34 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
                     {/* First user state */}
                     {users.length === 0 && (
-                      <motion.div
-                        className="px-8 py-12 text-center"
+                      <motion.button
+                        className="w-full px-8 py-12 text-center cursor-pointer group hover:bg-white/[0.03] transition-colors rounded-xl"
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.3 }}
+                        onClick={() => {
+                          const oauthSection = document.getElementById('oauth-login-section');
+                          if (oauthSection) {
+                            oauthSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            oauthSection.focus();
+                          }
+                        }}
+                        type="button"
                       >
                         <motion.div
-                          className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center border border-white/10"
+                          className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center border border-white/10 group-hover:border-[var(--brand-sky)]/30 transition-colors"
                           animate={{ y: [-4, 4, -4] }}
                           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                         >
                           <Users className="w-10 h-10 text-[var(--brand-sky)]" />
                         </motion.div>
-                        <h3 className="text-xl font-bold text-white mb-2">Create your team</h3>
+                        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-[var(--brand-sky-light)] transition-colors">Create your team</h3>
                         <p className="text-sm text-white/40 mb-6">Be the first to join the workspace</p>
-                      </motion.div>
+                      </motion.button>
                     )}
 
                     {/* OAuth buttons */}
-                    <div className="p-6 pt-2">
+                    <div id="oauth-login-section" tabIndex={-1} className="p-6 pt-2 outline-none">
                       <OAuthLoginButtons />
                     </div>
                   </div>
@@ -681,13 +689,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                               disabled={lockoutSeconds > 0 || isSubmitting}
                               aria-label={`PIN digit ${index + 1} of 4`}
                               autoComplete="one-time-code"
-                              className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${
-                                lockoutSeconds > 0
-                                  ? 'border-red-500/50 bg-red-500/10 text-red-400'
-                                  : digit
-                                    ? 'border-[var(--brand-sky)] bg-[var(--brand-sky)]/10 text-white'
-                                    : 'border-white/10 bg-white/5 text-white focus:border-[var(--brand-sky)] focus:bg-white/10'
-                              }`}
+                              className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${lockoutSeconds > 0
+                                ? 'border-red-500/50 bg-red-500/10 text-red-400'
+                                : digit
+                                  ? 'border-[var(--brand-sky)] bg-[var(--brand-sky)]/10 text-white'
+                                  : 'border-white/10 bg-white/5 text-white focus:border-[var(--brand-sky)] focus:bg-white/10'
+                                }`}
                             />
                           </div>
                         ))}
@@ -731,7 +738,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 1 }}
             >
-              Bealer Agency &copy; {new Date().getFullYear()}
+              Wavezly &copy; {new Date().getFullYear()}
             </motion.p>
           </div>
         </div>

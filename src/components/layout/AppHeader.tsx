@@ -62,11 +62,10 @@ export default function AppHeader({
             {onOpenDashboard && !focusMode && (
               <button
                 onClick={onOpenDashboard}
-                className={`p-2 rounded-xl transition-all flex-shrink-0 ${
-                  darkMode
+                className={`p-2 rounded-xl transition-all flex-shrink-0 ${darkMode
                     ? 'hover:bg-white/10 text-white/70 hover:text-white'
                     : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                }`}
+                  }`}
                 title="Daily Summary"
               >
                 <Home className="w-5 h-5" />
@@ -84,17 +83,15 @@ export default function AppHeader({
             {/* Title & Stats */}
             <div className="min-w-0">
               <h1
-                className={`text-base font-bold truncate tracking-tight ${
-                  darkMode ? 'text-white' : 'text-[var(--brand-navy)]'
-                }`}
+                className={`text-base font-bold truncate tracking-tight ${darkMode ? 'text-white' : 'text-[var(--brand-navy)]'
+                  }`}
               >
-                Bealer Agency
+                Wavezly
               </h1>
               {!focusMode && (
                 <p
-                  className={`text-xs truncate ${
-                    darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'
-                  }`}
+                  className={`text-xs truncate ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'
+                    }`}
                 >
                   {stats.active} active
                   {stats.dueToday > 0 && ` \u2022 ${stats.dueToday} due today`}
@@ -109,21 +106,19 @@ export default function AppHeader({
             {/* View toggle - hidden in focus mode */}
             {!focusMode && (
               <div
-                className={`flex backdrop-blur-sm rounded-xl p-1 border ${
-                  darkMode
+                className={`flex backdrop-blur-sm rounded-xl p-1 border ${darkMode
                     ? 'bg-white/8 border-white/10'
                     : 'bg-[var(--surface-2)] border-[var(--border)]'
-                }`}
+                  }`}
               >
                 <button
                   onClick={() => onViewModeChange('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                    viewMode === 'list'
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${viewMode === 'list'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : darkMode
                         ? 'text-white/70 hover:text-white hover:bg-white/10'
                         : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
+                    }`}
                   aria-pressed={viewMode === 'list'}
                   aria-label="List view"
                 >
@@ -132,13 +127,12 @@ export default function AppHeader({
                 </button>
                 <button
                   onClick={() => onViewModeChange('kanban')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
-                    viewMode === 'kanban'
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${viewMode === 'kanban'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : darkMode
                         ? 'text-white/70 hover:text-white hover:bg-white/10'
                         : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
+                    }`}
                   aria-pressed={viewMode === 'kanban'}
                   aria-label="Board view"
                 >

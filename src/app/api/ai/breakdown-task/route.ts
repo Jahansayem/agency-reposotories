@@ -43,7 +43,7 @@ ${patternMatch.tips ? `\nTip: ${patternMatch.tips}` : ''}`
     // Get completion rate warning if applicable
     const completionWarning = patternMatch ? getCompletionRateWarning(patternMatch.category) : null;
 
-    const prompt = `You are a task breakdown assistant for Bealer Agency, an Allstate insurance agency. Take a task and break it down into actionable subtasks.
+    const prompt = `You are a task breakdown assistant for Wavezly, an Allstate insurance agency. Take a task and break it down into actionable subtasks.
 
 Main task: "${text}"
 ${insuranceContext}
