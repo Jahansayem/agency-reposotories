@@ -10,6 +10,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { AppShell, useAppShell, ActiveView } from './layout';
 import { useTodoStore } from '@/store/todoStore';
+import { ErrorBoundary } from './ErrorBoundary';
 
 // Lazy load DashboardModal for better initial load performance
 const DashboardModal = dynamic(() => import('./DashboardModal'), {
@@ -421,12 +422,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 }
 
 /**
- * MainApp - Wraps the app content in AppShell context provider
+ * MainApp - Wraps the app content in AppShell context provider with Error Boundary
  */
 export default function MainApp({ currentUser, onUserChange }: MainAppProps) {
   return (
     <AppShell currentUser={currentUser} onUserChange={onUserChange}>
-      <MainAppContent currentUser={currentUser} onUserChange={onUserChange} />
+      <ErrorBoundary>
+        <MainAppContent currentUser={currentUser} onUserChange={onUserChange} />
+      </ErrorBoundary>
     </AppShell>
   );
 }

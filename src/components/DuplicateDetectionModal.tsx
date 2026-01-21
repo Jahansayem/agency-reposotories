@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Plus, GitMerge, X, Calendar, Flag, Paperclip, ListChecks } from 'lucide-react';
 import { TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
 import { DuplicateMatch } from '@/lib/duplicateDetection';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 import {
   backdropVariants,
   modalVariants,
@@ -46,6 +46,13 @@ export default function DuplicateDetectionModal({
   // Handle Escape key to close modal
   useEscapeKey(onCancel, { enabled: isOpen });
 
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onCancel,
+    enabled: isOpen,
+    autoFocus: true,
+  });
+
   const priorityConfig = PRIORITY_CONFIG[newTaskPriority];
   const reducedMotion = prefersReducedMotion();
 
@@ -72,6 +79,7 @@ export default function DuplicateDetectionModal({
             onClick={onCancel}
           />
           <motion.div
+            ref={containerRef}
             variants={reducedMotion ? undefined : modalVariants}
             initial={reducedMotion ? { opacity: 1 } : 'hidden'}
             animate={reducedMotion ? { opacity: 1 } : 'visible'}

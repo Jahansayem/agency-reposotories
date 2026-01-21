@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, Loader2, Share2, Lock } from 'lucide-react';
 import { Todo, PRIORITY_CONFIG } from '@/types/todo';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 import {
   backdropVariants,
   modalVariants,
@@ -36,6 +36,12 @@ export default function SaveTemplateModal({
 
   // Handle Escape key to close modal
   useEscapeKey(onClose);
+
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    autoFocus: true,
+  });
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -80,6 +86,7 @@ export default function SaveTemplateModal({
       />
 
       <motion.div
+        ref={containerRef}
         variants={reducedMotion ? undefined : modalVariants}
         initial={reducedMotion ? { opacity: 1 } : 'hidden'}
         animate={reducedMotion ? { opacity: 1 } : 'visible'}

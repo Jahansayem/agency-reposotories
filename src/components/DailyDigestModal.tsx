@@ -16,7 +16,7 @@ import {
   AlertCircle,
   Lightbulb,
 } from 'lucide-react';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 import type { AuthUser } from '@/types/todo';
 
 // Types based on the API response
@@ -123,6 +123,13 @@ export default function DailyDigestModal({
   // Handle Escape key to close modal
   useEscapeKey(onClose, { enabled: isOpen });
 
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    enabled: isOpen,
+    autoFocus: true,
+  });
+
   // Helper to get CSRF token from cookie
   const getCsrfToken = useCallback((): string | null => {
     const match = document.cookie.match(/csrf_token=([^;]+)/);
@@ -213,6 +220,7 @@ export default function DailyDigestModal({
 
           {/* Modal */}
           <motion.div
+            ref={containerRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="daily-digest-title"

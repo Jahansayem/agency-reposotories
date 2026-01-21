@@ -36,7 +36,7 @@ import AnimatedProgressRing from '@/components/dashboard/AnimatedProgressRing';
 import StatCard from '@/components/dashboard/StatCard';
 import QuickActions from '@/components/dashboard/QuickActions';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 import {
   generateDashboardAIData,
   NeglectedTask,
@@ -112,6 +112,13 @@ export default function DashboardModal({
 
   // Handle Escape key to close modal
   useEscapeKey(onClose, { enabled: isOpen });
+
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    enabled: isOpen,
+    autoFocus: true,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -319,6 +326,7 @@ export default function DashboardModal({
 
           {/* Modal */}
           <motion.div
+            ref={containerRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="dashboard-modal-title"

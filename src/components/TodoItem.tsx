@@ -10,6 +10,7 @@ import AttachmentUpload from './AttachmentUpload';
 import Celebration from './Celebration';
 import ReminderPicker from './ReminderPicker';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
+import { sanitizeTranscription } from '@/lib/sanitize';
 
 // Map priority levels to Badge variants
 const PRIORITY_TO_BADGE_VARIANT: Record<TodoPriority, 'danger' | 'warning' | 'info' | 'default'> = {
@@ -373,6 +374,13 @@ export default function TodoItem({
       setText(todo.text);
     }
   }, [todo.text, editingText]);
+
+  // Sync local notes state with todo.notes when notes panel is closed
+  useEffect(() => {
+    if (!showNotes) {
+      setNotes(todo.notes || '');
+    }
+  }, [todo.notes, showNotes]);
 
   // Priority-based left border color - always visible for quick scanning
   const getPriorityBorderClass = () => {
@@ -883,7 +891,7 @@ export default function TodoItem({
             <span className="text-sm font-medium text-purple-500">Voicemail Transcription</span>
           </div>
           <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap leading-relaxed">
-            {todo.transcription}
+            {sanitizeTranscription(todo.transcription)}
           </p>
         </div>
       )}
@@ -1226,7 +1234,7 @@ export default function TodoItem({
           {/* SECTION 5: Metadata footer */}
           <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs text-[var(--text-muted)]">
             <div className="flex items-center gap-3">
-              <span>Created by {todo.created_by}</span>
+              {todo.created_by && <span>Created by {todo.created_by}</span>}
               {todo.created_at && (
                 <span>• {new Date(todo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
               )}

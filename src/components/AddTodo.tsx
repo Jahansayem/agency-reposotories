@@ -14,6 +14,7 @@ import { getUserPreferences, updateLastTaskDefaults } from '@/lib/userPreference
 import { analyzeTaskPattern } from '@/lib/insurancePatterns';
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { useToast } from './ui/Toast';
 
 interface AddTodoProps {
   onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => void;
@@ -90,6 +91,8 @@ declare global {
 }
 
 export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, autoFocus }: AddTodoProps) {
+  const toast = useToast();
+
   // Initialize priority and assignedTo from user preferences (lazy initial state)
   const [text, setText] = useState('');
   const [priority, setPriority] = useState<TodoPriority>(() => {
@@ -197,6 +200,9 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
 
       if (!response.ok) {
         logger.error('Failed to smart parse', undefined, { component: 'AddTodo' });
+        toast.error('AI parsing failed', {
+          description: 'Could not parse your text. Try adding the task manually.',
+        });
         return null;
       }
 
@@ -207,9 +213,12 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
       return null;
     } catch (error) {
       logger.error('Error in smart parse', error, { component: 'AddTodo' });
+      toast.error('AI parsing failed', {
+        description: 'Network error. Please try again.',
+      });
       return null;
     }
-  }, [users]);
+  }, [users, toast]);
 
   // Initialize speech recognition
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Keyboard } from 'lucide-react';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 
 interface KeyboardShortcutsModalProps {
   show: boolean;
@@ -80,6 +80,13 @@ export default function KeyboardShortcutsModal({
   // Handle Escape key to close modal
   useEscapeKey(onClose, { enabled: show });
 
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    enabled: show,
+    autoFocus: true,
+  });
+
   // Generate platform-appropriate shortcut groups
   const shortcutGroups = useMemo(() => getShortcutGroups(), []);
 
@@ -94,6 +101,7 @@ export default function KeyboardShortcutsModal({
           onClick={onClose}
         >
           <motion.div
+            ref={containerRef}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}

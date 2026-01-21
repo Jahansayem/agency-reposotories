@@ -39,6 +39,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Todo, TodoPriority, TodoStatus, Subtask, User as UserType, PRIORITY_CONFIG, STATUS_CONFIG } from '@/types/todo';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
+import { sanitizeTranscription } from '@/lib/sanitize';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TASK DETAIL PANEL
@@ -735,7 +736,7 @@ export default function TaskDetailPanel({
                   }
                 `}
               >
-                &ldquo;{task.transcription}&rdquo;
+                &ldquo;{sanitizeTranscription(task.transcription)}&rdquo;
               </div>
             </CollapsibleSection>
           )}

@@ -5,7 +5,7 @@ import { X, User, Calendar, Flag, Repeat, FileText, Paperclip, Clock, MessageSqu
 import { Todo, PRIORITY_CONFIG, STATUS_CONFIG, Subtask } from '@/types/todo';
 import AttachmentList from './AttachmentList';
 import { generateSummary, copyToClipboard } from '@/lib/summaryGenerator';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 
 interface ArchivedTaskModalProps {
   todo: Todo;
@@ -21,6 +21,12 @@ export default function ArchivedTaskModal({ todo, onClose }: ArchivedTaskModalPr
 
   // Handle Escape key to close modal
   useEscapeKey(onClose);
+
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    autoFocus: true,
+  });
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -96,7 +102,10 @@ export default function ArchivedTaskModal({ todo, onClose }: ArchivedTaskModalPr
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-2xl)]">
+      <div
+        ref={containerRef}
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-2xl)]"
+      >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
           <div className="flex-1 min-w-0">
