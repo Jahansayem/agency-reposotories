@@ -18,6 +18,9 @@ export async function GET() {
     SUPABASE_SERVICE_ROLE_KEY_LENGTH: process.env.SUPABASE_SERVICE_ROLE_KEY?.length || 0,
     SUPABASE_SERVICE_ROLE_KEY_PREFIX: process.env.SUPABASE_SERVICE_ROLE_KEY?.substring(0, 10) || 'NOT_SET',
 
+    // Debug test
+    TEST_VAR: process.env.TEST_VAR || 'NOT_SET',
+
     // Optional
     OUTLOOK_ADDON_API_KEY: !!process.env.OUTLOOK_ADDON_API_KEY,
     UPSTASH_REDIS_REST_URL: !!process.env.UPSTASH_REDIS_REST_URL,
@@ -25,6 +28,9 @@ export async function GET() {
 
     // Node environment
     NODE_ENV: process.env.NODE_ENV || 'unknown',
+
+    // List all env var names containing SUPABASE (for debugging)
+    ALL_SUPABASE_VARS: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
   };
 
   // Check if critical vars for daily digest are present
