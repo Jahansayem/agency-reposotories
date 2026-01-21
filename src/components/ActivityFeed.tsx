@@ -336,7 +336,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
   };
 
   return (
-    <div className={`h-full flex flex-col ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
+    <div className={`flex-1 flex flex-col min-h-0 ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
       {/* Toolbar - Controls for filtering and settings */}
       <div className={`px-4 py-2.5 border-b flex items-center justify-between ${darkMode ? 'border-[var(--border)]' : 'border-[var(--border)]'}`}>
         <div className="flex items-center gap-3">

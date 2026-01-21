@@ -2372,7 +2372,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         {showActivityFeed && (
           <div className="fixed inset-0 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Activity Feed">
             {/* Full-page container with proper spacing for navigation */}
-            <div className={`flex-1 flex flex-col ${darkMode ? 'bg-[var(--background)]' : 'bg-[var(--background)]'}`}>
+            <div className={`flex-1 flex flex-col min-h-0 ${darkMode ? 'bg-[var(--background)]' : 'bg-[var(--background)]'}`}>
               {/* Header with back button */}
               <div className={`px-4 sm:px-6 py-4 border-b flex items-center gap-4 ${darkMode ? 'border-[var(--border)] bg-[var(--surface)]' : 'border-[var(--border)] bg-white'}`}>
                 <button
@@ -2395,8 +2395,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               </div>
 
               {/* Activity Feed Content - Centered container for readability */}
-              <div className="flex-1 overflow-hidden">
-                <div className="h-full max-w-4xl mx-auto">
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-h-0 max-w-4xl mx-auto w-full">
                   <ActivityFeed
                     currentUserName={userName}
                     darkMode={darkMode}
