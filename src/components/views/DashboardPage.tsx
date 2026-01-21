@@ -5,13 +5,12 @@ import {
   Sun,
   Moon,
   Sunrise,
-  Sparkles,
 } from 'lucide-react';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
 import { useTheme } from '@/contexts/ThemeContext';
 import DoerDashboard from '../dashboard/DoerDashboard';
 import ManagerDashboard from '../dashboard/ManagerDashboard';
-import DailyDigestModal from '../DailyDigestModal';
+import DailyDigestPanel from '../dashboard/DailyDigestPanel';
 
 interface DashboardPageProps {
   currentUser: AuthUser;
@@ -35,7 +34,6 @@ export default function DashboardPage({
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [showDailyDigest, setShowDailyDigest] = useState(false);
 
   // Check if user has team members (is a manager)
   const isManager = users.length > 1;
@@ -105,30 +103,17 @@ export default function DashboardPage({
           }}
         />
         <div className="relative px-6 py-8 max-w-7xl mx-auto">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <greeting.Icon className="w-5 h-5 text-white/60" />
-                <span className="text-white/60 text-sm font-medium">{greeting.text}</span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
-                {currentUser.name}
-              </h1>
-              <p className="text-white/70 text-sm">
-                {isManager ? `${users.length} team members · ` : ''}{stats.totalActive} active tasks
-              </p>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <greeting.Icon className="w-5 h-5 text-white/60" />
+              <span className="text-white/60 text-sm font-medium">{greeting.text}</span>
             </div>
-            {/* Daily Digest Button */}
-            <button
-              onClick={() => setShowDailyDigest(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#C9A227]/20 to-[#C9A227]/10 border border-[#C9A227]/30 hover:from-[#C9A227]/30 hover:to-[#C9A227]/20 transition-all group"
-            >
-              <Sparkles className="w-5 h-5 text-[#C9A227] group-hover:scale-110 transition-transform" />
-              <div className="text-left">
-                <p className="text-white font-medium text-sm">Daily Digest</p>
-                <p className="text-white/50 text-xs">AI-powered briefing</p>
-              </div>
-            </button>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
+              {currentUser.name}
+            </h1>
+            <p className="text-white/70 text-sm">
+              {isManager ? `${users.length} team members · ` : ''}{stats.totalActive} active tasks
+            </p>
           </div>
 
           {/* Quick Stats Row */}
@@ -169,8 +154,17 @@ export default function DashboardPage({
         </div>
       </div>
 
-      {/* Main Content - Role-based dashboard */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        {/* Daily Digest Panel - auto-loads AI briefing */}
+        <DailyDigestPanel
+          currentUser={currentUser}
+          onFilterOverdue={onFilterOverdue}
+          onFilterDueToday={onFilterDueToday}
+          defaultExpanded={true}
+        />
+
+        {/* Role-based dashboard */}
         {isManager ? (
           <ManagerDashboard
             currentUser={currentUser}
@@ -192,15 +186,6 @@ export default function DashboardPage({
           />
         )}
       </div>
-
-      {/* Daily Digest Modal */}
-      <DailyDigestModal
-        isOpen={showDailyDigest}
-        onClose={() => setShowDailyDigest(false)}
-        currentUser={currentUser}
-        onFilterOverdue={onFilterOverdue}
-        onFilterDueToday={onFilterDueToday}
-      />
     </div>
   );
 }
