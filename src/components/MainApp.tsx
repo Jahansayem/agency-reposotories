@@ -282,6 +282,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             todos={todos}
             users={users}
             onNavigateToTasks={() => handleNavigateToTasks()}
+            onTaskClick={handleTaskLinkClick}
             onFilterOverdue={() => handleNavigateToTasks('overdue')}
             onFilterDueToday={() => handleNavigateToTasks('due_today')}
           />

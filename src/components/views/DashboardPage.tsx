@@ -18,6 +18,7 @@ interface DashboardPageProps {
   activityLog?: ActivityLogEntry[];
   users?: string[];
   onNavigateToTasks?: () => void;
+  onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;
 }
@@ -28,6 +29,7 @@ export default function DashboardPage({
   activityLog = [],
   users = [],
   onNavigateToTasks,
+  onTaskClick,
   onFilterOverdue,
   onFilterDueToday,
 }: DashboardPageProps) {
@@ -172,6 +174,7 @@ export default function DashboardPage({
             activityLog={activityLog}
             users={users}
             onNavigateToTasks={onNavigateToTasks}
+            onTaskClick={onTaskClick}
             onFilterOverdue={onFilterOverdue}
             onFilterDueToday={onFilterDueToday}
           />
@@ -181,6 +184,7 @@ export default function DashboardPage({
             todos={todos}
             activityLog={activityLog}
             onNavigateToTasks={onNavigateToTasks}
+            onTaskClick={onTaskClick}
             onFilterOverdue={onFilterOverdue}
             onFilterDueToday={onFilterDueToday}
           />

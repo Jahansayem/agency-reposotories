@@ -27,6 +27,7 @@ interface DoerDashboardProps {
   todos: Todo[];
   activityLog?: ActivityLogEntry[];
   onNavigateToTasks?: () => void;
+  onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;
 }
@@ -36,6 +37,7 @@ export default function DoerDashboard({
   todos,
   activityLog = [],
   onNavigateToTasks,
+  onTaskClick,
   onFilterOverdue,
   onFilterDueToday,
 }: DoerDashboardProps) {
@@ -155,6 +157,15 @@ export default function DoerDashboard({
     }
   }, [onNavigateToTasks, setActiveView]);
 
+  const handleTaskClick = useCallback((taskId: string) => {
+    if (onTaskClick) {
+      onTaskClick(taskId);
+    } else {
+      // Fallback to just navigating to tasks view
+      handleNavigateToTasks();
+    }
+  }, [onTaskClick, handleNavigateToTasks]);
+
   const handleFilterOverdue = useCallback(() => {
     if (onFilterOverdue) {
       onFilterOverdue();
@@ -267,7 +278,7 @@ export default function DoerDashboard({
                 {stats.dueTodayTasks.slice(0, 5).map((task) => (
                   <button
                     key={task.id}
-                    onClick={handleNavigateToTasks}
+                    onClick={() => handleTaskClick(task.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
                       darkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50'
                     }`}
@@ -320,7 +331,7 @@ export default function DoerDashboard({
                   {stats.upcomingTasks.slice(0, 4).map((task) => (
                     <button
                       key={task.id}
-                      onClick={handleNavigateToTasks}
+                      onClick={() => handleTaskClick(task.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
                         darkMode ? 'hover:bg-white/5' : 'hover:bg-slate-50'
                       }`}
@@ -356,7 +367,7 @@ export default function DoerDashboard({
                       className={`flex items-center gap-3 p-3 rounded-xl ${
                         darkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-slate-100'
                       } transition-colors cursor-pointer`}
-                      onClick={handleNavigateToTasks}
+                      onClick={() => handleTaskClick(item.todo.id)}
                     >
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${badge.bg} ${badge.text}`}>
                         {item.daysSinceActivity}d
