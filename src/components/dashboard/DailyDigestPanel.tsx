@@ -347,7 +347,7 @@ export default function DailyDigestPanel({
                       : 'Your AI-powered briefing will be ready soon'}
                   </p>
                   <p className="text-xs text-[var(--text-muted)] mt-2">
-                    Briefings are generated at 5 AM and 4 PM daily
+                    Briefings are generated at 5 AM and 4 PM PT daily
                   </p>
                 </motion.div>
               )}

@@ -10,40 +10,40 @@ import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 
 /**
- * Calculate the next scheduled digest time in Central Time.
- * Digests are generated at 5 AM and 4 PM Central daily.
+ * Calculate the next scheduled digest time in Pacific Time.
+ * Digests are generated at 5 AM and 4 PM Pacific daily.
  */
 function getNextScheduledTime(): Date {
-  // Get current time in Central Time
+  // Get current time in Pacific Time
   const now = new Date();
-  const centralTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
-  const hour = centralTime.getHours();
+  const pacificTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const hour = pacificTime.getHours();
 
-  // Calculate next scheduled time in Central
-  let nextCentral: Date;
+  // Calculate next scheduled time in Pacific
+  let nextPacific: Date;
   if (hour < 5) {
-    // Before 5am CT - next is 5am today
-    nextCentral = new Date(centralTime);
-    nextCentral.setHours(5, 0, 0, 0);
+    // Before 5am PT - next is 5am today
+    nextPacific = new Date(pacificTime);
+    nextPacific.setHours(5, 0, 0, 0);
   } else if (hour < 16) {
-    // Between 5am and 4pm CT - next is 4pm today
-    nextCentral = new Date(centralTime);
-    nextCentral.setHours(16, 0, 0, 0);
+    // Between 5am and 4pm PT - next is 4pm today
+    nextPacific = new Date(pacificTime);
+    nextPacific.setHours(16, 0, 0, 0);
   } else {
-    // After 4pm CT - next is 5am tomorrow
-    nextCentral = new Date(centralTime);
-    nextCentral.setDate(nextCentral.getDate() + 1);
-    nextCentral.setHours(5, 0, 0, 0);
+    // After 4pm PT - next is 5am tomorrow
+    nextPacific = new Date(pacificTime);
+    nextPacific.setDate(nextPacific.getDate() + 1);
+    nextPacific.setHours(5, 0, 0, 0);
   }
 
   // Convert back to UTC for consistent API response
-  // Calculate the offset between Central and UTC
-  const centralOffset = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', timeZoneName: 'short' });
-  const isCDT = centralOffset.includes('CDT');
-  const offsetHours = isCDT ? 5 : 6; // CDT is UTC-5, CST is UTC-6
+  // Calculate the offset between Pacific and UTC
+  const pacificOffset = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles', timeZoneName: 'short' });
+  const isPDT = pacificOffset.includes('PDT');
+  const offsetHours = isPDT ? 7 : 8; // PDT is UTC-7, PST is UTC-8
 
-  // Create UTC date from Central time
-  const utcDate = new Date(nextCentral);
+  // Create UTC date from Pacific time
+  const utcDate = new Date(nextPacific);
   utcDate.setHours(utcDate.getHours() + offsetHours);
 
   return utcDate;
