@@ -9,6 +9,46 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 
+/**
+ * Calculate the next scheduled digest time in Central Time.
+ * Digests are generated at 5 AM and 4 PM Central daily.
+ */
+function getNextScheduledTime(): Date {
+  // Get current time in Central Time
+  const now = new Date();
+  const centralTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+  const hour = centralTime.getHours();
+
+  // Calculate next scheduled time in Central
+  let nextCentral: Date;
+  if (hour < 5) {
+    // Before 5am CT - next is 5am today
+    nextCentral = new Date(centralTime);
+    nextCentral.setHours(5, 0, 0, 0);
+  } else if (hour < 16) {
+    // Between 5am and 4pm CT - next is 4pm today
+    nextCentral = new Date(centralTime);
+    nextCentral.setHours(16, 0, 0, 0);
+  } else {
+    // After 4pm CT - next is 5am tomorrow
+    nextCentral = new Date(centralTime);
+    nextCentral.setDate(nextCentral.getDate() + 1);
+    nextCentral.setHours(5, 0, 0, 0);
+  }
+
+  // Convert back to UTC for consistent API response
+  // Calculate the offset between Central and UTC
+  const centralOffset = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', timeZoneName: 'short' });
+  const isCDT = centralOffset.includes('CDT');
+  const offsetHours = isCDT ? 5 : 6; // CDT is UTC-5, CST is UTC-6
+
+  // Create UTC date from Central time
+  const utcDate = new Date(nextCentral);
+  utcDate.setHours(utcDate.getHours() + offsetHours);
+
+  return utcDate;
+}
+
 // Initialize Supabase client
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -104,31 +144,11 @@ export async function GET(request: NextRequest) {
 
     // No digest found
     if (!digest) {
-      // Calculate next scheduled time
-      const now = new Date();
-      const hour = now.getHours();
-
-      let nextScheduled: Date;
-      if (hour < 5) {
-        // Before 5am - next is 5am today
-        nextScheduled = new Date(now);
-        nextScheduled.setHours(5, 0, 0, 0);
-      } else if (hour < 16) {
-        // Between 5am and 4pm - next is 4pm today
-        nextScheduled = new Date(now);
-        nextScheduled.setHours(16, 0, 0, 0);
-      } else {
-        // After 4pm - next is 5am tomorrow
-        nextScheduled = new Date(now);
-        nextScheduled.setDate(nextScheduled.getDate() + 1);
-        nextScheduled.setHours(5, 0, 0, 0);
-      }
-
       return NextResponse.json({
         success: true,
         hasDigest: false,
         message: 'No recent digest available',
-        nextScheduled: nextScheduled.toISOString(),
+        nextScheduled: getNextScheduledTime().toISOString(),
       });
     }
 
@@ -148,23 +168,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Calculate next scheduled time
-    const now = new Date();
-    const hour = now.getHours();
-
-    let nextScheduled: Date;
-    if (hour < 5) {
-      nextScheduled = new Date(now);
-      nextScheduled.setHours(5, 0, 0, 0);
-    } else if (hour < 16) {
-      nextScheduled = new Date(now);
-      nextScheduled.setHours(16, 0, 0, 0);
-    } else {
-      nextScheduled = new Date(now);
-      nextScheduled.setDate(nextScheduled.getDate() + 1);
-      nextScheduled.setHours(5, 0, 0, 0);
-    }
-
     return NextResponse.json({
       success: true,
       hasDigest: true,
@@ -172,11 +175,10 @@ export async function GET(request: NextRequest) {
       digestType: digest.digest_type,
       generatedAt: digest.generated_at,
       isNew,
-      nextScheduled: nextScheduled.toISOString(),
+      nextScheduled: getNextScheduledTime().toISOString(),
     });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error in digest latest', error, { component: 'DigestLatest' });
 
     return NextResponse.json(
