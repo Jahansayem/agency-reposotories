@@ -186,7 +186,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     setHasAttachmentsFilter,
     setDateRangeFilter,
     filterArchivedTodos,
-  } = useFilters(userName);
+  } = useFilters(userName, currentUser.role);
 
   // Destructure filter values for easier access (backwards compatibility with existing code)
   const {
@@ -491,6 +491,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'task_created',
         userName,
+        userRole: currentUser.role,
         todoId: newTodo.id,
         todoText: newTodo.text,
         details: {
@@ -542,6 +543,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             logActivity({
               action: 'attachment_added',
               userName,
+              userRole: currentUser.role,
               todoId: newTodo.id,
               todoText: newTodo.text,
               details: {
@@ -674,6 +676,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'task_updated',
         userName,
+        userRole: currentUser.role,
         todoId: existingTodoId,
         todoText: existingTodo.text,
         details: {
@@ -793,6 +796,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         logActivity({
           action: 'task_completed',
           userName,
+          userRole: currentUser.role,
           todoId: id,
           todoText: oldTodo.text,
         });
@@ -800,6 +804,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         logActivity({
           action: 'task_reopened',
           userName,
+          userRole: currentUser.role,
           todoId: id,
           todoText: oldTodo.text,
         });
@@ -807,6 +812,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         logActivity({
           action: 'status_changed',
           userName,
+          userRole: currentUser.role,
           todoId: id,
           todoText: oldTodo.text,
           details: { from: oldTodo.status, to: status },
@@ -922,6 +928,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'task_completed',
         userName,
+        userRole: currentUser.role,
         todoId: id,
         todoText: todoItem.text,
       });
@@ -949,6 +956,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'task_deleted',
         userName,
+        userRole: currentUser.role,
         todoId: id,
         todoText: todoToDelete.text,
       });
@@ -989,6 +997,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'assigned_to_changed',
         userName,
+        userRole: currentUser.role,
         todoId: id,
         todoText: oldTodo.text,
         details: { from: oldTodo.assigned_to || null, to: assignedTo },
@@ -1017,6 +1026,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'due_date_changed',
         userName,
+        userRole: currentUser.role,
         todoId: id,
         todoText: oldTodo.text,
         details: { from: oldTodo.due_date || null, to: dueDate },
@@ -1045,6 +1055,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: reminderAt ? 'reminder_added' : 'reminder_removed',
         userName,
+        userRole: currentUser.role,
         todoId: id,
         todoText: oldTodo.text,
         details: { from: oldTodo.reminder_at || null, to: reminderAt },
@@ -1073,6 +1084,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'priority_changed',
         userName,
+        userRole: currentUser.role,
         todoId: id,
         todoText: oldTodo.text,
         details: { from: oldTodo.priority, to: priority },
@@ -1101,6 +1113,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'notes_updated',
         userName,
+        userRole: currentUser.role,
         todoId: id,
         todoText: oldTodo.text,
       });
@@ -1198,6 +1211,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         logActivity({
           action: 'attachment_added',
           userName,
+          userRole: currentUser.role,
           todoId: id,
           todoText: oldTodo.text,
           details: { count: newCount - oldCount },
@@ -1206,6 +1220,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         logActivity({
           action: 'attachment_removed',
           userName,
+          userRole: currentUser.role,
           todoId: id,
           todoText: oldTodo.text,
           details: { count: oldCount - newCount },
@@ -1362,6 +1377,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       logActivity({
         action: 'tasks_merged',
         userName,
+        userRole: currentUser.role,
         todoId: primaryTodoId,
         todoText: combinedText,
         details: {
@@ -1514,8 +1530,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
         {/* Header - Theme Responsive */}
         <header className={`sticky top-0 z-40 shadow-[var(--shadow-lg)] border-b ${darkMode
-            ? 'bg-[var(--gradient-hero)] border-white/5'
-            : 'bg-white border-[var(--border)]'
+          ? 'bg-[var(--gradient-hero)] border-white/5'
+          : 'bg-white border-[var(--border)]'
           }`}>
           <div className="mx-auto px-4 sm:px-6 py-4 max-w-5xl xl:max-w-6xl 2xl:max-w-7xl">
             <div className="flex items-center justify-between gap-3">
@@ -1526,8 +1542,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   <button
                     onClick={onOpenDashboard}
                     className={`p-2 rounded-xl transition-all flex-shrink-0 ${darkMode
-                        ? 'hover:bg-white/10 text-white/70 hover:text-white'
-                        : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                      ? 'hover:bg-white/10 text-white/70 hover:text-white'
+                      : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
                       }`}
                     title="Daily Summary"
                   >
@@ -1550,16 +1566,16 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 {/* View toggle with labels - hidden in focus mode */}
                 {!focusMode && (
                   <div className={`flex backdrop-blur-sm rounded-xl p-1 border ${darkMode
-                      ? 'bg-white/8 border-white/10'
-                      : 'bg-[var(--surface-2)] border-[var(--border)]'
+                    ? 'bg-white/8 border-white/10'
+                    : 'bg-[var(--surface-2)] border-[var(--border)]'
                     }`}>
                     <button
                       onClick={() => setViewMode('list')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${viewMode === 'list'
-                          ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                          : darkMode
-                            ? 'text-white/70 hover:text-white hover:bg-white/10'
-                            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
+                        ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
+                        : darkMode
+                          ? 'text-white/70 hover:text-white hover:bg-white/10'
+                          : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
                         }`}
                       aria-pressed={viewMode === 'list'}
                       aria-label="List view"
@@ -1570,10 +1586,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                     <button
                       onClick={() => setViewMode('kanban')}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${viewMode === 'kanban'
-                          ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                          : darkMode
-                            ? 'text-white/70 hover:text-white hover:bg-white/10'
-                            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
+                        ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
+                        : darkMode
+                          ? 'text-white/70 hover:text-white hover:bg-white/10'
+                          : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
                         }`}
                       aria-pressed={viewMode === 'kanban'}
                       aria-label="Board view"
@@ -1589,10 +1605,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   <button
                     onClick={() => setUseSectionedView(!useSectionedView)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 border ${useSectionedView
-                        ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30'
-                        : darkMode
-                          ? 'text-white/70 hover:text-white hover:bg-white/10 border-white/10'
-                          : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] border-[var(--border)]'
+                      ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30'
+                      : darkMode
+                        ? 'text-white/70 hover:text-white hover:bg-white/10 border-white/10'
+                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] border-[var(--border)]'
                       }`}
                     aria-pressed={useSectionedView}
                     aria-label="Toggle date sections"
@@ -1645,8 +1661,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         {!focusMode && (
           <div className="fixed bottom-6 right-6 z-30">
             <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium shadow-[var(--shadow-md)] backdrop-blur-sm ${connected
-                ? 'bg-[var(--success-light)] text-[var(--success)] border border-[var(--success)]/20'
-                : 'bg-[var(--danger-light)] text-[var(--danger)] border border-[var(--danger)]/20'
+              ? 'bg-[var(--success-light)] text-[var(--success)] border border-[var(--success)]/20'
+              : 'bg-[var(--danger-light)] text-[var(--danger)] border border-[var(--danger)]/20'
               }`}>
               {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
               {connected ? 'Live' : 'Offline'}
@@ -1762,8 +1778,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                     type="button"
                     onClick={() => setHighPriorityOnly(!highPriorityOnly)}
                     className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${highPriorityOnly
-                        ? 'bg-[var(--danger)] text-white'
-                        : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
+                      ? 'bg-[var(--danger)] text-white'
+                      : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
                       }`}
                     aria-pressed={highPriorityOnly}
                     title="High Priority"
@@ -1777,8 +1793,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                     type="button"
                     onClick={() => setShowCompleted(!showCompleted)}
                     className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${showCompleted
-                        ? 'bg-[var(--success)] text-white'
-                        : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
+                      ? 'bg-[var(--success)] text-white'
+                      : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
                       }`}
                     aria-pressed={showCompleted}
                     title="Show Completed"
@@ -1792,8 +1808,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                     type="button"
                     onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                     className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${showAdvancedFilters || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end
-                        ? 'bg-[var(--accent)] text-white'
-                        : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
+                      ? 'bg-[var(--accent)] text-white'
+                      : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
                       }`}
                     aria-expanded={showAdvancedFilters}
                     title="More Filters"
@@ -1847,8 +1863,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                       setShowBulkActions(!showBulkActions);
                     }}
                     className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${showBulkActions
-                        ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)]'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+                      ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
                       }`}
                     title={showBulkActions ? 'Cancel selection' : 'Select tasks'}
                   >
@@ -2236,8 +2252,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               <button
                 onClick={() => setShowShortcuts(true)}
                 className={`mt-8 w-full text-center text-xs py-2 rounded-lg transition-colors ${darkMode
-                    ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800'
-                    : 'text-slate-400 hover:text-slate-500 hover:bg-slate-100'
+                  ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800'
+                  : 'text-slate-400 hover:text-slate-500 hover:bg-slate-100'
                   }`}
               >
                 <span className="hidden sm:inline">
@@ -2522,18 +2538,18 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                       key={todo.id}
                       onClick={() => setSelectedPrimaryId(todo.id)}
                       className={`w-full text-left p-3 rounded-xl border transition-all ${selectedPrimaryId === todo.id
-                          ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]/10 ring-1 ring-[var(--brand-blue)]/30'
-                          : darkMode
-                            ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
-                            : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
+                        ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]/10 ring-1 ring-[var(--brand-blue)]/30'
+                        : darkMode
+                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                          : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
                         }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${selectedPrimaryId === todo.id
-                            ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]'
-                            : darkMode
-                              ? 'border-slate-500'
-                              : 'border-[var(--border)]'
+                          ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]'
+                          : darkMode
+                            ? 'border-slate-500'
+                            : 'border-[var(--border)]'
                           }`}>
                           {selectedPrimaryId === todo.id && (
                             <Check className="w-3 h-3 text-white" />
@@ -2588,10 +2604,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   }}
                   disabled={isMerging}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${isMerging
-                      ? 'opacity-50 cursor-not-allowed'
-                      : darkMode
-                        ? 'text-slate-300 hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
+                    ? 'opacity-50 cursor-not-allowed'
+                    : darkMode
+                      ? 'text-slate-300 hover:bg-white/10'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
                     }`}
                 >
                   Cancel
@@ -2604,10 +2620,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   }}
                   disabled={!selectedPrimaryId || isMerging}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${selectedPrimaryId && !isMerging
-                      ? 'bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue)]/90 shadow-sm'
-                      : darkMode
-                        ? 'bg-white/10 text-slate-500 cursor-not-allowed'
-                        : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'
+                    ? 'bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue)]/90 shadow-sm'
+                    : darkMode
+                      ? 'bg-white/10 text-slate-500 cursor-not-allowed'
+                      : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'
                     }`}
                 >
                   {isMerging ? (

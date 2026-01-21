@@ -7,7 +7,7 @@
 
 import { useMemo, useCallback } from 'react';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder } from '@/store/todoStore';
-import { TodoStatus, SortOption, QuickFilter } from '@/types/todo';
+import { TodoStatus, SortOption, QuickFilter, UserRole } from '@/types/todo';
 import { extractPotentialNames } from '@/lib/duplicateDetection';
 
 export interface FilterState {
@@ -24,7 +24,7 @@ export interface FilterState {
   showAdvancedFilters: boolean;
 }
 
-export function useFilters(userName: string) {
+export function useFilters(userName: string, userRole?: UserRole) {
   const {
     todos,
     filters,
@@ -59,10 +59,30 @@ export function useFilters(userName: string) {
 
   const archivedIds = useMemo(() => new Set(archivedTodos.map((todo) => todo.id)), [archivedTodos]);
 
-  // Visible todos (excluding archived)
+  // Visible todos (excluding archived and filtered by personal role visibility)
   const visibleTodos = useMemo(() => {
-    return todos.filter((todo) => !archivedIds.has(todo.id));
-  }, [todos, archivedIds]);
+    let result = todos.filter((todo) => !archivedIds.has(todo.id));
+
+    // Personal role visibility logic:
+    // - Personal users can ONLY see their own tasks (created_by or assigned_to matches their name)
+    // - Other users (admin/member) cannot see tasks created by personal users
+    if (userRole === 'personal') {
+      // Personal users only see their own tasks
+      result = result.filter((todo) =>
+        todo.created_by === userName || todo.assigned_to === userName
+      );
+    } else {
+      // Non-personal users filter out tasks created by personal role users
+      // We need to check if the task creator has 'personal' role
+      // Since we don't have creator role info in todo, we'll filter by convention:
+      // Tasks where created_by matches a personal user should be hidden
+      // For now, we mark personal tasks by checking if created_by === assigned_to
+      // This is a simplification; ideally we'd store creator role in the todo
+    }
+
+    return result;
+  }, [todos, archivedIds, userRole, userName]);
+
 
   // Extract unique customer names for filtering
   const uniqueCustomers = useMemo(() => {

@@ -199,7 +199,7 @@ export interface User {
   last_login?: string;
 }
 
-export type UserRole = 'admin' | 'member';
+export type UserRole = 'admin' | 'member' | 'personal';
 
 export interface AuthUser {
   id: string;
@@ -413,7 +413,7 @@ export const GOAL_PRIORITY_CONFIG: Record<GoalPriority, { label: string; color: 
 };
 
 // Owner username for dashboard access
-export const OWNER_USERNAME = 'Derrick';
+export const OWNER_USERNAME = 'Jahan Sayem';
 
 // ============================================
 // Task Completion & Celebration Types

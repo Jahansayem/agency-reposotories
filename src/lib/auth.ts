@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string;
   name: string;
   color: string;
-  role?: 'owner' | 'admin' | 'member';
+  role?: 'owner' | 'admin' | 'member' | 'personal';
   created_at?: string;
   last_login?: string;
   streak_count?: number;

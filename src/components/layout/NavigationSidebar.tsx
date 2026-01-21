@@ -494,7 +494,7 @@ export default function NavigationSidebar({
                   {currentUser.name}
                 </p>
                 <p className={`text-xs truncate ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
-                  {currentUser.role === 'admin' ? 'Administrator' : 'Team Member'}
+                  {currentUser.role === 'admin' ? 'Administrator' : currentUser.role === 'personal' ? 'Personal' : 'Team Member'}
                 </p>
               </div>
 
