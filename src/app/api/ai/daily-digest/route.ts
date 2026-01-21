@@ -202,59 +202,70 @@ export async function POST(request: NextRequest) {
 
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    // Query 1: Overdue tasks (due_date < today, not completed)
-    const { data: overdueTasks, error: overdueError } = await supabase
-      .from('todos')
-      .select('*')
-      .lt('due_date', todayStart.toISOString())
-      .eq('completed', false)
-      .order('due_date', { ascending: true });
+    // Run all 4 database queries in parallel for better performance
+    const [
+      overdueResult,
+      todayResult,
+      completedResult,
+      activityResult,
+    ] = await Promise.all([
+      // Query 1: Overdue tasks (due_date < today, not completed)
+      supabase
+        .from('todos')
+        .select('*')
+        .lt('due_date', todayStart.toISOString())
+        .eq('completed', false)
+        .order('due_date', { ascending: true }),
 
-    if (overdueError) {
-      logger.error('Failed to fetch overdue tasks', overdueError, { component: 'DailyDigestAPI' });
-      throw overdueError;
+      // Query 2: Tasks due today (not completed)
+      supabase
+        .from('todos')
+        .select('*')
+        .gte('due_date', todayStart.toISOString())
+        .lt('due_date', todayEnd.toISOString())
+        .eq('completed', false)
+        .order('priority', { ascending: false }),
+
+      // Query 3: Tasks completed yesterday by the team
+      supabase
+        .from('todos')
+        .select('*')
+        .eq('completed', true)
+        .gte('updated_at', yesterdayStart.toISOString())
+        .lt('updated_at', todayStart.toISOString())
+        .order('updated_at', { ascending: false }),
+
+      // Query 4: Recent activity log entries (last 24 hours)
+      supabase
+        .from('activity_log')
+        .select('*')
+        .gte('created_at', last24Hours.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(50),
+    ]);
+
+    // Check for errors
+    if (overdueResult.error) {
+      logger.error('Failed to fetch overdue tasks', overdueResult.error, { component: 'DailyDigestAPI' });
+      throw overdueResult.error;
+    }
+    if (todayResult.error) {
+      logger.error('Failed to fetch today tasks', todayResult.error, { component: 'DailyDigestAPI' });
+      throw todayResult.error;
+    }
+    if (completedResult.error) {
+      logger.error('Failed to fetch completed tasks', completedResult.error, { component: 'DailyDigestAPI' });
+      throw completedResult.error;
+    }
+    if (activityResult.error) {
+      logger.error('Failed to fetch activity log', activityResult.error, { component: 'DailyDigestAPI' });
+      throw activityResult.error;
     }
 
-    // Query 2: Tasks due today (not completed)
-    const { data: todayTasks, error: todayError } = await supabase
-      .from('todos')
-      .select('*')
-      .gte('due_date', todayStart.toISOString())
-      .lt('due_date', todayEnd.toISOString())
-      .eq('completed', false)
-      .order('priority', { ascending: false });
-
-    if (todayError) {
-      logger.error('Failed to fetch today tasks', todayError, { component: 'DailyDigestAPI' });
-      throw todayError;
-    }
-
-    // Query 3: Tasks completed yesterday by the team
-    const { data: completedYesterday, error: completedError } = await supabase
-      .from('todos')
-      .select('*')
-      .eq('completed', true)
-      .gte('updated_at', yesterdayStart.toISOString())
-      .lt('updated_at', todayStart.toISOString())
-      .order('updated_at', { ascending: false });
-
-    if (completedError) {
-      logger.error('Failed to fetch completed tasks', completedError, { component: 'DailyDigestAPI' });
-      throw completedError;
-    }
-
-    // Query 4: Recent activity log entries (last 24 hours)
-    const { data: recentActivity, error: activityError } = await supabase
-      .from('activity_log')
-      .select('*')
-      .gte('created_at', last24Hours.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (activityError) {
-      logger.error('Failed to fetch activity log', activityError, { component: 'DailyDigestAPI' });
-      throw activityError;
-    }
+    const overdueTasks = overdueResult.data;
+    const todayTasks = todayResult.data;
+    const completedYesterday = completedResult.data;
+    const recentActivity = activityResult.data;
 
     // Prepare data for AI prompt
     const overdueTasksTyped = (overdueTasks || []) as Todo[];
