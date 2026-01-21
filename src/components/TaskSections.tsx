@@ -31,6 +31,7 @@ interface TaskSectionsProps {
   onAssign: (id: string, user: string | null) => void;
   onSetDueDate: (id: string, date: string | null) => void;
   onSetReminder: (id: string, reminderAt: string | null) => void;
+  onSetPrivacy: (id: string, isPrivate: boolean) => void;
   onSetPriority: (id: string, priority: TodoPriority) => void;
   onStatusChange: (id: string, status: 'todo' | 'in_progress' | 'done') => void;
   onUpdateText: (id: string, text: string) => void;

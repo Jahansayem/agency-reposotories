@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Lock } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
 import AttachmentList from './AttachmentList';
@@ -50,18 +50,16 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
 
   return (
     <div
-      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-2.5 rounded-[var(--radius-md)] transition-colors ${
-        subtask.completed ? 'bg-[var(--surface-2)] opacity-60' : 'bg-[var(--surface)]'
-      }`}
+      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-2.5 rounded-[var(--radius-md)] transition-colors ${subtask.completed ? 'bg-[var(--surface-2)] opacity-60' : 'bg-[var(--surface)]'
+        }`}
     >
       {/* Checkbox */}
       <button
         onClick={() => onToggle(subtask.id)}
-        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
-          subtask.completed
-            ? 'bg-[var(--accent)] border-[var(--accent)]'
-            : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
-        }`}
+        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${subtask.completed
+          ? 'bg-[var(--accent)] border-[var(--accent)]'
+          : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
+          }`}
       >
         {subtask.completed && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />}
       </button>
@@ -80,9 +78,8 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
       ) : (
         <span
           onClick={() => !subtask.completed && setIsEditing(true)}
-          className={`flex-1 text-sm leading-snug cursor-pointer ${
-            subtask.completed ? 'text-[var(--text-light)] line-through' : 'text-[var(--foreground)] hover:text-[var(--accent)]'
-          }`}
+          className={`flex-1 text-sm leading-snug cursor-pointer ${subtask.completed ? 'text-[var(--text-light)] line-through' : 'text-[var(--foreground)] hover:text-[var(--accent)]'
+            }`}
           title={subtask.completed ? undefined : 'Click to edit'}
         >
           {subtask.text}
@@ -136,6 +133,7 @@ interface TodoItemProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onEmailCustomer?: (todo: Todo) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
 }
 
 const formatDueDate = (date: string, includeYear = false) => {
@@ -205,6 +203,7 @@ export default function TodoItem({
   onUpdateAttachments,
   onEmailCustomer,
   onSetReminder,
+  onSetPrivacy,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
@@ -387,11 +386,10 @@ export default function TodoItem({
         {/* Completion checkbox - prominent one-click complete */}
         <button
           onClick={handleToggle}
-          className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 touch-manipulation hover:scale-110 active:scale-95 ${
-            todo.completed
-              ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
-              : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10 hover:shadow-md active:border-[var(--success)]'
-          }`}
+          className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 touch-manipulation hover:scale-110 active:scale-95 ${todo.completed
+            ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
+            : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10 hover:shadow-md active:border-[var(--success)]'
+            }`}
           title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
         >
           {todo.completed && <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
@@ -417,11 +415,10 @@ export default function TodoItem({
             />
           ) : (
             <p
-              className={`font-semibold cursor-pointer line-clamp-2 ${
-                todo.completed
-                  ? 'text-[var(--text-light)] line-through'
-                  : 'text-[var(--foreground)]'
-              }`}
+              className={`font-semibold cursor-pointer line-clamp-2 ${todo.completed
+                ? 'text-[var(--text-light)] line-through'
+                : 'text-[var(--foreground)]'
+                }`}
               title={todo.text}
             >
               {todo.text}
@@ -479,6 +476,17 @@ export default function TodoItem({
                   icon={<Repeat className="w-3 h-3" />}
                 >
                   {todo.recurrence}
+                </Badge>
+              )}
+
+              {/* Private task indicator */}
+              {todo.is_private && (
+                <Badge
+                  variant="default"
+                  size="sm"
+                  icon={<Lock className="w-3 h-3" />}
+                >
+                  Private
                 </Badge>
               )}
 
@@ -970,9 +978,8 @@ export default function TodoItem({
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                  className={`input-refined w-full text-sm px-3 py-2 text-[var(--foreground)] ${
-                    dueDateStatus === 'overdue' && !todo.completed ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''
-                  }`}
+                  className={`input-refined w-full text-sm px-3 py-2 text-[var(--foreground)] ${dueDateStatus === 'overdue' && !todo.completed ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''
+                    }`}
                 />
               </div>
 
@@ -1019,6 +1026,24 @@ export default function TodoItem({
                   onChange={(time) => onSetReminder(todo.id, time)}
                   compact
                 />
+              </div>
+            )}
+
+            {/* Visibility - Private/Public toggle */}
+            {onSetPrivacy && (
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Visibility</label>
+                <button
+                  type="button"
+                  onClick={() => onSetPrivacy(todo.id, !todo.is_private)}
+                  className={`inline-flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] border transition-all ${todo.is_private
+                      ? 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border-hover)]'
+                    }`}
+                >
+                  <Lock className={`w-4 h-4 ${todo.is_private ? 'text-purple-500' : ''}`} />
+                  <span className="text-sm font-medium">{todo.is_private ? 'Private' : 'Public'}</span>
+                </button>
               </div>
             )}
           </div>

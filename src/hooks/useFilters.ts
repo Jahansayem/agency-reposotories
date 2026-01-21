@@ -80,6 +80,14 @@ export function useFilters(userName: string, userRole?: UserRole) {
       // This is a simplification; ideally we'd store creator role in the todo
     }
 
+    // Filter private tasks - only creator and assignee can see them
+    result = result.filter((todo) => {
+      // Non-private tasks are visible to everyone
+      if (!todo.is_private) return true;
+      // Private tasks only visible to creator or assignee
+      return todo.created_by === userName || todo.assigned_to === userName;
+    });
+
     return result;
   }, [todos, archivedIds, userRole, userName]);
 

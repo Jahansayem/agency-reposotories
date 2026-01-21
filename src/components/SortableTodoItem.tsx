@@ -27,6 +27,7 @@ interface SortableTodoItemProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onEmailCustomer?: (todo: Todo) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   isDragEnabled?: boolean;
 }
 

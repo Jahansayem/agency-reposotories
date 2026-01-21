@@ -17,7 +17,8 @@ interface AddTaskModalProps {
     subtasks?: Subtask[],
     transcription?: string,
     sourceFile?: File,
-    reminderAt?: string
+    reminderAt?: string,
+    isPrivate?: boolean
   ) => void;
   users: string[];
   darkMode?: boolean;
@@ -62,9 +63,10 @@ export default function AddTaskModal({
       subtasks?: Subtask[],
       transcription?: string,
       sourceFile?: File,
-      reminderAt?: string
+      reminderAt?: string,
+      isPrivate?: boolean
     ) => {
-      onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt);
+      onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, isPrivate);
       onClose();
     },
     [onAdd, onClose]

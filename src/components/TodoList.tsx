@@ -294,6 +294,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     transcription?: string;
     sourceFile?: File;
     reminderAt?: string;
+    isPrivate?: boolean;
   } | null>(null);
 
   // Customer email modal state
@@ -423,25 +424,25 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }, [fetchActivityLog]);
 
   // Check for duplicates and either show modal or create task directly
-  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
+  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, isPrivate?: boolean) => {
     // Check if we should look for duplicates
     const combinedText = `${text} ${transcription || ''}`;
     if (shouldCheckForDuplicates(combinedText)) {
       const duplicates = findPotentialDuplicates(combinedText, todos);
       if (duplicates.length > 0) {
         // Store pending task and show modal
-        setPendingTask({ text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt });
+        setPendingTask({ text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, isPrivate });
         setDuplicateMatches(duplicates);
         setShowDuplicateModal(true);
         return;
       }
     }
     // No duplicates found, create directly
-    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt);
+    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, isPrivate);
   };
 
   // Actually create the todo (called after duplicate check or when user confirms)
-  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
+  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, isPrivate?: boolean) => {
     const newTodo: Todo = {
       id: uuidv4(),
       text,
@@ -456,6 +457,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       transcription: transcription,
       reminder_at: reminderAt,
       reminder_sent: false,
+      is_private: isPrivate || false,
     };
 
     // Optimistic update using store action
@@ -479,6 +481,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       insertData.reminder_at = newTodo.reminder_at;
       insertData.reminder_sent = false;
     }
+    if (newTodo.is_private) insertData.is_private = newTodo.is_private;
 
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
@@ -487,11 +490,12 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       // Rollback optimistic update
       deleteTodoFromStore(newTodo.id);
     } else {
-      // Log activity
+      // Log activity (skip for private tasks)
       logActivity({
         action: 'task_created',
         userName,
         userRole: currentUser.role,
+        isPrivate: newTodo.is_private,
         todoId: newTodo.id,
         todoText: newTodo.text,
         details: {
@@ -500,6 +504,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           due_date: newTodo.due_date,
           has_subtasks: (subtasks?.length || 0) > 0,
           has_transcription: !!transcription,
+          is_private: newTodo.is_private,
         },
       });
 
@@ -573,7 +578,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         pendingTask.subtasks,
         pendingTask.transcription,
         pendingTask.sourceFile,
-        pendingTask.reminderAt
+        pendingTask.reminderAt,
+        pendingTask.isPrivate
       );
     }
     setShowDuplicateModal(false);
@@ -1226,6 +1232,38 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           details: { count: oldCount - newCount },
         });
       }
+    }
+  };
+
+  const setPrivacy = async (id: string, isPrivate: boolean) => {
+    const oldTodo = todos.find((t) => t.id === id);
+
+    // Optimistic update using store action
+    updateTodoInStore(id, { is_private: isPrivate });
+
+    const { error: updateError } = await supabase
+      .from('todos')
+      .update({ is_private: isPrivate })
+      .eq('id', id);
+
+    if (updateError) {
+      logger.error('Error setting privacy', updateError, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback optimistic update
+        updateTodoInStore(id, { is_private: oldTodo.is_private });
+      }
+    } else if (oldTodo && oldTodo.is_private !== isPrivate) {
+      // Log activity
+      logActivity({
+        action: 'task_updated',
+        userName,
+        userRole: currentUser.role,
+        todoId: id,
+        todoText: oldTodo.text,
+        details: {
+          privacy_changed: { from: oldTodo.is_private, to: isPrivate }
+        },
+      });
     }
   };
 
@@ -2035,6 +2073,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                           onAssign={assignTodo}
                           onSetDueDate={setDueDate}
                           onSetReminder={setReminder}
+                          onSetPrivacy={setPrivacy}
                           onSetPriority={setPriority}
                           onStatusChange={updateStatus}
                           onUpdateText={updateText}
@@ -2072,8 +2111,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                                 onDelete={confirmDeleteTodo}
                                 onAssign={assignTodo}
                                 onSetDueDate={setDueDate}
-                                onSetReminder={setReminder}
-                                onSetPriority={setPriority}
+                                    onSetReminder={setReminder}
+                                    onSetPrivacy={setPrivacy}
+                                    onSetPriority={setPriority}
                                 onStatusChange={updateStatus}
                                 onUpdateText={updateText}
                                 onDuplicate={duplicateTodo}

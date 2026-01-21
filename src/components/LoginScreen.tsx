@@ -21,7 +21,7 @@ interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
 }
 
-type Screen = 'users' | 'pin';
+type Screen = 'users' | 'pin' | 'personal';
 
 // Animated grid background
 function AnimatedGrid() {
@@ -124,6 +124,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [loading, setLoading] = useState(true);
   const [teamStats, setTeamStats] = useState<{ totalTasks: number; completedThisWeek: number; activeUsers: number } | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [personalUsername, setPersonalUsername] = useState('');
 
   const features = [
     {
@@ -206,7 +207,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     checkAndFetchStats();
   }, []);
 
+  // Filter users - exclude personal role users from main list (they use Personal Login)
   const filteredUsers = users.filter(user =>
+    user.role !== 'personal' &&
     user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -616,6 +619,22 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <div id="oauth-login-section" tabIndex={-1} className="p-6 pt-2 outline-none">
                       <OAuthLoginButtons />
                     </div>
+
+                    {/* Personal Login Link */}
+                    <div className="px-6 pb-6">
+                      <button
+                        onClick={() => {
+                          setScreen('personal');
+                          setPersonalUsername('');
+                          setPin(['', '', '', '']);
+                          setError('');
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-3 text-sm text-white/40 hover:text-white/70 transition-colors"
+                      >
+                        <Lock className="w-4 h-4" />
+
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -722,6 +741,149 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                         animate={{ opacity: 1 }}
                       >
                         <div className="w-8 h-8 border-2 border-[var(--brand-sky)]/30 border-t-[var(--brand-sky)] rounded-full animate-spin" />
+                        <span className="text-sm text-white/50">Verifying...</span>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Personal Login Screen */}
+              {screen === 'personal' && (
+                <motion.div
+                  key="personal"
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <div className="absolute -inset-[1px] bg-gradient-to-b from-purple-500/40 via-white/10 to-white/5 rounded-[28px] blur-sm" />
+
+                  <div className="relative bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-2xl rounded-[28px] border border-white/10 p-8 shadow-2xl">
+                    <motion.button
+                      onClick={() => { setScreen('users'); setPersonalUsername(''); setError(''); }}
+                      className="flex items-center gap-2 text-sm text-white/40 hover:text-white mb-8 transition-colors -ml-2 px-3 py-2 rounded-lg hover:bg-white/5"
+                      whileHover={{ x: -2 }}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Back
+                    </motion.button>
+
+                    <div className="text-center mb-8">
+                      <div className="relative inline-block mb-6">
+                        <div className="w-20 h-20 rounded-2xl flex items-center justify-center bg-gradient-to-br from-purple-500 to-purple-700 shadow-xl ring-2 ring-white/20">
+                          <Lock className="w-10 h-10 text-white" />
+                        </div>
+                      </div>
+
+                      <h2 className="text-xl font-bold text-white">Personal Login</h2>
+                      <p className="text-sm text-white/40 mt-2">
+                        {!selectedUser ? 'Enter your username' : 'Enter your 4-digit PIN'}
+                      </p>
+                    </div>
+
+                    {!selectedUser ? (
+                      // Username input
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!personalUsername.trim()) {
+                            setError('Please enter your username');
+                            return;
+                          }
+                          setIsSubmitting(true);
+                          setError('');
+
+                          // Find user with personal role
+                          const personalUser = users.find(
+                            u => u.name.toLowerCase() === personalUsername.trim().toLowerCase() && u.role === 'personal'
+                          );
+
+                          if (!personalUser) {
+                            setError('User not found or not a personal account');
+                            setIsSubmitting(false);
+                            return;
+                          }
+
+                          setSelectedUser(personalUser);
+                          setIsSubmitting(false);
+                          setTimeout(() => pinRefs.current[0]?.focus(), 100);
+                        }}
+                        className="space-y-4"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Your username"
+                          value={personalUsername}
+                          onChange={(e) => setPersonalUsername(e.target.value)}
+                          className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-center focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/40 transition-all"
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          disabled={isSubmitting || !personalUsername.trim()}
+                          className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold hover:from-purple-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isSubmitting ? 'Checking...' : 'Continue'}
+                        </button>
+                      </form>
+                    ) : (
+                      // PIN input (reuse existing PIN logic)
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handlePinSubmit();
+                        }}
+                        aria-label="PIN entry form"
+                      >
+                        <div className="flex justify-center gap-3 mb-6" role="group" aria-label="Enter your 4-digit PIN">
+                          {pin.map((digit, index) => (
+                            <div key={index} className="relative">
+                              <input
+                                ref={(el) => { pinRefs.current[index] = el; }}
+                                type="password"
+                                inputMode="numeric"
+                                maxLength={1}
+                                value={digit}
+                                onChange={(e) => handlePinChange(index, e.target.value, pinRefs, pin, setPin)}
+                                onKeyDown={(e) => handlePinKeyDown(e, index, pinRefs, pin)}
+                                disabled={lockoutSeconds > 0 || isSubmitting}
+                                aria-label={`PIN digit ${index + 1} of 4`}
+                                autoComplete="one-time-code"
+                                className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500/50 ${lockoutSeconds > 0
+                                  ? 'border-red-500/50 bg-red-500/10 text-red-400'
+                                  : digit
+                                    ? 'border-purple-500 bg-purple-500/10 text-white'
+                                    : 'border-white/10 bg-white/5 text-white focus:border-purple-500 focus:bg-white/10'
+                                  }`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </form>
+                    )}
+
+                    <AnimatePresence mode="wait">
+                      {error && (
+                        <motion.div
+                          className="flex items-center justify-center gap-2 text-red-400 text-sm bg-red-500/10 py-3 px-4 rounded-xl border border-red-500/20 mt-4"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                          {error}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {isSubmitting && selectedUser && (
+                      <motion.div
+                        className="flex flex-col items-center gap-3 mt-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                      >
+                        <div className="w-8 h-8 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
                         <span className="text-sm text-white/50">Verifying...</span>
                       </motion.div>
                     )}

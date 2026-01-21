@@ -86,6 +86,7 @@ export interface Todo {
   reminder_at?: string; // Simple single reminder timestamp
   reminder_sent?: boolean; // Whether simple reminder has been sent
   reminders?: TaskReminder[]; // Multiple reminders (from task_reminders table)
+  is_private?: boolean; // Private tasks only visible to creator and assignee
 }
 
 // ============================================

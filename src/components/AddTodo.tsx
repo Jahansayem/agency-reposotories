@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell } from 'lucide-react';
+import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell, Lock } from 'lucide-react';
 import SmartParseModal from './SmartParseModal';
 import ReminderPicker from './ReminderPicker';
 import VoiceRecordingIndicator from './VoiceRecordingIndicator';
@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 
 interface AddTodoProps {
-  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => void;
+  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, isPrivate?: boolean) => void;
   users: string[];
   darkMode?: boolean;
   currentUserId?: string;
@@ -79,7 +79,7 @@ interface SpeechRecognition extends EventTarget {
 }
 
 interface SpeechRecognitionConstructor {
-  new (): SpeechRecognition;
+  new(): SpeechRecognition;
 }
 
 declare global {
@@ -114,6 +114,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [draggedFile, setDraggedFile] = useState<File | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
 
 
   // AI modal state
@@ -280,14 +281,14 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
     // Convert suggested subtasks to proper Subtask objects
     const subtasks: Subtask[] = suggestedSubtasks.length > 0
       ? suggestedSubtasks.map((text, index) => ({
-          id: `subtask-${Date.now()}-${index}`,
-          text,
-          completed: false,
-          priority: 'medium' as TodoPriority,
-        }))
+        id: `subtask-${Date.now()}-${index}`,
+        text,
+        completed: false,
+        priority: 'medium' as TodoPriority,
+      }))
       : undefined as unknown as Subtask[];
 
-    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined);
+    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, isPrivate || undefined);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -364,6 +365,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
     setParsedResult(null);
     setSuggestedSubtasks([]);
     setPatternDismissed(false); // Reset so new pattern can be detected on next input
+    setIsPrivate(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -465,9 +467,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`rounded-[var(--radius-xl)] border-2 shadow-[var(--shadow-md)] overflow-hidden transition-all duration-300 relative bg-[var(--surface)] border-[var(--accent)]/25 ${
-          isDraggingFile ? 'ring-2 ring-[var(--accent)] border-[var(--accent)]' : 'hover:shadow-[var(--shadow-lg)] hover:border-[var(--accent)]/40 focus-within:border-[var(--accent)]/60 focus-within:shadow-[var(--shadow-lg)]'
-        }`}
+        className={`rounded-[var(--radius-xl)] border-2 shadow-[var(--shadow-md)] overflow-hidden transition-all duration-300 relative bg-[var(--surface)] border-[var(--accent)]/25 ${isDraggingFile ? 'ring-2 ring-[var(--accent)] border-[var(--accent)]' : 'hover:shadow-[var(--shadow-lg)] hover:border-[var(--accent)]/40 focus-within:border-[var(--accent)]/60 focus-within:shadow-[var(--shadow-lg)]'
+          }`}
       >
         {/* File drop overlay */}
         {isDraggingFile && (
@@ -505,9 +506,8 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                 rows={1}
                 disabled={isProcessing}
                 aria-label="New task description"
-                className={`input-refined w-full px-4 py-4 pr-10 resize-none text-base min-h-[56px] text-[var(--foreground)] placeholder-[var(--text-muted)] font-medium ${
-                  isRecording ? 'border-[var(--danger)] ring-2 ring-[var(--danger-light)]' : ''
-                }`}
+                className={`input-refined w-full px-4 py-4 pr-10 resize-none text-base min-h-[56px] text-[var(--foreground)] placeholder-[var(--text-muted)] font-medium ${isRecording ? 'border-[var(--danger)] ring-2 ring-[var(--danger-light)]' : ''
+                  }`}
                 style={{ maxHeight: '120px' }}
               />
               {/* Clear button - appears when there's text */}
@@ -544,11 +544,10 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                   type="button"
                   onClick={toggleRecording}
                   disabled={isProcessing}
-                  className={`p-2.5 rounded-[var(--radius-lg)] transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation ${
-                    isRecording
-                      ? 'bg-[var(--danger)] text-white animate-pulse'
-                      : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
-                  } active:scale-95 disabled:opacity-50`}
+                  className={`p-2.5 rounded-[var(--radius-lg)] transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation ${isRecording
+                    ? 'bg-[var(--danger)] text-white animate-pulse'
+                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
+                    } active:scale-95 disabled:opacity-50`}
                   aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
                   aria-pressed={isRecording}
                 >
@@ -562,11 +561,10 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                   type="button"
                   onClick={handleAiClick}
                   disabled={isProcessing}
-                  className={`p-2.5 rounded-[var(--radius-lg)] transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation ${
-                    isComplexInput()
-                      ? 'bg-[var(--accent)] text-white hover:opacity-90 shadow-[var(--shadow-blue)]'
-                      : 'bg-[var(--accent-light)] text-[var(--accent)] hover:bg-[var(--accent)]/20'
-                  } active:scale-95 disabled:opacity-50`}
+                  className={`p-2.5 rounded-[var(--radius-lg)] transition-all duration-200 min-h-[48px] min-w-[48px] flex items-center justify-center touch-manipulation ${isComplexInput()
+                    ? 'bg-[var(--accent)] text-white hover:opacity-90 shadow-[var(--shadow-blue)]'
+                    : 'bg-[var(--accent-light)] text-[var(--accent)] hover:bg-[var(--accent)]/20'
+                    } active:scale-95 disabled:opacity-50`}
                   aria-label="Parse with AI"
                   title={isComplexInput() ? 'Complex input detected - AI can help' : 'Parse with AI'}
                 >
@@ -648,37 +646,33 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
               </div>
 
               {/* Due date - pill style */}
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm ${
-                dueDate
-                  ? 'border-[var(--accent)]/30 bg-[var(--accent-light)]'
-                  : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
-              }`}>
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm ${dueDate
+                ? 'border-[var(--accent)]/30 bg-[var(--accent-light)]'
+                : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
+                }`}>
                 <Calendar className={`w-3.5 h-3.5 flex-shrink-0 ${dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   aria-label="Due date"
-                  className={`bg-transparent text-xs font-medium cursor-pointer focus:outline-none w-[90px] ${
-                    dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
-                  }`}
+                  className={`bg-transparent text-xs font-medium cursor-pointer focus:outline-none w-[90px] ${dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
+                    }`}
                 />
               </div>
 
               {/* Assignee - pill style */}
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm ${
-                assignedTo
-                  ? 'border-[var(--success)]/30 bg-[var(--success)]/10'
-                  : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
-              }`}>
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm ${assignedTo
+                ? 'border-[var(--success)]/30 bg-[var(--success)]/10'
+                : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
+                }`}>
                 <User className={`w-3.5 h-3.5 flex-shrink-0 ${assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`} />
                 <select
                   value={assignedTo}
                   onChange={(e) => setAssignedTo(e.target.value)}
                   aria-label="Assign to"
-                  className={`bg-transparent text-xs font-medium cursor-pointer focus:outline-none appearance-none pr-1 ${
-                    assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'
-                  }`}
+                  className={`bg-transparent text-xs font-medium cursor-pointer focus:outline-none appearance-none pr-1 ${assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'
+                    }`}
                 >
                   <option value="" className="text-[var(--foreground)] bg-[var(--surface)]">Unassigned</option>
                   {users.map((user) => (
@@ -694,6 +688,20 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
                 onChange={(time) => setReminderAt(time)}
                 compact
               />
+
+              {/* Private toggle - pill style */}
+              <button
+                type="button"
+                onClick={() => setIsPrivate(!isPrivate)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:shadow-sm ${isPrivate
+                    ? 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                    : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)] hover:border-[var(--border-hover)]'
+                  }`}
+                title={isPrivate ? 'Task is private - only you and assignee can see it' : 'Make task private'}
+              >
+                <Lock className={`w-3.5 h-3.5 flex-shrink-0 ${isPrivate ? 'text-purple-500' : ''}`} />
+                <span className="text-xs font-medium">{isPrivate ? 'Private' : 'Public'}</span>
+              </button>
             </div>
           </div>
         )}
