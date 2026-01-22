@@ -29,9 +29,14 @@ import {
   Wand2,
   Zap,
   GitBranch,
+  CalendarDays,
+  ListTodo,
 } from 'lucide-react';
+import AnimatedProgressRing from '@/components/dashboard/AnimatedProgressRing';
+import StatCard from '@/components/dashboard/StatCard';
+import QuickActions from '@/components/dashboard/QuickActions';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 import {
   generateDashboardAIData,
   NeglectedTask,
@@ -46,6 +51,7 @@ import {
 } from '@/lib/orchestratorIntegration';
 // Re-export utilities for backwards compatibility
 export { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
+import { isDashboardAutoOpenDisabled, setDashboardAutoOpenDisabled } from '@/lib/dashboardUtils';
 
 interface DashboardModalProps {
   isOpen: boolean;
@@ -60,6 +66,9 @@ interface DashboardModalProps {
   darkMode?: boolean;
   users?: string[]; // Team members list for manager view
   onReassignTask?: (taskId: string, newAssignee: string) => void;
+  onOpenChat?: () => void;
+  onViewCalendar?: () => void;
+  onViewReport?: () => void;
 }
 
 interface WeekDay {
@@ -90,15 +99,26 @@ export default function DashboardModal({
   darkMode = true,
   users = [],
   onReassignTask: _onReassignTask,
+  onOpenChat,
+  onViewCalendar,
+  onViewReport,
 }: DashboardModalProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'team'>('overview');
+  const [dontShowOnLogin, setDontShowOnLogin] = useState(() => isDashboardAutoOpenDisabled());
 
   // Check if user has team members (is a manager)
   const hasTeam = users.length > 1;
 
   // Handle Escape key to close modal
   useEscapeKey(onClose, { enabled: isOpen });
+
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    enabled: isOpen,
+    autoFocus: true,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -258,6 +278,11 @@ export default function DashboardModal({
     action();
   };
 
+  const handleDontShowOnLoginChange = (checked: boolean) => {
+    setDontShowOnLogin(checked);
+    setDashboardAutoOpenDisabled(checked);
+  };
+
   const getInsightIcon = (type: ProductivityInsight['type']) => {
     switch (type) {
       case 'streak': return Flame;
@@ -301,6 +326,7 @@ export default function DashboardModal({
 
           {/* Modal */}
           <motion.div
+            ref={containerRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="dashboard-modal-title"
@@ -310,15 +336,15 @@ export default function DashboardModal({
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl"
           >
-            <div className={`${darkMode ? 'bg-[#0A1628]' : 'bg-white'}`}>
+            <div className={`${darkMode ? 'bg-[var(--background)]' : 'bg-white'}`}>
               {/* Header */}
               <div className="relative overflow-hidden">
                 <div
                   className="absolute inset-0"
                   style={{
                     background: darkMode
-                      ? 'linear-gradient(135deg, #0A1628 0%, #0033A0 50%, #1E3A5F 100%)'
-                      : 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
+                      ? 'linear-gradient(135deg, var(--background) 0%, var(--brand-blue) 50%, #1E3A5F 100%)'
+                      : 'linear-gradient(135deg, var(--brand-blue) 0%, #0047CC 50%, #1E3A5F 100%)',
                   }}
                 />
 
@@ -360,17 +386,25 @@ export default function DashboardModal({
 
                   {/* Productivity Score Badge */}
                   <div className="absolute top-4 right-14 flex flex-col items-center">
-                    <div className={`
-                      w-12 h-12 rounded-full flex items-center justify-center
-                      ${aiData.productivityScore >= 70
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : aiData.productivityScore >= 40
-                          ? 'bg-amber-500/20 text-amber-400'
-                          : 'bg-red-500/20 text-red-400'
-                      }
-                    `}>
-                      <span className="text-lg font-bold">{aiData.productivityScore}</span>
-                    </div>
+                    <AnimatedProgressRing
+                      progress={aiData.productivityScore}
+                      size={56}
+                      strokeWidth={5}
+                      darkMode={true}
+                      gradientId="headerProgressGradient"
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className={`text-lg font-bold ${
+                          aiData.productivityScore >= 70
+                            ? 'text-emerald-400'
+                            : aiData.productivityScore >= 40
+                              ? 'text-amber-400'
+                              : 'text-red-400'
+                        }`}>
+                          {aiData.productivityScore}
+                        </span>
+                      </div>
+                    </AnimatedProgressRing>
                     <span className="text-white/40 text-[10px] mt-1">Score</span>
                   </div>
                 </div>
@@ -384,8 +418,8 @@ export default function DashboardModal({
                     flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors
                     ${activeTab === 'overview'
                       ? darkMode
-                        ? 'bg-[#0033A0] text-white'
-                        : 'bg-[#0033A0] text-white'
+                        ? 'bg-[var(--brand-blue)] text-white'
+                        : 'bg-[var(--brand-blue)] text-white'
                       : darkMode
                         ? 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -400,8 +434,8 @@ export default function DashboardModal({
                     flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2
                     ${activeTab === 'insights'
                       ? darkMode
-                        ? 'bg-[#0033A0] text-white'
-                        : 'bg-[#0033A0] text-white'
+                        ? 'bg-[var(--brand-blue)] text-white'
+                        : 'bg-[var(--brand-blue)] text-white'
                       : darkMode
                         ? 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -413,7 +447,7 @@ export default function DashboardModal({
                   {(aiData.neglectedTasks.length > 0 || aiData.insights.length > 0) && (
                     <span className={`
                       w-2 h-2 rounded-full
-                      ${activeTab === 'insights' ? 'bg-white' : 'bg-[#0033A0]'}
+                      ${activeTab === 'insights' ? 'bg-white' : 'bg-[var(--brand-blue)]'}
                     `} />
                   )}
                 </button>
@@ -424,8 +458,8 @@ export default function DashboardModal({
                       flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2
                       ${activeTab === 'team'
                         ? darkMode
-                          ? 'bg-[#0033A0] text-white'
-                          : 'bg-[#0033A0] text-white'
+                          ? 'bg-[var(--brand-blue)] text-white'
+                          : 'bg-[var(--brand-blue)] text-white'
                         : darkMode
                           ? 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -445,7 +479,7 @@ export default function DashboardModal({
               </div>
 
               {/* Content */}
-              <div className={`px-5 py-5 space-y-4 ${darkMode ? 'bg-[#0A1628]' : 'bg-slate-50'}`}>
+              <div className={`px-5 py-5 space-y-4 ${darkMode ? 'bg-[var(--background)]' : 'bg-slate-50'}`}>
                 <AnimatePresence mode="wait">
                   {activeTab === 'overview' ? (
                     <motion.div
@@ -456,6 +490,13 @@ export default function DashboardModal({
                       transition={{ duration: 0.2 }}
                       className="space-y-4"
                     >
+                      {/* Quick Actions */}
+                      <QuickActions
+                        darkMode={darkMode}
+                        onAddTask={() => handleAction(onAddTask)}
+                        onOpenChat={onOpenChat ? () => handleAction(onOpenChat) : undefined}
+                      />
+
                       {/* Today's Focus (AI Suggested) */}
                       {aiData.todaysFocus && (
                         <motion.div
@@ -480,7 +521,7 @@ export default function DashboardModal({
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           onClick={() => handleAction(onFilterOverdue)}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0033A0] text-white hover:bg-[#002580] transition-colors group"
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--brand-blue)] text-white hover:bg-[var(--accent-hover)] transition-colors group"
                         >
                           <AlertTriangle className="w-5 h-5" />
                           <div className="flex-1 text-left">
@@ -494,7 +535,7 @@ export default function DashboardModal({
                       {/* Today's Tasks */}
                       <div className={`rounded-xl p-4 ${
                         darkMode
-                          ? 'bg-[#1E293B] border border-[#334155]'
+                          ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                           : 'bg-white border border-slate-200'
                       }`}>
                         <h3 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${
@@ -518,7 +559,7 @@ export default function DashboardModal({
                                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                                   task.priority === 'urgent' ? 'bg-red-500' :
                                   task.priority === 'high' ? 'bg-orange-500' :
-                                  'bg-[#0033A0]'
+                                  'bg-[var(--brand-blue)]'
                                 }`} />
                                 <span className={`flex-1 text-sm font-medium truncate ${
                                   darkMode ? 'text-white' : 'text-slate-900'
@@ -532,7 +573,7 @@ export default function DashboardModal({
                               <button
                                 onClick={() => handleAction(onFilterDueToday)}
                                 className={`w-full text-center py-2 text-sm font-medium ${
-                                  darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'
+                                  darkMode ? 'text-[var(--accent-sky)]' : 'text-[var(--brand-blue)]'
                                 } hover:underline`}
                               >
                                 +{stats.dueToday - 3} more
@@ -541,7 +582,7 @@ export default function DashboardModal({
                           </div>
                         ) : (
                           <div className="flex items-center gap-3 py-1">
-                            <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
+                            <CheckCircle2 className="w-5 h-5 text-[var(--success)]" />
                             <span className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                               No tasks due today
                             </span>
@@ -553,7 +594,7 @@ export default function DashboardModal({
                       {stats.nextTask && (
                         <div className={`rounded-xl p-4 ${
                           darkMode
-                            ? 'bg-[#1E293B] border border-[#334155]'
+                            ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                             : 'bg-white border border-slate-200'
                         }`}>
                           <h3 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${
@@ -573,7 +614,7 @@ export default function DashboardModal({
                             <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
                               stats.nextTask.priority === 'urgent' ? 'bg-red-500' :
                               stats.nextTask.priority === 'high' ? 'bg-orange-500' :
-                              'bg-[#0033A0]'
+                              'bg-[var(--brand-blue)]'
                             }`} />
                             <div className="flex-1 min-w-0">
                               <p className={`text-sm font-medium truncate ${
@@ -596,7 +637,7 @@ export default function DashboardModal({
                       {/* Weekly Progress (compact) */}
                       <div className={`rounded-xl p-4 ${
                         darkMode
-                          ? 'bg-[#1E293B] border border-[#334155]'
+                          ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                           : 'bg-white border border-slate-200'
                       }`}>
                         <div className="flex items-center justify-between mb-3">
@@ -617,9 +658,9 @@ export default function DashboardModal({
                             animate={{ width: `${stats.weeklyRatio}%` }}
                             transition={{ duration: 0.5, delay: 0.2 }}
                             className={`h-full rounded-full ${
-                              stats.weeklyRatio >= 50 ? 'bg-[#10B981]' :
-                              stats.weeklyRatio >= 25 ? 'bg-[#F59E0B]' :
-                              'bg-[#0033A0]'
+                              stats.weeklyRatio >= 50 ? 'bg-[var(--success)]' :
+                              stats.weeklyRatio >= 25 ? 'bg-[var(--warning)]' :
+                              'bg-[var(--brand-blue)]'
                             }`}
                           />
                         </div>
@@ -640,16 +681,16 @@ export default function DashboardModal({
                                     transition={{ delay: 0.3 + index * 0.05, duration: 0.3 }}
                                     className={`w-full rounded-sm ${
                                       day.isToday
-                                        ? 'bg-[#0033A0]'
+                                        ? 'bg-[var(--brand-blue)]'
                                         : day.completed > 0
-                                          ? darkMode ? 'bg-[#0033A0]/40' : 'bg-[#0033A0]/20'
+                                          ? darkMode ? 'bg-[var(--brand-blue)]/40' : 'bg-[var(--brand-blue)]/20'
                                           : darkMode ? 'bg-slate-700' : 'bg-slate-100'
                                     }`}
                                   />
                                 </div>
                                 <span className={`text-[10px] ${
                                   day.isToday
-                                    ? 'text-[#0033A0] font-semibold'
+                                    ? 'text-[var(--brand-blue)] font-semibold'
                                     : darkMode ? 'text-slate-500' : 'text-slate-400'
                                 }`}>
                                   {day.dayName.charAt(0)}
@@ -678,7 +719,7 @@ export default function DashboardModal({
                       {aiData.neglectedTasks.length > 0 && (
                         <div className={`rounded-xl p-4 ${
                           darkMode
-                            ? 'bg-[#1E293B] border border-[#334155]'
+                            ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                             : 'bg-white border border-slate-200'
                         }`}>
                           <div className="flex items-center gap-2 mb-3">
@@ -721,7 +762,7 @@ export default function DashboardModal({
                             <button
                               onClick={() => handleAction(onNavigateToTasks)}
                               className={`w-full text-center py-2 mt-3 text-sm font-medium ${
-                                darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'
+                                darkMode ? 'text-[var(--accent-sky)]' : 'text-[var(--brand-blue)]'
                               } hover:underline`}
                             >
                               View all {aiData.neglectedTasks.length} neglected tasks
@@ -734,7 +775,7 @@ export default function DashboardModal({
                       {aiData.insights.length > 0 && (
                         <div className={`rounded-xl p-4 ${
                           darkMode
-                            ? 'bg-[#1E293B] border border-[#334155]'
+                            ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                             : 'bg-white border border-slate-200'
                         }`}>
                           <div className="flex items-center gap-2 mb-3">
@@ -777,10 +818,24 @@ export default function DashboardModal({
 
                       {/* Empty state for insights */}
                       {aiData.neglectedTasks.length === 0 && aiData.insights.length === 0 && (
-                        <div className={`text-center py-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                          <p className="text-sm font-medium">All caught up!</p>
-                          <p className="text-xs mt-1">No special insights right now. Keep up the good work!</p>
+                        <div className="text-center py-10">
+                          <motion.div
+                            className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+                              darkMode
+                                ? 'bg-gradient-to-br from-emerald-500/20 to-green-500/10 border border-emerald-500/30'
+                                : 'bg-gradient-to-br from-emerald-100 to-green-50 border border-emerald-200'
+                            }`}
+                            animate={{ scale: [1, 1.05, 1] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                          >
+                            <Award className={`w-8 h-8 ${darkMode ? 'text-emerald-400' : 'text-emerald-500'}`} />
+                          </motion.div>
+                          <p className={`font-semibold text-base ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                            All caught up!
+                          </p>
+                          <p className={`text-sm mt-2 max-w-[200px] mx-auto ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            No special insights right now. Keep up the excellent work!
+                          </p>
                         </div>
                       )}
 
@@ -813,78 +868,74 @@ export default function DashboardModal({
                       className="space-y-4"
                     >
                       {/* Team Overview Stats */}
-                      <div className={`rounded-xl p-4 ${
-                        darkMode
-                          ? 'bg-[#1E293B] border border-[#334155]'
-                          : 'bg-white border border-slate-200'
-                      }`}>
-                        <div className="flex items-center gap-2 mb-3">
-                          <BarChart3 className="w-4 h-4 text-[#0033A0]" />
-                          <h3 className={`text-xs font-semibold uppercase tracking-wide ${
-                            darkMode ? 'text-slate-400' : 'text-slate-500'
-                          }`}>
-                            Team Overview
-                          </h3>
-                        </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <StatCard
+                          label="Active Tasks"
+                          value={managerData.teamOverview.totalActive}
+                          icon={ListTodo}
+                          variant="info"
+                          darkMode={darkMode}
+                          delay={0}
+                        />
+                        <StatCard
+                          label="Overdue"
+                          value={managerData.teamOverview.totalOverdue}
+                          icon={AlertTriangle}
+                          variant={managerData.teamOverview.totalOverdue > 0 ? 'danger' : 'success'}
+                          darkMode={darkMode}
+                          delay={0.1}
+                        />
+                        <StatCard
+                          label="This Week"
+                          value={managerData.teamOverview.weeklyTeamCompleted}
+                          icon={CalendarDays}
+                          variant="default"
+                          darkMode={darkMode}
+                          delay={0.2}
+                        />
+                        <StatCard
+                          label="Completion"
+                          value={managerData.teamOverview.teamCompletionRate}
+                          icon={TrendingUp}
+                          variant="success"
+                          suffix="%"
+                          darkMode={darkMode}
+                          delay={0.3}
+                        />
+                      </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
-                            <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                              {managerData.teamOverview.totalActive}
-                            </p>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Active Tasks</p>
-                          </div>
-                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
-                            <p className={`text-2xl font-bold ${
-                              managerData.teamOverview.totalOverdue > 0
-                                ? 'text-red-500'
-                                : darkMode ? 'text-emerald-400' : 'text-emerald-600'
-                            }`}>
-                              {managerData.teamOverview.totalOverdue}
-                            </p>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Overdue</p>
-                          </div>
-                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
-                            <p className={`text-2xl font-bold text-[#0033A0]`}>
-                              {managerData.teamOverview.weeklyTeamCompleted}
-                            </p>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>This Week</p>
-                          </div>
-                          <div className={`text-center p-3 rounded-lg ${darkMode ? 'bg-slate-700/30' : 'bg-slate-50'}`}>
-                            <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                              {managerData.teamOverview.teamCompletionRate}%
-                            </p>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Completion</p>
-                          </div>
-                        </div>
-
-                        {/* Highlights */}
-                        {(managerData.teamOverview.topPerformer || managerData.teamOverview.needsAttention) && (
-                          <div className="mt-3 space-y-2">
+                      {/* Team Highlights */}
+                      {(managerData.teamOverview.topPerformer || managerData.teamOverview.needsAttention) && (
+                        <div className={`rounded-xl p-4 ${
+                          darkMode
+                            ? 'bg-[var(--surface-2)] border border-[var(--border)]'
+                            : 'bg-white border border-slate-200'
+                        }`}>
+                          <div className="space-y-2">
                             {managerData.teamOverview.topPerformer && (
-                              <div className={`flex items-center gap-2 text-xs ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                                <Award className="w-3.5 h-3.5" />
+                              <div className={`flex items-center gap-2 text-sm ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                <Award className="w-4 h-4" />
                                 <span><strong>{managerData.teamOverview.topPerformer}</strong> is crushing it this week!</span>
                               </div>
                             )}
                             {managerData.teamOverview.needsAttention && (
-                              <div className={`flex items-center gap-2 text-xs ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
-                                <AlertCircle className="w-3.5 h-3.5" />
+                              <div className={`flex items-center gap-2 text-sm ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+                                <AlertCircle className="w-4 h-4" />
                                 <span><strong>{managerData.teamOverview.needsAttention}</strong> may need support</span>
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Team Member Workload */}
                       <div className={`rounded-xl p-4 ${
                         darkMode
-                          ? 'bg-[#1E293B] border border-[#334155]'
+                          ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                           : 'bg-white border border-slate-200'
                       }`}>
                         <div className="flex items-center gap-2 mb-3">
-                          <Users className="w-4 h-4 text-[#0033A0]" />
+                          <Users className="w-4 h-4 text-[var(--brand-blue)]" />
                           <h3 className={`text-xs font-semibold uppercase tracking-wide ${
                             darkMode ? 'text-slate-400' : 'text-slate-500'
                           }`}>
@@ -924,7 +975,7 @@ export default function DashboardModal({
                                   className={`h-full rounded-full transition-all ${
                                     member.workloadLevel === 'overloaded' ? 'bg-red-500' :
                                     member.workloadLevel === 'heavy' ? 'bg-amber-500' :
-                                    member.workloadLevel === 'normal' ? 'bg-[#0033A0]' :
+                                    member.workloadLevel === 'normal' ? 'bg-[var(--brand-blue)]' :
                                     'bg-emerald-500'
                                   }`}
                                   style={{ width: `${Math.min(member.activeTasks / 15 * 100, 100)}%` }}
@@ -939,7 +990,7 @@ export default function DashboardModal({
                       {managerData.bottlenecks.length > 0 && (
                         <div className={`rounded-xl p-4 ${
                           darkMode
-                            ? 'bg-[#1E293B] border border-[#334155]'
+                            ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                             : 'bg-white border border-slate-200'
                         }`}>
                           <div className="flex items-center gap-2 mb-3">
@@ -1025,7 +1076,7 @@ export default function DashboardModal({
                       {managerData.recentTeamCompletions.length > 0 && (
                         <div className={`rounded-xl p-4 ${
                           darkMode
-                            ? 'bg-[#1E293B] border border-[#334155]'
+                            ? 'bg-[var(--surface-2)] border border-[var(--border)]'
                             : 'bg-white border border-slate-200'
                         }`}>
                           <div className="flex items-center gap-2 mb-3">
@@ -1160,10 +1211,24 @@ export default function DashboardModal({
 
                       {/* Empty state for team tab */}
                       {managerData.memberStats.length === 0 && (
-                        <div className={`text-center py-8 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                          <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                          <p className="text-sm font-medium">No team data yet</p>
-                          <p className="text-xs mt-1">Assign tasks to team members to see their stats here.</p>
+                        <div className="text-center py-10">
+                          <motion.div
+                            className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
+                              darkMode
+                                ? 'bg-gradient-to-br from-blue-500/20 to-indigo-500/10 border border-blue-500/30'
+                                : 'bg-gradient-to-br from-blue-100 to-indigo-50 border border-blue-200'
+                            }`}
+                            animate={{ y: [-2, 2, -2] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                          >
+                            <Users className={`w-8 h-8 ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+                          </motion.div>
+                          <p className={`font-semibold text-base ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                            No team data yet
+                          </p>
+                          <p className={`text-sm mt-2 max-w-[220px] mx-auto ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            Assign tasks to team members to see their productivity stats here
+                          </p>
                         </div>
                       )}
                     </motion.div>
@@ -1186,12 +1251,29 @@ export default function DashboardModal({
 
                   <button
                     onClick={() => handleAction(onAddTask)}
-                    className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#0033A0] text-white font-semibold hover:bg-[#0028A0] transition-colors min-h-[48px] touch-manipulation"
+                    className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[var(--brand-blue)] text-white font-semibold hover:bg-[var(--accent-hover)] transition-colors min-h-[48px] touch-manipulation"
                   >
                     <Plus className="w-4 h-4" />
                     <span className="text-sm">Add Task</span>
                   </button>
                 </div>
+
+                {/* Don't show on login checkbox */}
+                <label className={`flex items-center gap-2 pt-3 cursor-pointer select-none ${
+                  darkMode ? 'text-slate-400' : 'text-slate-500'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={dontShowOnLogin}
+                    onChange={(e) => handleDontShowOnLoginChange(e.target.checked)}
+                    className={`w-4 h-4 rounded border-2 cursor-pointer transition-colors ${
+                      darkMode
+                        ? 'bg-slate-700 border-slate-600 checked:bg-[var(--brand-blue)] checked:border-[var(--brand-blue)]'
+                        : 'bg-white border-slate-300 checked:bg-[var(--brand-blue)] checked:border-[var(--brand-blue)]'
+                    }`}
+                  />
+                  <span className="text-xs">Don&apos;t show automatically on login</span>
+                </label>
               </div>
             </div>
           </motion.div>

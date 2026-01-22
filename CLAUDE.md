@@ -1,6 +1,6 @@
 # Claude Code Developer Guide
 
-This document provides comprehensive context for AI assistants (like Claude Code) working on the Bealer Agency Todo List codebase.
+This document provides comprehensive context for AI assistants (like Claude Code) working on the Wavezly Todo List codebase.
 
 > **For Multi-Agent Orchestrators**: See [ORCHESTRATOR.md](./ORCHESTRATOR.md) for a structured, quick-reference guide optimized for orchestrator agents.
 
@@ -28,7 +28,7 @@ This document provides comprehensive context for AI assistants (like Claude Code
 
 ### What This App Does
 
-The Bealer Agency Todo List is a **comprehensive collaborative task management platform** built specifically for the Bealer Agency (Allstate insurance agency). It combines:
+The Wavezly Todo List is a **comprehensive collaborative task management platform** built specifically for the Wavezly (Allstate insurance agency). It combines:
 
 - **Task Management**: Full CRUD with subtasks, attachments, notes, recurrence
 - **Team Collaboration**: Real-time chat, DMs, message reactions, presence tracking
@@ -458,6 +458,9 @@ App Entry: page.tsx (auth state)
     │   └── VoiceRecordingIndicator.tsx
     │
     ├── StrategicDashboard.tsx (owner only)
+    │
+    ├── ArchiveView.tsx (view === 'archive')
+    │   └── ArchivedTaskModal.tsx
     │
     ├── ActivityFeed.tsx
     │

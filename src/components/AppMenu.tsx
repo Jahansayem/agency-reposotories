@@ -4,26 +4,25 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Menu,
   X,
-  Activity,
   BarChart2,
-  Target,
-  Archive,
-  Sun,
-  Moon,
   Keyboard,
   Filter,
   RotateCcw,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { OWNER_USERNAME } from '@/types/todo';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// APP MENU - Hamburger menu for quick actions
+// NOTE: Activity, Archive, and Strategic Goals are now in NavigationSidebar
+// This menu only contains items NOT available elsewhere:
+// - Weekly Progress (modal)
+// - Keyboard Shortcuts (modal)
+// - Advanced Filters (toggle)
+// - Reset Filters (action)
+// ═══════════════════════════════════════════════════════════════════════════
 
 interface AppMenuProps {
-  userName: string;
-  canViewArchive: boolean;
-  onShowActivityFeed: () => void;
   onShowWeeklyChart: () => void;
-  onShowStrategicDashboard: () => void;
-  onShowArchive: () => void;
   onShowShortcuts: () => void;
   onShowAdvancedFilters: () => void;
   onResetFilters: () => void;
@@ -31,12 +30,7 @@ interface AppMenuProps {
 }
 
 export default function AppMenu({
-  userName,
-  canViewArchive,
-  onShowActivityFeed,
   onShowWeeklyChart,
-  onShowStrategicDashboard,
-  onShowArchive,
   onShowShortcuts,
   onShowAdvancedFilters,
   onResetFilters,
@@ -44,7 +38,7 @@ export default function AppMenu({
 }: AppMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const darkMode = theme === 'dark';
 
   // Close menu when clicking outside
@@ -133,21 +127,12 @@ export default function AppMenu({
             {/* Menu Header */}
             <div className={`px-4 py-3 border-b ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`}>
               <p className={`text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
-                Menu
+                Quick Actions
               </p>
             </div>
 
-            {/* Views Section */}
+            {/* Views Section - Only items not in sidebar */}
             <div className="py-1">
-              <button
-                onClick={() => handleMenuItemClick(onShowActivityFeed)}
-                className={menuItemClass}
-                role="menuitem"
-              >
-                <Activity className="w-4 h-4 flex-shrink-0" />
-                <span>Activity Feed</span>
-              </button>
-
               <button
                 onClick={() => handleMenuItemClick(onShowWeeklyChart)}
                 className={menuItemClass}
@@ -156,64 +141,12 @@ export default function AppMenu({
                 <BarChart2 className="w-4 h-4 flex-shrink-0" />
                 <span>Weekly Progress</span>
               </button>
-
-              {/* Strategic Goals - Owner only */}
-              {userName === OWNER_USERNAME && (
-                <button
-                  onClick={() => handleMenuItemClick(onShowStrategicDashboard)}
-                  className={menuItemClass}
-                  role="menuitem"
-                >
-                  <Target className="w-4 h-4 flex-shrink-0" />
-                  <span>Strategic Goals</span>
-                </button>
-              )}
-
-              {/* Archive - Admin/Owner only */}
-              {canViewArchive && (
-                <button
-                  onClick={() => handleMenuItemClick(onShowArchive)}
-                  className={menuItemClass}
-                  role="menuitem"
-                >
-                  <Archive className="w-4 h-4 flex-shrink-0" />
-                  <span>Archive</span>
-                </button>
-              )}
             </div>
 
             <div className={dividerClass} />
 
             {/* Settings Section */}
             <div className="py-1">
-              {/* Theme Toggle with Switch */}
-              <button
-                onClick={() => {
-                  toggleTheme();
-                  // Don't close menu for theme toggle
-                }}
-                className={menuItemClass}
-                role="menuitem"
-              >
-                {darkMode ? (
-                  <Sun className="w-4 h-4 flex-shrink-0" />
-                ) : (
-                  <Moon className="w-4 h-4 flex-shrink-0" />
-                )}
-                <span className="flex-1 text-left">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-                <div
-                  className={`relative w-9 h-5 rounded-full transition-colors ${
-                    darkMode ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                      darkMode ? 'translate-x-4' : 'translate-x-0.5'
-                    }`}
-                  />
-                </div>
-              </button>
-
               <button
                 onClick={() => handleMenuItemClick(onShowShortcuts)}
                 className={menuItemClass}

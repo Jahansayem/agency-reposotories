@@ -4,12 +4,15 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
-import { DashboardModalSkeleton, ChatPanelSkeleton, AIInboxSkeleton } from './LoadingSkeletons';
+import { DashboardModalSkeleton, ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton } from './LoadingSkeletons';
+import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser, Todo, QuickFilter } from '@/types/todo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { AppShell, useAppShell, ActiveView } from './layout';
 import { useTodoStore } from '@/store/todoStore';
+import { ErrorBoundary } from './ErrorBoundary';
+import NotificationPermissionBanner from './NotificationPermissionBanner';
 
 // Lazy load DashboardModal for better initial load performance
 const DashboardModal = dynamic(() => import('./DashboardModal'), {
@@ -35,6 +38,24 @@ const DashboardPage = dynamic(() => import('./views/DashboardPage'), {
   loading: () => <DashboardModalSkeleton />,
 });
 
+// Lazy load WeeklyProgressChart modal (accessible from any view via sidebar)
+const WeeklyProgressChart = dynamic(() => import('./WeeklyProgressChart'), {
+  ssr: false,
+  loading: () => <WeeklyProgressChartSkeleton />,
+});
+
+// Lazy load KeyboardShortcutsModal (accessible from any view via sidebar)
+const KeyboardShortcutsModal = dynamic(() => import('./KeyboardShortcutsModal'), {
+  ssr: false,
+  loading: () => null,
+});
+
+// Lazy load ArchiveView for the archive browser
+const ArchiveView = dynamic(() => import('./ArchiveView'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><div className="animate-spin w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full" /></div>,
+});
+
 interface MainAppProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
@@ -44,7 +65,17 @@ interface MainAppProps {
  * MainAppContent - Inner component that uses AppShell context
  */
 function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
-  const { activeView, setActiveView, onNewTaskTrigger } = useAppShell();
+  const {
+    activeView,
+    setActiveView,
+    onNewTaskTrigger,
+    showWeeklyChart,
+    closeWeeklyChart,
+    showShortcuts,
+    closeShortcuts,
+  } = useAppShell();
+  const { theme } = useTheme();
+  const darkMode = theme === 'dark';
   const usersWithColors = useTodoStore((state) => state.usersWithColors);
   const users = useTodoStore((state) => state.users);
 
@@ -55,6 +86,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   // Initialize showDashboard to false - we'll check for daily show AFTER data loads
   const [showDashboard, setShowDashboard] = useState(false);
   const [hasCheckedDailyDashboard, setHasCheckedDailyDashboard] = useState(false);
+  // Track which task to auto-expand when navigating from dashboard/notifications
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   // Fetch todos
   useEffect(() => {
@@ -131,21 +164,114 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     setShowDashboard(true);
   }, []);
 
-  // Handle task link click from chat (navigate to tasks view and scroll to task)
+  // Reset the add task trigger after modal opens
+  const handleAddTaskModalOpened = useCallback(() => {
+    setShowAddTask(false);
+  }, []);
+
+  // Reset the initial filter after it's applied
+  const handleInitialFilterApplied = useCallback(() => {
+    setInitialFilter(null);
+  }, []);
+
+  // Handle task link click from chat/dashboard/notifications (navigate to tasks view and open task)
   const handleTaskLinkClick = useCallback((taskId: string) => {
     setActiveView('tasks');
-    // Small delay to allow view switch
+    // Set the selected task ID to trigger auto-expand in TodoItem
+    setSelectedTaskId(taskId);
+    // Small delay to allow view switch, then scroll to task
     setTimeout(() => {
       const taskElement = document.getElementById(`todo-${taskId}`);
       if (taskElement) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        taskElement.classList.add('ring-2', 'ring-blue-500');
+        // Add animated highlight class
+        taskElement.classList.add('notification-highlight');
+        // Remove the class after animation completes
         setTimeout(() => {
-          taskElement.classList.remove('ring-2', 'ring-blue-500');
-        }, 2000);
+          taskElement.classList.remove('notification-highlight');
+        }, 3000);
       }
-    }, 100);
+    }, 150);
   }, [setActiveView]);
+
+  // Clear selected task after it has been expanded
+  const handleSelectedTaskHandled = useCallback(() => {
+    setSelectedTaskId(null);
+  }, []);
+
+  // Handle restoring an archived task
+  const handleRestoreTask = useCallback(async (taskId: string) => {
+    if (!isSupabaseConfigured()) return;
+
+    try {
+      // Restore task by marking it as not completed and resetting status
+      const { error } = await supabase
+        .from('todos')
+        .update({
+          completed: false,
+          status: 'todo',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', taskId);
+
+      if (error) {
+        logger.error('Failed to restore task', error, { component: 'MainApp', taskId });
+        throw error;
+      }
+
+      // Log the restore action
+      await supabase.from('activity_log').insert({
+        action: 'restore',
+        entity_type: 'todo',
+        entity_id: taskId,
+        user_name: currentUser.name,
+        details: { restored_from: 'archive' },
+      });
+
+      logger.info('Task restored from archive', { component: 'MainApp', taskId });
+    } catch (error) {
+      logger.error('Failed to restore task', error, { component: 'MainApp', taskId });
+      throw error;
+    }
+  }, [currentUser.name]);
+
+  // Handle permanently deleting an archived task
+  const handleDeleteTask = useCallback(async (taskId: string) => {
+    if (!isSupabaseConfigured()) return;
+
+    try {
+      // Get task info for logging before deletion
+      const { data: taskData } = await supabase
+        .from('todos')
+        .select('text')
+        .eq('id', taskId)
+        .single();
+
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', taskId);
+
+      if (error) {
+        logger.error('Failed to delete task', error, { component: 'MainApp', taskId });
+        throw error;
+      }
+
+      // Log the deletion
+      await supabase.from('activity_log').insert({
+        action: 'permanent_delete',
+        entity_type: 'todo',
+        entity_id: taskId,
+        user_name: currentUser.name,
+        details: { task_text: taskData?.text, deleted_from: 'archive' },
+      });
+
+      logger.info('Task permanently deleted from archive', { component: 'MainApp', taskId });
+    } catch (error) {
+      logger.error('Failed to delete task', error, { component: 'MainApp', taskId });
+      throw error;
+    }
+  }, [currentUser.name]);
 
   // Dashboard view is now a full page, no longer triggers modal
   // The modal is only shown on daily login check
@@ -157,20 +283,29 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     });
   }, [onNewTaskTrigger]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '300ms' }} />
-        </div>
-      </div>
-    );
-  }
+  // AI Inbox handlers - extracted to useCallback for memoization
+  // NOTE: These must be defined BEFORE any conditional returns to follow Rules of Hooks
+  const handleAIAccept = useCallback(async (item: unknown, editedTask: unknown) => {
+    // TODO: Implement accept logic - create task from AI suggestion
+    console.log('Accept AI item:', item, editedTask);
+  }, []);
 
-  // Render different views based on activeView from AppShell context
-  const renderActiveView = () => {
+  const handleAIDismiss = useCallback(async (itemId: string) => {
+    // TODO: Implement dismiss logic
+    console.log('Dismiss AI item:', itemId);
+  }, []);
+
+  const handleAIRefresh = useCallback(async () => {
+    // TODO: Implement refresh logic - fetch new AI items
+    console.log('Refresh AI inbox');
+  }, []);
+
+  const handleArchiveClose = useCallback(() => setActiveView('tasks'), [setActiveView]);
+  const handleChatBack = useCallback(() => setActiveView('tasks'), [setActiveView]);
+
+  // Memoized view rendering to prevent unnecessary re-renders
+  // NOTE: Must be defined BEFORE any conditional returns to follow Rules of Hooks
+  const activeViewContent = useMemo(() => {
     switch (activeView) {
       case 'dashboard':
         return (
@@ -179,7 +314,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             todos={todos}
             users={users}
             onNavigateToTasks={() => handleNavigateToTasks()}
-            onAddTask={handleAddTask}
+            onTaskClick={handleTaskLinkClick}
             onFilterOverdue={() => handleNavigateToTasks('overdue')}
             onFilterDueToday={() => handleNavigateToTasks('due_today')}
           />
@@ -190,7 +325,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
           <ChatView
             currentUser={currentUser}
             users={usersWithColors}
-            onBack={() => setActiveView('tasks')}
+            onBack={handleChatBack}
             onTaskLinkClick={handleTaskLinkClick}
           />
         );
@@ -204,7 +339,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
+            onAddTaskModalOpened={handleAddTaskModalOpened}
+            onInitialFilterApplied={handleInitialFilterApplied}
             onOpenDashboard={handleOpenDashboard}
+            selectedTaskId={selectedTaskId}
+            onSelectedTaskHandled={handleSelectedTaskHandled}
           />
         );
 
@@ -216,19 +355,23 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
+            onAddTaskModalOpened={handleAddTaskModalOpened}
+            onInitialFilterApplied={handleInitialFilterApplied}
             onOpenDashboard={handleOpenDashboard}
+            selectedTaskId={selectedTaskId}
+            onSelectedTaskHandled={handleSelectedTaskHandled}
           />
         );
 
       case 'archive':
-        // Archive is handled by TodoList internally
+        // Full-featured archive browser
         return (
-          <TodoList
+          <ArchiveView
             currentUser={currentUser}
-            onUserChange={onUserChange}
-            initialFilter={initialFilter}
-            autoFocusAddTask={showAddTask}
-            onOpenDashboard={handleOpenDashboard}
+            users={users}
+            onRestore={handleRestoreTask}
+            onDelete={handleDeleteTask}
+            onClose={handleArchiveClose}
           />
         );
 
@@ -238,18 +381,9 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
           <AIInbox
             items={[]} // TODO: Connect to actual AI inbox state from store
             users={usersWithColors.map(u => u.name)}
-            onAccept={async (item, editedTask) => {
-              // TODO: Implement accept logic - create task from AI suggestion
-              console.log('Accept AI item:', item, editedTask);
-            }}
-            onDismiss={async (itemId) => {
-              // TODO: Implement dismiss logic
-              console.log('Dismiss AI item:', itemId);
-            }}
-            onRefresh={async () => {
-              // TODO: Implement refresh logic - fetch new AI items
-              console.log('Refresh AI inbox');
-            }}
+            onAccept={handleAIAccept}
+            onDismiss={handleAIDismiss}
+            onRefresh={handleAIRefresh}
           />
         );
 
@@ -261,15 +395,55 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
+            onAddTaskModalOpened={handleAddTaskModalOpened}
+            onInitialFilterApplied={handleInitialFilterApplied}
             onOpenDashboard={handleOpenDashboard}
+            selectedTaskId={selectedTaskId}
+            onSelectedTaskHandled={handleSelectedTaskHandled}
           />
         );
     }
-  };
+  }, [
+    activeView,
+    currentUser,
+    todos,
+    users,
+    usersWithColors,
+    initialFilter,
+    showAddTask,
+    selectedTaskId,
+    handleNavigateToTasks,
+    handleTaskLinkClick,
+    handleSelectedTaskHandled,
+    handleRestoreTask,
+    handleDeleteTask,
+    handleAddTaskModalOpened,
+    handleInitialFilterApplied,
+    handleOpenDashboard,
+    handleChatBack,
+    handleArchiveClose,
+    handleAIAccept,
+    handleAIDismiss,
+    handleAIRefresh,
+    onUserChange,
+  ]);
+
+  // Loading state - rendered conditionally in JSX to avoid early return before hooks
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2 h-2 rounded-full bg-[var(--accent)] animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      {renderActiveView()}
+      {activeViewContent}
 
       {/* Only render DashboardModal when it needs to be shown - prevents skeleton flash */}
       {showDashboard && (
@@ -285,17 +459,39 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
           users={users}
         />
       )}
+
+      {/* Push notification permission banner */}
+      <NotificationPermissionBanner currentUser={currentUser} />
+
+      {/* Weekly Progress Chart Modal - accessible from any view via sidebar */}
+      {showWeeklyChart && (
+        <WeeklyProgressChart
+          todos={todos}
+          darkMode={darkMode}
+          show={showWeeklyChart}
+          onClose={closeWeeklyChart}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Modal - accessible from any view via sidebar */}
+      <KeyboardShortcutsModal
+        show={showShortcuts}
+        onClose={closeShortcuts}
+        darkMode={darkMode}
+      />
     </>
   );
 }
 
 /**
- * MainApp - Wraps the app content in AppShell context provider
+ * MainApp - Wraps the app content in AppShell context provider with Error Boundary
  */
 export default function MainApp({ currentUser, onUserChange }: MainAppProps) {
   return (
     <AppShell currentUser={currentUser} onUserChange={onUserChange}>
-      <MainAppContent currentUser={currentUser} onUserChange={onUserChange} />
+      <ErrorBoundary>
+        <MainAppContent currentUser={currentUser} onUserChange={onUserChange} />
+      </ErrorBoundary>
     </AppShell>
   );
 }

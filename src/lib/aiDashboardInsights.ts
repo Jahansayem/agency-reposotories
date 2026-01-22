@@ -185,6 +185,7 @@ export function generateProductivityInsights(
   const insights: ProductivityInsight[] = [];
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const currentHour = now.getHours();
 
   // Filter user's tasks
   const userTasks = todos.filter(t => t.assigned_to === currentUser);
@@ -200,7 +201,77 @@ export function generateProductivityInsights(
     return completedDate && completedDate >= weekAgo;
   });
 
-  // 1. Check for completion milestone
+  // Get today's completions
+  const todayCompletions = completedTasks.filter(t => {
+    const completedDate = t.updated_at ? new Date(t.updated_at) : null;
+    return completedDate && completedDate.toDateString() === today.toDateString();
+  });
+
+  // Calculate tasks due soon (next 3 days)
+  const threeDaysFromNow = new Date(today);
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+  const dueSoon = activeTasks.filter(t => {
+    if (!t.due_date) return false;
+    const dueDate = new Date(t.due_date);
+    return dueDate >= today && dueDate <= threeDaysFromNow;
+  });
+
+  // Calculate overdue tasks
+  const overdue = activeTasks.filter(t => {
+    if (!t.due_date) return false;
+    const dueDate = new Date(t.due_date);
+    dueDate.setHours(23, 59, 59, 999);
+    return dueDate < today;
+  });
+
+  // Tasks due today
+  const dueToday = activeTasks.filter(t => {
+    if (!t.due_date) return false;
+    const dueDate = new Date(t.due_date);
+    return dueDate.toDateString() === today.toDateString();
+  });
+
+  // Priority counts
+  const highPriorityActive = activeTasks.filter(
+    t => t.priority === 'urgent' || t.priority === 'high'
+  ).length;
+
+  // =====================================================================
+  // HIGH PRIORITY INSIGHTS - Always check these first
+  // =====================================================================
+
+  // 1. Overdue tasks warning (high priority)
+  if (overdue.length > 0) {
+    insights.push({
+      type: 'tip',
+      icon: '⏰',
+      title: overdue.length === 1 ? '1 Overdue Task' : `${overdue.length} Overdue Tasks`,
+      message: overdue.length === 1
+        ? `"${overdue[0].text.slice(0, 35)}${overdue[0].text.length > 35 ? '...' : ''}" needs your attention.`
+        : `Let's clear a few today and get back on track!`,
+      priority: 'high',
+    });
+  }
+
+  // 2. Tasks due today
+  if (dueToday.length > 0) {
+    insights.push({
+      type: 'pattern',
+      icon: '📅',
+      title: dueToday.length === 1 ? '1 Task Due Today' : `${dueToday.length} Tasks Due Today`,
+      message: dueToday.length === 1
+        ? `"${dueToday[0].text.slice(0, 35)}${dueToday[0].text.length > 35 ? '...' : ''}" is due today.`
+        : `Focus on completing these to stay on schedule.`,
+      priority: 'high',
+    });
+  }
+
+  // =====================================================================
+  // MILESTONE & ACHIEVEMENT INSIGHTS
+  // =====================================================================
+
+  // 3. Check for completion milestone
   const totalCompleted = completedTasks.length;
   if (totalCompleted > 0 && totalCompleted % 10 === 0) {
     insights.push({
@@ -212,14 +283,25 @@ export function generateProductivityInsights(
     });
   }
 
-  // 2. Weekly completion analysis
+  // 4. Today's progress celebration
+  if (todayCompletions.length >= 3) {
+    insights.push({
+      type: 'milestone',
+      icon: '⭐',
+      title: 'Great Day So Far!',
+      message: `${todayCompletions.length} tasks completed today. You're crushing it!`,
+      priority: 'medium',
+    });
+  }
+
+  // 5. Weekly completion analysis
   if (recentCompletions.length >= 5) {
     insights.push({
       type: 'pattern',
       icon: '📈',
       title: 'Productive Week!',
       message: `${recentCompletions.length} tasks completed in the past 7 days. You're on fire!`,
-      priority: 'high',
+      priority: 'medium',
     });
   } else if (recentCompletions.length >= 3) {
     insights.push({
@@ -228,56 +310,6 @@ export function generateProductivityInsights(
       title: 'Good Progress',
       message: `${recentCompletions.length} tasks done this week. Keep pushing forward!`,
       priority: 'medium',
-    });
-  }
-
-  // 3. Priority balance check
-  const highPriorityActive = activeTasks.filter(
-    t => t.priority === 'urgent' || t.priority === 'high'
-  ).length;
-
-  if (highPriorityActive > 5) {
-    insights.push({
-      type: 'tip',
-      icon: '💡',
-      title: 'Priority Overload',
-      message: `You have ${highPriorityActive} high-priority tasks. Consider completing a few before adding more.`,
-      priority: 'medium',
-    });
-  }
-
-  // 4. No tasks due today encouragement
-  const dueToday = activeTasks.filter(t => {
-    if (!t.due_date) return false;
-    const dueDate = new Date(t.due_date);
-    return dueDate.toDateString() === today.toDateString();
-  });
-
-  if (dueToday.length === 0 && activeTasks.length > 0) {
-    insights.push({
-      type: 'tip',
-      icon: '🎯',
-      title: 'Open Day',
-      message: "No deadlines today! Perfect time to tackle something you've been putting off.",
-      priority: 'low',
-    });
-  }
-
-  // 5. Check for overdue tasks
-  const overdue = activeTasks.filter(t => {
-    if (!t.due_date) return false;
-    const dueDate = new Date(t.due_date);
-    dueDate.setHours(23, 59, 59, 999);
-    return dueDate < today;
-  });
-
-  if (overdue.length > 3) {
-    insights.push({
-      type: 'tip',
-      icon: '⏰',
-      title: 'Catch Up Time',
-      message: `${overdue.length} overdue tasks. Let's clear a few today and feel the relief!`,
-      priority: 'high',
     });
   }
 
@@ -292,9 +324,149 @@ export function generateProductivityInsights(
     });
   }
 
-  // Sort by priority
+  // =====================================================================
+  // CONTEXTUAL & TIME-BASED INSIGHTS
+  // =====================================================================
+
+  // 7. Morning planning insight (before 10am)
+  if (currentHour < 10 && activeTasks.length > 0 && insights.length < 3) {
+    const suggestedTask = activeTasks
+      .filter(t => t.priority === 'urgent' || t.priority === 'high')
+      .sort((a, b) => {
+        if (a.due_date && b.due_date) return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        if (a.due_date) return -1;
+        if (b.due_date) return 1;
+        return PRIORITY_WEIGHT[b.priority] - PRIORITY_WEIGHT[a.priority];
+      })[0] || activeTasks[0];
+
+    insights.push({
+      type: 'tip',
+      icon: '🌅',
+      title: 'Morning Focus',
+      message: `Start strong with "${suggestedTask.text.slice(0, 30)}${suggestedTask.text.length > 30 ? '...' : ''}"`,
+      priority: 'medium',
+    });
+  }
+
+  // 8. Afternoon check-in (2-4pm)
+  if (currentHour >= 14 && currentHour < 16 && insights.length < 3) {
+    if (todayCompletions.length === 0 && activeTasks.length > 0) {
+      insights.push({
+        type: 'encouragement',
+        icon: '☀️',
+        title: 'Afternoon Boost',
+        message: "Still time to make today count! Pick one task to complete before end of day.",
+        priority: 'medium',
+      });
+    }
+  }
+
+  // 9. End of day wrap-up (after 5pm)
+  if (currentHour >= 17 && insights.length < 3) {
+    if (todayCompletions.length > 0) {
+      insights.push({
+        type: 'encouragement',
+        icon: '🌙',
+        title: 'Day Well Spent',
+        message: `You completed ${todayCompletions.length} task${todayCompletions.length > 1 ? 's' : ''} today. Time to recharge!`,
+        priority: 'low',
+      });
+    } else if (activeTasks.length > 0) {
+      insights.push({
+        type: 'tip',
+        icon: '🌙',
+        title: 'Tomorrow\'s Plan',
+        message: "Review your tasks tonight so you can hit the ground running tomorrow.",
+        priority: 'low',
+      });
+    }
+  }
+
+  // =====================================================================
+  // TASK DISTRIBUTION & BALANCE INSIGHTS
+  // =====================================================================
+
+  // 10. Upcoming deadlines (next 3 days)
+  if (dueSoon.length > 0 && !dueToday.length && insights.length < 4) {
+    insights.push({
+      type: 'pattern',
+      icon: '📆',
+      title: `${dueSoon.length} Task${dueSoon.length > 1 ? 's' : ''} Due Soon`,
+      message: `You have deadlines coming up in the next 3 days. Plan ahead!`,
+      priority: 'medium',
+    });
+  }
+
+  // 11. Priority balance check
+  if (highPriorityActive > 5) {
+    insights.push({
+      type: 'tip',
+      icon: '💡',
+      title: 'Priority Overload',
+      message: `${highPriorityActive} high-priority tasks active. Consider completing a few first.`,
+      priority: 'medium',
+    });
+  }
+
+  // 12. Workload summary (always show if nothing else)
+  if (insights.length < 2 && activeTasks.length > 0) {
+    const urgentCount = activeTasks.filter(t => t.priority === 'urgent').length;
+    const highCount = activeTasks.filter(t => t.priority === 'high').length;
+
+    if (urgentCount > 0 || highCount > 0) {
+      insights.push({
+        type: 'pattern',
+        icon: '📊',
+        title: 'Current Workload',
+        message: urgentCount > 0
+          ? `${urgentCount} urgent and ${highCount} high priority tasks need attention.`
+          : `${highCount} high priority task${highCount > 1 ? 's' : ''} in your queue.`,
+        priority: 'medium',
+      });
+    } else {
+      insights.push({
+        type: 'encouragement',
+        icon: '✨',
+        title: 'Balanced Workload',
+        message: `${activeTasks.length} active task${activeTasks.length > 1 ? 's' : ''}, no urgent priorities. Great time to make progress!`,
+        priority: 'low',
+      });
+    }
+  }
+
+  // 13. No tasks due today encouragement
+  if (dueToday.length === 0 && activeTasks.length > 0 && overdue.length === 0 && insights.length < 3) {
+    insights.push({
+      type: 'tip',
+      icon: '🎯',
+      title: 'Open Day',
+      message: "No deadlines today! Perfect time to tackle something you've been putting off.",
+      priority: 'low',
+    });
+  }
+
+  // 14. Quick win suggestion
+  if (insights.length < 3 && activeTasks.length > 0) {
+    const quickWins = activeTasks.filter(t =>
+      t.priority === 'low' || t.priority === 'medium'
+    ).filter(t => !t.subtasks || t.subtasks.length === 0);
+
+    if (quickWins.length > 0) {
+      insights.push({
+        type: 'tip',
+        icon: '⚡',
+        title: 'Quick Win Available',
+        message: `"${quickWins[0].text.slice(0, 30)}${quickWins[0].text.length > 30 ? '...' : ''}" looks like a quick one!`,
+        priority: 'low',
+      });
+    }
+  }
+
+  // Sort by priority and limit to top 4
   const priorityOrder = { high: 0, medium: 1, low: 2 };
-  return insights.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+  return insights
+    .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+    .slice(0, 4);
 }
 
 // ============================================================================

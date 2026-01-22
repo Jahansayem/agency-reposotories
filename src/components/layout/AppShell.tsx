@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser } from '@/types/todo';
@@ -62,6 +62,14 @@ interface AppShellContextType {
   triggerNewTask: () => void;
   onNewTaskTrigger: (callback: () => void) => void;
 
+  // Modal state (Weekly Progress, Keyboard Shortcuts)
+  showWeeklyChart: boolean;
+  openWeeklyChart: () => void;
+  closeWeeklyChart: () => void;
+  showShortcuts: boolean;
+  openShortcuts: () => void;
+  closeShortcuts: () => void;
+
   // User info
   currentUser: AuthUser | null;
 }
@@ -113,6 +121,10 @@ export default function AppShell({
 
   // New task trigger callback - allows child components to register handlers
   const [newTaskCallback, setNewTaskCallback] = useState<(() => void) | null>(null);
+
+  // Modal state for Weekly Progress and Shortcuts
+  const [showWeeklyChart, setShowWeeklyChart] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Handle responsive sidebar
   useEffect(() => {
@@ -200,10 +212,37 @@ export default function AppShell({
     }, 50);
   }, [newTaskCallback]);
 
+  // Handle task link click from chat - navigate to task and highlight it
+  const handleTaskLinkClick = useCallback((taskId: string) => {
+    // Navigate to tasks view
+    setActiveView('tasks');
+    // Small delay to ensure view switches, then scroll to task
+    setTimeout(() => {
+      const taskElement = document.getElementById(`todo-${taskId}`);
+      if (taskElement) {
+        taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Add animated highlight class
+        taskElement.classList.add('notification-highlight');
+        // Remove the class after animation completes
+        setTimeout(() => {
+          taskElement.classList.remove('notification-highlight');
+        }, 3000);
+      }
+    }, 150);
+  }, []);
+
   // Allow child components to register their new task handler
   const onNewTaskTrigger = useCallback((callback: () => void) => {
     setNewTaskCallback(() => callback);
   }, []);
+
+  // Weekly chart modal controls
+  const openWeeklyChart = useCallback(() => setShowWeeklyChart(true), []);
+  const closeWeeklyChart = useCallback(() => setShowWeeklyChart(false), []);
+
+  // Shortcuts modal controls
+  const openShortcuts = useCallback(() => setShowShortcuts(true), []);
+  const closeShortcuts = useCallback(() => setShowShortcuts(false), []);
 
   const contextValue: AppShellContextType = {
     activeView,
@@ -223,6 +262,12 @@ export default function AppShell({
     closeMobileSheet,
     triggerNewTask,
     onNewTaskTrigger,
+    showWeeklyChart,
+    openWeeklyChart,
+    closeWeeklyChart,
+    showShortcuts,
+    openShortcuts,
+    closeShortcuts,
     currentUser,
   };
 
@@ -248,6 +293,8 @@ export default function AppShell({
           <NavigationSidebar
             currentUser={currentUser}
             onUserChange={onUserChange}
+            onShowWeeklyChart={openWeeklyChart}
+            onShowShortcuts={openShortcuts}
           />
 
           {/* ═══ MAIN CONTENT AREA ═══ */}
@@ -296,6 +343,7 @@ export default function AppShell({
         <FloatingChatButton
           currentUser={currentUser}
           users={users}
+          onTaskLinkClick={handleTaskLinkClick}
         />
 
         {/* ═══ COMMAND PALETTE ═══ */}
@@ -378,7 +426,6 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
   const menuItems = [
     { id: 'tasks', label: 'Tasks', icon: '📋' },
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'activity', label: 'Activity', icon: '⚡' },
     { id: 'chat', label: 'Messages', icon: '💬' },
   ];
 

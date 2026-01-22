@@ -15,6 +15,8 @@ import { logActivity } from '@/lib/activityLogger';
 import { shouldShowWelcomeNotification } from '@/components/WelcomeBackNotification';
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
+import { createAutoReminders, updateAutoReminders } from '@/lib/reminderService';
 
 export function useTodoData(currentUser: AuthUser) {
   const {
@@ -182,6 +184,19 @@ export function useTodoData(currentUser: AuthUser) {
       },
     });
 
+    // Send notification if task is assigned to someone else
+    if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
+      sendTaskAssignmentNotification({
+        taskId: newTodo.id,
+        taskText: newTodo.text,
+        assignedTo: newTodo.assigned_to,
+        assignedBy: userName,
+        dueDate: newTodo.due_date,
+        priority: newTodo.priority,
+        subtasks: newTodo.subtasks,
+      });
+    }
+
     // Auto-attach source file if provided
     if (sourceFile) {
       try {
@@ -196,6 +211,36 @@ export function useTodoData(currentUser: AuthUser) {
         });
       } catch (err) {
         logger.error('Failed to attach source file', err, { component: 'useTodoData' });
+      }
+    }
+
+    // Create auto-reminders for tasks with due dates
+    if (newTodo.due_date && newTodo.assigned_to) {
+      // Get the user ID for the assignee to send push notifications
+      const { data: assigneeData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('name', newTodo.assigned_to)
+        .single();
+
+      if (assigneeData?.id) {
+        const reminderResult = await createAutoReminders(
+          newTodo.id,
+          newTodo.due_date,
+          assigneeData.id,
+          userName
+        );
+        if (!reminderResult.success) {
+          logger.warn('Failed to create auto-reminders', {
+            component: 'useTodoData',
+            error: reminderResult.error,
+          });
+        } else if (reminderResult.created > 0) {
+          logger.info(`Created ${reminderResult.created} auto-reminders for task`, {
+            component: 'useTodoData',
+            taskId: newTodo.id,
+          });
+        }
       }
     }
 
@@ -229,6 +274,39 @@ export function useTodoData(currentUser: AuthUser) {
       // Rollback
       updateTodoInStore(id, currentTodo);
       return false;
+    }
+
+    // Update auto-reminders if due_date changed
+    const dueDateChanged = 'due_date' in updates && updates.due_date !== currentTodo.due_date;
+    const assignedToChanged = 'assigned_to' in updates && updates.assigned_to !== currentTodo.assigned_to;
+
+    if (dueDateChanged || assignedToChanged) {
+      const assignedTo = updates.assigned_to ?? currentTodo.assigned_to;
+      const newDueDate = updates.due_date ?? currentTodo.due_date;
+
+      if (assignedTo) {
+        // Get user ID for the assignee
+        const { data: assigneeData } = await supabase
+          .from('users')
+          .select('id')
+          .eq('name', assignedTo)
+          .single();
+
+        if (assigneeData?.id) {
+          const reminderResult = await updateAutoReminders(
+            id,
+            newDueDate || null,
+            assigneeData.id,
+            userName
+          );
+          if (!reminderResult.success) {
+            logger.warn('Failed to update auto-reminders', {
+              component: 'useTodoData',
+              error: reminderResult.error,
+            });
+          }
+        }
+      }
     }
 
     return true;

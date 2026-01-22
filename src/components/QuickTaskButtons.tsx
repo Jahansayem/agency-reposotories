@@ -153,7 +153,7 @@ export function QuickTaskButtons({
 
   // Render the template grid (shared between inline and normal mode)
   const renderTemplateGrid = () => (
-    <div className={`flex flex-wrap ${inline ? 'gap-2' : 'gap-2.5'}`}>
+    <div className={`flex flex-wrap ${inline ? 'gap-3' : 'gap-3'}`}>
       {allTemplates.map((template, index) => {
         const Icon = CATEGORY_ICONS[template.category] || FileText;
         const colors = CATEGORY_COLORS[template.category] || CATEGORY_COLORS.other;
@@ -168,8 +168,8 @@ export function QuickTaskButtons({
             onClick={() => handleTemplateSelect(template)}
             className={`group relative inline-flex items-center gap-2 rounded-full border bg-[var(--surface)] hover:bg-[var(--surface-2)] active:scale-[0.97] transition-all text-left touch-manipulation shadow-sm hover:shadow-md ${
               inline
-                ? 'px-3 py-1.5 border-[var(--border)]'
-                : 'px-4 py-2 border-[var(--border)] hover:border-[var(--border-hover)]'
+                ? 'px-4 py-2.5 border-[var(--border)]'
+                : 'px-4 py-2.5 border-[var(--border)] hover:border-[var(--border-hover)]'
             }`}
             style={{
               borderColor: indicator === 'high' ? colors.icon + '40' : undefined,
@@ -180,19 +180,19 @@ export function QuickTaskButtons({
             {/* Icon with colored background */}
             <span
               className={`flex-shrink-0 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 ${
-                inline ? 'w-5 h-5' : 'w-6 h-6'
+                inline ? 'w-6 h-6' : 'w-6 h-6'
               }`}
               style={{ backgroundColor: colors.bg }}
             >
               <Icon
-                className={inline ? 'w-3 h-3' : 'w-3.5 h-3.5'}
+                className={inline ? 'w-3.5 h-3.5' : 'w-3.5 h-3.5'}
                 style={{ color: colors.icon }}
               />
             </span>
 
             {/* Label */}
             <span className={`font-medium text-[var(--foreground)] whitespace-nowrap ${
-              inline ? 'text-xs' : 'text-sm'
+              inline ? 'text-sm' : 'text-sm'
             }`}>
               {label}
             </span>
@@ -216,8 +216,8 @@ export function QuickTaskButtons({
   if (inline) {
     return (
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-light)]">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-xs uppercase tracking-wider font-medium text-[var(--text-light)]">
             Quick Add
           </span>
           <div className="flex-1 h-px bg-[var(--border-subtle)]" />

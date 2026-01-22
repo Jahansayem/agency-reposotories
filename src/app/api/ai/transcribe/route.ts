@@ -11,6 +11,22 @@ import { logger } from '@/lib/logger';
 // Supported audio formats by Whisper
 const SUPPORTED_FORMATS = ['mp3', 'mp4', 'mpeg', 'mpga', 'm4a', 'wav', 'webm', 'ogg', 'aac', 'flac'];
 
+// Supported MIME types for audio files
+const SUPPORTED_MIME_TYPES = [
+  'audio/mpeg',        // mp3
+  'audio/mp4',         // m4a, mp4 audio
+  'audio/x-m4a',       // m4a alternative
+  'audio/wav',         // wav
+  'audio/x-wav',       // wav alternative
+  'audio/webm',        // webm
+  'audio/ogg',         // ogg
+  'audio/aac',         // aac
+  'audio/flac',        // flac
+  'audio/x-flac',      // flac alternative
+  'video/mp4',         // mp4 (video container with audio)
+  'video/webm',        // webm (video container with audio)
+];
+
 type ProcessingMode = 'transcribe' | 'tasks' | 'subtasks';
 
 export async function POST(request: NextRequest) {
@@ -61,13 +77,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check file format
+    // Check file format - validate both extension and MIME type
     const extension = audioFile.name.split('.').pop()?.toLowerCase();
+    const mimeType = audioFile.type;
+
+    // Validate extension
     if (extension && !SUPPORTED_FORMATS.includes(extension)) {
       return NextResponse.json(
         { success: false, error: `Unsupported audio format. Supported formats: ${SUPPORTED_FORMATS.join(', ')}` },
         { status: 400 }
       );
+    }
+
+    // Validate MIME type (if provided by browser)
+    if (mimeType && !SUPPORTED_MIME_TYPES.includes(mimeType) && !mimeType.startsWith('audio/')) {
+      logger.warn('Unexpected MIME type for audio file', { component: 'TranscribeAPI', mimeType, fileName: audioFile.name });
+      // Don't reject - some browsers report incorrect MIME types, but log for monitoring
     }
 
     if (!process.env.OPENAI_API_KEY) {

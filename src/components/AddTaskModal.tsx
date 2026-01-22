@@ -93,14 +93,14 @@ export default function AddTaskModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed inset-x-4 top-[10vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 w-auto sm:w-full sm:max-w-lg"
+            className="fixed inset-x-4 top-[5vh] bottom-[5vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 w-auto sm:w-full sm:max-w-2xl flex flex-col"
             role="dialog"
             aria-modal="true"
             aria-label="Add new task"
           >
             <div
               className={`
-                rounded-xl border shadow-2xl overflow-hidden
+                rounded-xl border shadow-2xl overflow-hidden flex flex-col max-h-full
                 ${darkMode
                   ? 'bg-[var(--surface)] border-white/10'
                   : 'bg-white border-[var(--border)]'
@@ -110,13 +110,13 @@ export default function AddTaskModal({
               {/* Header */}
               <div
                 className={`
-                  flex items-center justify-between px-5 py-4 border-b
+                  flex items-center justify-between px-6 py-5 border-b
                   ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
                 `}
               >
                 <h2
                   className={`
-                    text-lg font-semibold
+                    text-xl font-semibold
                     ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
                   `}
                 >
@@ -125,20 +125,20 @@ export default function AddTaskModal({
                 <button
                   onClick={onClose}
                   className={`
-                    p-2 rounded-lg transition-colors
+                    p-2.5 rounded-lg transition-colors
                     ${darkMode
-                      ? 'text-white/60 hover:text-white hover:bg-white/10'
+                      ? 'text-white/70 hover:text-white hover:bg-white/10'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
                     }
                   `}
                   aria-label="Close modal"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" strokeWidth={2.5} />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="p-5">
+              <div className="p-6 pt-4 overflow-y-auto flex-1 min-h-0">
                 <AddTodo
                   onAdd={handleAdd}
                   users={users}

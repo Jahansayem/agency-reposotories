@@ -77,18 +77,52 @@ export default function FloatingChatButton({
     const fetchUnreadCount = async () => {
       try {
         // Get messages not read by current user
+        // We need to fetch recipient and created_by to filter properly
         const { data, error } = await supabase
           .from('messages')
-          .select('id, read_by')
+          .select('id, read_by, recipient, created_by')
           .not('created_by', 'eq', currentUser.name)
           .is('deleted_at', null);
 
         if (error) throw error;
 
-        // Count messages where current user is not in read_by array
-        const unread = data?.filter(
-          (msg) => !msg.read_by?.includes(currentUser.name)
-        ).length || 0;
+        // Determine what conversation will be shown when chat opens
+        // If we have a persisted conversation, don't count those messages as unread
+        const persistedConversationType = lastConversation?.type;
+        const persistedDmUser = persistedConversationType === 'dm' ? lastConversation?.userName : null;
+
+        // Get list of valid user names (users we can actually show conversations for)
+        const validUserNames = new Set(users.map(u => u.name));
+
+        // Count messages where:
+        // 1. Current user is not in read_by array
+        // 2. Message is either a team message (no recipient) OR a DM to the current user
+        // 3. Message is NOT from the persisted conversation (which will be shown immediately)
+        // 4. For DMs, the sender must be a valid user (so we can show their conversation)
+        const unread = data?.filter((msg) => {
+          // Skip if already read
+          if (msg.read_by?.includes(currentUser.name)) return false;
+
+          // Team message (no recipient)
+          if (!msg.recipient) {
+            // Skip if team chat is the persisted conversation
+            if (persistedConversationType === 'team') return false;
+            return true;
+          }
+
+          // DM to current user
+          if (msg.recipient === currentUser.name) {
+            // Skip if sender is not in the users list (e.g., "System" messages)
+            // These can't be viewed in the UI so shouldn't show as unread
+            if (!validUserNames.has(msg.created_by)) return false;
+            // Skip if this DM is from the persisted conversation user
+            if (persistedDmUser && msg.created_by === persistedDmUser) return false;
+            return true;
+          }
+
+          // DM between other users - don't count it
+          return false;
+        }).length || 0;
 
         setUnreadCount(unread);
       } catch (err) {
@@ -113,7 +147,7 @@ export default function FloatingChatButton({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser.name]);
+  }, [currentUser.name, lastConversation]);
 
   // Clear unread count when opening chat
   useEffect(() => {
@@ -149,28 +183,6 @@ export default function FloatingChatButton({
         aria-label={`Open chat${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <MessageCircle className="w-6 h-6 text-white" />
-        
-        {/* Unread Badge */}
-        <AnimatePresence>
-          {unreadCount > 0 && (
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              className={`
-                absolute -top-1 -right-1
-                min-w-[22px] h-[22px]
-                flex items-center justify-center
-                px-1.5 rounded-full
-                text-xs font-bold text-white
-                bg-red-500 border-2
-                ${darkMode ? 'border-[var(--background)]' : 'border-white'}
-              `}
-            >
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </motion.span>
-          )}
-        </AnimatePresence>
       </motion.button>
 
       {/* Chat Popup - Google Chat style */}

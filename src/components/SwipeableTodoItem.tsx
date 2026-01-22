@@ -238,7 +238,7 @@ export default function SwipeableTodoItem({
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden rounded-[var(--radius-xl)]"
+      className="relative overflow-x-clip overflow-y-visible rounded-[var(--radius-xl)]"
       role="listitem"
       aria-label={`Task: ${todo.text}. ${todo.completed ? 'Completed.' : ''} Swipe left to ${todo.completed ? 'reopen' : 'complete'}, swipe right for options.`}
     >

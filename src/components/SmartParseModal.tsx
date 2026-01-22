@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Check, Clock, Flag, Calendar, User, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 import {
   backdropVariants,
   modalVariants,
@@ -65,6 +65,13 @@ export default function SmartParseModal({
 
   // Handle Escape key to close modal
   useEscapeKey(onClose, { enabled: isOpen });
+
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    enabled: isOpen,
+    autoFocus: true,
+  });
 
   const reducedMotion = prefersReducedMotion();
 
@@ -132,6 +139,7 @@ export default function SmartParseModal({
 
           {/* Modal */}
           <motion.div
+            ref={containerRef}
             variants={reducedMotion ? undefined : modalVariants}
             initial={reducedMotion ? { opacity: 1 } : 'hidden'}
             animate={reducedMotion ? { opacity: 1 } : 'visible'}

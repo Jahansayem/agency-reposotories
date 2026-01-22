@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 import { Card, Badge, Button, ProgressRing } from '@/components/ui';
+import DailyDigestPanel from '@/components/dashboard/DailyDigestPanel';
 
 interface DashboardProps {
   todos: Todo[];
@@ -209,6 +210,14 @@ export default function Dashboard({
 
       {/* Main Content */}
       <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-6 py-6 space-y-5">
+        {/* Daily Digest Panel - auto-loads AI briefing */}
+        <DailyDigestPanel
+          currentUser={currentUser}
+          onFilterOverdue={onFilterOverdue}
+          onFilterDueToday={onFilterDueToday}
+          defaultExpanded={true}
+        />
+
         {/* Overdue Alert - Primary CTA when there are overdue tasks */}
         {stats.overdue > 0 && (
           <motion.div

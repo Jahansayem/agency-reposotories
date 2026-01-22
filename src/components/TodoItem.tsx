@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Lock } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
@@ -10,6 +10,7 @@ import AttachmentUpload from './AttachmentUpload';
 import Celebration from './Celebration';
 import ReminderPicker from './ReminderPicker';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
+import { sanitizeTranscription } from '@/lib/sanitize';
 
 // Map priority levels to Badge variants
 const PRIORITY_TO_BADGE_VARIANT: Record<TodoPriority, 'danger' | 'warning' | 'info' | 'default'> = {
@@ -51,16 +52,21 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
 
   return (
     <div
-      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-2.5 rounded-[var(--radius-md)] transition-colors ${subtask.completed ? 'bg-[var(--surface-2)] opacity-60' : 'bg-[var(--surface)]'
-        }`}
+      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-2.5 rounded-[var(--radius-md)] transition-colors ${
+        subtask.completed ? 'bg-[var(--surface-2)] opacity-60' : 'bg-[var(--surface)]'
+      }`}
     >
       {/* Checkbox */}
       <button
         onClick={() => onToggle(subtask.id)}
-        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${subtask.completed
-          ? 'bg-[var(--accent)] border-[var(--accent)]'
-          : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
-          }`}
+        role="checkbox"
+        aria-checked={subtask.completed}
+        aria-label={`${subtask.completed ? 'Completed' : 'Incomplete'}: ${subtask.text}`}
+        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
+          subtask.completed
+            ? 'bg-[var(--accent)] border-[var(--accent)]'
+            : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
+        }`}
       >
         {subtask.completed && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />}
       </button>
@@ -79,8 +85,9 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
       ) : (
         <span
           onClick={() => !subtask.completed && setIsEditing(true)}
-          className={`flex-1 text-sm leading-snug cursor-pointer ${subtask.completed ? 'text-[var(--text-light)] line-through' : 'text-[var(--foreground)] hover:text-[var(--accent)]'
-            }`}
+          className={`flex-1 text-sm leading-snug cursor-pointer ${
+            subtask.completed ? 'text-[var(--text-light)] line-through' : 'text-[var(--foreground)] hover:text-[var(--accent)]'
+          }`}
           title={subtask.completed ? undefined : 'Click to edit'}
         >
           {subtask.text}
@@ -118,6 +125,8 @@ interface TodoItemProps {
   users: string[];
   currentUserName: string;
   selected?: boolean;
+  autoExpand?: boolean;
+  onAutoExpandHandled?: () => void;
   onSelect?: (id: string, selected: boolean) => void;
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
@@ -188,6 +197,8 @@ export default function TodoItem({
   users,
   currentUserName,
   selected,
+  autoExpand,
+  onAutoExpandHandled,
   onSelect,
   onToggle,
   onDelete,
@@ -207,6 +218,15 @@ export default function TodoItem({
   onSetPrivacy,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
+
+  // Auto-expand when triggered from external navigation (e.g., dashboard task click)
+  useEffect(() => {
+    if (autoExpand) {
+      setExpanded(true);
+      // Notify parent that we've handled the auto-expand
+      onAutoExpandHandled?.();
+    }
+  }, [autoExpand, onAutoExpandHandled]);
   const [celebrating, setCelebrating] = useState(false);
   const [notes, setNotes] = useState(todo.notes || '');
   const [showNotes, setShowNotes] = useState(false);
@@ -219,20 +239,59 @@ export default function TodoItem({
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const priority = todo.priority || 'medium';
   const status = todo.status || 'todo';
   void status; // Used for status-based logic elsewhere
+
+  // Calculate dropdown position when menu opens
+  useEffect(() => {
+    if (showActionsMenu && menuButtonRef.current) {
+      const rect = menuButtonRef.current.getBoundingClientRect();
+      // For fixed positioning, use viewport-relative coordinates (no scroll offset needed)
+      // getBoundingClientRect() already returns viewport-relative values
+      const dropdownWidth = 180;
+      let left = rect.right - dropdownWidth; // Align right edge
+      let top = rect.bottom + 4; // 4px gap below button
+
+      // Ensure dropdown doesn't go off-screen on the left
+      if (left < 8) {
+        left = 8;
+      }
+
+      // Ensure dropdown doesn't go off-screen on the right
+      if (left + dropdownWidth > window.innerWidth - 8) {
+        left = window.innerWidth - dropdownWidth - 8;
+      }
+
+      // If dropdown would go below viewport, position it above the button
+      const estimatedHeight = 280; // Approximate dropdown height
+      if (top + estimatedHeight > window.innerHeight) {
+        top = rect.top - estimatedHeight - 4;
+      }
+
+      setDropdownPosition({ top, left });
+    } else {
+      setDropdownPosition(null);
+    }
+  }, [showActionsMenu]);
 
   // Close menu when clicking outside
   useEffect(() => {
     if (!showActionsMenu) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      // Check both the menu container and the portal dropdown
+      const target = event.target as Node;
+      const isInsideMenuRef = menuRef.current?.contains(target);
+      const portalDropdown = document.getElementById(`todo-dropdown-${todo.id}`);
+      const isInsidePortal = portalDropdown?.contains(target);
+
+      if (!isInsideMenuRef && !isInsidePortal) {
         setShowActionsMenu(false);
         setShowSnoozeMenu(false);
       }
@@ -240,24 +299,7 @@ export default function TodoItem({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showActionsMenu]);
-
-  // Calculate menu position when opened (for portal rendering)
-  useEffect(() => {
-    if (showActionsMenu && menuRef.current) {
-      const rect = menuRef.current.getBoundingClientRect();
-      const menuHeight = 280;
-      const menuWidth = 180;
-      const spaceBelow = window.innerHeight - rect.bottom;
-
-      setMenuPosition({
-        top: spaceBelow < menuHeight ? rect.top - menuHeight : rect.bottom + 4,
-        left: Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)
-      });
-    } else if (!showActionsMenu) {
-      setMenuPosition(null);
-    }
-  }, [showActionsMenu]);
+  }, [showActionsMenu, todo.id]);
 
   // Helper to get date offset for snooze
   const getSnoozeDate = (days: number) => {
@@ -348,6 +390,13 @@ export default function TodoItem({
     }
   }, [todo.text, editingText]);
 
+  // Sync local notes state with todo.notes when notes panel is closed
+  useEffect(() => {
+    if (!showNotes) {
+      setNotes(todo.notes || '');
+    }
+  }, [todo.notes, showNotes]);
+
   // Priority-based left border color - always visible for quick scanning
   const getPriorityBorderClass = () => {
     switch (priority) {
@@ -387,8 +436,9 @@ export default function TodoItem({
 
   return (
     <div
+      id={`todo-${todo.id}`}
       role="listitem"
-      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${showActionsMenu ? 'z-[100]' : ''}`}
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()}`}
     >
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <div className="flex items-center gap-3 px-4 py-3">
@@ -405,17 +455,31 @@ export default function TodoItem({
         {/* Completion checkbox - prominent one-click complete */}
         <button
           onClick={handleToggle}
-          className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 touch-manipulation hover:scale-110 active:scale-95 ${todo.completed
-            ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
-            : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10 hover:shadow-md active:border-[var(--success)]'
-            }`}
+          className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 touch-manipulation hover:scale-110 active:scale-95 ${
+            todo.completed
+              ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
+              : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10 hover:shadow-md active:border-[var(--success)]'
+          }`}
           title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
         >
           {todo.completed && <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
         </button>
 
         {/* Content */}
-        <div className="flex-1 min-w-0" onClick={() => setExpanded(!expanded)}>
+        <div
+          className="flex-1 min-w-0 cursor-pointer"
+          onClick={() => setExpanded(!expanded)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setExpanded(!expanded);
+            }
+          }}
+          tabIndex={0}
+          role="button"
+          aria-expanded={expanded}
+          aria-label={`${todo.text}. Press Enter to ${expanded ? 'collapse' : 'expand'} details`}
+        >
           {editingText ? (
             <input
               value={text}
@@ -434,20 +498,22 @@ export default function TodoItem({
             />
           ) : (
             <p
-              className={`font-semibold cursor-pointer line-clamp-2 ${todo.completed
-                ? 'text-[var(--text-light)] line-through'
-                : 'text-[var(--foreground)]'
-                }`}
+              className={`font-semibold cursor-pointer line-clamp-2 ${
+                todo.completed
+                  ? 'text-[var(--text-light)] line-through'
+                  : 'text-[var(--foreground)]'
+              }`}
               title={todo.text}
             >
               {todo.text}
             </p>
           )}
 
-          {/* Meta row - grouped with better spacing */}
+          {/* Meta row - Progressive Disclosure: Essential info always visible */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {/* Priority + Date group */}
+            {/* PRIMARY ROW: Priority + Due Date + Assignee (always visible for quick scanning) */}
             <div className="flex items-center gap-2">
+              {/* Priority badge */}
               <Badge
                 variant={PRIORITY_TO_BADGE_VARIANT[priority]}
                 size="sm"
@@ -456,10 +522,9 @@ export default function TodoItem({
                 {priorityConfig.label}
               </Badge>
 
-              {/* Due date - improved color coding with days overdue */}
+              {/* Due date - critical for decision-making */}
               {todo.due_date && dueDateStatus && (() => {
                 const daysOverdue = dueDateStatus === 'overdue' ? getDaysOverdue(todo.due_date) : 0;
-                // Map due date status to Badge variant
                 const dueDateVariant = todo.completed
                   ? 'default'
                   : dueDateStatus === 'overdue'
@@ -487,64 +552,7 @@ export default function TodoItem({
                 );
               })()}
 
-              {/* Recurrence indicator */}
-              {todo.recurrence && (
-                <Badge
-                  variant="primary"
-                  size="sm"
-                  icon={<Repeat className="w-3 h-3" />}
-                >
-                  {todo.recurrence}
-                </Badge>
-              )}
-
-              {/* Private task indicator */}
-              {todo.is_private && (
-                <Badge
-                  variant="default"
-                  size="sm"
-                  icon={<Lock className="w-3 h-3" />}
-                >
-                  Private
-                </Badge>
-              )}
-
-              {/* Reminder indicator */}
-              {todo.reminder_at && !todo.reminder_sent && !todo.completed && (
-                <Badge
-                  variant="info"
-                  size="sm"
-                  icon={<Bell className="w-3 h-3" />}
-                >
-                  {(() => {
-                    const reminderDate = new Date(todo.reminder_at);
-                    const now = new Date();
-                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    const reminderDay = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
-                    const diffDays = Math.round((reminderDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-                    if (diffDays === 0) {
-                      return `Today ${reminderDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-                    } else if (diffDays === 1) {
-                      return `Tomorrow ${reminderDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-                    } else if (diffDays < 0) {
-                      return 'Past';
-                    } else {
-                      return reminderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    }
-                  })()}
-                </Badge>
-              )}
-            </div>
-
-            {/* Separator - only show if there are metadata badges */}
-            {(todo.assigned_to || subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0)) && (
-              <div className="w-px h-4 bg-[var(--border)] mx-1" />
-            )}
-
-            {/* Assignment + Metadata group */}
-            <div className="flex items-center gap-2">
-              {/* Assigned to */}
+              {/* Assignee - always visible as it's key for knowing who owns the task */}
               {todo.assigned_to && (
                 <Badge
                   variant="brand"
@@ -555,80 +563,154 @@ export default function TodoItem({
                 </Badge>
               )}
 
-              {/* Subtasks indicator */}
-              {subtasks.length > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowSubtasks(!showSubtasks); }}
-                  className="inline-flex items-center gap-1.5 touch-manipulation"
-                >
-                  <Badge
-                    variant={subtaskProgress === 100 ? 'success' : 'primary'}
-                    size="sm"
-                    icon={<ListTree className="w-3 h-3" />}
-                    interactive
-                  >
-                    {completedSubtasks}/{subtasks.length}
-                    {subtaskProgress === 100 && <Check className="w-3 h-3 ml-0.5" />}
-                  </Badge>
-                </button>
+              {/* "Has more" indicator - subtle dot when task has hidden content */}
+              {!expanded && (subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0) || todo.merged_from?.length) && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] opacity-40 group-hover:opacity-0 transition-opacity"
+                  title="Hover for more details"
+                />
               )}
-
-              {/* Notes indicator */}
-              {todo.notes && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
-                  className="touch-manipulation"
-                >
-                  <Badge
-                    variant="default"
-                    size="sm"
-                    icon={<MessageSquare className="w-3 h-3" />}
-                    interactive
-                  >
-                    Note
-                  </Badge>
-                </button>
-              )}
-
-              {/* Transcription indicator */}
-              {todo.transcription && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowTranscription(!showTranscription); }}
-                  className="touch-manipulation"
-                >
-                  <Badge
-                    variant="info"
-                    size="sm"
-                    icon={<Mic className="w-3 h-3" />}
-                    interactive
-                  >
-                    Voicemail
-                  </Badge>
-                </button>
-              )}
-
-              {/* Attachments indicator */}
-              {todo.attachments && todo.attachments.length > 0 && (() => {
-                const hasAudio = todo.attachments.some(a => a.file_type === 'audio');
-                const AttachmentIcon = hasAudio ? Music : Paperclip;
-                return (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowAttachments(!showAttachments); }}
-                    className="inline-flex items-center gap-1.5 touch-manipulation"
-                  >
-                    <Badge
-                      variant={hasAudio ? 'info' : 'warning'}
-                      size="sm"
-                      icon={<AttachmentIcon className="w-3 h-3" />}
-                      interactive
-                    >
-                      {todo.attachments.length}
-                    </Badge>
-                  </button>
-                );
-              })()}
             </div>
 
+            {/* SECONDARY ROW: Hidden by default, revealed on hover - Progressive Disclosure */}
+            {/* Shows only when there's secondary metadata AND (hovered OR expanded) */}
+            {(subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0) || todo.recurrence || (todo.reminder_at && !todo.reminder_sent && !todo.completed) || todo.merged_from?.length) && (
+              <>
+                {/* Separator */}
+                <div className="w-px h-4 bg-[var(--border)] mx-1 hidden group-hover:block sm:group-hover:block" />
+
+                {/* Secondary metadata - only visible on hover/focus */}
+                <div className={`flex items-center gap-2 transition-opacity duration-200 ${expanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
+                  {/* Recurrence - indicates recurring task */}
+                  {todo.recurrence && (
+                    <Badge
+                      variant="primary"
+                      size="sm"
+                      icon={<Repeat className="w-3 h-3" />}
+                    >
+                      {todo.recurrence}
+                    </Badge>
+                  )}
+
+                  {/* Private task indicator */}
+                  {todo.is_private && (
+                    <Badge
+                      variant="default"
+                      size="sm"
+                      icon={<Lock className="w-3 h-3" />}
+                    >
+                      Private
+                    </Badge>
+                  )}
+
+                  {/* Reminder indicator */}
+                  {todo.reminder_at && !todo.reminder_sent && !todo.completed && (
+                    <Badge
+                      variant="info"
+                      size="sm"
+                      icon={<Bell className="w-3 h-3" />}
+                    >
+                      {(() => {
+                        const reminderDate = new Date(todo.reminder_at);
+                        const now = new Date();
+                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const reminderDay = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
+                        const diffDays = Math.round((reminderDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+                        if (diffDays === 0) {
+                          return `Today ${reminderDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+                        } else if (diffDays === 1) {
+                          return `Tomorrow`;
+                        } else if (diffDays < 0) {
+                          return 'Past';
+                        } else {
+                          return reminderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        }
+                      })()}
+                    </Badge>
+                  )}
+
+                  {/* Subtasks indicator */}
+                  {subtasks.length > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowSubtasks(!showSubtasks); }}
+                      className="inline-flex items-center gap-1.5 touch-manipulation"
+                    >
+                      <Badge
+                        variant={subtaskProgress === 100 ? 'success' : 'primary'}
+                        size="sm"
+                        icon={<ListTree className="w-3 h-3" />}
+                        interactive
+                      >
+                        {completedSubtasks}/{subtasks.length}
+                      </Badge>
+                    </button>
+                  )}
+
+                  {/* Notes indicator */}
+                  {todo.notes && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowNotes(!showNotes); }}
+                      className="touch-manipulation"
+                    >
+                      <Badge
+                        variant="default"
+                        size="sm"
+                        icon={<MessageSquare className="w-3 h-3" />}
+                        interactive
+                      />
+                    </button>
+                  )}
+
+                  {/* Transcription indicator */}
+                  {todo.transcription && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowTranscription(!showTranscription); }}
+                      className="touch-manipulation"
+                    >
+                      <Badge
+                        variant="info"
+                        size="sm"
+                        icon={<Mic className="w-3 h-3" />}
+                        interactive
+                      />
+                    </button>
+                  )}
+
+                  {/* Attachments indicator */}
+                  {todo.attachments && todo.attachments.length > 0 && (() => {
+                    const hasAudio = todo.attachments.some(a => a.file_type === 'audio');
+                    const AttachmentIcon = hasAudio ? Music : Paperclip;
+                    return (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowAttachments(!showAttachments); }}
+                        className="inline-flex items-center gap-1.5 touch-manipulation"
+                      >
+                        <Badge
+                          variant={hasAudio ? 'info' : 'warning'}
+                          size="sm"
+                          icon={<AttachmentIcon className="w-3 h-3" />}
+                          interactive
+                        >
+                          {todo.attachments.length}
+                        </Badge>
+                      </button>
+                    );
+                  })()}
+
+                  {/* Merged indicator - shows task has history */}
+                  {todo.merged_from && todo.merged_from.length > 0 && (
+                    <Badge
+                      variant="default"
+                      size="sm"
+                      icon={<ListTree className="w-3 h-3" />}
+                    >
+                      +{todo.merged_from.length}
+                    </Badge>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Quick inline actions - visible on hover for incomplete tasks (hide when menu is open) */}
@@ -642,13 +724,13 @@ export default function TodoItem({
                 value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                 onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
                 className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
-                title="Set due date"
+                aria-label="Set due date"
               />
               <select
                 value={todo.assigned_to || ''}
                 onChange={(e) => onAssign(todo.id, e.target.value || null)}
                 className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none min-w-[90px]"
-                title="Assign to"
+                aria-label="Assign task to user"
               >
                 <option value="">Unassigned</option>
                 {users.map((user) => (
@@ -659,7 +741,7 @@ export default function TodoItem({
                 value={priority}
                 onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
                 className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
-                title="Set priority"
+                aria-label="Set task priority"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -686,6 +768,7 @@ export default function TodoItem({
           {/* Three-dot menu */}
           <div className="relative" ref={menuRef}>
             <IconButton
+              ref={menuButtonRef}
               variant="ghost"
               size="md"
               icon={<MoreVertical className="w-4 h-4" />}
@@ -696,10 +779,16 @@ export default function TodoItem({
               className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             />
 
-            {showActionsMenu && menuPosition && createPortal(
+            {/* Dropdown rendered via Portal to escape stacking context */}
+            {showActionsMenu && dropdownPosition && typeof document !== 'undefined' && createPortal(
               <div
-                className="fixed bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl z-[9999] py-1 min-w-[180px]"
-                style={{ top: menuPosition.top, left: menuPosition.left }}
+                id={`todo-dropdown-${todo.id}`}
+                className="fixed bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl py-1 min-w-[180px]"
+                style={{
+                  top: dropdownPosition.top,
+                  left: dropdownPosition.left,
+                  zIndex: 99999,
+                }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Edit */}
@@ -843,7 +932,7 @@ export default function TodoItem({
             <span className="text-sm font-medium text-purple-500">Voicemail Transcription</span>
           </div>
           <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap leading-relaxed">
-            {todo.transcription}
+            {sanitizeTranscription(todo.transcription)}
           </p>
         </div>
       )}
@@ -999,8 +1088,9 @@ export default function TodoItem({
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                  className={`input-refined w-full text-sm px-3 py-2 text-[var(--foreground)] ${dueDateStatus === 'overdue' && !todo.completed ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''
-                    }`}
+                  className={`input-refined w-full text-sm px-3 py-2 text-[var(--foreground)] ${
+                    dueDateStatus === 'overdue' && !todo.completed ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''
+                  }`}
                 />
               </div>
 
@@ -1050,17 +1140,18 @@ export default function TodoItem({
               </div>
             )}
 
-            {/* Visibility - Private/Public toggle */}
+            {/* Privacy toggle */}
             {onSetPrivacy && (
-              <div>
+              <div className="col-span-2">
                 <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Visibility</label>
                 <button
                   type="button"
                   onClick={() => onSetPrivacy(todo.id, !todo.is_private)}
-                  className={`inline-flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] border transition-all ${todo.is_private
-                    ? 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border-hover)]'
-                    }`}
+                  className={`inline-flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] border transition-all ${
+                    todo.is_private
+                      ? 'border-purple-400/40 bg-purple-50 dark:bg-purple-900/20'
+                      : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
+                  }`}
                 >
                   <Lock className={`w-4 h-4 ${todo.is_private ? 'text-purple-500' : ''}`} />
                   <span className="text-sm font-medium">{todo.is_private ? 'Private' : 'Public'}</span>
@@ -1203,7 +1294,7 @@ export default function TodoItem({
           {/* SECTION 5: Metadata footer */}
           <div className="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between text-xs text-[var(--text-muted)]">
             <div className="flex items-center gap-3">
-              <span>Created by {todo.created_by}</span>
+              {todo.created_by && <span>Created by {todo.created_by}</span>}
               {todo.created_at && (
                 <span>• {new Date(todo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
               )}

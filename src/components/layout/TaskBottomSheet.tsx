@@ -28,6 +28,7 @@ import {
 import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Todo, TodoPriority, TodoStatus, Subtask, User as UserType, PRIORITY_CONFIG, STATUS_CONFIG } from '@/types/todo';
+import { sanitizeTranscription } from '@/lib/sanitize';
 
 // ===============================================================================
 // TASK BOTTOM SHEET
@@ -839,7 +840,7 @@ export default function TaskBottomSheet({
                         ${darkMode ? 'bg-white/5 text-white/70' : 'bg-gray-50 text-gray-600'}
                       `}
                     >
-                      &ldquo;{task.transcription}&rdquo;
+                      &ldquo;{sanitizeTranscription(task.transcription)}&rdquo;
                     </div>
                   </CollapsibleSection>
                 )}

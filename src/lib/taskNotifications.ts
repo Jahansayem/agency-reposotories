@@ -8,6 +8,7 @@
 
 import { supabase } from './supabaseClient';
 import { format, formatDistanceToNow, startOfDay } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
 import { TodoPriority, Subtask } from '@/types/todo';
 
 const SYSTEM_SENDER = 'System';
@@ -47,6 +48,13 @@ export async function sendTaskAssignmentNotification(
 ): Promise<{ success: boolean; error?: string }> {
   const { taskId, taskText, assignedTo, assignedBy, dueDate, priority, subtasks, notes } = options;
 
+  console.log('[TaskNotification] sendTaskAssignmentNotification called:', {
+    taskId,
+    taskText: taskText?.substring(0, 50),
+    assignedTo,
+    assignedBy,
+  });
+
   // Input validation
   if (!taskId || !taskId.trim()) {
     return { success: false, error: 'taskId is required' };
@@ -79,8 +87,11 @@ export async function sendTaskAssignmentNotification(
 
   // Don't notify if self-assigned
   if (assignedTo === assignedBy) {
+    console.log('[TaskNotification] Skipping - self-assigned (assignedTo === assignedBy)');
     return { success: true };
   }
+
+  console.log('[TaskNotification] Proceeding to send notification');
 
   // Build the rich task card notification message
   const message = buildTaskCardMessage({
@@ -94,22 +105,32 @@ export async function sendTaskAssignmentNotification(
   });
 
   try {
-    const { error } = await supabase.from('messages').insert({
-      text: message,
+    console.log('[TaskNotification] Inserting message into database:', {
       created_by: SYSTEM_SENDER,
       related_todo_id: taskId,
       recipient: assignedTo,
-      mentions: [assignedTo],
+      messageLength: message.length,
     });
 
+    const { data, error } = await supabase.from('messages').insert({
+      id: uuidv4(),
+      text: message,
+      created_by: SYSTEM_SENDER,
+      created_at: new Date().toISOString(),
+      related_todo_id: taskId,
+      recipient: assignedTo,
+      mentions: [assignedTo],
+    }).select();
+
     if (error) {
-      console.error('Failed to send task assignment notification:', error);
+      console.error('[TaskNotification] Failed to insert message:', error);
       return { success: false, error: error.message };
     }
 
+    console.log('[TaskNotification] Message inserted successfully:', data);
     return { success: true };
   } catch (err) {
-    console.error('Error sending task assignment notification:', err);
+    console.error('[TaskNotification] Exception occurred:', err);
     return { success: false, error: 'Unknown error occurred' };
   }
 }
@@ -235,8 +256,10 @@ export async function sendTaskCompletionNotification(
 
   try {
     const { error } = await supabase.from('messages').insert({
+      id: uuidv4(),
       text: message,
       created_by: SYSTEM_SENDER,
+      created_at: new Date().toISOString(),
       related_todo_id: taskId,
       recipient: assignedBy,
       mentions: [assignedBy],
@@ -311,8 +334,10 @@ export async function sendTaskReassignmentNotification(
       });
 
       const { error: newAssigneeError } = await supabase.from('messages').insert({
+        id: uuidv4(),
         text: newAssigneeMessage,
         created_by: SYSTEM_SENDER,
+        created_at: new Date().toISOString(),
         related_todo_id: taskId,
         recipient: newAssignee,
         mentions: [newAssignee],
@@ -336,8 +361,10 @@ export async function sendTaskReassignmentNotification(
       });
 
       const { error: prevAssigneeError } = await supabase.from('messages').insert({
+        id: uuidv4(),
         text: prevAssigneeMessage,
         created_by: SYSTEM_SENDER,
+        created_at: new Date().toISOString(),
         related_todo_id: taskId,
         recipient: previousAssignee,
         mentions: [previousAssignee],

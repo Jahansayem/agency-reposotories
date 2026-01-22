@@ -10,7 +10,7 @@ import {
 import { Todo, AuthUser } from '@/types/todo';
 import { extractPhoneNumbers, extractEmails, extractPotentialNames } from '@/lib/duplicateDetection';
 import { fetchWithCsrf } from '@/lib/csrf';
-import { useEscapeKey } from '@/hooks';
+import { useEscapeKey, useFocusTrap } from '@/hooks';
 
 interface CustomerEmailModalProps {
   todos: Todo[];
@@ -75,6 +75,12 @@ export default function CustomerEmailModal({
 
   // Handle Escape key to close modal
   useEscapeKey(onClose);
+
+  // Focus trap for accessibility (WCAG 2.1 AA)
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    autoFocus: true,
+  });
 
   // Detect customer from tasks on mount
   useEffect(() => {
@@ -241,6 +247,7 @@ export default function CustomerEmailModal({
 
       {/* Modal */}
       <motion.div
+        ref={containerRef}
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}

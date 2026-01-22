@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
+import { TodoPriority } from '@/types/todo';
+import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 
 // Create Supabase client for server-side operations
 const supabase = createClient(
@@ -72,6 +74,19 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Failed to create task in database' },
         { status: 500 }
       );
+    }
+
+    // Send notification if task is assigned to someone other than the creator
+    const creator = createdBy || 'Outlook Add-in';
+    if (assignedTo && assignedTo.trim() && assignedTo.trim() !== creator) {
+      await sendTaskAssignmentNotification({
+        taskId,
+        taskText: text.trim(),
+        assignedTo: assignedTo.trim(),
+        assignedBy: creator,
+        dueDate: dueDate,
+        priority: (priority as TodoPriority) || 'medium',
+      });
     }
 
     return NextResponse.json({

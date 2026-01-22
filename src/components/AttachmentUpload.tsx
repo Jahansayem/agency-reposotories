@@ -207,11 +207,11 @@ export default function AttachmentUpload({
             </div>
           )}
 
-          {/* Supported file types */}
+          {/* Supported file types - derived from ALLOWED_ATTACHMENT_TYPES */}
           <div className="mt-4 pt-4 border-t border-[var(--border)]">
             <p className="text-xs font-medium text-[var(--text-muted)] mb-2">Supported file types:</p>
             <div className="flex flex-wrap gap-1.5">
-              {['PDF', 'DOC', 'DOCX', 'XLS', 'XLSX', 'PPT', 'PPTX', 'TXT', 'CSV', 'JPG', 'PNG', 'GIF', 'MP3', 'WAV', 'MP4', 'ZIP'].map((ext) => (
+              {Array.from(new Set(Object.values(ALLOWED_ATTACHMENT_TYPES).map(t => t.ext.toUpperCase()))).sort().map((ext) => (
                 <span
                   key={ext}
                   className="px-2 py-0.5 text-xs rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-muted)]"
