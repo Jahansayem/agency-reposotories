@@ -85,11 +85,11 @@ export default function WeeklyProgressChart({
     const totalCreated = weekData.reduce((sum, d) => sum + d.created, 0);
     const maxCompleted = Math.max(...weekData.map(d => d.completed), dailyGoal);
 
-    // Calculate trend (compare last 3 days to previous 4)
+    // Calculate trend (compare last 3 days to first 2 days of the 5-day week)
     const recentCompleted = weekData.slice(-3).reduce((sum, d) => sum + d.completed, 0);
-    const earlierCompleted = weekData.slice(0, 4).reduce((sum, d) => sum + d.completed, 0);
-    const avgRecent = recentCompleted / 2;
-    const avgEarlier = earlierCompleted / 3;
+    const earlierCompleted = weekData.slice(0, 2).reduce((sum, d) => sum + d.completed, 0);
+    const avgRecent = recentCompleted / 3;  // Last 3 days average
+    const avgEarlier = earlierCompleted / 2; // First 2 days average
 
     let trend: 'up' | 'down' | 'stable' = 'stable';
     if (avgRecent > avgEarlier * 1.2) trend = 'up';
@@ -127,6 +127,9 @@ export default function WeeklyProgressChart({
       onClick={onClose}
     >
       <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="weekly-progress-title"
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -146,14 +149,15 @@ export default function WeeklyProgressChart({
             }`}>
               <TrendingUp className="w-4 h-4 text-[#0033A0]" />
             </div>
-            <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+            <h3 id="weekly-progress-title" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
               Weekly Progress
             </h3>
           </div>
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg transition-colors ${
-              darkMode ? 'hover:bg-white/10 text-white/60' : 'hover:bg-slate-100 text-slate-500'
+            aria-label="Close weekly progress chart"
+            className={`p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
+              darkMode ? 'hover:bg-white/10 text-white/60 focus-visible:ring-offset-[#0A1628]' : 'hover:bg-slate-100 text-slate-500 focus-visible:ring-offset-white'
             }`}
           >
             <X className="w-5 h-5" />

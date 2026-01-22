@@ -436,7 +436,18 @@ export default function ManagerDashboard({
                           }`}
                         />
                       </div>
-                      <div className="flex items-center gap-2 w-16 justify-end">
+                      {/* Workload status text - accessibility: not color-only */}
+                      <span className={`text-[10px] font-semibold w-16 text-center ${
+                        member.workloadLevel === 'overloaded' ? 'text-red-500' :
+                        member.workloadLevel === 'heavy' ? 'text-amber-500' :
+                        member.workloadLevel === 'normal' ? (darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]') :
+                        'text-emerald-500'
+                      }`}>
+                        {member.workloadLevel === 'overloaded' ? 'OVER' :
+                         member.workloadLevel === 'heavy' ? 'HEAVY' :
+                         member.workloadLevel === 'normal' ? 'OK' : 'LIGHT'}
+                      </span>
+                      <div className="flex items-center gap-2 w-12 justify-end">
                         {member.overdueTasks > 0 && (
                           <span className="text-xs text-red-500 font-bold tabular-nums">{member.overdueTasks}!</span>
                         )}

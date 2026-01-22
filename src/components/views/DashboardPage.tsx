@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Sun,
   Moon,
@@ -54,8 +54,8 @@ export default function DashboardPage({
 
   const greeting = getGreeting();
 
-  // Calculate stats for header
-  const stats = (() => {
+  // Calculate stats for header - memoized to avoid recalculation on every render
+  const stats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEnd = new Date(today);
@@ -90,7 +90,7 @@ export default function DashboardPage({
       dueToday: dueToday.length,
       upcoming: upcoming.length,
     };
-  })();
+  }, [todos]);
 
   return (
     <div className={`min-h-full ${darkMode ? 'bg-[var(--background)]' : 'bg-slate-50'}`}>
