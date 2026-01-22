@@ -70,6 +70,7 @@ interface KanbanBoardProps {
   onSetDueDate: (id: string, dueDate: string | null) => void;
   onSetPriority: (id: string, priority: TodoPriority) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   onUpdateNotes?: (id: string, notes: string) => void;
   onUpdateText?: (id: string, text: string) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
