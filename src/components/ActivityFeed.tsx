@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter } from 'lucide-react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Lock } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
@@ -74,6 +74,7 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6' },
   reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444' },
   reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981' },
+  privacy_changed: { icon: Lock, label: 'changed privacy', color: '#8b5cf6' },
 };
 
 // Activity type filter options

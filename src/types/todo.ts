@@ -320,7 +320,8 @@ export type ActivityAction =
   | 'tasks_merged'
   | 'reminder_added'
   | 'reminder_removed'
-  | 'reminder_sent';
+  | 'reminder_sent'
+  | 'privacy_changed';
 
 export interface ActivityLogEntry {
   id: string;
