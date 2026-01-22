@@ -2095,11 +2095,12 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                 >
                                   {isTeam ? <Users className="w-5 h-5" /> : getInitials(userName)}
                                 </motion.div>
-                                {/* Presence indicator for DMs */}
-                                {!isTeam && presence && (
+                                {/* Presence indicator for DMs - always show, default to offline */}
+                                {!isTeam && (
                                   <div
                                     className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--surface-dark)]"
-                                    style={{ backgroundColor: PRESENCE_CONFIG[presence].color }}
+                                    style={{ backgroundColor: PRESENCE_CONFIG[presence || 'offline'].color }}
+                                    title={PRESENCE_CONFIG[presence || 'offline'].label}
                                   />
                                 )}
                                 {unreadCount > 0 && !isMuted && (
