@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Lock } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
@@ -218,6 +219,7 @@ export default function TodoItem({
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -238,6 +240,23 @@ export default function TodoItem({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActionsMenu]);
+
+  // Calculate menu position when opened (for portal rendering)
+  useEffect(() => {
+    if (showActionsMenu && menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      const menuHeight = 280;
+      const menuWidth = 180;
+      const spaceBelow = window.innerHeight - rect.bottom;
+
+      setMenuPosition({
+        top: spaceBelow < menuHeight ? rect.top - menuHeight : rect.bottom + 4,
+        left: Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)
+      });
+    } else if (!showActionsMenu) {
+      setMenuPosition(null);
+    }
   }, [showActionsMenu]);
 
   // Helper to get date offset for snooze
@@ -677,9 +696,10 @@ export default function TodoItem({
               className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             />
 
-            {showActionsMenu && (
+            {showActionsMenu && menuPosition && createPortal(
               <div
-                className="absolute right-0 top-full mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl z-[110] py-1 min-w-[180px]"
+                className="fixed bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl z-[9999] py-1 min-w-[180px]"
+                style={{ top: menuPosition.top, left: menuPosition.left }}
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Edit */}
@@ -760,7 +780,8 @@ export default function TodoItem({
                   <Trash2 className="w-4 h-4" />
                   Delete
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         </div>
@@ -1037,8 +1058,8 @@ export default function TodoItem({
                   type="button"
                   onClick={() => onSetPrivacy(todo.id, !todo.is_private)}
                   className={`inline-flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] border transition-all ${todo.is_private
-                      ? 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                      : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border-hover)]'
+                    ? 'border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--border-hover)]'
                     }`}
                 >
                   <Lock className={`w-4 h-4 ${todo.is_private ? 'text-purple-500' : ''}`} />
