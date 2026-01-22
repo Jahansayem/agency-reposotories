@@ -97,7 +97,7 @@ export default function SaveTemplateModal({
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
           <div className="flex items-center gap-2">
-            <FileText className={`w-5 h-5 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+            <FileText className={`w-5 h-5 ${darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'}`} />
             <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
               Save as Template
             </h2>
@@ -126,7 +126,7 @@ export default function SaveTemplateModal({
                 darkMode
                   ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400'
                   : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
-              } focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500`}
+              } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)]`}
               autoFocus
             />
           </div>
@@ -192,7 +192,7 @@ export default function SaveTemplateModal({
                 type="checkbox"
                 checked={isShared}
                 onChange={(e) => setIsShared(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                className="w-4 h-4 rounded border-slate-300 text-[var(--accent)] focus:ring-[var(--accent)]"
               />
               <span className="text-sm">Share with team</span>
             </label>
@@ -232,7 +232,7 @@ export default function SaveTemplateModal({
             disabled={isSaving || !name.trim()}
             whileHover={prefersReducedMotion() || isSaving ? undefined : { scale: 1.02 }}
             whileTap={prefersReducedMotion() || isSaving ? undefined : { scale: 0.98 }}
-            className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:bg-[#002880] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isSaving ? (
               <>

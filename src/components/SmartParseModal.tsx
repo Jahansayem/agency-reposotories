@@ -148,7 +148,7 @@ export default function SmartParseModal({
             className="relative bg-[var(--surface)] rounded-2xl shadow-2xl w-full max-w-[calc(100vw-1.5rem)] sm:max-w-lg max-h-[85vh] sm:max-h-[90vh] overflow-hidden flex flex-col border border-[var(--border-subtle)]"
           >
             {/* Header */}
-            <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-[var(--border-subtle)] flex items-center justify-between bg-gradient-to-r from-purple-500 to-indigo-500">
+            <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-[var(--border-subtle)] flex items-center justify-between bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]">
               <div className="flex items-center gap-2 text-white">
                 <Sparkles className="w-5 h-5" />
                 <h2 id="smart-parse-title" className="font-semibold text-base sm:text-lg">AI Task Organizer</h2>
@@ -165,7 +165,7 @@ export default function SmartParseModal({
             {isLoading ? (
               <div className="flex-1 flex items-center justify-center py-16">
                 <div className="text-center">
-                  <Loader2 className="w-10 h-10 text-purple-500 animate-spin mx-auto mb-3" />
+                  <Loader2 className="w-10 h-10 text-[var(--brand-blue)] animate-spin mx-auto mb-3" />
                   <p className="text-[var(--text-muted)]">Analyzing your input...</p>
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default function SmartParseModal({
                 <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">
                   {/* Summary */}
                   {parsedResult.summary && (
-                    <div className="bg-purple-500/10 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-purple-600 dark:text-purple-300">
+                    <div className="bg-[var(--accent)]/10 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-[var(--accent)] dark:text-[#72B5E8]">
                       {parsedResult.summary}
                     </div>
                   )}
@@ -187,7 +187,7 @@ export default function SmartParseModal({
                       type="text"
                       value={mainTaskText}
                       onChange={(e) => setMainTaskText(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-base min-h-[48px] touch-manipulation placeholder:text-[var(--text-light)]"
+                      className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] text-base min-h-[48px] touch-manipulation placeholder:text-[var(--text-light)]"
                       placeholder="Task description"
                     />
 
@@ -273,8 +273,8 @@ export default function SmartParseModal({
                                 aria-label={subtask.included ? `Deselect subtask: ${subtask.text}` : `Select subtask: ${subtask.text}`}
                                 className={`w-6 h-6 sm:w-5 sm:h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors touch-manipulation ${
                                   subtask.included
-                                    ? 'bg-purple-500 border-purple-500 text-white'
-                                    : 'border-[var(--border)] hover:border-purple-400'
+                                    ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
+                                    : 'border-[var(--border)] hover:border-[var(--accent)]'
                                 }`}
                               >
                                 {subtask.included && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3" />}
@@ -332,7 +332,7 @@ export default function SmartParseModal({
                     disabled={!mainTaskText.trim()}
                     whileHover={reducedMotion || !mainTaskText.trim() ? undefined : { scale: 1.02 }}
                     whileTap={reducedMotion || !mainTaskText.trim() ? undefined : { scale: 0.98 }}
-                    className="px-5 py-2.5 sm:py-2 bg-purple-500 hover:bg-purple-600 active:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 min-h-[44px] touch-manipulation order-1 sm:order-2"
+                    className="px-5 py-2.5 sm:py-2 bg-[var(--accent)] hover:bg-[#002880] active:bg-[#001f66] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 min-h-[44px] touch-manipulation order-1 sm:order-2"
                   >
                     <Check className="w-4 h-4" />
                     Add Task{includedCount > 0 ? ` + ${includedCount} Subtasks` : ''}

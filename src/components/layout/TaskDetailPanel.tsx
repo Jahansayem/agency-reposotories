@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { Todo, TodoPriority, TodoStatus, Subtask, User as UserType, PRIORITY_CONFIG, STATUS_CONFIG } from '@/types/todo';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
@@ -91,6 +92,9 @@ export default function TaskDetailPanel({
   const [aiSubtasksPreview, setAiSubtasksPreview] = useState<Subtask[] | null>(null);
   const [aiEnhancedText, setAiEnhancedText] = useState<string | null>(null);
   const [showAiActions, setShowAiActions] = useState(true);
+
+  // Close on Escape key press (only when not editing text/notes)
+  useEscapeKey(onClose, { enabled: !isEditingText && !isEditingNotes });
 
   // Update local state when task changes
   useEffect(() => {
@@ -285,9 +289,11 @@ export default function TaskDetailPanel({
           {/* Complete checkbox */}
           <button
             onClick={handleToggleComplete}
+            aria-label={task.completed ? 'Mark task as incomplete' : 'Mark task as complete'}
+            aria-pressed={task.completed}
             className={`
               w-6 h-6 rounded-lg border-2 flex items-center justify-center
-              transition-all
+              transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
               ${task.completed
                 ? 'bg-[var(--success)] border-[var(--success)]'
                 : 'border-[var(--border)] hover:border-[var(--accent)]'
@@ -339,8 +345,9 @@ export default function TaskDetailPanel({
 
           {/* More options */}
           <button
+            aria-label="More options"
             className={`
-              p-2 rounded-lg transition-colors
+              p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
               ${darkMode
                 ? 'text-white/60 hover:text-white hover:bg-white/10'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
@@ -353,8 +360,9 @@ export default function TaskDetailPanel({
           {/* Close button */}
           <button
             onClick={onClose}
+            aria-label="Close task details"
             className={`
-              p-2 rounded-lg transition-colors
+              p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
               ${darkMode
                 ? 'text-white/60 hover:text-white hover:bg-white/10'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
@@ -451,13 +459,15 @@ export default function TaskDetailPanel({
               label="Status"
               icon={<Clock className="w-4 h-4" />}
               darkMode={darkMode}
+              htmlFor={`task-status-${task.id}`}
             >
               <select
+                id={`task-status-${task.id}`}
                 value={task.status}
                 onChange={(e) => handleStatusChange(e.target.value as TodoStatus)}
                 className={`
                   w-full px-3 py-2 rounded-lg border text-sm font-medium
-                  cursor-pointer
+                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${darkMode
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
@@ -475,13 +485,15 @@ export default function TaskDetailPanel({
               label="Priority"
               icon={<Flag className="w-4 h-4" />}
               darkMode={darkMode}
+              htmlFor={`task-priority-${task.id}`}
             >
               <select
+                id={`task-priority-${task.id}`}
                 value={task.priority}
                 onChange={(e) => handlePriorityChange(e.target.value as TodoPriority)}
                 className={`
                   w-full px-3 py-2 rounded-lg border text-sm font-medium
-                  cursor-pointer
+                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${darkMode
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
@@ -502,13 +514,15 @@ export default function TaskDetailPanel({
               label="Assigned to"
               icon={<User className="w-4 h-4" />}
               darkMode={darkMode}
+              htmlFor={`task-assignee-${task.id}`}
             >
               <select
+                id={`task-assignee-${task.id}`}
                 value={task.assigned_to || ''}
                 onChange={(e) => handleAssigneeChange(e.target.value || null)}
                 className={`
                   w-full px-3 py-2 rounded-lg border text-sm font-medium
-                  cursor-pointer
+                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${darkMode
                     ? 'bg-white/5 border-white/10 text-white'
                     : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
@@ -527,9 +541,11 @@ export default function TaskDetailPanel({
               label="Due date"
               icon={<Calendar className="w-4 h-4" />}
               darkMode={darkMode}
+              htmlFor={`task-duedate-${task.id}`}
             >
               <div className="relative">
                 <input
+                  id={`task-duedate-${task.id}`}
                   type="date"
                   value={task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : ''}
                   onChange={(e) => onUpdate(task.id, {
@@ -537,7 +553,7 @@ export default function TaskDetailPanel({
                   })}
                   className={`
                     w-full px-3 py-2 rounded-lg border text-sm font-medium
-                    cursor-pointer
+                    cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                     ${darkMode
                       ? 'bg-white/5 border-white/10 text-white'
                       : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
@@ -573,9 +589,11 @@ export default function TaskDetailPanel({
                 >
                   <button
                     onClick={() => handleToggleSubtask(subtask.id)}
+                    aria-label={subtask.completed ? `Mark "${subtask.text}" as incomplete` : `Mark "${subtask.text}" as complete`}
+                    aria-pressed={subtask.completed}
                     className={`
                       w-5 h-5 rounded-md border-2 flex items-center justify-center
-                      transition-all flex-shrink-0
+                      transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                       ${subtask.completed
                         ? 'bg-[var(--success)] border-[var(--success)]'
                         : 'border-[var(--border)] hover:border-[var(--accent)]'
@@ -600,8 +618,9 @@ export default function TaskDetailPanel({
 
                   <button
                     onClick={() => handleDeleteSubtask(subtask.id)}
+                    aria-label={`Delete subtask "${subtask.text}"`}
                     className={`
-                      p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity
+                      p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                       ${darkMode
                         ? 'text-white/40 hover:text-white hover:bg-white/10'
                         : 'text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)]'
@@ -1085,15 +1104,18 @@ function PropertyField({
   icon,
   children,
   darkMode,
+  htmlFor,
 }: {
   label: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   darkMode: boolean;
+  htmlFor?: string;
 }) {
   return (
     <div className="space-y-1.5">
       <label
+        htmlFor={htmlFor}
         className={`
           flex items-center gap-2 text-xs font-medium
           ${darkMode ? 'text-white/50' : 'text-[var(--text-muted)]'}

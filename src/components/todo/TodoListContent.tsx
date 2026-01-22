@@ -180,8 +180,35 @@ function TodoListContent({
     </motion.div>
   );
 
+  // Generate status message for screen readers
+  const getStatusMessage = () => {
+    if (todos.length === 0) {
+      if (searchQuery) return `No tasks found for "${searchQuery}"`;
+      return 'No tasks to display';
+    }
+    const taskWord = todos.length === 1 ? 'task' : 'tasks';
+    if (searchQuery) {
+      return `Showing ${todos.length} ${taskWord} matching "${searchQuery}"`;
+    }
+    if (quickFilter && quickFilter !== 'all') {
+      return `Showing ${todos.length} ${taskWord}`;
+    }
+    return `${todos.length} ${taskWord} in list`;
+  };
+
   return (
-    <AnimatePresence mode="wait" initial={false}>
+    <>
+      {/* Screen reader status announcement for task list changes */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {getStatusMessage()}
+      </div>
+
+      <AnimatePresence mode="wait" initial={false}>
       {viewMode === 'list' ? (
         <motion.div
           key="list-view"
@@ -277,6 +304,7 @@ function TodoListContent({
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   );
 }
 

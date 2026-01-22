@@ -913,10 +913,10 @@ export default function TodoItem({
 
       {/* Transcription display */}
       {showTranscription && todo.transcription && (
-        <div className="mx-3 sm:mx-4 mb-3 p-3 bg-purple-500/5 rounded-[var(--radius-lg)] border border-purple-500/10">
+        <div className="mx-3 sm:mx-4 mb-3 p-3 bg-[var(--accent)]/5 rounded-[var(--radius-lg)] border border-[var(--accent)]/10">
           <div className="flex items-center gap-2 mb-2">
-            <Mic className="w-4 h-4 text-purple-500" />
-            <span className="text-sm font-medium text-purple-500">Voicemail Transcription</span>
+            <Mic className="w-4 h-4 text-[var(--accent)]" />
+            <span className="text-sm font-medium text-[var(--accent)]">Voicemail Transcription</span>
           </div>
           <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap leading-relaxed">
             {sanitizeTranscription(todo.transcription)}

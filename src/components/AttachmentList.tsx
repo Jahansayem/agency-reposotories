@@ -27,7 +27,7 @@ const categoryIcons: Record<AttachmentCategory, React.ElementType> = {
 const categoryColors: Record<AttachmentCategory, string> = {
   document: 'text-blue-500 bg-blue-500/10',
   image: 'text-green-500 bg-green-500/10',
-  audio: 'text-purple-500 bg-purple-500/10',
+  audio: 'text-[var(--accent)] bg-[var(--accent)]/10',
   video: 'text-pink-500 bg-pink-500/10',
   archive: 'text-amber-500 bg-amber-500/10',
 };

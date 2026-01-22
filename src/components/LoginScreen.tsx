@@ -130,7 +130,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       Icon: Sparkles,
       title: 'AI-Powered Triage',
       description: 'Smart parsing turns messy notes into structured tasks instantly.',
-      gradient: 'from-purple-500/20 to-pink-500/20',
+      gradient: 'from-[#0033A0]/20 to-[#72B5E8]/20',
     },
     {
       Icon: Zap,

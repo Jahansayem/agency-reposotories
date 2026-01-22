@@ -525,9 +525,9 @@ export default function FileImporter({
         }`}>
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              darkMode ? 'bg-purple-900/50' : 'bg-purple-100'
+              darkMode ? 'bg-[var(--brand-blue)]/30' : 'bg-[var(--accent)]/10'
             }`}>
-              <FileIcon className="w-5 h-5 text-purple-500" />
+              <FileIcon className="w-5 h-5 text-[var(--accent)]" />
             </div>
             <div>
               <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>Import File</h2>
@@ -558,20 +558,20 @@ export default function FileImporter({
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer
                 ${isDragging
-                  ? 'border-purple-500 bg-purple-500/10'
+                  ? 'border-[var(--accent)] bg-[var(--accent)]/10'
                   : darkMode
-                    ? 'border-slate-600 hover:border-purple-400 hover:bg-purple-500/10'
-                    : 'border-slate-300 hover:border-purple-400 hover:bg-purple-50/50'
+                    ? 'border-slate-600 hover:border-[var(--accent)] hover:bg-[var(--accent)]/10'
+                    : 'border-slate-300 hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'
                 }`}
             >
-              <Upload className={`w-12 h-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-purple-500' : darkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+              <Upload className={`w-12 h-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-[var(--accent)]' : darkMode ? 'text-slate-500' : 'text-slate-400'}`} />
               <p className={`font-medium text-lg ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                 {isDragging ? 'Drop your file here' : 'Drop your file here'}
               </p>
               <p className={`mt-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>or click to browse</p>
               <div className="flex flex-wrap gap-2 justify-center mt-4">
                 <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
-                  darkMode ? 'bg-purple-900/50 text-purple-300' : 'bg-purple-100 text-purple-700'
+                  darkMode ? 'bg-[var(--brand-blue)]/30 text-[var(--brand-sky)]' : 'bg-[var(--accent)]/10 text-[var(--accent)]'
                 }`}>
                   <FileAudio className="w-4 h-4" />
                   Audio
@@ -611,7 +611,7 @@ export default function FileImporter({
                   {fileType === 'audio' ? (
                     <button
                       onClick={togglePlayback}
-                      className="w-12 h-12 rounded-full bg-purple-500 hover:bg-purple-600
+                      className="w-12 h-12 rounded-full bg-[var(--accent)] hover:bg-[var(--brand-navy)]
                                text-white flex items-center justify-center transition-colors"
                     >
                       {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
@@ -652,7 +652,7 @@ export default function FileImporter({
               {/* Process button */}
               <button
                 onClick={processFile}
-                className="w-full py-4 bg-purple-500 hover:bg-purple-600 text-white rounded-xl
+                className="w-full py-4 bg-[var(--accent)] hover:bg-[var(--brand-navy)] text-white rounded-xl
                          font-medium transition-colors flex items-center justify-center gap-2 text-lg"
               >
                 <Sparkles className="w-5 h-5" />
@@ -667,9 +667,9 @@ export default function FileImporter({
               {/* Header with icon */}
               <div className="text-center mb-8">
                 <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
-                  darkMode ? 'bg-purple-900/50' : 'bg-purple-100'
+                  darkMode ? 'bg-[var(--brand-blue)]/30' : 'bg-[var(--accent)]/10'
                 }`}>
-                  <Wand2 className="w-8 h-8 text-purple-500 animate-pulse" />
+                  <Wand2 className="w-8 h-8 text-[var(--accent)] animate-pulse" />
                 </div>
                 <h3 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
                   AI is processing your file
@@ -686,7 +686,7 @@ export default function FileImporter({
                     key={step.id}
                     className={`flex items-center gap-4 p-3 rounded-xl transition-all ${
                       step.status === 'active'
-                        ? darkMode ? 'bg-purple-900/30 ring-2 ring-purple-500/50' : 'bg-purple-50 ring-2 ring-purple-200'
+                        ? darkMode ? 'bg-[var(--brand-blue)]/20 ring-2 ring-[var(--accent)]/50' : 'bg-[var(--accent)]/5 ring-2 ring-[var(--accent)]/30'
                         : step.status === 'completed'
                           ? darkMode ? 'bg-green-900/20' : 'bg-green-50'
                           : step.status === 'error'
@@ -699,7 +699,7 @@ export default function FileImporter({
                       {step.status === 'completed' ? (
                         <CheckCircle2 className="w-6 h-6 text-green-500" />
                       ) : step.status === 'active' ? (
-                        <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+                        <Loader2 className="w-6 h-6 text-[var(--accent)] animate-spin" />
                       ) : step.status === 'error' ? (
                         <XCircle className="w-6 h-6 text-red-500" />
                       ) : (
@@ -711,7 +711,7 @@ export default function FileImporter({
                     <div className="flex-1 min-w-0">
                       <p className={`font-medium ${
                         step.status === 'active'
-                          ? 'text-purple-600'
+                          ? 'text-[var(--accent)]'
                           : step.status === 'completed'
                             ? darkMode ? 'text-green-400' : 'text-green-700'
                             : step.status === 'error'
@@ -722,7 +722,7 @@ export default function FileImporter({
                       </p>
                       <p className={`text-sm ${
                         step.status === 'active'
-                          ? darkMode ? 'text-purple-300' : 'text-purple-600'
+                          ? darkMode ? 'text-[var(--brand-sky)]' : 'text-[var(--accent)]'
                           : darkMode ? 'text-slate-500' : 'text-slate-400'
                       }`}>
                         {step.description}
@@ -734,7 +734,7 @@ export default function FileImporter({
                       step.status === 'completed'
                         ? 'bg-green-500 text-white'
                         : step.status === 'active'
-                          ? 'bg-purple-500 text-white'
+                          ? 'bg-[var(--accent)]/50 text-white'
                           : step.status === 'error'
                             ? 'bg-red-500 text-white'
                             : darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500'
@@ -747,7 +747,7 @@ export default function FileImporter({
 
               {/* Helpful tip */}
               <p className={`text-center text-xs mt-6 flex items-center justify-center gap-1.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <Sparkles className="w-3.5 h-3.5 text-[var(--brand-sky)]" />
                 AI is analyzing your content and extracting actionable tasks
               </p>
             </div>
@@ -790,7 +790,7 @@ export default function FileImporter({
                     </p>
                     <button
                       onClick={() => setShowFullText(!showFullText)}
-                      className="text-sm text-purple-500 hover:text-purple-400 flex items-center gap-1"
+                      className="text-sm text-[var(--accent)] hover:text-[var(--brand-sky)] flex items-center gap-1"
                     >
                       {showFullText ? 'Show less' : 'Show more'}
                       {showFullText ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -804,8 +804,8 @@ export default function FileImporter({
 
               {/* Summary */}
               {summary && (
-                <div className={`p-3 rounded-lg ${darkMode ? 'bg-purple-900/30' : 'bg-purple-50'}`}>
-                  <p className={`text-sm ${darkMode ? 'text-purple-300' : 'text-purple-700'}`}>{summary}</p>
+                <div className={`p-3 rounded-lg ${darkMode ? 'bg-[var(--brand-blue)]/20' : 'bg-[var(--accent)]/5'}`}>
+                  <p className={`text-sm ${darkMode ? 'text-[var(--brand-sky)]' : 'text-[var(--accent)]'}`}>{summary}</p>
                 </div>
               )}
 
@@ -819,7 +819,7 @@ export default function FileImporter({
                   onChange={(e) => setMainTask(prev => ({ ...prev, text: e.target.value }))}
                   placeholder="Task description..."
                   className={`w-full px-4 py-3 border rounded-xl
-                           focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 ${
+                           focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] ${
                              darkMode
                                ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-400'
                                : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
@@ -833,7 +833,7 @@ export default function FileImporter({
                       value={mainTask.priority}
                       onChange={(e) => setMainTask(prev => ({ ...prev, priority: e.target.value as TodoPriority }))}
                       className={`appearance-none pl-8 pr-8 py-2 rounded-lg text-sm font-medium cursor-pointer
-                               focus:outline-none focus:ring-2 focus:ring-purple-500/30 border ${
+                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 border ${
                                  darkMode ? 'border-slate-600' : 'border-slate-200'
                                }`}
                       style={{ backgroundColor: darkMode ? 'rgb(51 65 85)' : priorityConfig.bgColor, color: priorityConfig.color }}
@@ -855,7 +855,7 @@ export default function FileImporter({
                       value={mainTask.dueDate}
                       onChange={(e) => setMainTask(prev => ({ ...prev, dueDate: e.target.value }))}
                       className={`pl-8 pr-3 py-2 rounded-lg text-sm border
-                               focus:outline-none focus:ring-2 focus:ring-purple-500/30 ${
+                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${
                                  darkMode
                                    ? 'bg-slate-700 border-slate-600 text-white'
                                    : 'bg-white border-slate-200 text-slate-700'
@@ -870,7 +870,7 @@ export default function FileImporter({
                       value={mainTask.assignedTo}
                       onChange={(e) => setMainTask(prev => ({ ...prev, assignedTo: e.target.value }))}
                       className={`appearance-none pl-8 pr-8 py-2 rounded-lg text-sm border
-                               focus:outline-none focus:ring-2 focus:ring-purple-500/30 ${
+                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${
                                  darkMode
                                    ? 'bg-slate-700 border-slate-600 text-white'
                                    : 'bg-white border-slate-200 text-slate-700'
@@ -895,7 +895,7 @@ export default function FileImporter({
                   </h3>
                   <button
                     onClick={addSubtask}
-                    className="text-sm text-purple-500 hover:text-purple-400 flex items-center gap-1"
+                    className="text-sm text-[var(--accent)] hover:text-[var(--brand-sky)] flex items-center gap-1"
                   >
                     <Plus className="w-4 h-4" />
                     Add subtask
@@ -914,8 +914,8 @@ export default function FileImporter({
                         className={`p-3 rounded-lg border transition-colors ${
                           subtask.selected
                             ? darkMode
-                              ? 'border-purple-500/50 bg-purple-900/20'
-                              : 'border-purple-200 bg-purple-50/50'
+                              ? 'border-[var(--accent)]/50 bg-[var(--brand-blue)]/15'
+                              : 'border-[var(--accent)]/30 bg-[var(--accent)]/5/50'
                             : darkMode
                               ? 'border-slate-600 bg-slate-700/50 opacity-60'
                               : 'border-slate-200 bg-slate-50 opacity-60'
@@ -926,7 +926,7 @@ export default function FileImporter({
                             onClick={() => toggleSubtask(index)}
                             className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                               subtask.selected
-                                ? 'bg-purple-500 border-purple-500 text-white'
+                                ? 'bg-[var(--accent)]/50 border-[var(--accent)] text-white'
                                 : darkMode
                                   ? 'border-slate-500'
                                   : 'border-slate-300'
@@ -942,7 +942,7 @@ export default function FileImporter({
                               onChange={(e) => updateSubtask(index, { text: e.target.value })}
                               placeholder="Subtask description..."
                               className={`w-full border rounded-lg px-3 py-1.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 ${
+                                       focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] ${
                                          darkMode
                                            ? 'bg-slate-600 border-slate-500 text-white placeholder-slate-400'
                                            : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
@@ -956,7 +956,7 @@ export default function FileImporter({
                                   value={subtask.priority}
                                   onChange={(e) => updateSubtask(index, { priority: e.target.value as TodoPriority })}
                                   className={`text-xs px-2 py-1 rounded border
-                                           focus:outline-none focus:ring-2 focus:ring-purple-500/30 ${
+                                           focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${
                                              darkMode
                                                ? 'bg-slate-600 border-slate-500 text-white'
                                                : 'bg-white border-slate-200 text-slate-700'
@@ -1038,7 +1038,7 @@ export default function FileImporter({
               <button
                 onClick={handleCreate}
                 disabled={!mainTask.text.trim()}
-                className={`px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg font-medium transition-colors
+                className={`px-4 py-2 bg-[var(--accent)] hover:bg-[var(--brand-navy)] rounded-lg font-medium transition-colors
                          disabled:cursor-not-allowed flex items-center gap-2 ${
                            darkMode
                              ? 'text-white disabled:bg-slate-600 disabled:text-slate-400'

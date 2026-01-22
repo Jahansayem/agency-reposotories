@@ -504,12 +504,12 @@ export default function DashboardModal({
                           animate={{ opacity: 1, y: 0 }}
                           className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
                             darkMode
-                              ? 'bg-violet-500/10 border border-violet-500/30'
-                              : 'bg-violet-50 border border-violet-200'
+                              ? 'bg-[var(--accent)]/10 border border-[var(--accent)]/30'
+                              : 'bg-[var(--accent)]/5 border border-[var(--accent)]/20'
                           }`}
                         >
-                          <Target className="w-5 h-5 text-violet-500 flex-shrink-0" />
-                          <p className={`text-sm font-medium ${darkMode ? 'text-violet-300' : 'text-violet-700'}`}>
+                          <Target className="w-5 h-5 text-[var(--accent)] flex-shrink-0" />
+                          <p className={`text-sm font-medium ${darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'}`}>
                             {aiData.todaysFocus}
                           </p>
                         </motion.div>
@@ -779,7 +779,7 @@ export default function DashboardModal({
                             : 'bg-white border border-slate-200'
                         }`}>
                           <div className="flex items-center gap-2 mb-3">
-                            <Sparkles className="w-4 h-4 text-violet-500" />
+                            <Sparkles className="w-4 h-4 text-[var(--accent)]" />
                             <h3 className={`text-xs font-semibold uppercase tracking-wide ${
                               darkMode ? 'text-slate-400' : 'text-slate-500'
                             }`}>
@@ -842,13 +842,13 @@ export default function DashboardModal({
                       {/* Productivity Tips */}
                       <div className={`rounded-xl p-4 ${
                         darkMode
-                          ? 'bg-gradient-to-br from-violet-900/20 to-indigo-900/20 border border-violet-500/20'
-                          : 'bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200'
+                          ? 'bg-gradient-to-br from-[#0033A0]/15 to-[#0047CC]/15 border border-[var(--accent)]/20'
+                          : 'bg-gradient-to-br from-[var(--accent)]/5 to-[#0047CC]/5 border border-[var(--accent)]/20'
                       }`}>
                         <div className="flex items-center gap-2 mb-2">
-                          <Lightbulb className="w-4 h-4 text-violet-500" />
+                          <Lightbulb className="w-4 h-4 text-[var(--accent)]" />
                           <h3 className={`text-xs font-semibold uppercase tracking-wide ${
-                            darkMode ? 'text-violet-300' : 'text-violet-600'
+                            darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'
                           }`}>
                             Daily Tip
                           </h3>
@@ -1036,13 +1036,13 @@ export default function DashboardModal({
                       {managerData.delegationStats.totalDelegated > 0 && (
                         <div className={`rounded-xl p-4 ${
                           darkMode
-                            ? 'bg-gradient-to-br from-indigo-900/20 to-violet-900/20 border border-indigo-500/20'
-                            : 'bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-200'
+                            ? 'bg-gradient-to-br from-[#0033A0]/15 to-[#0047CC]/15 border border-[var(--accent)]/20'
+                            : 'bg-gradient-to-br from-[var(--accent)]/5 to-[#0047CC]/5 border border-[var(--accent)]/20'
                         }`}>
                           <div className="flex items-center gap-2 mb-2">
-                            <Send className="w-4 h-4 text-indigo-500" />
+                            <Send className="w-4 h-4 text-[var(--accent)]" />
                             <h3 className={`text-xs font-semibold uppercase tracking-wide ${
-                              darkMode ? 'text-indigo-300' : 'text-indigo-600'
+                              darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'
                             }`}>
                               Your Delegations
                             </h3>
@@ -1111,13 +1111,13 @@ export default function DashboardModal({
                       {complexTaskAnalysis.length > 0 && (
                         <div className={`rounded-xl p-4 ${
                           darkMode
-                            ? 'bg-gradient-to-br from-violet-900/20 to-purple-900/20 border border-violet-500/20'
-                            : 'bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200'
+                            ? 'bg-gradient-to-br from-[#0033A0]/15 to-[#0047CC]/15 border border-[var(--accent)]/20'
+                            : 'bg-gradient-to-br from-[var(--accent)]/5 to-[#0047CC]/5 border border-[var(--accent)]/20'
                         }`}>
                           <div className="flex items-center gap-2 mb-3">
-                            <Wand2 className="w-4 h-4 text-violet-500" />
+                            <Wand2 className="w-4 h-4 text-[var(--accent)]" />
                             <h3 className={`text-xs font-semibold uppercase tracking-wide ${
-                              darkMode ? 'text-violet-300' : 'text-violet-600'
+                              darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'
                             }`}>
                               AI Task Decomposition
                             </h3>
@@ -1163,7 +1163,7 @@ export default function DashboardModal({
                             ))}
                           </div>
 
-                          <p className={`text-xs mt-3 ${darkMode ? 'text-violet-400' : 'text-violet-600'}`}>
+                          <p className={`text-xs mt-3 ${darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'}`}>
                             <Zap className="w-3 h-3 inline mr-1" />
                             Complex tasks can be broken down using AI agents
                           </p>
@@ -1215,8 +1215,8 @@ export default function DashboardModal({
                           <motion.div
                             className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
                               darkMode
-                                ? 'bg-gradient-to-br from-blue-500/20 to-indigo-500/10 border border-blue-500/30'
-                                : 'bg-gradient-to-br from-blue-100 to-indigo-50 border border-blue-200'
+                                ? 'bg-gradient-to-br from-[#0033A0]/20 to-[#0047CC]/10 border border-blue-500/30'
+                                : 'bg-gradient-to-br from-[#0033A0]/10 to-[#0047CC]/5 border border-blue-200'
                             }`}
                             animate={{ y: [-2, 2, -2] }}
                             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}

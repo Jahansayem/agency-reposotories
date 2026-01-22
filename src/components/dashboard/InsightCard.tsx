@@ -44,10 +44,10 @@ const typeStyles: Record<InsightType, {
     borderColor: 'border-l-amber-500',
   },
   tip: {
-    gradient: 'from-purple-500 to-violet-600',
-    iconBg: 'bg-purple-500/10 dark:bg-purple-400/20',
-    iconColor: 'text-purple-600 dark:text-purple-400',
-    borderColor: 'border-l-purple-500',
+    gradient: 'from-[var(--brand-blue)] to-[#0047CC]',
+    iconBg: 'bg-[var(--brand-blue)]/10 dark:bg-[var(--brand-sky)]/20',
+    iconColor: 'text-[var(--brand-blue)] dark:text-[var(--brand-sky)]',
+    borderColor: 'border-l-[var(--brand-blue)]',
   },
   alert: {
     gradient: 'from-red-500 to-rose-600',
