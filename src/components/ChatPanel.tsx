@@ -1784,6 +1784,13 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
               <MessageSquare className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
 
+            {/* Unread badge */}
+            {totalUnreadCount > 0 && (
+              <div className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg animate-pulse">
+                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+              </div>
+            )}
+
           </motion.button>
         )}
       </AnimatePresence>
