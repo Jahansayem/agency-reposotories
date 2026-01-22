@@ -24,6 +24,7 @@ import {
   Settings,
   ChevronRight,
   ExternalLink,
+  Lock,
 } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,6 +70,7 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6', verb: 'set reminder for' },
   reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444', verb: 'removed reminder from' },
   reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981', verb: 'reminder sent for' },
+  privacy_changed: { icon: Lock, label: 'changed privacy', color: '#8b5cf6', verb: 'changed privacy of' },
 };
 
 // Local storage key for last seen notification
