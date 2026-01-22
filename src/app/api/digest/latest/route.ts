@@ -10,6 +10,14 @@ import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 
 /**
+ * Get today's date in Pacific Time (YYYY-MM-DD format).
+ */
+function getTodayInPacific(): string {
+  const now = new Date();
+  return now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+}
+
+/**
  * Calculate the next scheduled digest time in Pacific Time.
  * Digests are generated at 5 AM and 4 PM Pacific daily.
  */
@@ -121,14 +129,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the most recent digest for this user (within last 12 hours)
-    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+    // Get the most recent digest for this user from today (Pacific Time)
+    const todayPT = getTodayInPacific();
 
     const { data: digest, error: digestError } = await supabase
       .from('daily_digests')
       .select('*')
       .eq('user_id', user.id)
-      .gte('generated_at', twelveHoursAgo)
+      .eq('digest_date', todayPT)
       .order('generated_at', { ascending: false })
       .limit(1)
       .single();

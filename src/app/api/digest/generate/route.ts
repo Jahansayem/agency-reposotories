@@ -17,6 +17,17 @@ import type { Todo, ActivityLogEntry } from '@/types/todo';
 // Use the same API key as other cron endpoints
 const API_KEY = process.env.OUTLOOK_ADDON_API_KEY;
 
+/**
+ * Get today's date in Pacific Time (YYYY-MM-DD format).
+ * This is important because cron jobs run in Pacific Time.
+ */
+function getTodayInPacific(): string {
+  const now = new Date();
+  // Format date in Pacific timezone
+  const pacificDate = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+  return pacificDate; // Returns YYYY-MM-DD format
+}
+
 // VAPID configuration
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
@@ -456,8 +467,8 @@ export async function POST(request: NextRequest) {
         const result = await generateDigestForUser(supabase, user.id, user.name, digestType);
 
         if (result) {
-          // Store the digest
-          const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+          // Store the digest - use Pacific time for date since cron runs in PT
+          const today = getTodayInPacific();
           const { error: insertError } = await supabase
             .from('daily_digests')
             .upsert({
