@@ -1121,6 +1121,44 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
       logger.error('Error sending message', error, { component: 'ChatPanel' });
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
       setNewMessage(text);
+    } else {
+      // Send push notification to recipient(s)
+      // For DMs: notify the recipient
+      // For team chat with mentions: notify mentioned users
+      const recipientsToNotify: string[] = [];
+
+      if (conversation.type === 'dm' && conversation.userName) {
+        // Don't notify yourself
+        if (conversation.userName !== currentUser.name) {
+          recipientsToNotify.push(conversation.userName);
+        }
+      } else if (mentions.length > 0) {
+        // Notify mentioned users (excluding sender)
+        mentions.forEach(mention => {
+          if (mention !== currentUser.name) {
+            recipientsToNotify.push(mention);
+          }
+        });
+      }
+
+      if (recipientsToNotify.length > 0) {
+        // Fire and forget - don't block on push notification
+        fetch('/api/push-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'message',
+            payload: {
+              senderName: currentUser.name,
+              messageText: text,
+              isDm: conversation.type === 'dm',
+            },
+            userNames: recipientsToNotify,
+          }),
+        }).catch(err => {
+          logger.warn('Failed to send push notification for message', { error: err, component: 'ChatPanel' });
+        });
+      }
     }
   };
 
