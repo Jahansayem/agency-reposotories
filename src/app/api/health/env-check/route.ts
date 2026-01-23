@@ -8,8 +8,10 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const envStatus = {
     // Required for AI features
-    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+    OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY,
     OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+    // Legacy (not used anymore)
+    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
 
     // Required for database
     NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -35,7 +37,7 @@ export async function GET() {
 
   // Check if critical vars for daily digest are present
   const dailyDigestReady =
-    envStatus.ANTHROPIC_API_KEY &&
+    envStatus.OPENROUTER_API_KEY &&
     envStatus.NEXT_PUBLIC_SUPABASE_URL &&
     envStatus.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -44,7 +46,7 @@ export async function GET() {
     dailyDigestReady,
     environment: envStatus,
     missingCritical: [
-      !envStatus.ANTHROPIC_API_KEY && 'ANTHROPIC_API_KEY',
+      !envStatus.OPENROUTER_API_KEY && 'OPENROUTER_API_KEY',
       !envStatus.SUPABASE_SERVICE_ROLE_KEY && 'SUPABASE_SERVICE_ROLE_KEY',
       !envStatus.NEXT_PUBLIC_SUPABASE_URL && 'NEXT_PUBLIC_SUPABASE_URL',
     ].filter(Boolean),

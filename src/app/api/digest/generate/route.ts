@@ -8,10 +8,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import webpush from 'web-push';
 import { logger } from '@/lib/logger';
+import { callOpenRouter } from '@/lib/openrouter';
 import type { Todo, ActivityLogEntry } from '@/types/todo';
 
 // Use the same API key as other cron endpoints
@@ -33,21 +32,18 @@ const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
 
-// Initialize web-push
+// Initialize web-push (optional - gracefully handle if not installed)
 let webPushInitialized = false;
+let webpush: any = null;
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   try {
+    webpush = require('web-push');
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
     webPushInitialized = true;
   } catch (error) {
-    console.error('Failed to initialize web-push:', error);
+    console.log('web-push not available - push notifications will be skipped');
   }
 }
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 // Response types (same as in /api/ai/daily-digest)
 export interface DailyDigestTask {
@@ -266,14 +262,12 @@ Guidelines:
 - Be encouraging even if there are challenges
 - For afternoon briefings, focus on what's remaining and end-of-day priorities`;
 
-  // Call Claude API
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
+  // Call OpenRouter API
+  const responseText = await callOpenRouter({
+    model: 'anthropic/claude-3.5-sonnet',
     messages: [{ role: 'user', content: prompt }],
+    max_tokens: 1024,
   });
-
-  const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
 
   // Parse the JSON from Claude's response
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -419,9 +413,9 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Check for Anthropic API key
-    if (!process.env.ANTHROPIC_API_KEY) {
-      logger.error('ANTHROPIC_API_KEY not configured', undefined, { component: 'DigestGenerate' });
+    // Check for OpenRouter API key
+    if (!process.env.OPENROUTER_API_KEY) {
+      logger.error('OPENROUTER_API_KEY not configured', undefined, { component: 'DigestGenerate' });
       return NextResponse.json(
         { success: false, error: 'AI service not configured' },
         { status: 500 }
