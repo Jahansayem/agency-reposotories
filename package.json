@@ -15,7 +15,10 @@
     "test:e2e:ui": "playwright test --ui",
     "migrate:schema": "tsx scripts/migrate-schema.ts",
     "migrate:verify": "tsx scripts/verify-migration.ts",
-    "migrate:dry-run": "DRY_RUN=true tsx scripts/migrate-schema.ts"
+    "migrate:dry-run": "DRY_RUN=true tsx scripts/migrate-schema.ts",
+    "digest:deploy": "bash scripts/deploy-digest-cron.sh",
+    "digest:test": "curl \"${SUPABASE_URL}/functions/v1/digest-cron?type=morning\"",
+    "digest:logs": "supabase functions logs digest-cron"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
