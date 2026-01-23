@@ -82,9 +82,13 @@ export default function QuickActions({
             whileTap={{ scale: 0.98 }}
             className={`
               relative flex items-center justify-center gap-2
-              px-3 py-2.5 rounded-lg
+              px-3 py-3 rounded-lg
+              min-h-[44px] min-w-[44px]
               text-sm font-medium
               transition-colors duration-150
+              touch-manipulation
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2
+              ${darkMode ? 'focus-visible:ring-offset-[#0A1628]' : 'focus-visible:ring-offset-white'}
               ${isPrimary
                 ? darkMode
                   ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90'

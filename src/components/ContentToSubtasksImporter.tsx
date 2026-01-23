@@ -428,10 +428,10 @@ export default function ContentToSubtasksImporter({
               </button>
               <button
                 onClick={() => setMode('voicemail')}
-                className="p-6 border-2 border-slate-200 rounded-xl hover:border-purple-300 hover:bg-purple-50/50 transition-all group"
+                className="p-6 border-2 border-slate-200 rounded-xl hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 transition-all group"
               >
-                <FileAudio className="w-10 h-10 text-slate-400 group-hover:text-purple-500 mx-auto mb-3 transition-colors" />
-                <p className="font-medium text-slate-700 group-hover:text-purple-700">Upload Audio</p>
+                <FileAudio className="w-10 h-10 text-slate-400 group-hover:text-[var(--accent)] mx-auto mb-3 transition-colors" />
+                <p className="font-medium text-slate-700 group-hover:text-[var(--brand-navy)]">Upload Audio</p>
                 <p className="text-sm text-slate-500 mt-1">Upload audio file</p>
               </button>
               <button
@@ -514,7 +514,7 @@ export default function ContentToSubtasksImporter({
               {status === 'idle' && (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-purple-400 hover:bg-purple-50/50 transition-colors cursor-pointer"
+                  className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
                 >
                   <Upload className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                   <p className="font-medium text-slate-600">Click to upload audio file</p>
@@ -531,7 +531,7 @@ export default function ContentToSubtasksImporter({
 
               {(status === 'transcribing' || status === 'parsing') && (
                 <div className="p-6 bg-slate-50 rounded-xl text-center">
-                  <Loader2 className="w-8 h-8 text-purple-500 animate-spin mx-auto mb-3" />
+                  <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mx-auto mb-3" />
                   <p className="font-medium text-slate-700">
                     {status === 'transcribing' ? 'Transcribing audio...' : 'Extracting action items...'}
                   </p>

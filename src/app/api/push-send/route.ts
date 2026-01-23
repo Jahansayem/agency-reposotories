@@ -40,7 +40,7 @@ interface PushSubscription {
 }
 
 interface RequestBody {
-  type: 'task_assigned' | 'task_due_soon' | 'task_overdue' | 'task_completed' | 'generic';
+  type: 'task_assigned' | 'task_due_soon' | 'task_overdue' | 'task_completed' | 'message' | 'generic';
   payload: {
     taskId?: string;
     taskText?: string;
@@ -48,8 +48,13 @@ interface RequestBody {
     completedBy?: string;
     timeUntil?: string;
     message?: string;
+    // Message notification fields
+    senderName?: string;
+    messageText?: string;
+    isDm?: boolean;
   };
   userIds?: string[];
+  userNames?: string[];  // Alternative to userIds - will be looked up
 }
 
 // Build notification payload based on type
@@ -81,10 +86,27 @@ function buildNotificationPayload(
       body = `${payload.completedBy} completed: ${payload.taskText}`;
       break;
 
+    case 'message':
+      title = payload.isDm ? `Message from ${payload.senderName}` : `${payload.senderName} mentioned you`;
+      body = payload.messageText || 'New message';
+      // Truncate long messages
+      if (body.length > 100) {
+        body = body.substring(0, 97) + '...';
+      }
+      break;
+
     case 'generic':
     default:
       title = 'Notification';
       body = payload.message || 'You have a new notification';
+  }
+
+  // Determine URL based on notification type
+  let url = '/';
+  if (type === 'message') {
+    url = '/?chat=open';
+  } else if (payload.taskId) {
+    url = `/?task=${payload.taskId}`;
   }
 
   return {
@@ -92,7 +114,7 @@ function buildNotificationPayload(
     body,
     taskId: payload.taskId,
     type,
-    url: payload.taskId ? `/?task=${payload.taskId}` : '/',
+    url,
   };
 }
 
@@ -140,7 +162,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body: RequestBody = await request.json();
-    const { type, payload, userIds } = body;
+    const { type, payload, userNames } = body;
+    let { userIds } = body;
 
     // Validate request
     if (!type || !payload) {
@@ -150,6 +173,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // If userNames provided but not userIds, look up the user IDs
+    if ((!userIds || userIds.length === 0) && userNames && userNames.length > 0) {
+      const { data: users, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .in('name', userNames);
+
+      if (userError) {
+        console.error('Error looking up users by name:', userError);
+      } else if (users && users.length > 0) {
+        userIds = users.map(u => u.id);
+      }
+    }
+
     if (!userIds || userIds.length === 0) {
       return NextResponse.json({
         success: true,
@@ -157,9 +197,6 @@ export async function POST(request: NextRequest) {
         sent: 0,
       });
     }
-
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get web push subscriptions for users
     const { data: tokens, error: fetchError } = await supabase

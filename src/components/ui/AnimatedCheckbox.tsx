@@ -173,6 +173,8 @@ interface SubtaskCheckboxProps {
   onChange: () => void;
   disabled?: boolean;
   className?: string;
+  /** Accessible label for screen readers */
+  'aria-label'?: string;
 }
 
 export function SubtaskCheckbox({
@@ -180,6 +182,7 @@ export function SubtaskCheckbox({
   onChange,
   disabled = false,
   className = '',
+  'aria-label': ariaLabel,
 }: SubtaskCheckboxProps) {
   const reducedMotion = prefersReducedMotion();
 
@@ -188,6 +191,7 @@ export function SubtaskCheckbox({
       type="button"
       onClick={onChange}
       disabled={disabled}
+      aria-label={ariaLabel || (checked ? 'Mark subtask as incomplete' : 'Mark subtask as complete')}
       aria-checked={checked}
       role="checkbox"
       whileHover={disabled || reducedMotion ? undefined : { scale: 1.1 }}

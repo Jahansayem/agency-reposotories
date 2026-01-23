@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
 import {
   X,
   Trophy,
@@ -40,6 +42,16 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
     streak: 0,
     productivity: 0,
   });
+
+  // Focus trap for accessibility - keeps focus within modal
+  const { containerRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    enabled: show,
+    autoFocus: true,
+  });
+
+  // Close on Escape key press
+  useEscapeKey(onClose, { enabled: show });
 
   const calculateAndUpdateStreak = async () => {
     const today = new Date();
@@ -148,6 +160,10 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
           onClick={onClose}
         >
           <motion.div
+            ref={containerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="progress-summary-title"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -159,7 +175,8 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
             <div className="relative bg-[var(--gradient-hero)] p-6 text-white">
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/20 transition-colors"
+                aria-label="Close progress summary"
+                className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0033A0]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -175,7 +192,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                   <Trophy className="w-8 h-8 text-white" />
                 </motion.div>
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight">Your Progress</h2>
+                  <h2 id="progress-summary-title" className="text-2xl font-bold tracking-tight">Your Progress</h2>
                   <p className="text-white/70 text-sm flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
                     {new Date().toLocaleDateString('en-US', {

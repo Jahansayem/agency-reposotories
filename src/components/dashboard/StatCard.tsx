@@ -46,8 +46,8 @@ const variantStyles: Record<StatCardVariant, { iconBg: string; iconColor: string
     trendNegative: 'text-red-500 dark:text-red-400',
   },
   info: {
-    iconBg: 'bg-purple-500/10 dark:bg-purple-400/20',
-    iconColor: 'text-purple-600 dark:text-purple-400',
+    iconBg: 'bg-[var(--brand-blue)]/10 dark:bg-[var(--brand-sky)]/20',
+    iconColor: 'text-[var(--brand-blue)] dark:text-[var(--brand-sky)]',
     trendPositive: 'text-emerald-600 dark:text-emerald-400',
     trendNegative: 'text-red-500 dark:text-red-400',
   },

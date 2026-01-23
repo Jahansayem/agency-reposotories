@@ -293,7 +293,7 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
           {(hasNotes || subtaskCount > 0 || attachmentCount > 0 || hasTranscription) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               {hasTranscription && (
-                <span className="inline-flex items-center gap-1 text-xs text-purple-500 dark:text-purple-400">
+                <span className="inline-flex items-center gap-1 text-xs text-[var(--accent)] dark:text-[#72B5E8]">
                   <Mic className="w-3 h-3" />
                 </span>
               )}
@@ -311,7 +311,7 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
               {attachmentCount > 0 && (() => {
                 const hasAudio = todo.attachments?.some(a => a.file_type === 'audio');
                 const AttachmentIcon = hasAudio ? Music : Paperclip;
-                const colorClass = hasAudio ? 'text-purple-500 dark:text-purple-400' : 'text-amber-500 dark:text-amber-400';
+                const colorClass = hasAudio ? 'text-[var(--accent)] dark:text-[#72B5E8]' : 'text-amber-500 dark:text-amber-400';
                 return (
                   <span className={`inline-flex items-center gap-1 text-xs ${colorClass}`}>
                     <AttachmentIcon className="w-3 h-3" />
@@ -944,12 +944,12 @@ function TaskDetailModal({
           {todo.transcription && (
             <div className={`p-3 rounded-lg border ${
               darkMode
-                ? 'bg-purple-500/10 border-purple-500/20'
-                : 'bg-purple-500/5 border-purple-500/10'
+                ? 'bg-[var(--accent)]/10 border-[var(--accent)]/20'
+                : 'bg-[var(--accent)]/5 border-[var(--accent)]/10'
             }`}>
               <div className="flex items-center gap-2 mb-2">
-                <Mic className="w-4 h-4 text-purple-500" />
-                <span className="text-sm font-medium text-purple-500">Voicemail Transcription</span>
+                <Mic className="w-4 h-4 text-[var(--accent)]" />
+                <span className="text-sm font-medium text-[var(--accent)]">Voicemail Transcription</span>
               </div>
               <p className={`text-sm whitespace-pre-wrap leading-relaxed ${
                 darkMode ? 'text-slate-200' : 'text-slate-700'
@@ -1093,7 +1093,7 @@ function TaskDetailModal({
                         }`}
                       >
                         <FileIcon className={`w-4 h-4 flex-shrink-0 ${
-                          attachment.file_type === 'audio' ? 'text-purple-500' : 'text-amber-500'
+                          attachment.file_type === 'audio' ? 'text-[var(--accent)]' : 'text-amber-500'
                         }`} />
                         <span className={`flex-1 text-sm truncate ${darkMode ? 'text-white' : 'text-slate-800'}`}>
                           {attachment.file_name}
@@ -1294,6 +1294,7 @@ export default function KanbanBoard({
   const [overId, setOverId] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState(false);
   const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+  const [dragAnnouncement, setDragAnnouncement] = useState<string>('');
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1393,7 +1394,13 @@ export default function KanbanBoard({
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const todoId = event.active.id as string;
+    setActiveId(todoId);
+    const draggedTodo = todos.find((t) => t.id === todoId);
+    if (draggedTodo) {
+      const currentColumn = columns.find(c => c.id === draggedTodo.status);
+      setDragAnnouncement(`Picked up task: ${draggedTodo.text}. Currently in ${currentColumn?.title || 'To Do'} column.`);
+    }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -1407,14 +1414,16 @@ export default function KanbanBoard({
 
     logger.debug('Drag ended', { component: 'KanbanBoard', activeId: active.id, overId: over?.id });
 
+    const todoId = active.id as string;
+    const draggedTodo = todos.find((t) => t.id === todoId);
+
     if (!over) {
       logger.debug('No drop target', { component: 'KanbanBoard' });
+      setDragAnnouncement(draggedTodo ? `Dropped task: ${draggedTodo.text}. No change.` : 'Task dropped. No change.');
       return;
     }
 
-    const todoId = active.id as string;
     const targetId = over.id as string;
-    const draggedTodo = todos.find((t) => t.id === todoId);
     const previousStatus = draggedTodo?.status || 'todo';
 
     logger.debug('Dragged todo', { component: 'KanbanBoard', todoId, targetId, previousStatus });
@@ -1431,8 +1440,10 @@ export default function KanbanBoard({
           setCelebrating(true);
         }
         onStatusChange(todoId, column.id);
+        setDragAnnouncement(`Moved task to ${column.title} column.`);
       } else {
         logger.debug('Same column, no change needed', { component: 'KanbanBoard' });
+        setDragAnnouncement(`Task remains in ${column.title} column.`);
       }
       return;
     }
@@ -1441,6 +1452,7 @@ export default function KanbanBoard({
     const overTodo = todos.find((t) => t.id === targetId);
     if (overTodo) {
       const targetStatus = overTodo.status || 'todo';
+      const targetColumn = columns.find(c => c.id === targetStatus);
       logger.debug('Dropped on card', { component: 'KanbanBoard', targetId, targetStatus });
       // Only change if different column
       if (previousStatus !== targetStatus) {
@@ -1450,9 +1462,13 @@ export default function KanbanBoard({
           setCelebrating(true);
         }
         onStatusChange(todoId, targetStatus);
+        setDragAnnouncement(`Moved task to ${targetColumn?.title || targetStatus} column.`);
+      } else {
+        setDragAnnouncement(`Task remains in ${targetColumn?.title || targetStatus} column.`);
       }
     } else {
       logger.debug('No matching column or card found for targetId', { component: 'KanbanBoard', targetId });
+      setDragAnnouncement('Task dropped. No change.');
     }
   };
 
@@ -1460,6 +1476,15 @@ export default function KanbanBoard({
 
   return (
     <div className="relative">
+      {/* Screen reader announcements for drag operations */}
+      <div
+        role="status"
+        aria-live="assertive"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {dragAnnouncement}
+      </div>
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <DndContext
         sensors={sensors}

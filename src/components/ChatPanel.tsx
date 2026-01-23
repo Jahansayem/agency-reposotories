@@ -1121,6 +1121,44 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
       logger.error('Error sending message', error, { component: 'ChatPanel' });
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
       setNewMessage(text);
+    } else {
+      // Send push notification to recipient(s)
+      // For DMs: notify the recipient
+      // For team chat with mentions: notify mentioned users
+      const recipientsToNotify: string[] = [];
+
+      if (conversation.type === 'dm' && conversation.userName) {
+        // Don't notify yourself
+        if (conversation.userName !== currentUser.name) {
+          recipientsToNotify.push(conversation.userName);
+        }
+      } else if (mentions.length > 0) {
+        // Notify mentioned users (excluding sender)
+        mentions.forEach(mention => {
+          if (mention !== currentUser.name) {
+            recipientsToNotify.push(mention);
+          }
+        });
+      }
+
+      if (recipientsToNotify.length > 0) {
+        // Fire and forget - don't block on push notification
+        fetch('/api/push-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'message',
+            payload: {
+              senderName: currentUser.name,
+              messageText: text,
+              isDm: conversation.type === 'dm',
+            },
+            userNames: recipientsToNotify,
+          }),
+        }).catch(err => {
+          logger.warn('Failed to send push notification for message', { error: err, component: 'ChatPanel' });
+        });
+      }
     }
   };
 
@@ -1746,6 +1784,13 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
               <MessageSquare className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
 
+            {/* Unread badge */}
+            {totalUnreadCount > 0 && (
+              <div className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg animate-pulse">
+                {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+              </div>
+            )}
+
           </motion.button>
         )}
       </AnimatePresence>
@@ -2050,11 +2095,12 @@ export default function ChatPanel({ currentUser, users, onCreateTask, onTaskLink
                                 >
                                   {isTeam ? <Users className="w-5 h-5" /> : getInitials(userName)}
                                 </motion.div>
-                                {/* Presence indicator for DMs */}
-                                {!isTeam && presence && (
+                                {/* Presence indicator for DMs - always show, default to offline */}
+                                {!isTeam && (
                                   <div
                                     className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--surface-dark)]"
-                                    style={{ backgroundColor: PRESENCE_CONFIG[presence].color }}
+                                    style={{ backgroundColor: PRESENCE_CONFIG[presence || 'offline'].color }}
+                                    title={PRESENCE_CONFIG[presence || 'offline'].label}
                                   />
                                 )}
                                 {unreadCount > 0 && !isMuted && (
