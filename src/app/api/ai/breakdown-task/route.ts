@@ -111,13 +111,17 @@ Task: "Call back customer about auto claim"
 
 Respond with ONLY the JSON object, no other text.`;
 
-    // Call OpenRouter API with GPT-4o
+    // Call OpenRouter API with GLM-4.5-Air (thinking mode enabled)
     const responseText = await callOpenRouter({
-      model: 'openai/gpt-4o',
+      model: 'z-ai/glm-4.5-air:free',
       max_tokens: 800,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
       plugins: [{ id: 'response-healing' }],
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 10000,  // High budget for detailed task breakdown
+      },
     });
 
     // Parse the JSON from Claude's response using robust extraction

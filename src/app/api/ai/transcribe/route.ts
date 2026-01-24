@@ -245,11 +245,15 @@ Rules:
     let responseText: string;
     try {
       responseText = await callOpenRouter({
-        model: 'openai/gpt-4o',
+        model: 'z-ai/glm-4.5-air:free',
         max_tokens: 4096,
         temperature: 0.7,
         messages: [{ role: 'user', content: prompt }],
         plugins: [{ id: 'response-healing' }],
+        thinking: {
+          type: 'enabled',
+          budget_tokens: 8000,  // Medium budget for transcription parsing
+        },
       });
     } catch (error) {
       logger.error('OpenRouter API error', error, {

@@ -71,9 +71,9 @@ Genera una respuesta JSON con:
   "body": "El cuerpo traducido (mantén los \\n para saltos de línea)"
 }`;
 
-    // Call OpenRouter API with GPT-4o
+    // Call OpenRouter API with GLM-4.5-Air (thinking mode enabled)
     const responseText = await callOpenRouter({
-      model: 'openai/gpt-4o',
+      model: 'z-ai/glm-4.5-air:free',
       max_tokens: 1024,
       temperature: 0.7,
       messages: [
@@ -81,6 +81,10 @@ Genera una respuesta JSON con:
         { role: 'user', content: prompt }
       ],
       plugins: [{ id: 'response-healing' }],
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 5000,  // Moderate budget for translation
+      },
     });
 
     // Parse JSON from response using robust extraction

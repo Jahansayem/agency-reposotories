@@ -64,13 +64,17 @@ If the transcription doesn't contain any clear tasks, still return one task with
 Leave dueDate as empty string "" if no date is mentioned.
 Leave assignedTo as empty string "" if no person is mentioned.`;
 
-    // Call OpenRouter API with GPT-4o
+    // Call OpenRouter API with GLM-4.5-Air (thinking mode enabled)
     const responseText = await callOpenRouter({
-      model: 'openai/gpt-4o',
+      model: 'z-ai/glm-4.5-air:free',
       max_tokens: 1024,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
       plugins: [{ id: 'response-healing' }],
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 8000,  // Medium budget for voicemail parsing
+      },
     });
 
     // Parse JSON from response using robust extraction

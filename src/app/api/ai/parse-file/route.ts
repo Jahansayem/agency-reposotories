@@ -129,7 +129,7 @@ Respond with ONLY the JSON object, no other text.`,
         'X-Title': 'Wavezly Todo',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o',
+        model: 'z-ai/glm-4.5-air:free',
         max_tokens: 2000,
         temperature: 0.7,
         messages: [
@@ -139,6 +139,10 @@ Respond with ONLY the JSON object, no other text.`,
           },
         ],
         plugins: [{ id: 'response-healing' }],
+        thinking: {
+          type: 'enabled',
+          budget_tokens: 10000,  // High budget for file parsing with vision
+        },
       }),
     });
 

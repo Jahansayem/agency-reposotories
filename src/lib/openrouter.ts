@@ -14,6 +14,10 @@ interface OpenRouterRequest {
   max_tokens?: number;
   temperature?: number;
   plugins?: Array<{ id: string }>;
+  thinking?: {
+    type: 'enabled' | 'disabled';
+    budget_tokens?: number;
+  };
 }
 
 interface OpenRouterError {
@@ -31,12 +35,14 @@ interface OpenRouterResponse {
     };
     finish_reason?: string;
     native_finish_reason?: string;
+    thinking_process?: string;
   }[];
   error?: OpenRouterError;
   usage?: {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
+    thinking_tokens?: number;
   };
 }
 
@@ -97,6 +103,12 @@ export async function callOpenRouter(
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
     throw new Error('OpenRouter response missing content');
+  }
+
+  // Optional: Log thinking process if available (useful for debugging)
+  const thinkingProcess = data.choices?.[0]?.thinking_process;
+  if (thinkingProcess && process.env.NODE_ENV === 'development') {
+    console.log('[OpenRouter Thinking Process]', thinkingProcess);
   }
 
   return content;

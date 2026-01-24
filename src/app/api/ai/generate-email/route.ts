@@ -227,9 +227,9 @@ The warnings array should flag any items that need the agent's review before sen
       ? `Genera un correo electrónico de actualización para el cliente con los siguientes detalles:`
       : `Generate a customer update email with the following details:`) + promptDetails;
 
-    // Call OpenRouter API with GPT-4o
+    // Call OpenRouter API with GLM-4.5-Air (thinking mode enabled)
     const responseText = await callOpenRouter({
-      model: 'openai/gpt-4o',
+      model: 'z-ai/glm-4.5-air:free',
       max_tokens: 1024,
       temperature: 0.7,
       messages: [
@@ -237,6 +237,10 @@ The warnings array should flag any items that need the agent's review before sen
         { role: 'user', content: prompt }
       ],
       plugins: [{ id: 'response-healing' }],
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 8000,  // Medium budget for professional email generation
+      },
     });
 
     // Parse JSON from response using robust extraction
