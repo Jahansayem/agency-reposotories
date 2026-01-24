@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { callOpenRouter } from '@/lib/openrouter';
 import { logger } from '@/lib/logger';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 // Verify API key middleware
 function verifyApiKey(request: NextRequest): boolean {
@@ -58,15 +54,12 @@ Rules:
 
 Respond with ONLY the JSON object, no other text.`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const responseText = await callOpenRouter({
+      model: 'anthropic/claude-3.5-sonnet',
       max_tokens: 500,
+      temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
     });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
 
     // Parse the JSON from Claude's response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -95,9 +88,20 @@ Respond with ONLY the JSON object, no other text.`;
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error parsing email', error, { component: 'OutlookParseEmailAPI', details: errorMessage });
+    logger.error('Error parsing email', error, {
+      component: 'OutlookParseEmailAPI',
+      hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to parse email', details: errorMessage },
+      {
+        success: false,
+        error: 'Failed to parse email',
+        // Development-only error details
+        ...(process.env.NODE_ENV === 'development' && {
+          details: errorMessage,
+          hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY
+        })
+      },
       { status: 500 }
     );
   }

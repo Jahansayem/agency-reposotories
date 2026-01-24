@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { callOpenRouter } from '@/lib/openrouter';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import type { Todo, ActivityLogEntry } from '@/types/todo';
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 // Initialize Supabase client with service role for server-side queries
 function getSupabaseClient() {
@@ -181,8 +176,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for API key
-    if (!process.env.ANTHROPIC_API_KEY) {
-      logger.error('ANTHROPIC_API_KEY not configured', undefined, { component: 'DailyDigestAPI' });
+    if (!process.env.OPENROUTER_API_KEY) {
+      logger.error('OPENROUTER_API_KEY not configured', undefined, { component: 'DailyDigestAPI' });
       return NextResponse.json(
         { success: false, error: 'AI service not configured' },
         { status: 500 }
@@ -327,16 +322,13 @@ Guidelines:
 - Acknowledge team wins to boost morale
 - Be encouraging even if there are challenges`;
 
-    // Call Claude API
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    // Call OpenRouter API
+    const responseText = await callOpenRouter({
+      model: 'anthropic/claude-3.5-sonnet',
       max_tokens: 1024,
+      temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
     });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
 
     // Parse the JSON from Claude's response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);

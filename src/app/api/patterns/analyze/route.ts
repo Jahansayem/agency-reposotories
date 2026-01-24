@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import Anthropic from '@anthropic-ai/sdk';
+import { callOpenRouter } from '@/lib/openrouter';
 
 /**
  * POST /api/patterns/analyze
@@ -12,7 +12,7 @@ export async function POST() {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const openRouterKey = process.env.OPENROUTER_API_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
       return NextResponse.json(
@@ -21,7 +21,7 @@ export async function POST() {
       );
     }
 
-    if (!anthropicKey) {
+    if (!openRouterKey) {
       return NextResponse.json(
         { error: 'AI service not configured' },
         { status: 500 }
@@ -56,11 +56,7 @@ export async function POST() {
       });
     }
 
-    // Use Claude to analyze and categorize tasks
-    const anthropic = new Anthropic({
-      apiKey: anthropicKey,
-    });
-
+    // Use OpenRouter to analyze and categorize tasks
     const taskSummary = completedTasks
       .slice(0, 200) // Limit for context window
       .map(t => {
@@ -69,9 +65,10 @@ export async function POST() {
       })
       .join('\n');
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const responseText = await callOpenRouter({
+      model: 'anthropic/claude-3.5-sonnet',
       max_tokens: 2048,
+      temperature: 0.7,
       messages: [
         {
           role: 'user',
@@ -108,9 +105,6 @@ Group similar tasks together and extract common subtask patterns. Only include p
         },
       ],
     });
-
-    // Extract and parse the response
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
 
     // Try to parse JSON from response
     let patterns;
