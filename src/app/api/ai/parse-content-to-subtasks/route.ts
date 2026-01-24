@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { callOpenRouter } from '@/lib/openrouter';
 
 export interface ParsedSubtask {
   text: string;
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // If no API key, return a simple fallback
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENROUTER_API_KEY) {
       // Split by sentences/newlines as fallback
       const lines = content
         .split(/[.\n]+/)
@@ -47,10 +47,6 @@ export async function POST(request: NextRequest) {
         }],
       });
     }
-
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
 
     const today = new Date().toISOString().split('T')[0];
     const contentTypeLabel = contentType === 'email' ? 'email' : contentType === 'voicemail' ? 'voicemail transcription' : 'message';
@@ -101,15 +97,13 @@ Rules:
 
 Respond with ONLY the JSON object.`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    // Call OpenRouter API with Claude 3.5 Sonnet
+    const responseText = await callOpenRouter({
+      model: 'anthropic/claude-3.5-sonnet',
       max_tokens: 1200,
+      temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
     });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
 
     // Parse the JSON from Claude's response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -151,9 +145,19 @@ Respond with ONLY the JSON object.`;
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error parsing content to subtasks', error, { component: 'ParseContentToSubtasksAPI', details: errorMessage });
+
+    logger.error('Error parsing content to subtasks', error, {
+      component: 'ParseContentToSubtasksAPI',
+      details: errorMessage,
+      hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+    });
+
     return NextResponse.json(
-      { success: false, error: 'Failed to parse content', details: errorMessage },
+      {
+        success: false,
+        error: 'Failed to parse content',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }

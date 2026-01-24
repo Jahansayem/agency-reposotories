@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
-
-const anthropic = new Anthropic();
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,28 +113,53 @@ Guidelines:
 Respond with ONLY the JSON object, no other text.`,
     });
 
-    // Use Claude's vision capability to read and parse the document
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: contentBlocks,
-        },
-      ],
+    // Check for OpenRouter API key
+    if (!process.env.OPENROUTER_API_KEY) {
+      throw new Error('OPENROUTER_API_KEY not configured');
+    }
+
+    // Use OpenRouter API with Claude vision capability
+    const apiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://wavezly.netlify.app',
+        'X-Title': 'Wavezly Todo',
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-3.5-sonnet',
+        max_tokens: 2000,
+        temperature: 0.7,
+        messages: [
+          {
+            role: 'user',
+            content: contentBlocks,
+          },
+        ],
+      }),
     });
 
-    // Extract JSON from response
-    const textContent = response.content.find(block => block.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      throw new Error(`OpenRouter API error: ${apiResponse.status} - ${errorText}`);
+    }
+
+    const apiData = await apiResponse.json();
+
+    if (!apiData.choices || apiData.choices.length === 0) {
+      throw new Error('No response from AI');
+    }
+
+    const textContent = apiData.choices[0].message.content;
+    if (!textContent) {
       throw new Error('No text response from AI');
     }
 
     let result;
     try {
       // Clean the response - remove any markdown code blocks if present
-      let jsonText = textContent.text.trim();
+      let jsonText = textContent.trim();
       if (jsonText.startsWith('```json')) {
         jsonText = jsonText.slice(7);
       }
@@ -149,7 +171,7 @@ Respond with ONLY the JSON object, no other text.`,
       }
       result = JSON.parse(jsonText.trim());
     } catch {
-      logger.error('Failed to parse AI response', undefined, { component: 'ParseFileAPI', responseText: textContent.text });
+      logger.error('Failed to parse AI response', undefined, { component: 'ParseFileAPI', responseText: textContent });
       throw new Error('Failed to parse AI response as JSON');
     }
 
@@ -161,11 +183,19 @@ Respond with ONLY the JSON object, no other text.`,
       subtasks: result.subtasks || [],
     });
   } catch (error) {
-    logger.error('Error parsing file', error, { component: 'ParseFileAPI' });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to parse file';
+
+    logger.error('Error parsing file', error, {
+      component: 'ParseFileAPI',
+      details: errorMessage,
+      hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+    });
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to parse file',
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       },
       { status: 500 }
     );

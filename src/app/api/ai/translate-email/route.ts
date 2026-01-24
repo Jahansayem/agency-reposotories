@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { callOpenRouter } from '@/lib/openrouter';
 
 // Email translation endpoint
 // Translates existing emails from English to Spanish
@@ -48,15 +48,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { success: false, error: 'API key not configured' },
         { status: 500 }
       );
     }
-
-    const anthropic = new Anthropic({ apiKey });
 
     const prompt = `Traduce el siguiente correo electrónico del inglés al español, manteniendo el tono y estilo profesional de un agente de seguros:
 
@@ -72,21 +70,19 @@ Genera una respuesta JSON con:
   "body": "El cuerpo traducido (mantén los \\n para saltos de línea)"
 }`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    // Call OpenRouter API with Claude 3.5 Sonnet
+    const responseText = await callOpenRouter({
+      model: 'anthropic/claude-3.5-sonnet',
       max_tokens: 1024,
-      system: TRANSLATION_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      messages: [
+        { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
+        { role: 'user', content: prompt }
+      ],
     });
 
-    // Extract text response
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from AI');
-    }
-
     // Parse JSON from response
-    const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('Could not parse translation response');
     }

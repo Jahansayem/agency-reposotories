@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { callOpenRouter } from '@/lib/openrouter';
 
 // Parse voicemail transcription to extract multiple tasks
 export async function POST(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENROUTER_API_KEY) {
       // Return the transcription as a single task if no AI available
       return NextResponse.json({
         success: true,
@@ -28,20 +28,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
     const userList = users && users.length > 0 ? users.join(', ') : 'none specified';
     const today = new Date().toISOString().split('T')[0];
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a task extraction assistant. Analyze this voicemail transcription and extract ALL distinct action items or tasks mentioned.
+    const prompt = `You are a task extraction assistant. Analyze this voicemail transcription and extract ALL distinct action items or tasks mentioned.
 
 Voicemail transcription:
 "${transcription}"
@@ -71,13 +61,15 @@ Respond ONLY with valid JSON in this exact format:
 
 If the transcription doesn't contain any clear tasks, still return one task with the cleaned-up text.
 Leave dueDate as empty string "" if no date is mentioned.
-Leave assignedTo as empty string "" if no person is mentioned.`,
-        },
-      ],
-    });
+Leave assignedTo as empty string "" if no person is mentioned.`;
 
-    // Extract text from the response
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    // Call OpenRouter API with Claude 3.5 Sonnet
+    const responseText = await callOpenRouter({
+      model: 'anthropic/claude-3.5-sonnet',
+      max_tokens: 1024,
+      temperature: 0.7,
+      messages: [{ role: 'user', content: prompt }],
+    });
 
     // Try to parse JSON from response
     let parsedResponse;
@@ -136,9 +128,20 @@ Leave assignedTo as empty string "" if no person is mentioned.`,
     });
 
   } catch (error) {
-    logger.error('Voicemail parsing error', error, { component: 'ParseVoicemailAPI' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    logger.error('Voicemail parsing error', error, {
+      component: 'ParseVoicemailAPI',
+      details: errorMessage,
+      hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+    });
+
     return NextResponse.json(
-      { success: false, error: 'Failed to parse voicemail' },
+      {
+        success: false,
+        error: 'Failed to parse voicemail',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }

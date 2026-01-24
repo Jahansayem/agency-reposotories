@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { callOpenRouter } from '@/lib/openrouter';
 import { analyzeTaskPattern, getAllPatternDefinitions, getCompletionRateWarning } from '@/lib/insurancePatterns';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 export interface Subtask {
   text: string;
@@ -114,15 +110,13 @@ Task: "Call back customer about auto claim"
 
 Respond with ONLY the JSON object, no other text.`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    // Call OpenRouter API with Claude 3.5 Sonnet
+    const responseText = await callOpenRouter({
+      model: 'anthropic/claude-3.5-sonnet',
       max_tokens: 800,
+      temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
     });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
 
     // Parse the JSON from Claude's response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -189,9 +183,19 @@ Respond with ONLY the JSON object, no other text.`;
     return NextResponse.json(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error breaking down task', error, { component: 'BreakdownTaskAPI', details: errorMessage });
+
+    logger.error('Error breaking down task', error, {
+      component: 'BreakdownTaskAPI',
+      details: errorMessage,
+      hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+    });
+
     return NextResponse.json(
-      { success: false, error: 'Failed to break down task', details: errorMessage },
+      {
+        success: false,
+        error: 'Failed to break down task',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     );
   }
