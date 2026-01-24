@@ -133,7 +133,7 @@ Respond with ONLY the JSON object, no other text.`;
 
     // Fallback if parsing fails
     if (!result || !result.subtasks) {
-      logger.warn('AI response parsing failed for task breakdown', undefined, {
+      logger.warn('AI response parsing failed for task breakdown', {
         component: 'BreakdownTaskAPI',
         responsePreview: responseText.substring(0, 200)
       });

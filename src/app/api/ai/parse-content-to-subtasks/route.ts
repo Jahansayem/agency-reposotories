@@ -119,7 +119,7 @@ Respond with ONLY the JSON object.`;
 
     // Fallback if parsing fails
     if (!result || !result.subtasks) {
-      logger.warn('AI response parsing failed for content parsing', undefined, {
+      logger.warn('AI response parsing failed for content parsing', {
         component: 'ParseContentToSubtasksAPI',
         responsePreview: responseText.substring(0, 200)
       });

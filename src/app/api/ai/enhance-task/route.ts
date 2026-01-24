@@ -80,7 +80,7 @@ Respond with ONLY the JSON object, no other text.`;
 
     // Fallback if parsing fails
     if (!enhanced) {
-      logger.warn('AI response parsing failed, returning original text', undefined, {
+      logger.warn('AI response parsing failed, returning original text', {
         component: 'EnhanceTaskAPI',
         responsePreview: responseText.substring(0, 200)
       });

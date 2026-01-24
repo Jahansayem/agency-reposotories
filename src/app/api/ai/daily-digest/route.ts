@@ -347,7 +347,7 @@ Guidelines:
 
     // Fallback if parsing fails
     if (!aiResponse) {
-      logger.warn('AI response parsing failed for daily digest', undefined, {
+      logger.warn('AI response parsing failed for daily digest', {
         component: 'DailyDigestAPI',
         responsePreview: responseText.substring(0, 200)
       });

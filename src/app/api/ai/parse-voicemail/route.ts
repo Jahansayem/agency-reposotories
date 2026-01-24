@@ -89,7 +89,7 @@ Leave assignedTo as empty string "" if no person is mentioned.`;
 
     // If parsing fails, return the transcription as a single task
     if (!parsedResponse) {
-      logger.warn('AI response parsing failed for voicemail', undefined, {
+      logger.warn('AI response parsing failed for voicemail', {
         component: 'ParseVoicemailAPI',
         responsePreview: responseText.substring(0, 200)
       });

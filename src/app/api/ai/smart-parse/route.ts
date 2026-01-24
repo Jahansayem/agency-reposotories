@@ -196,7 +196,7 @@ Respond with ONLY the JSON object, no other text.`;
 
     // Fallback if parsing fails - return simple task instead of error
     if (!result || !hasRequiredProperties(result, ['mainTask'])) {
-      logger.warn('AI response parsing failed, using fallback', undefined, {
+      logger.warn('AI response parsing failed, using fallback', {
         component: 'SmartParseAPI',
         responsePreview: responseText.substring(0, 200)
       });
