@@ -10,6 +10,15 @@ export interface Subtask {
   estimatedMinutes?: number;
 }
 
+// Normalize priority into the allowed union type
+const allowedPriorities = ['urgent', 'high', 'medium', 'low'] as const;
+type AllowedPriority = typeof allowedPriorities[number];
+
+function normalizePriority(raw?: unknown): AllowedPriority {
+  const p = String(raw ?? '').trim().toLowerCase();
+  return (allowedPriorities.includes(p as AllowedPriority) ? (p as AllowedPriority) : 'low');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -149,9 +158,7 @@ Respond with ONLY the JSON object, no other text.`;
       .slice(0, 6) // Max 6 subtasks
       .map((subtask: { text?: string; priority?: string; estimatedMinutes?: number }) => ({
         text: String(subtask.text || '').slice(0, 200),
-        priority: ['low', 'medium', 'high', 'urgent'].includes(subtask.priority || '')
-          ? subtask.priority
-          : 'medium',
+        priority: normalizePriority(subtask.priority),
         estimatedMinutes: typeof subtask.estimatedMinutes === 'number'
           ? Math.min(Math.max(subtask.estimatedMinutes, 5), 480) // 5 min to 8 hours
           : undefined,
