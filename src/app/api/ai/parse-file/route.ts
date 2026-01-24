@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { extractJSON } from '@/lib/parseAIResponse';
 
 export async function POST(request: NextRequest) {
   try {
@@ -128,7 +129,7 @@ Respond with ONLY the JSON object, no other text.`,
         'X-Title': 'Wavezly Todo',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'openai/gpt-4o',
         max_tokens: 2000,
         temperature: 0.7,
         messages: [
@@ -137,6 +138,7 @@ Respond with ONLY the JSON object, no other text.`,
             content: contentBlocks,
           },
         ],
+        plugins: [{ id: 'response-healing' }],
       }),
     });
 
@@ -156,22 +158,28 @@ Respond with ONLY the JSON object, no other text.`,
       throw new Error('No text response from AI');
     }
 
-    let result;
-    try {
-      // Clean the response - remove any markdown code blocks if present
-      let jsonText = textContent.trim();
-      if (jsonText.startsWith('```json')) {
-        jsonText = jsonText.slice(7);
-      }
-      if (jsonText.startsWith('```')) {
-        jsonText = jsonText.slice(3);
-      }
-      if (jsonText.endsWith('```')) {
-        jsonText = jsonText.slice(0, -3);
-      }
-      result = JSON.parse(jsonText.trim());
-    } catch {
-      logger.error('Failed to parse AI response', undefined, { component: 'ParseFileAPI', responseText: textContent });
+    // Parse using robust JSON extraction
+    const result = extractJSON<{
+      documentSummary?: string;
+      extractedText?: string;
+      mainTask?: {
+        text?: string;
+        priority?: string;
+        dueDate?: string;
+        assignedTo?: string;
+      };
+      subtasks?: Array<{
+        text?: string;
+        priority?: string;
+        estimatedMinutes?: number;
+      }>;
+    }>(textContent);
+
+    if (!result) {
+      logger.error('Failed to parse AI response', undefined, {
+        component: 'ParseFileAPI',
+        responsePreview: textContent.substring(0, 200)
+      });
       throw new Error('Failed to parse AI response as JSON');
     }
 
@@ -187,8 +195,10 @@ Respond with ONLY the JSON object, no other text.`,
 
     logger.error('Error parsing file', error, {
       component: 'ParseFileAPI',
-      details: errorMessage,
+      endpoint: '/api/ai/parse-file',
       hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      errorMessage,
     });
 
     return NextResponse.json(

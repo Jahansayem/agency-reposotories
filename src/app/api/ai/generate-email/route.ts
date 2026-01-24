@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 
 // Customer email generation endpoint
 // Generates professional update emails for internal staff to send to customers
@@ -226,24 +227,33 @@ The warnings array should flag any items that need the agent's review before sen
       ? `Genera un correo electrónico de actualización para el cliente con los siguientes detalles:`
       : `Generate a customer update email with the following details:`) + promptDetails;
 
-    // Call OpenRouter API with Claude 3.5 Sonnet
+    // Call OpenRouter API with GPT-4o
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 1024,
       temperature: 0.7,
       messages: [
         { role: 'system', content: language === 'spanish' ? SPANISH_SYSTEM_PROMPT : SYSTEM_PROMPT },
         { role: 'user', content: prompt }
       ],
+      plugins: [{ id: 'response-healing' }],
     });
 
-    // Parse JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    // Parse JSON from response using robust extraction
+    const emailData = extractJSON<{
+      subject?: string;
+      body?: string;
+      suggestedFollowUp?: string;
+      warnings?: Array<{
+        type: string;
+        message: string;
+        severity: string;
+      }>;
+    }>(responseText);
+
+    if (!emailData || !emailData.subject || !emailData.body) {
       throw new Error('Could not parse email response');
     }
-
-    const emailData = JSON.parse(jsonMatch[0]);
 
     return NextResponse.json({
       success: true,
@@ -258,15 +268,20 @@ The warnings array should flag any items that need the agent's review before sen
 
     logger.error('Email generation error', error, {
       component: 'GenerateEmailAPI',
-      details: errorMessage,
+      endpoint: '/api/ai/generate-email',
       hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      errorMessage,
     });
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to generate email. Please try again.',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        ...(process.env.NODE_ENV === 'development' && {
+          details: errorMessage,
+          hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+        }),
       },
       { status: 500 }
     );

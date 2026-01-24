@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,25 +56,42 @@ Examples:
 
 Respond with ONLY the JSON object, no other text.`;
 
-    // Call OpenRouter API with Claude 3.5 Sonnet
+    // Call OpenRouter API with GPT-4o
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 300,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
+      plugins: [{ id: 'response-healing' }],
     });
 
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'EnhanceTaskAPI', responseText });
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
+    // Parse the JSON from Claude's response using robust extraction
+    const enhanced = extractJSON<{
+      text?: string;
+      priority?: string;
+      dueDate?: string;
+      assignedTo?: string;
+      wasEnhanced?: boolean;
+    }>(responseText);
 
-    const enhanced = JSON.parse(jsonMatch[0]);
+    // Fallback if parsing fails
+    if (!enhanced) {
+      logger.warn('AI response parsing failed, returning original text', undefined, {
+        component: 'EnhanceTaskAPI',
+        responsePreview: responseText.substring(0, 200)
+      });
+
+      return NextResponse.json({
+        success: true,
+        enhanced: {
+          text,
+          priority: 'medium',
+          dueDate: '',
+          assignedTo: '',
+          wasEnhanced: false,
+        },
+      });
+    }
 
     // Validate the response structure
     const validatedResult = {
@@ -95,15 +113,20 @@ Respond with ONLY the JSON object, no other text.`;
 
     logger.error('Error enhancing task', error, {
       component: 'EnhanceTaskAPI',
-      details: errorMessage,
+      endpoint: '/api/ai/enhance-task',
       hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      errorMessage,
     });
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to enhance task',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        ...(process.env.NODE_ENV === 'development' && {
+          details: errorMessage,
+          hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+        }),
       },
       { status: 500 }
     );

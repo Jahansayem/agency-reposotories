@@ -13,18 +13,27 @@ interface OpenRouterRequest {
   messages: OpenRouterMessage[];
   max_tokens?: number;
   temperature?: number;
+  plugins?: Array<{ id: string }>;
+}
+
+interface OpenRouterError {
+  code: number | string;
+  message: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface OpenRouterResponse {
-  id: string;
-  choices: {
-    message: {
+  id?: string;
+  choices?: {
+    message?: {
       role: string;
       content: string;
     };
-    finish_reason: string;
+    finish_reason?: string;
+    native_finish_reason?: string;
   }[];
-  usage: {
+  error?: OpenRouterError;
+  usage?: {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
@@ -52,21 +61,43 @@ export async function callOpenRouter(
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://wavezly.netlify.app',
-      'X-Title': 'Wavezly Todo List - Daily Digest'
+      'X-Title': 'Wavezly Todo List - AI Features'
     },
     body: JSON.stringify(request)
   });
 
+  // Parse response body (could be error or success)
+  let data: OpenRouterResponse;
+  try {
+    data = await response.json();
+  } catch (parseError) {
+    throw new Error(`OpenRouter response parsing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+  }
+
+  // Check for HTTP-level errors (400, 401, 429, 500, etc.)
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+    const errorMsg = data.error?.message || 'Unknown error';
+    const errorCode = data.error?.code || response.status;
+    throw new Error(`OpenRouter API error (${errorCode}): ${errorMsg}`);
   }
 
-  const data: OpenRouterResponse = await response.json();
-
-  if (!data.choices?.[0]?.message?.content) {
-    throw new Error('Invalid OpenRouter response format');
+  // Check for mid-stream errors (response.ok but contains error field)
+  if (data.error) {
+    throw new Error(`OpenRouter error: ${data.error.message} (code: ${data.error.code})`);
   }
 
-  return data.choices[0].message.content;
+  // Check finish_reason for error conditions
+  const finishReason = data.choices?.[0]?.finish_reason;
+  if (finishReason === 'error') {
+    const nativeReason = data.choices?.[0]?.native_finish_reason || 'unknown';
+    throw new Error(`OpenRouter generation error: ${nativeReason}`);
+  }
+
+  // Validate response structure
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenRouter response missing content');
+  }
+
+  return content;
 }

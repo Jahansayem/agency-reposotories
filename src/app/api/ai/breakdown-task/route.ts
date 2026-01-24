@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 import { analyzeTaskPattern, getAllPatternDefinitions, getCompletionRateWarning } from '@/lib/insurancePatterns';
 
 export interface Subtask {
@@ -110,25 +111,34 @@ Task: "Call back customer about auto claim"
 
 Respond with ONLY the JSON object, no other text.`;
 
-    // Call OpenRouter API with Claude 3.5 Sonnet
+    // Call OpenRouter API with GPT-4o
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 800,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
+      plugins: [{ id: 'response-healing' }],
     });
 
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'BreakdownTaskAPI', responseText });
+    // Parse the JSON from Claude's response using robust extraction
+    const result = extractJSON<{
+      subtasks?: Array<{ text?: string; priority?: string; estimatedMinutes?: number }>;
+      summary?: string;
+      category?: string;
+    }>(responseText);
+
+    // Fallback if parsing fails
+    if (!result || !result.subtasks) {
+      logger.warn('AI response parsing failed for task breakdown', undefined, {
+        component: 'BreakdownTaskAPI',
+        responsePreview: responseText.substring(0, 200)
+      });
+
       return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
+        { success: false, error: 'Could not generate subtasks for this task' },
+        { status: 400 }
       );
     }
-
-    const result = JSON.parse(jsonMatch[0]);
 
     // Validate and clean up the response
     const validatedSubtasks: Subtask[] = (result.subtasks || [])
@@ -186,15 +196,20 @@ Respond with ONLY the JSON object, no other text.`;
 
     logger.error('Error breaking down task', error, {
       component: 'BreakdownTaskAPI',
-      details: errorMessage,
+      endpoint: '/api/ai/breakdown-task',
       hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      errorMessage,
     });
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to break down task',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        ...(process.env.NODE_ENV === 'development' && {
+          details: errorMessage,
+          hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+        }),
       },
       { status: 500 }
     );

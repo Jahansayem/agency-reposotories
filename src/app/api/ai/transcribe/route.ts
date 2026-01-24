@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 
 // Audio file transcription endpoint using OpenAI Whisper + Claude for task parsing
 // Supports three modes:
@@ -140,9 +142,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Use Claude to extract tasks from the transcription
-    if (!process.env.ANTHROPIC_API_KEY) {
-      // If no Claude API key, return just the transcription
-      logger.debug('ANTHROPIC_API_KEY not configured, returning transcription only', { component: 'TranscribeAPI' });
+    if (!process.env.OPENROUTER_API_KEY) {
+      // If no OpenRouter API key, return just the transcription
+      logger.debug('OPENROUTER_API_KEY not configured, returning transcription only', { component: 'TranscribeAPI' });
       return NextResponse.json({
         success: true,
         text: transcription.trim(),
@@ -239,31 +241,23 @@ Rules:
 - Don't create redundant or overly granular subtasks`;
     }
 
-    // Use Claude to extract tasks from the transcription
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+    // Use OpenRouter to extract tasks from the transcription
+    let responseText: string;
+    try {
+      responseText = await callOpenRouter({
+        model: 'openai/gpt-4o',
         max_tokens: 4096,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      }),
-    });
+        temperature: 0.7,
+        messages: [{ role: 'user', content: prompt }],
+        plugins: [{ id: 'response-healing' }],
+      });
+    } catch (error) {
+      logger.error('OpenRouter API error', error, {
+        component: 'TranscribeAPI',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      });
 
-    if (!claudeResponse.ok) {
-      const errorData = await claudeResponse.json().catch(() => ({}));
-      logger.error('Claude API error', undefined, { component: 'TranscribeAPI', status: claudeResponse.status, errorData });
-
-      // Still return the transcription even if Claude fails
+      // Still return the transcription even if OpenRouter fails
       return NextResponse.json({
         success: true,
         text: transcription.trim(),
@@ -280,22 +274,20 @@ Rules:
       });
     }
 
-    const data = await claudeResponse.json();
-    const responseText = data.content?.[0]?.type === 'text' ? data.content[0].text : '';
-
     // Handle tasks mode
     if (mode === 'tasks') {
       try {
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-
-          const tasks = (parsed.tasks || []).map((task: {
+        const parsed = extractJSON<{
+          tasks?: Array<{
             text?: string;
             priority?: string;
             dueDate?: string;
             assignedTo?: string;
-          }) => ({
+          }>;
+        }>(responseText);
+
+        if (parsed && parsed.tasks) {
+          const tasks = parsed.tasks.map((task) => ({
             text: task.text || transcription.trim().slice(0, 200),
             priority: ['low', 'medium', 'high', 'urgent'].includes(task.priority || '')
               ? task.priority
@@ -332,17 +324,19 @@ Rules:
     // Handle subtasks mode
     if (mode === 'subtasks') {
       try {
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
+        const parsed = extractJSON<{
+          subtasks?: Array<{
+            text?: string;
+            priority?: string;
+            estimatedMinutes?: number;
+          }>;
+          summary?: string;
+        }>(responseText);
 
-          const subtasks = (parsed.subtasks || [])
+        if (parsed && parsed.subtasks) {
+          const subtasks = parsed.subtasks
             .slice(0, 10)
-            .map((subtask: {
-              text?: string;
-              priority?: string;
-              estimatedMinutes?: number;
-            }) => ({
+            .map((subtask) => ({
               text: String(subtask.text || '').slice(0, 200),
               priority: ['low', 'medium', 'high', 'urgent'].includes(subtask.priority || '')
                 ? subtask.priority

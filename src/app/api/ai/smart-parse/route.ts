@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON, hasRequiredProperties } from '@/lib/parseAIResponse';
 
 export interface ParsedSubtask {
   text: string;
@@ -172,25 +173,47 @@ Complex input: "Email from client: Hi, thanks for the presentation yesterday. Ca
 
 Respond with ONLY the JSON object, no other text.`;
 
-    // Call OpenRouter API with Claude 3.5 Sonnet
+    // Call OpenRouter API with GPT-4o
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 1000,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
+      plugins: [{ id: 'response-healing' }],  // Auto-fix malformed JSON
     });
 
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'SmartParseAPI', responseText });
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
+    // Parse the JSON from Claude's response using robust extraction
+    const result = extractJSON<{
+      mainTask?: { text?: string; priority?: string; dueDate?: string; assignedTo?: string };
+      subtasks?: Array<{ text?: string; priority?: string; estimatedMinutes?: number }>;
+      summary?: string;
+      wasComplex?: boolean;
+    }>(responseText);
 
-    const result = JSON.parse(jsonMatch[0]);
+    // Fallback if parsing fails - return simple task instead of error
+    if (!result || !hasRequiredProperties(result, ['mainTask'])) {
+      logger.warn('AI response parsing failed, using fallback', undefined, {
+        component: 'SmartParseAPI',
+        responsePreview: responseText.substring(0, 200)
+      });
+
+      // FALLBACK: Return original text as simple task
+      return NextResponse.json({
+        success: true,
+        result: {
+          mainTask: {
+            text: text.slice(0, 200),
+            priority: 'medium',
+            dueDate: '',
+            assignedTo: '',
+          },
+          subtasks: [],
+          summary: 'Parsed from user input',
+          wasComplex: false,
+        },
+        warning: 'AI parsing unavailable, created simple task',
+      });
+    }
 
     // Validate and clean up the response
     const validatedResult: SmartParseResult = {
@@ -227,15 +250,20 @@ Respond with ONLY the JSON object, no other text.`;
 
     logger.error('Error in smart parse', error, {
       component: 'SmartParseAPI',
-      details: errorMessage,
+      endpoint: '/api/ai/smart-parse',
       hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      errorMessage,
     });
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to parse content',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        ...(process.env.NODE_ENV === 'development' && {
+          details: errorMessage,
+          hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+        }),
       },
       { status: 500 }
     );

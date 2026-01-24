@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 
 // Parse voicemail transcription to extract multiple tasks
 export async function POST(request: NextRequest) {
@@ -63,26 +64,32 @@ If the transcription doesn't contain any clear tasks, still return one task with
 Leave dueDate as empty string "" if no date is mentioned.
 Leave assignedTo as empty string "" if no person is mentioned.`;
 
-    // Call OpenRouter API with Claude 3.5 Sonnet
+    // Call OpenRouter API with GPT-4o
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 1024,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
+      plugins: [{ id: 'response-healing' }],
     });
 
-    // Try to parse JSON from response
-    let parsedResponse;
-    try {
-      // Find JSON in the response (it might be wrapped in markdown code blocks)
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedResponse = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch {
-      // If parsing fails, return the transcription as a single task
+    // Parse JSON from response using robust extraction
+    const parsedResponse = extractJSON<{
+      tasks?: Array<{
+        text?: string;
+        priority?: string;
+        dueDate?: string;
+        assignedTo?: string;
+      }>;
+    }>(responseText);
+
+    // If parsing fails, return the transcription as a single task
+    if (!parsedResponse) {
+      logger.warn('AI response parsing failed for voicemail', undefined, {
+        component: 'ParseVoicemailAPI',
+        responsePreview: responseText.substring(0, 200)
+      });
+
       return NextResponse.json({
         success: true,
         tasks: [{
@@ -132,15 +139,20 @@ Leave assignedTo as empty string "" if no person is mentioned.`;
 
     logger.error('Voicemail parsing error', error, {
       component: 'ParseVoicemailAPI',
-      details: errorMessage,
+      endpoint: '/api/ai/parse-voicemail',
       hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      errorMessage,
     });
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to parse voicemail',
-        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        ...(process.env.NODE_ENV === 'development' && {
+          details: errorMessage,
+          hasOpenRouterKey: !!process.env.OPENROUTER_API_KEY,
+        }),
       },
       { status: 500 }
     );

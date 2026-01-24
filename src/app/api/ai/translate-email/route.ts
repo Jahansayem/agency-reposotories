@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 
 // Email translation endpoint
 // Translates existing emails from English to Spanish
@@ -70,24 +71,27 @@ Genera una respuesta JSON con:
   "body": "El cuerpo traducido (mantén los \\n para saltos de línea)"
 }`;
 
-    // Call OpenRouter API with Claude 3.5 Sonnet
+    // Call OpenRouter API with GPT-4o
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 1024,
       temperature: 0.7,
       messages: [
         { role: 'system', content: TRANSLATION_SYSTEM_PROMPT },
         { role: 'user', content: prompt }
       ],
+      plugins: [{ id: 'response-healing' }],
     });
 
-    // Parse JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    // Parse JSON from response using robust extraction
+    const translatedData = extractJSON<{
+      subject?: string;
+      body?: string;
+    }>(responseText);
+
+    if (!translatedData || !translatedData.subject || !translatedData.body) {
       throw new Error('Could not parse translation response');
     }
-
-    const translatedData = JSON.parse(jsonMatch[0]);
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import type { Todo, ActivityLogEntry } from '@/types/todo';
@@ -324,33 +325,29 @@ Guidelines:
 
     // Call OpenRouter API
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 1024,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
+      plugins: [{ id: 'response-healing' }],
     });
 
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, {
-        component: 'DailyDigestAPI',
-        responseText: responseText.substring(0, 500)
-      });
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
+    // Parse the JSON from Claude's response using robust extraction
+    const aiResponse = extractJSON<{
+      overdueSummary?: string;
+      todaySummary?: string;
+      upcomingSummary?: string;
+      focusSuggestion?: string;
+      encouragement?: string;
+    }>(responseText);
 
-    let aiResponse;
-    try {
-      aiResponse = JSON.parse(jsonMatch[0]);
-    } catch (parseError) {
-      logger.error('Failed to parse AI response JSON', parseError, {
+    // Fallback if parsing fails
+    if (!aiResponse) {
+      logger.warn('AI response parsing failed for daily digest', undefined, {
         component: 'DailyDigestAPI',
-        responseText: responseText.substring(0, 500)
+        responsePreview: responseText.substring(0, 200)
       });
+
       return NextResponse.json(
         { success: false, error: 'Failed to parse AI response' },
         { status: 500 }

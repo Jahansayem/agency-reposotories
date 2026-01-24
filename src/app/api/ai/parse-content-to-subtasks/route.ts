@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { callOpenRouter } from '@/lib/openrouter';
+import { extractJSON } from '@/lib/parseAIResponse';
 
 export interface ParsedSubtask {
   text: string;
@@ -97,25 +98,33 @@ Rules:
 
 Respond with ONLY the JSON object.`;
 
-    // Call OpenRouter API with Claude 3.5 Sonnet
+    // Call OpenRouter API with GPT-4o
     const responseText = await callOpenRouter({
-      model: 'anthropic/claude-3.5-sonnet',
+      model: 'openai/gpt-4o',
       max_tokens: 1200,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
+      plugins: [{ id: 'response-healing' }],
     });
 
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'ParseContentToSubtasksAPI', responseText });
+    // Parse the JSON from Claude's response using robust extraction
+    const result = extractJSON<{
+      subtasks?: Array<{ text?: string; priority?: string; estimatedMinutes?: number }>;
+      summary?: string;
+    }>(responseText);
+
+    // Fallback if parsing fails
+    if (!result || !result.subtasks) {
+      logger.warn('AI response parsing failed for content parsing', undefined, {
+        component: 'ParseContentToSubtasksAPI',
+        responsePreview: responseText.substring(0, 200)
+      });
+
       return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
+        { success: false, error: 'Could not extract any action items from this content' },
+        { status: 400 }
       );
     }
-
-    const result = JSON.parse(jsonMatch[0]);
 
     // Validate and clean up the response
     const validatedSubtasks: ParsedSubtask[] = (result.subtasks || [])
