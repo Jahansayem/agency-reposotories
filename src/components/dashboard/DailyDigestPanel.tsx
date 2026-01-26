@@ -230,7 +230,7 @@ export default function DailyDigestPanel({
   className = '',
 }: DailyDigestPanelProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const { digest, loading, error, refetch, isNew, digestType, nextScheduled, hasDigest } = useDailyDigest({
+  const { digest, loading, generating, error, refetch, generateNow, isNew, digestType, nextScheduled, hasDigest } = useDailyDigest({
     currentUser,
     autoFetch: true,
     enabled: true,
@@ -238,6 +238,7 @@ export default function DailyDigestPanel({
 
   // Get subtitle text based on state
   const getSubtitle = () => {
+    if (generating) return 'Generating your briefing...';
     if (loading) return 'Loading...';
     if (error) return 'Unable to load';
     if (!hasDigest) return 'Your briefing is coming';
@@ -280,7 +281,7 @@ export default function DailyDigestPanel({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {loading && (
+          {(loading || generating) && (
             <RefreshCw className="w-4 h-4 text-[var(--text-muted)] animate-spin" />
           )}
           <ChevronDown
@@ -326,10 +327,10 @@ export default function DailyDigestPanel({
               )}
 
               {/* Loading state */}
-              {loading && !error && <DailyDigestSkeleton />}
+              {(loading || generating) && !error && <DailyDigestSkeleton />}
 
               {/* No digest available state */}
-              {!hasDigest && !loading && !error && (
+              {!hasDigest && !loading && !generating && !error && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -349,6 +350,14 @@ export default function DailyDigestPanel({
                   <p className="text-xs text-[var(--text-muted)] mt-2">
                     Briefings are generated at 5 AM and 4 PM PT daily
                   </p>
+                  <button
+                    onClick={generateNow}
+                    disabled={generating}
+                    className="mt-4 px-4 py-2 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white text-sm font-medium rounded-xl hover:brightness-110 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Generate Now
+                  </button>
                 </motion.div>
               )}
 
@@ -363,7 +372,7 @@ export default function DailyDigestPanel({
               )}
 
               {/* Footer with timestamp and next scheduled */}
-              {hasDigest && digest && !loading && (
+              {hasDigest && digest && !loading && !generating && (
                 <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] flex items-center justify-between">
                   <div className="text-xs text-[var(--text-muted)]">
                     <p>
@@ -379,14 +388,24 @@ export default function DailyDigestPanel({
                       </p>
                     )}
                   </div>
-                  <button
-                    onClick={refetch}
-                    disabled={loading}
-                    className="text-xs text-[var(--accent)] hover:underline inline-flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-                    Check for update
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={generateNow}
+                      disabled={generating}
+                      className="text-xs text-[#C9A227] hover:underline inline-flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227] disabled:opacity-50"
+                    >
+                      <Sparkles className={`w-3 h-3 ${generating ? 'animate-pulse' : ''}`} />
+                      Generate fresh
+                    </button>
+                    <button
+                      onClick={refetch}
+                      disabled={loading}
+                      className="text-xs text-[var(--accent)] hover:underline inline-flex items-center gap-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                      Check for update
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

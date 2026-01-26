@@ -44,8 +44,10 @@ interface UseDailyDigestOptions {
 interface UseDailyDigestReturn {
   digest: DailyDigestData | null;
   loading: boolean;
+  generating: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  generateNow: () => Promise<void>;
   lastFetched: Date | null;
   isNew: boolean;
   digestType: 'morning' | 'afternoon' | null;
@@ -67,6 +69,7 @@ export function useDailyDigest({
 }: UseDailyDigestOptions): UseDailyDigestReturn {
   const [digest, setDigest] = useState<DailyDigestData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -125,6 +128,54 @@ export function useDailyDigest({
     }
   }, [currentUser?.name, enabled]);
 
+  // Generate a fresh digest on demand
+  const generateNow = useCallback(async () => {
+    if (!currentUser?.name || !enabled) return;
+
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const csrfToken = getCsrfToken();
+      const response = await fetch('/api/ai/daily-digest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+        },
+        body: JSON.stringify({ userName: currentUser.name }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to generate digest');
+      }
+
+      // The on-demand endpoint returns the digest directly
+      const generatedDigest: DailyDigestData = {
+        greeting: data.greeting,
+        overdueTasks: data.overdueTasks,
+        todaysTasks: data.todaysTasks,
+        teamActivity: data.teamActivity,
+        focusSuggestion: data.focusSuggestion,
+        generatedAt: data.generatedAt,
+      };
+
+      setDigest(generatedDigest);
+      setIsNew(true);
+      setDigestType(new Date().getHours() < 12 ? 'morning' : 'afternoon');
+      setHasDigest(true);
+      setLastFetched(new Date());
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate digest';
+      setError(errorMessage);
+      console.error('Error generating daily digest:', err);
+    } finally {
+      setGenerating(false);
+    }
+  }, [currentUser?.name, enabled]);
+
   // Auto-fetch on mount if enabled
   useEffect(() => {
     if (autoFetch && enabled && !digest && !loading && !lastFetched) {
@@ -135,8 +186,10 @@ export function useDailyDigest({
   return {
     digest,
     loading,
+    generating,
     error,
     refetch: fetchDigest,
+    generateNow,
     lastFetched,
     isNew,
     digestType,
