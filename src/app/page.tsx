@@ -7,6 +7,7 @@ import { AuthUser } from '@/types/todo';
 import { getStoredSession, setStoredSession, clearStoredSession } from '@/lib/auth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
+import { AgencyProvider } from '@/contexts/AgencyContext';
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -106,5 +107,9 @@ export default function Home() {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  return <MainApp currentUser={currentUser} onUserChange={handleUserChange} />;
+  return (
+    <AgencyProvider userId={currentUser.id}>
+      <MainApp currentUser={currentUser} onUserChange={handleUserChange} />
+    </AgencyProvider>
+  );
 }

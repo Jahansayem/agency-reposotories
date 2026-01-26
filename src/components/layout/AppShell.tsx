@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser } from '@/types/todo';
+import { AuthUser, isOwner } from '@/types/todo';
 import { useTodoStore } from '@/store/todoStore';
 import NavigationSidebar from './NavigationSidebar';
 import CommandPalette from './CommandPalette';
@@ -457,7 +457,7 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
         </button>
       ))}
 
-      {currentUser?.name === 'Derrick' && (
+      {isOwner(currentUser) && (
         <>
           <div className={`border-t my-4 ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`} />
           <button

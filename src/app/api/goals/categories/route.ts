@@ -1,15 +1,39 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { OWNER_USERNAME } from '@/types/todo';
 import { logger } from '@/lib/logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Verify owner access
-function isOwner(userName: string | null): boolean {
-  return userName === OWNER_USERNAME;
+// Legacy owner name for backward compatibility
+const LEGACY_OWNER_NAME = 'Derrick';
+
+/**
+ * Verify owner access by checking user's role in database
+ */
+async function verifyOwnerAccess(userName: string | null): Promise<boolean> {
+  if (!userName) return false;
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('name', userName)
+      .single();
+
+    if (error || !user) {
+      return userName === LEGACY_OWNER_NAME;
+    }
+
+    if (user.role === 'owner' || user.role === 'admin') {
+      return true;
+    }
+
+    return userName === LEGACY_OWNER_NAME;
+  } catch {
+    return userName === LEGACY_OWNER_NAME;
+  }
 }
 
 // GET - Fetch all goal categories
@@ -18,7 +42,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userName = searchParams.get('userName');
 
-    if (!isOwner(userName)) {
+    if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -42,7 +66,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, color, icon, userName } = body;
 
-    if (!isOwner(userName)) {
+    if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -86,7 +110,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { id, name, color, icon, display_order, userName } = body;
 
-    if (!isOwner(userName)) {
+    if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -123,7 +147,7 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
     const userName = searchParams.get('userName');
 
-    if (!isOwner(userName)) {
+    if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

@@ -86,6 +86,7 @@ export interface Todo {
   reminder_at?: string; // Simple single reminder timestamp
   reminder_sent?: boolean; // Whether simple reminder has been sent
   reminders?: TaskReminder[]; // Multiple reminders (from task_reminders table)
+  agency_id?: string; // Multi-tenancy: which agency this task belongs to
 }
 
 // ============================================
@@ -195,22 +196,36 @@ export interface User {
   name: string;
   color: string;
   pin_hash?: string;
+  email?: string;
+  global_role?: GlobalRole;
   created_at?: string;
   last_login?: string;
 }
 
-export type UserRole = 'admin' | 'member';
+export type UserRole = 'owner' | 'admin' | 'member';
+export type GlobalRole = 'user' | 'super_admin';
+
+// Import agency types for re-export
+import type { AgencyMembership, AgencyRole, AgencyPermissions } from './agency';
+export type { AgencyMembership, AgencyRole, AgencyPermissions };
 
 export interface AuthUser {
   id: string;
   name: string;
   color: string;
+  email?: string;
   role: UserRole;
+  global_role?: GlobalRole;
   created_at: string;
   last_login?: string;
   streak_count?: number;
   streak_last_date?: string;
   welcome_shown_at?: string;
+  // Multi-tenancy fields
+  agencies?: AgencyMembership[];
+  current_agency_id?: string;
+  current_agency_role?: AgencyRole;
+  current_agency_permissions?: AgencyPermissions;
 }
 
 export const PRIORITY_CONFIG: Record<TodoPriority, { label: string; color: string; bgColor: string; icon: string }> = {
@@ -254,6 +269,7 @@ export interface ChatMessage {
   pinned_by?: string | null; // User who pinned the message
   pinned_at?: string | null; // When it was pinned
   mentions?: string[]; // Array of mentioned usernames
+  agency_id?: string; // Multi-tenancy: which agency this message belongs to
 }
 
 // User presence status
@@ -295,6 +311,7 @@ export interface TaskTemplate {
   is_shared: boolean;
   created_at: string;
   updated_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this template belongs to
 }
 
 // Activity Log types
@@ -329,6 +346,7 @@ export interface ActivityLogEntry {
   user_name: string;
   details: Record<string, unknown>;
   created_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this activity belongs to
 }
 
 // Activity feed is now accessible to all users (legacy constants kept for compatibility)
@@ -364,6 +382,7 @@ export interface GoalCategory {
   icon: string;
   display_order: number;
   created_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this category belongs to
 }
 
 export interface StrategicGoal {
@@ -382,6 +401,7 @@ export interface StrategicGoal {
   created_by: string;
   created_at: string;
   updated_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this goal belongs to
   // Joined data
   category?: GoalCategory;
   milestones?: GoalMilestone[];
@@ -413,7 +433,78 @@ export const GOAL_PRIORITY_CONFIG: Record<GoalPriority, { label: string; color: 
 };
 
 // Owner username for dashboard access
+// DEPRECATED: Use isOwner(user) or user.role === 'owner' instead
+// Kept for backward compatibility during migration
 export const OWNER_USERNAME = 'Derrick';
+
+/**
+ * Check if a user has owner privileges
+ * Supports both single-tenant (legacy) and multi-tenant modes
+ *
+ * In multi-tenant mode, checks current_agency_role
+ * In single-tenant mode, checks role or falls back to name
+ */
+export function isOwner(user: {
+  role?: string;
+  name?: string;
+  current_agency_role?: string;
+} | null | undefined): boolean {
+  if (!user) return false;
+
+  // Multi-tenant: check agency-specific role
+  if (user.current_agency_role === 'owner') return true;
+
+  // Single-tenant: use role from database
+  if (user.role === 'owner') return true;
+
+  // Legacy fallback: check name (will be removed in future)
+  if (user.name === OWNER_USERNAME) return true;
+
+  return false;
+}
+
+/**
+ * Check if a user has admin privileges (owner or admin)
+ * Supports both single-tenant (legacy) and multi-tenant modes
+ */
+export function isAdmin(user: {
+  role?: string;
+  name?: string;
+  current_agency_role?: string;
+} | null | undefined): boolean {
+  if (!user) return false;
+
+  // Multi-tenant: check agency-specific role
+  if (user.current_agency_role === 'owner' || user.current_agency_role === 'admin') return true;
+
+  // Single-tenant: use role from database
+  if (user.role === 'owner' || user.role === 'admin') return true;
+
+  // Legacy fallback
+  if (user.name === OWNER_USERNAME) return true;
+
+  return false;
+}
+
+/**
+ * Check if a user can view strategic goals
+ * In multi-tenant mode, checks permissions
+ * In single-tenant mode, checks if user is admin
+ */
+export function canViewStrategicGoals(user: {
+  role?: string;
+  name?: string;
+  current_agency_role?: string;
+  current_agency_permissions?: { can_view_strategic_goals?: boolean };
+} | null | undefined): boolean {
+  if (!user) return false;
+
+  // Multi-tenant: check permissions
+  if (user.current_agency_permissions?.can_view_strategic_goals) return true;
+
+  // Fall back to admin check
+  return isAdmin(user);
+}
 
 // ============================================
 // Task Completion & Celebration Types

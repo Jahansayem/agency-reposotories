@@ -37,23 +37,35 @@ export function generateSessionToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
+// Idle timeout in minutes
+const IDLE_TIMEOUT_MINUTES = 30;
+
 /**
  * Validate a session from request headers
  *
  * Checks for session token in:
- * 1. X-Session-Token header
- * 2. Authorization: Bearer <token> header
- * 3. Cookie: session=<token>
+ * 1. HttpOnly session_token cookie (preferred, most secure)
+ * 2. X-Session-Token header
+ * 3. Authorization: Bearer <token> header
+ * 4. Legacy session cookie
  */
 export async function validateSession(
   request: NextRequest
 ): Promise<SessionValidationResult> {
   try {
-    // Try to get session token from various sources
+    // Try to get session token from various sources (prefer HttpOnly cookie)
     let sessionToken: string | null = null;
 
+    // Check HttpOnly session_token cookie first (most secure)
+    const httpOnlyCookie = request.cookies.get('session_token');
+    if (httpOnlyCookie?.value) {
+      sessionToken = httpOnlyCookie.value;
+    }
+
     // Check X-Session-Token header
-    sessionToken = request.headers.get('X-Session-Token');
+    if (!sessionToken) {
+      sessionToken = request.headers.get('X-Session-Token');
+    }
 
     // Check Authorization header
     if (!sessionToken) {
@@ -63,7 +75,7 @@ export async function validateSession(
       }
     }
 
-    // Check cookie
+    // Check legacy session cookie
     if (!sessionToken) {
       const sessionCookie = request.cookies.get('session');
       sessionToken = sessionCookie?.value || null;
@@ -122,7 +134,7 @@ export async function validateSession(
       // First get the session
       const { data: session, error: sessionError } = await supabase
         .from('user_sessions')
-        .select('user_id, expires_at, is_valid')
+        .select('user_id, expires_at, is_valid, last_activity')
         .eq('token_hash', tokenHash)
         .single();
 
@@ -140,6 +152,31 @@ export async function validateSession(
           error: 'Session expired',
         };
       }
+
+      // Check idle timeout
+      if (session.last_activity) {
+        const lastActivity = new Date(session.last_activity);
+        const idleTime = Date.now() - lastActivity.getTime();
+        const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
+
+        if (idleTime > idleTimeoutMs) {
+          // Invalidate the session due to idle timeout
+          await supabase
+            .from('user_sessions')
+            .update({ is_valid: false })
+            .eq('token_hash', tokenHash);
+
+          return {
+            valid: false,
+            error: 'Session expired due to inactivity',
+          };
+        }
+      }
+
+      // Update last activity timestamp (non-blocking)
+      touchSession(tokenHash).catch(() => {
+        // Ignore errors - this is non-critical
+      });
 
       // Then get the user details
       const { data: user, error: userError } = await supabase

@@ -9,6 +9,7 @@ import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from './logger';
 import { isFeatureEnabled } from './featureFlags';
+import { securityMonitor } from './securityMonitor';
 
 // Initialize Redis client (only if configured)
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -91,17 +92,28 @@ export async function checkRateLimit(
         remaining,
         reset: new Date(reset),
       });
+
+      // Send to security monitor for alerting
+      securityMonitor.rateLimitExceeded(identifier, 'api').catch(() => {
+        // Fire and forget - don't block on alerting
+      });
     }
 
     return { success, limit, remaining, reset };
   } catch (error) {
-    // If Redis is down, fail open (allow the request)
-    logger.error('Rate limit check failed', error as Error, {
+    // SECURITY: Fail closed - deny requests when Redis is unavailable
+    // This prevents bypass of rate limiting during service outages
+    logger.error('Rate limit check failed - denying request (fail-closed)', error as Error, {
       identifier,
       action: 'rate_limit_check',
     });
 
-    return { success: true };
+    return {
+      success: false,
+      limit: 0,
+      remaining: 0,
+      reset: Date.now() + 60000, // Retry after 1 minute
+    };
   }
 }
 

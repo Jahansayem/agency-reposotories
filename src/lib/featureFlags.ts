@@ -11,7 +11,8 @@ export type FeatureFlag =
   | 'normalized_schema'
   | 'refactored_components'
   | 'new_state_management'
-  | 'server_rate_limiting';
+  | 'server_rate_limiting'
+  | 'multi_tenancy';
 
 interface FeatureFlagConfig {
   enabled: boolean;
@@ -55,6 +56,11 @@ const FEATURE_FLAGS: Record<FeatureFlag, () => FeatureFlagConfig> = {
     // Set DISABLE_RATE_LIMITING=true to disable (not recommended)
     enabled: process.env.DISABLE_RATE_LIMITING !== 'true',
     description: 'Server-side rate limiting with Upstash Redis (enabled by default)',
+  }),
+
+  multi_tenancy: () => ({
+    enabled: process.env.NEXT_PUBLIC_ENABLE_MULTI_TENANCY === 'true',
+    description: 'Multi-tenant support for multiple Allstate agencies',
   }),
 };
 

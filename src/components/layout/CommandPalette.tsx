@@ -23,7 +23,7 @@ import {
   CornerDownLeft,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser, OWNER_USERNAME } from '@/types/todo';
+import { AuthUser, isOwner } from '@/types/todo';
 import { useAppShell } from './AppShell';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -193,7 +193,7 @@ export default function CommandPalette({
     return commands
       .filter(cmd => {
         // Owner-only commands
-        if (cmd.ownerOnly && currentUser.name !== OWNER_USERNAME) {
+        if (cmd.ownerOnly && !isOwner(currentUser)) {
           return false;
         }
 

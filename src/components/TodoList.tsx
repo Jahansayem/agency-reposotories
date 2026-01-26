@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, OWNER_USERNAME } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, isOwner } from '@/types/todo';
 import SortableTodoItem from './SortableTodoItem';
 import AddTodo from './AddTodo';
 import AddTaskModal from './AddTaskModal';
@@ -2338,7 +2338,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       )}
 
       {/* Strategic Dashboard - Owner only */}
-      {showStrategicDashboard && userName === OWNER_USERNAME && (
+      {showStrategicDashboard && isOwner({ name: userName, role: currentUser?.role }) && (
         <StrategicDashboard
           userName={userName}
           darkMode={darkMode}

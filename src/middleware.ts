@@ -3,6 +3,15 @@ import type { NextRequest } from 'next/server';
 import { rateLimiters, withRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
 
 /**
+ * Security event logger for middleware
+ * Uses console directly to avoid import issues in Edge Runtime
+ */
+function logSecurityEvent(event: string, details: Record<string, unknown>): void {
+  const timestamp = new Date().toISOString();
+  console.warn(`[SECURITY] ${timestamp} ${event}`, JSON.stringify(details));
+}
+
+/**
  * Routes that require authentication
  */
 const AUTHENTICATED_ROUTES = [
@@ -131,6 +140,12 @@ export async function middleware(request: NextRequest) {
 
   if (needsCsrfProtection(pathname, request.method)) {
     if (!validateCsrfToken(request)) {
+      logSecurityEvent('CSRF validation failed', {
+        pathname,
+        method: request.method,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown',
+      });
       return NextResponse.json(
         {
           error: 'CSRF validation failed',
@@ -149,6 +164,13 @@ export async function middleware(request: NextRequest) {
     const session = await validateSessionFromRequest(request);
 
     if (!session.valid) {
+      logSecurityEvent('Authentication failure', {
+        pathname,
+        method: request.method,
+        error: session.error,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown',
+      });
       return NextResponse.json(
         {
           error: 'Authentication required',
@@ -207,6 +229,13 @@ export async function middleware(request: NextRequest) {
 
   // Check if rate limit exceeded
   if (rateLimitResult && !rateLimitResult.success) {
+    logSecurityEvent('Rate limit exceeded', {
+      pathname,
+      method: request.method,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      limit: rateLimitResult.limit,
+      reset: rateLimitResult.reset,
+    });
     return createRateLimitResponse(rateLimitResult);
   }
 

@@ -24,21 +24,102 @@ export interface LogContext {
   [key: string]: unknown;
 }
 
+/**
+ * Sensitive data patterns to filter from logs
+ */
+const SENSITIVE_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
+  // SSN patterns
+  { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, replacement: '[SSN REDACTED]' },
+  { pattern: /\b\d{9}\b/g, replacement: '[POSSIBLE SSN REDACTED]' },
+  // Credit card patterns
+  { pattern: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g, replacement: '[CARD REDACTED]' },
+  // PIN patterns (4-6 digits that look like PINs)
+  { pattern: /\bpin[_\s]*[:=]\s*['"]?\d{4,6}['"]?/gi, replacement: 'pin=[PIN REDACTED]' },
+  { pattern: /pin_hash['"]*\s*[:=]\s*['"][^'"]+['"]/gi, replacement: 'pin_hash=[HASH REDACTED]' },
+  // Session tokens
+  { pattern: /session[_\s]*token['"]*\s*[:=]\s*['"][^'"]+['"]/gi, replacement: 'session_token=[TOKEN REDACTED]' },
+  { pattern: /bearer\s+[a-zA-Z0-9_\-\.]+/gi, replacement: 'Bearer [TOKEN REDACTED]' },
+  // API keys
+  { pattern: /api[_\s]*key['"]*\s*[:=]\s*['"][^'"]+['"]/gi, replacement: 'api_key=[KEY REDACTED]' },
+  { pattern: /x-api-key['"]*\s*[:=]\s*['"][^'"]+['"]/gi, replacement: 'x-api-key=[KEY REDACTED]' },
+  // Passwords
+  { pattern: /password['"]*\s*[:=]\s*['"][^'"]+['"]/gi, replacement: 'password=[REDACTED]' },
+  // Email addresses (partial redaction)
+  { pattern: /\b([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/g, replacement: '[EMAIL REDACTED]' },
+  // Policy numbers (common insurance format)
+  { pattern: /\b[A-Z]{2,3}\d{6,10}\b/g, replacement: '[POLICY# REDACTED]' },
+  // Account numbers
+  { pattern: /account[_\s]*(?:number|num|#)?['"]*\s*[:=]\s*['"]?\d{6,}['"]?/gi, replacement: 'account=[ACCT REDACTED]' },
+];
+
+/**
+ * Sanitize sensitive data from log messages and context
+ */
+function sanitizeSensitiveData(input: unknown): unknown {
+  if (input === null || input === undefined) {
+    return input;
+  }
+
+  if (typeof input === 'string') {
+    let sanitized = input;
+    for (const { pattern, replacement } of SENSITIVE_PATTERNS) {
+      sanitized = sanitized.replace(pattern, replacement);
+    }
+    return sanitized;
+  }
+
+  if (Array.isArray(input)) {
+    return input.map(sanitizeSensitiveData);
+  }
+
+  if (typeof input === 'object') {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+      // Redact known sensitive field names entirely
+      const lowerKey = key.toLowerCase();
+      if (
+        lowerKey.includes('password') ||
+        lowerKey.includes('pin_hash') ||
+        lowerKey.includes('secret') ||
+        lowerKey.includes('token') && !lowerKey.includes('csrf') ||
+        lowerKey.includes('api_key') ||
+        lowerKey.includes('apikey') ||
+        lowerKey === 'ssn' ||
+        lowerKey === 'creditcard' ||
+        lowerKey === 'cardnumber'
+      ) {
+        sanitized[key] = '[REDACTED]';
+      } else {
+        sanitized[key] = sanitizeSensitiveData(value);
+      }
+    }
+    return sanitized;
+  }
+
+  return input;
+}
+
 class Logger {
   /**
    * Debug level logging - only in development
+   * Automatically sanitizes sensitive data
    */
   debug(message: string, context?: LogContext): void {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`[DEBUG] ${message}`, context);
+      const sanitizedMessage = sanitizeSensitiveData(message) as string;
+      const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
+      console.debug(`[DEBUG] ${sanitizedMessage}`, sanitizedContext);
     }
   }
 
   /**
    * Info level logging - general information
+   * Automatically sanitizes sensitive data
    */
   info(message: string, context?: LogContext): void {
-    console.info(`[INFO] ${message}`, context);
+    const sanitizedMessage = sanitizeSensitiveData(message) as string;
+    const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
+    console.info(`[INFO] ${sanitizedMessage}`, sanitizedContext);
 
     // Send to analytics if needed
     if (process.env.NODE_ENV === 'production') {
@@ -48,34 +129,64 @@ class Logger {
 
   /**
    * Warning level logging - potential issues
+   * Automatically sanitizes sensitive data
    */
   warn(message: string, context?: LogContext): void {
-    console.warn(`[WARN] ${message}`, context);
+    const sanitizedMessage = sanitizeSensitiveData(message) as string;
+    const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
+    console.warn(`[WARN] ${sanitizedMessage}`, sanitizedContext);
 
     // Send to Sentry as breadcrumb
     Sentry.addBreadcrumb({
       category: 'warning',
-      message,
+      message: sanitizedMessage,
       level: 'warning',
-      data: context,
+      data: sanitizedContext,
     });
   }
 
   /**
    * Error level logging - critical issues
    * Accepts Error object or any unknown error value
+   * Automatically sanitizes sensitive data
    */
   error(message: string, error?: Error | unknown, context?: LogContext): void {
+    const sanitizedMessage = sanitizeSensitiveData(message) as string;
+    const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
+
+    // Sanitize error message but preserve stack trace structure
     const errorObj = error instanceof Error ? error : new Error(String(error ?? message));
-    console.error(`[ERROR] ${message}`, errorObj, context);
+    const sanitizedErrorMessage = sanitizeSensitiveData(errorObj.message) as string;
+    const sanitizedError = new Error(sanitizedErrorMessage);
+    sanitizedError.stack = errorObj.stack;
+
+    console.error(`[ERROR] ${sanitizedMessage}`, sanitizedError, sanitizedContext);
 
     // Send to Sentry
-    Sentry.captureException(errorObj, {
-      extra: { message, ...context },
+    Sentry.captureException(sanitizedError, {
+      extra: { message: sanitizedMessage, ...sanitizedContext },
       tags: {
-        component: context?.component,
-        action: context?.action,
+        component: sanitizedContext?.component,
+        action: sanitizedContext?.action,
       },
+    });
+  }
+
+  /**
+   * Security event logging - for auth failures and security incidents
+   * Always logs regardless of environment
+   */
+  security(event: string, context?: LogContext & { ip?: string; endpoint?: string }): void {
+    const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
+    const timestamp = new Date().toISOString();
+    console.warn(`[SECURITY] ${timestamp} ${event}`, sanitizedContext);
+
+    // Always send security events to Sentry
+    Sentry.addBreadcrumb({
+      category: 'security',
+      message: event,
+      level: 'warning',
+      data: sanitizedContext,
     });
   }
 

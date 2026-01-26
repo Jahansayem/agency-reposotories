@@ -12,10 +12,18 @@ const OUTLOOK_ALLOWED_ORIGINS = [
 ].filter(Boolean).join(", ");
 
 // Content Security Policy
+// Note: Next.js requires 'unsafe-inline' for styles due to how Tailwind/CSS-in-JS works
+// 'unsafe-eval' is removed in production for security
+const isProduction = process.env.NODE_ENV === 'production';
+
 const cspDirectives: Record<string, string[]> = {
   "default-src": ["'self'"],
-  "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-  "style-src": ["'self'", "'unsafe-inline'"],
+  // In production, we try to avoid unsafe-eval
+  // unsafe-inline is still needed for Next.js hydration scripts
+  "script-src": isProduction
+    ? ["'self'", "'unsafe-inline'"] // No unsafe-eval in production
+    : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Dev needs eval for hot reload
+  "style-src": ["'self'", "'unsafe-inline'"], // Tailwind requires unsafe-inline
   "img-src": ["'self'", "data:", "https:", "blob:"],
   "font-src": ["'self'", "data:"],
   "media-src": ["'self'", "data:", "blob:"], // Allow audio/video from data URLs and blobs
@@ -25,11 +33,19 @@ const cspDirectives: Record<string, string[]> = {
     "wss://*.supabase.co",
     "https://api.anthropic.com",
     "https://api.openai.com",
+    // Sentry for error reporting
+    "https://*.sentry.io",
   ],
-  "frame-ancestors": ["'none'"],
+  "frame-ancestors": ["'none'"], // Clickjacking protection
   "base-uri": ["'self'"],
   "form-action": ["'self'"],
+  "object-src": ["'none'"], // Prevent plugins like Flash
+  "worker-src": ["'self'", "blob:"], // Service workers
+  "child-src": ["'self'", "blob:"], // iframes and workers
+  "manifest-src": ["'self'"], // Web app manifest
   "upgrade-insecure-requests": [],
+  // Report CSP violations for monitoring
+  "report-uri": ["/api/csp-report"],
 };
 
 const cspString = Object.entries(cspDirectives)

@@ -17,7 +17,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Todo, AuthUser, OWNER_USERNAME } from '@/types/todo';
+import { Todo, AuthUser, isOwner as checkIsOwner } from '@/types/todo';
 import { format, isToday, isPast, startOfDay } from 'date-fns';
 
 interface UtilitySidebarProps {
@@ -47,7 +47,7 @@ export default function UtilitySidebar({
   const darkMode = theme === 'dark';
   const [expandedSection, setExpandedSection] = useState<string | null>('stats');
 
-  const isOwner = currentUser.name === OWNER_USERNAME;
+  const isOwner = checkIsOwner(currentUser);
 
   // Calculate statistics
   const stats = useMemo(() => {

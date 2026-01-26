@@ -11,15 +11,53 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Verify API key middleware
+// Verify API key middleware with constant-time comparison
 function verifyApiKey(request: NextRequest): boolean {
   const apiKey = request.headers.get('X-API-Key');
-  return apiKey === process.env.OUTLOOK_ADDON_API_KEY;
+  const expectedKey = process.env.OUTLOOK_ADDON_API_KEY;
+
+  if (!apiKey || !expectedKey) {
+    return false;
+  }
+
+  // Constant-time comparison to prevent timing attacks
+  if (apiKey.length !== expectedKey.length) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < apiKey.length; i++) {
+    result |= apiKey.charCodeAt(i) ^ expectedKey.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+// Validate that createdBy is a valid user in the system
+async function validateCreator(createdBy: string): Promise<{ valid: boolean; userId?: string }> {
+  if (!createdBy || typeof createdBy !== 'string' || createdBy.trim().length === 0) {
+    return { valid: false };
+  }
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, name')
+    .eq('name', createdBy.trim())
+    .single();
+
+  if (error || !user) {
+    return { valid: false };
+  }
+
+  return { valid: true, userId: user.id };
 }
 
 export async function POST(request: NextRequest) {
   // Verify API key
   if (!verifyApiKey(request)) {
+    logger.security('Outlook API key validation failed', {
+      endpoint: '/api/outlook/create-task',
+      ip: request.headers.get('x-forwarded-for') || 'unknown',
+    });
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }
@@ -28,6 +66,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const { text, assignedTo, priority, dueDate, createdBy } = await request.json();
+
+    // SECURITY: Validate that createdBy is a real user in the system
+    // This prevents impersonation attacks
+    const creatorValidation = await validateCreator(createdBy);
+    if (!creatorValidation.valid) {
+      logger.security('Invalid creator in Outlook task creation', {
+        endpoint: '/api/outlook/create-task',
+        attemptedCreator: createdBy,
+        ip: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+      return NextResponse.json(
+        { success: false, error: 'Invalid creator - user does not exist' },
+        { status: 400 }
+      );
+    }
 
     if (!text || !text.trim()) {
       return NextResponse.json(

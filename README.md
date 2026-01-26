@@ -2,6 +2,25 @@
 
 A comprehensive real-time collaborative task management platform built for small teams, featuring AI-powered workflows, team chat, strategic planning, and seamless Outlook integration.
 
+## 🔒 Security Status (January 2026)
+
+Security hardening has been completed to meet Allstate internal application requirements:
+
+| Area | Status |
+|------|--------|
+| **Authentication** | ✅ Server-side lockout, session timeout, HttpOnly cookies |
+| **Authorization** | ✅ Role-based access control (owner/admin/member) |
+| **Data Protection** | ✅ Field-level encryption (AES-256-GCM) for PII |
+| **Logging** | ✅ Audit logging, security event monitoring, SIEM-ready |
+| **CI/CD Security** | ✅ CodeQL, Semgrep, dependency scanning, secret detection |
+| **Rate Limiting** | ✅ Redis-based, fail-closed design |
+
+**Compliance: 81%** - See `docs/ALLSTATE_SECURITY_CHECKLIST.md` for details.
+
+**Pending:** MFA for admin accounts (PIN auth retained per business decision).
+
+**To enable alerting:** Set `SECURITY_WEBHOOK_URL` env var to a Slack/Discord webhook.
+
 ## Features
 
 ### Core Task Management

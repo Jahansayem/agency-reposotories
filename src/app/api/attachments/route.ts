@@ -68,10 +68,24 @@ async function ensureBucketExists() {
 // POST - Upload a new attachment
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY: Validate session instead of trusting form data
+    // Extract userName from session validation (header or cookie)
+    const sessionUserName = extractUserName(request);
+    const authError = validateUserName(sessionUserName);
+    if (authError) {
+      logger.security('Attachment upload auth failure', {
+        endpoint: '/api/attachments',
+        ip: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+      return authError;
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const todoId = formData.get('todoId') as string | null;
-    const userName = formData.get('userName') as string | null;
+    // Use validated session userName, not form data (which can be spoofed)
+    // validateUserName already verified userName is not null
+    const userName = sessionUserName!;
 
     if (!file) {
       return NextResponse.json(
@@ -87,11 +101,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!userName) {
-      return NextResponse.json(
-        { success: false, error: 'No userName provided' },
-        { status: 400 }
-      );
+    // Verify user has access to this todo before allowing upload
+    const { error: accessError } = await verifyTodoAccess(todoId, userName!);
+    if (accessError) {
+      logger.security('Attachment upload access denied', {
+        endpoint: '/api/attachments',
+        todoId,
+        userName,
+        ip: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+      return accessError;
     }
 
     // Validate file type
