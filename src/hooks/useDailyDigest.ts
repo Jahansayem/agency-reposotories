@@ -141,6 +141,7 @@ export function useDailyDigest({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Name': currentUser.name,
           ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({ userName: currentUser.name }),
