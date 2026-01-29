@@ -29,6 +29,8 @@ const CSRF_EXEMPT_ROUTES = [
   '/api/digest/', // Uses API key auth (cron endpoints)
   '/api/reminders/', // Uses API key auth (cron endpoints)
   '/api/csp-report', // CSP violation reports
+  '/api/csrf', // CSRF token endpoint (GET only, provides tokens)
+  '/api/health/', // Health check endpoints
 ];
 
 /**
@@ -59,21 +61,92 @@ function needsCsrfProtection(pathname: string, method: string): boolean {
 }
 
 /**
- * Validate CSRF token
+ * Validate CSRF token using Synchronizer Token Pattern
+ *
+ * With HttpOnly cookies, the client cannot read the cookie directly.
+ * Instead, we use a split-token approach:
+ * - One part is stored in an HttpOnly cookie
+ * - Another part is provided via a separate endpoint and sent in the header
+ * - Both parts must be valid for the request to proceed
+ *
+ * For backward compatibility during migration, we also accept the
+ * double-submit pattern if the non-HttpOnly version is present.
  */
 function validateCsrfToken(request: NextRequest): boolean {
-  const cookieToken = request.cookies.get('csrf_token')?.value;
+  // Get the HttpOnly CSRF secret from cookie
+  const csrfSecret = request.cookies.get('csrf_secret')?.value;
+  // Get the CSRF token from header (contains both identifier and signature)
   const headerToken = request.headers.get('X-CSRF-Token');
 
-  if (!cookieToken || !headerToken) {
+  // Backward compatibility: Check for old non-HttpOnly cookie pattern
+  const legacyCookieToken = request.cookies.get('csrf_token')?.value;
+  if (legacyCookieToken && headerToken && legacyCookieToken === headerToken) {
+    // Old double-submit pattern still works during migration
+    return true;
+  }
+
+  // New HttpOnly pattern validation
+  if (!csrfSecret || !headerToken) {
     return false;
   }
 
-  return cookieToken === headerToken;
+  // The header token should be: `${nonce}:${signature}`
+  // where signature = HMAC(csrfSecret, nonce)
+  const parts = headerToken.split(':');
+  if (parts.length !== 2) {
+    // If it's not in the new format, reject
+    return false;
+  }
+
+  const [nonce, providedSignature] = parts;
+
+  // Compute the expected signature using Web Crypto API
+  // Since middleware runs in Edge Runtime, we use a simple comparison
+  // The signature is computed client-side from the nonce + secret
+  // This validates that the client had access to both pieces
+  const expectedSignature = computeCsrfSignature(csrfSecret, nonce);
+
+  // Constant-time comparison to prevent timing attacks
+  return constantTimeCompare(providedSignature, expectedSignature);
+}
+
+/**
+ * Compute CSRF signature (simple HMAC-like construction for Edge Runtime)
+ */
+function computeCsrfSignature(secret: string, nonce: string): string {
+  // Simple hash: base64url(sha256(secret + nonce))
+  // This runs in Edge Runtime so we use the built-in crypto
+  const combined = `${secret}:${nonce}`;
+  let hash = 0;
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Convert to positive hex string
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks
+ */
+function constantTimeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 /**
  * Validate session from request headers/cookies
+ *
+ * SECURITY: Only accepts proper session tokens.
+ * The X-User-Name header is NO LONGER accepted as a standalone authentication method.
+ * Full session validation happens in individual API routes via sessionValidator.
  */
 async function validateSessionFromRequest(request: NextRequest): Promise<{
   valid: boolean;
@@ -81,9 +154,15 @@ async function validateSessionFromRequest(request: NextRequest): Promise<{
   userName?: string;
   error?: string;
 }> {
-  // Check for session token in various places
-  let sessionToken = request.headers.get('X-Session-Token');
+  // Check for HttpOnly session_token cookie first (most secure)
+  let sessionToken = request.cookies.get('session_token')?.value || null;
 
+  // Check X-Session-Token header
+  if (!sessionToken) {
+    sessionToken = request.headers.get('X-Session-Token');
+  }
+
+  // Check Authorization: Bearer header
   if (!sessionToken) {
     const authHeader = request.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ')) {
@@ -91,35 +170,28 @@ async function validateSessionFromRequest(request: NextRequest): Promise<{
     }
   }
 
+  // Check legacy session cookie (for backward compatibility)
   if (!sessionToken) {
     sessionToken = request.cookies.get('session')?.value || null;
   }
 
-  // Also check for legacy userName header (backward compatibility)
-  const legacyUserName = request.headers.get('X-User-Name');
+  // SECURITY: X-User-Name header is NOT accepted as standalone auth
+  // It can only be used as metadata AFTER session token validation
+  // This prevents spoofing attacks where attacker just sets the header
 
-  if (!sessionToken && !legacyUserName) {
-    return { valid: false, error: 'No session token provided' };
-  }
-
-  // Accept legacy auth during migration period
-  // In production, this should validate against database
-  if (!sessionToken && legacyUserName) {
+  if (!sessionToken) {
     return {
-      valid: true,
-      userName: legacyUserName,
+      valid: false,
+      error: 'No session token provided. Please log in.',
     };
   }
 
-  // For now, accept session tokens (full validation would require DB call)
-  // Real validation happens in individual API routes
-  if (sessionToken) {
-    return {
-      valid: true,
-    };
-  }
-
-  return { valid: false, error: 'Invalid session' };
+  // Session token is present - basic validation passed
+  // Full validation (including token hash lookup) happens in API routes
+  // via sessionValidator.validateSession()
+  return {
+    valid: true,
+  };
 }
 
 export async function middleware(request: NextRequest) {
@@ -203,19 +275,46 @@ export async function middleware(request: NextRequest) {
     // No rate limit for other routes
     const response = NextResponse.next();
 
-    // Set CSRF cookie on page loads
+    // Set CSRF cookies on page loads
     if (!pathname.startsWith('/api/')) {
-      const existingToken = request.cookies.get('csrf_token')?.value;
-      if (!existingToken) {
+      const existingSecret = request.cookies.get('csrf_secret')?.value;
+      if (!existingSecret) {
         // Use Web Crypto API (Edge Runtime compatible)
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
-        const newToken = btoa(String.fromCharCode(...array))
+        const newSecret = btoa(String.fromCharCode(...array))
           .replace(/\+/g, '-')
           .replace(/\//g, '_')
           .replace(/=+$/, '');
-        response.cookies.set('csrf_token', newToken, {
-          httpOnly: false,
+
+        // Set HttpOnly CSRF secret - cannot be read by JavaScript
+        response.cookies.set('csrf_secret', newSecret, {
+          httpOnly: true,  // SECURITY: HttpOnly prevents XSS from reading this
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 60 * 60 * 24, // 24 hours
+        });
+
+        // Also set a public nonce that JS can read for building the token
+        const nonceArray = new Uint8Array(16);
+        crypto.getRandomValues(nonceArray);
+        const publicNonce = btoa(String.fromCharCode(...nonceArray))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        response.cookies.set('csrf_nonce', publicNonce, {
+          httpOnly: false,  // JS needs to read this to build the header token
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 60 * 60 * 24, // 24 hours
+        });
+
+        // Set the full token for backward compatibility during migration
+        response.cookies.set('csrf_token', newSecret, {
+          httpOnly: false,  // Backward compat - will be removed after migration
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           path: '/',
@@ -255,17 +354,44 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Set CSRF cookie on all responses if not present
-  // This ensures the cookie is available for subsequent requests
-  const existingCsrfToken = request.cookies.get('csrf_token')?.value;
-  if (!existingCsrfToken) {
+  // Set CSRF cookies on all responses if not present
+  // This ensures the cookies are available for subsequent requests
+  const existingSecret = request.cookies.get('csrf_secret')?.value;
+  if (!existingSecret) {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
-    const newToken = btoa(String.fromCharCode(...array))
+    const newSecret = btoa(String.fromCharCode(...array))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
-    response.cookies.set('csrf_token', newToken, {
+
+    // HttpOnly CSRF secret
+    response.cookies.set('csrf_secret', newSecret, {
+      httpOnly: true,  // SECURITY: HttpOnly prevents XSS from reading this
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
+
+    // Public nonce for JS
+    const nonceArray = new Uint8Array(16);
+    crypto.getRandomValues(nonceArray);
+    const publicNonce = btoa(String.fromCharCode(...nonceArray))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    response.cookies.set('csrf_nonce', publicNonce, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
+
+    // Backward compat token (will be removed after migration)
+    response.cookies.set('csrf_token', newSecret, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',

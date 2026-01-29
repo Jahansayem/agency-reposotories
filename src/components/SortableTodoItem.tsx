@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import TodoItem from './TodoItem';
-import { Todo, TodoPriority, TodoStatus, RecurrencePattern, Subtask, Attachment } from '@/types/todo';
+import { Todo, TodoPriority, TodoStatus, RecurrencePattern, Subtask, Attachment, WaitingContactType } from '@/types/todo';
 
 interface SortableTodoItemProps {
   todo: Todo;
@@ -29,6 +29,8 @@ interface SortableTodoItemProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onEmailCustomer?: (todo: Todo) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
+  onClearWaiting?: (id: string) => Promise<void>;
   isDragEnabled?: boolean;
 }
 

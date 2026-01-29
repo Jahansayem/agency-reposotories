@@ -56,7 +56,7 @@ import {
   CalendarClock,
   CalendarX,
 } from 'lucide-react';
-import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask, RecurrencePattern, Attachment } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask, RecurrencePattern, Attachment, WaitingContactType } from '@/types/todo';
 import Celebration from './Celebration';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 
@@ -70,6 +70,8 @@ interface KanbanBoardProps {
   onSetDueDate: (id: string, dueDate: string | null) => void;
   onSetPriority: (id: string, priority: TodoPriority) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
+  onClearWaiting?: (id: string) => Promise<void>;
   onUpdateNotes?: (id: string, notes: string) => void;
   onUpdateText?: (id: string, text: string) => void;
   onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
@@ -218,7 +220,7 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
       <div className="p-3 sm:p-3">
         {/* Card content */}
         <div className="flex items-start gap-2">
-          {/* Selection checkbox */}
+          {/* Selection checkbox with 44x44px touch target for mobile accessibility */}
           {showBulkActions && onSelectTodo && (
             <div
               onClick={(e) => {
@@ -226,13 +228,16 @@ function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPrio
                 onSelectTodo(todo.id, !isSelected);
               }}
               onPointerDown={(e) => e.stopPropagation()}
-              className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all mt-0.5 ${
+              className="flex-shrink-0 w-11 h-11 -m-3 flex items-center justify-center cursor-pointer"
+              style={{ touchAction: 'manipulation' }}
+            >
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                 isSelected
                   ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
                   : 'border-slate-300 dark:border-slate-600 hover:border-[var(--accent)]'
-              }`}
-            >
-              {isSelected && <CheckSquare className="w-3 h-3" />}
+              }`}>
+                {isSelected && <CheckSquare className="w-3 h-3" />}
+              </div>
             </div>
           )}
           <div className="flex-1 min-w-0">
@@ -1275,6 +1280,8 @@ export default function KanbanBoard({
   onSetDueDate,
   onSetPriority,
   onSetReminder,
+  onMarkWaiting,
+  onClearWaiting,
   onUpdateNotes,
   onUpdateText,
   onUpdateSubtasks,

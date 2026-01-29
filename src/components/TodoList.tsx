@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, isOwner } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, isOwner, WaitingContactType, DEFAULT_FOLLOW_UP_HOURS } from '@/types/todo';
 import SortableTodoItem from './SortableTodoItem';
 import AddTodo from './AddTodo';
 import AddTaskModal from './AddTaskModal';
@@ -1149,6 +1149,89 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
+  // Mark a task as waiting for customer response
+  const markWaiting = async (id: string, contactType: WaitingContactType, followUpHours: number = DEFAULT_FOLLOW_UP_HOURS) => {
+    const oldTodo = todos.find((t) => t.id === id);
+    const now = new Date().toISOString();
+
+    // Optimistic update using store action
+    updateTodoInStore(id, {
+      waiting_for_response: true,
+      waiting_since: now,
+      waiting_contact_type: contactType,
+      follow_up_after_hours: followUpHours,
+    });
+
+    try {
+      const response = await fetchWithCsrf('/api/todos/waiting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Name': userName,
+        },
+        body: JSON.stringify({ todoId: id, contactType, followUpAfterHours: followUpHours }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark as waiting');
+      }
+
+      // Activity is logged by the API
+    } catch (error) {
+      logger.error('Error marking task as waiting', error, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback optimistic update
+        updateTodoInStore(id, {
+          waiting_for_response: oldTodo.waiting_for_response,
+          waiting_since: oldTodo.waiting_since,
+          waiting_contact_type: oldTodo.waiting_contact_type,
+          follow_up_after_hours: oldTodo.follow_up_after_hours,
+        });
+      }
+      throw error;
+    }
+  };
+
+  // Clear waiting status when customer responds
+  const clearWaiting = async (id: string) => {
+    const oldTodo = todos.find((t) => t.id === id);
+
+    // Optimistic update using store action
+    updateTodoInStore(id, {
+      waiting_for_response: false,
+      waiting_since: undefined,
+      waiting_contact_type: undefined,
+    });
+
+    try {
+      const response = await fetchWithCsrf('/api/todos/waiting', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Name': userName,
+        },
+        body: JSON.stringify({ todoId: id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear waiting status');
+      }
+
+      // Activity is logged by the API
+    } catch (error) {
+      logger.error('Error clearing waiting status', error, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback optimistic update
+        updateTodoInStore(id, {
+          waiting_for_response: oldTodo.waiting_for_response,
+          waiting_since: oldTodo.waiting_since,
+          waiting_contact_type: oldTodo.waiting_contact_type,
+        });
+      }
+      throw error;
+    }
+  };
+
   const setPriority = async (id: string, priority: TodoPriority) => {
     const oldTodo = todos.find((t) => t.id === id);
 
@@ -2012,6 +2095,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                       onAssign={assignTodo}
                       onSetDueDate={setDueDate}
                       onSetReminder={setReminder}
+                      onMarkWaiting={markWaiting}
+                      onClearWaiting={clearWaiting}
                       onSetPriority={setPriority}
                       onStatusChange={updateStatus}
                       onUpdateText={updateText}
@@ -2051,6 +2136,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                             onAssign={assignTodo}
                             onSetDueDate={setDueDate}
                             onSetReminder={setReminder}
+                            onMarkWaiting={markWaiting}
+                            onClearWaiting={clearWaiting}
                             onSetPriority={setPriority}
                             onStatusChange={updateStatus}
                             onUpdateText={updateText}
@@ -2164,6 +2251,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                                 onAssign={assignTodo}
                                 onSetDueDate={setDueDate}
                                 onSetReminder={setReminder}
+                                onMarkWaiting={markWaiting}
+                                onClearWaiting={clearWaiting}
                                 onSetPriority={setPriority}
                                 onStatusChange={updateStatus}
                                 onUpdateText={updateText}
@@ -2204,6 +2293,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 onAssign={assignTodo}
                 onSetDueDate={setDueDate}
                 onSetReminder={setReminder}
+                onMarkWaiting={markWaiting}
+                onClearWaiting={clearWaiting}
                 onSetPriority={setPriority}
                 onUpdateNotes={updateNotes}
                 onUpdateText={updateText}

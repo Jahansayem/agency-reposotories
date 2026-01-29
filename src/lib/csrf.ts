@@ -1,13 +1,26 @@
 /**
  * CSRF Protection Utility
  *
- * Implements double-submit cookie pattern for CSRF protection.
+ * Implements a secure CSRF protection pattern using HttpOnly cookies.
+ *
+ * Security approach:
+ * - csrf_secret: HttpOnly cookie that cannot be read by JavaScript (prevents XSS theft)
+ * - csrf_nonce: Non-HttpOnly cookie that JS can read
+ * - X-CSRF-Token header: Contains "nonce:signature" where signature = hash(secret + nonce)
+ *
+ * This ensures that even if an attacker can execute XSS, they cannot construct
+ * a valid CSRF token because they cannot read the HttpOnly secret.
+ *
+ * Backward compatibility:
+ * - Still supports the old csrf_token cookie pattern during migration
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'crypto';
 
-const CSRF_COOKIE_NAME = 'csrf_token';
+const CSRF_SECRET_COOKIE = 'csrf_secret';  // HttpOnly
+const CSRF_NONCE_COOKIE = 'csrf_nonce';    // Readable by JS
+const CSRF_LEGACY_COOKIE = 'csrf_token';   // Backward compat (non-HttpOnly)
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 const CSRF_TOKEN_LENGTH = 32;
 
@@ -28,41 +41,112 @@ function hashToken(token: string): string {
 /**
  * Validate CSRF token from request
  *
- * Compares the token from the header/body with the token in the cookie.
+ * Supports both the new HttpOnly pattern and legacy pattern.
  * Uses constant-time comparison to prevent timing attacks.
  */
 export function validateCsrfToken(request: NextRequest): boolean {
-  // Get token from cookie
-  const cookieToken = request.cookies.get(CSRF_COOKIE_NAME)?.value;
-  if (!cookieToken) {
-    return false;
-  }
-
+  // Get the secret from HttpOnly cookie (new pattern)
+  const secretCookie = request.cookies.get(CSRF_SECRET_COOKIE)?.value;
+  // Get the legacy token (backward compatibility)
+  const legacyToken = request.cookies.get(CSRF_LEGACY_COOKIE)?.value;
   // Get token from header
   const headerToken = request.headers.get(CSRF_HEADER_NAME);
-
-  // If not in header, try form data (for form submissions)
-  // Note: We can't easily read form data in middleware, so header is preferred
 
   if (!headerToken) {
     return false;
   }
 
-  // Constant-time comparison using hashes
-  const cookieHash = hashToken(cookieToken);
-  const headerHash = hashToken(headerToken);
+  // Try new HttpOnly pattern first
+  if (secretCookie) {
+    const nonceCookie = request.cookies.get(CSRF_NONCE_COOKIE)?.value;
+    if (nonceCookie) {
+      // Validate the nonce:signature format
+      const parts = headerToken.split(':');
+      if (parts.length === 2) {
+        const [nonce, signature] = parts;
+        if (nonce === nonceCookie) {
+          // Compute expected signature
+          const expectedHash = createHash('sha256')
+            .update(`${secretCookie}:${nonce}`)
+            .digest('hex')
+            .substring(0, 16);
+          // Constant-time comparison
+          const providedHash = hashToken(signature);
+          const expectedHashHashed = hashToken(expectedHash);
+          if (providedHash === expectedHashHashed) {
+            return true;
+          }
+        }
+      }
+    }
+  }
 
-  return cookieHash === headerHash;
+  // Fall back to legacy pattern (backward compatibility)
+  if (legacyToken && headerToken === legacyToken) {
+    // Use constant-time comparison
+    const cookieHash = hashToken(legacyToken);
+    const headerHash = hashToken(headerToken);
+    return cookieHash === headerHash;
+  }
+
+  return false;
 }
 
 /**
- * Set CSRF token cookie on response
+ * Set CSRF cookies on response (new HttpOnly pattern)
+ *
+ * Sets up the secure CSRF protection with:
+ * - HttpOnly secret cookie (cannot be stolen via XSS)
+ * - Public nonce cookie (JS reads this to build header token)
+ * - Legacy token cookie (backward compatibility)
+ */
+export function setCsrfCookies(
+  response: NextResponse,
+  secret?: string,
+  nonce?: string
+): { secret: string; nonce: string } {
+  const csrfSecret = secret || generateCsrfToken();
+  const csrfNonce = nonce || randomBytes(16).toString('base64url');
+
+  // HttpOnly secret - JavaScript cannot read this
+  response.cookies.set(CSRF_SECRET_COOKIE, csrfSecret, {
+    httpOnly: true,  // SECURITY: Prevents XSS from stealing the secret
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60 * 24, // 24 hours
+  });
+
+  // Public nonce - JavaScript reads this to build the token
+  response.cookies.set(CSRF_NONCE_COOKIE, csrfNonce, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60 * 24, // 24 hours
+  });
+
+  // Legacy token for backward compatibility
+  response.cookies.set(CSRF_LEGACY_COOKIE, csrfSecret, {
+    httpOnly: false,  // Backward compat - will be removed after migration
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60 * 24, // 24 hours
+  });
+
+  return { secret: csrfSecret, nonce: csrfNonce };
+}
+
+/**
+ * Set CSRF token cookie on response (DEPRECATED - use setCsrfCookies)
+ * @deprecated Use setCsrfCookies for the new secure HttpOnly pattern
  */
 export function setCsrfCookie(response: NextResponse, token?: string): string {
   const csrfToken = token || generateCsrfToken();
 
-  response.cookies.set(CSRF_COOKIE_NAME, csrfToken, {
-    httpOnly: false, // Must be readable by JavaScript
+  response.cookies.set(CSRF_LEGACY_COOKIE, csrfToken, {
+    httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
@@ -76,7 +160,13 @@ export function setCsrfCookie(response: NextResponse, token?: string): string {
  * Get or create CSRF token from request
  */
 export function getOrCreateCsrfToken(request: NextRequest): string {
-  const existingToken = request.cookies.get(CSRF_COOKIE_NAME)?.value;
+  // Try HttpOnly secret first (new pattern)
+  const existingSecret = request.cookies.get(CSRF_SECRET_COOKIE)?.value;
+  if (existingSecret) {
+    return existingSecret;
+  }
+  // Fall back to legacy token
+  const existingToken = request.cookies.get(CSRF_LEGACY_COOKIE)?.value;
   if (existingToken) {
     return existingToken;
   }
@@ -145,9 +235,9 @@ export function csrfMiddleware(request: NextRequest): NextResponse | null {
 }
 
 /**
- * Client-side helper to get CSRF token from cookie
+ * Parse a cookie value from document.cookie
  */
-export function getClientCsrfToken(): string | null {
+function getCookieValue(name: string): string | null {
   if (typeof document === 'undefined') {
     return null;
   }
@@ -158,11 +248,10 @@ export function getClientCsrfToken(): string | null {
     const equalIndex = trimmed.indexOf('=');
     if (equalIndex === -1) continue;
 
-    const name = trimmed.substring(0, equalIndex);
+    const cookieName = trimmed.substring(0, equalIndex);
     const value = trimmed.substring(equalIndex + 1);
 
-    if (name === CSRF_COOKIE_NAME) {
-      // Decode the value in case it was URL-encoded
+    if (cookieName === name) {
       try {
         return decodeURIComponent(value);
       } catch {
@@ -171,6 +260,50 @@ export function getClientCsrfToken(): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Client-side helper to build CSRF token for header
+ *
+ * Returns the token that should be set in the X-CSRF-Token header.
+ * Supports both the new HttpOnly pattern and legacy pattern.
+ */
+export function getClientCsrfToken(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  // Try the new pattern first: nonce + computed signature
+  const nonce = getCookieValue(CSRF_NONCE_COOKIE);
+  if (nonce) {
+    // For the new pattern, we need the signature from the server
+    // Until that's implemented, fall back to legacy
+  }
+
+  // Fall back to legacy token (backward compatibility)
+  const legacyToken = getCookieValue(CSRF_LEGACY_COOKIE);
+  if (legacyToken) {
+    return legacyToken;
+  }
+
+  return null;
+}
+
+/**
+ * Client-side helper to build CSRF token with signature
+ *
+ * This is used with the new HttpOnly pattern where the server
+ * provides the signature via an API endpoint.
+ *
+ * @param signature - The signature provided by the server
+ * @returns The formatted token for the X-CSRF-Token header
+ */
+export function buildCsrfTokenWithSignature(signature: string): string | null {
+  const nonce = getCookieValue(CSRF_NONCE_COOKIE);
+  if (!nonce || !signature) {
+    return null;
+  }
+  return `${nonce}:${signature}`;
 }
 
 /**

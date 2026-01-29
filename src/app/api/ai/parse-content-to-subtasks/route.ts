@@ -1,61 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { NextRequest } from 'next/server';
+import {
+  validateAiRequest,
+  callClaude,
+  parseAiJsonResponse,
+  aiErrorResponse,
+  aiSuccessResponse,
+  isAiConfigured,
+  validators,
+  dateHelpers,
+  withAiErrorHandling,
+  ParsedSubtask,
+} from '@/lib/aiApiHelper';
 import { logger } from '@/lib/logger';
 
-export interface ParsedSubtask {
-  text: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  estimatedMinutes?: number;
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const { content, contentType, parentTaskText } = await request.json();
-
-    if (!content || typeof content !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Content is required' },
-        { status: 400 }
-      );
-    }
-
-    if (content.trim().length < 10) {
-      return NextResponse.json(
-        { success: false, error: 'Content is too short to parse into subtasks' },
-        { status: 400 }
-      );
-    }
-
-    // If no API key, return a simple fallback
-    if (!process.env.ANTHROPIC_API_KEY) {
-      // Split by sentences/newlines as fallback
-      const lines = content
-        .split(/[.\n]+/)
-        .map(line => line.trim())
-        .filter(line => line.length > 5 && line.length < 200);
-
-      const fallbackSubtasks: ParsedSubtask[] = lines.slice(0, 8).map(line => ({
-        text: line,
-        priority: 'medium' as const,
-      }));
-
-      return NextResponse.json({
-        success: true,
-        subtasks: fallbackSubtasks.length > 0 ? fallbackSubtasks : [{
-          text: content.slice(0, 200),
-          priority: 'medium' as const,
-        }],
-      });
-    }
-
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
-    const today = new Date().toISOString().split('T')[0];
-    const contentTypeLabel = contentType === 'email' ? 'email' : contentType === 'voicemail' ? 'voicemail transcription' : 'message';
-
-    const prompt = `You are a task extraction assistant. Analyze this ${contentTypeLabel} and extract ALL distinct action items as subtasks for a parent task.
+function buildPrompt(
+  content: string,
+  contentTypeLabel: string,
+  parentTaskText: string | undefined,
+  today: string
+): string {
+  return `You are a task extraction assistant. Analyze this ${contentTypeLabel} and extract ALL distinct action items as subtasks for a parent task.
 
 ${parentTaskText ? `Parent task context: "${parentTaskText}"` : ''}
 
@@ -100,61 +64,113 @@ Rules:
 - If content is conversational, focus on action items, not statements
 
 Respond with ONLY the JSON object.`;
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1200,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
-
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'ParseContentToSubtasksAPI', responseText });
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-
-    // Validate and clean up the response
-    const validatedSubtasks: ParsedSubtask[] = (result.subtasks || [])
-      .slice(0, 10) // Max 10 subtasks
-      .map((subtask: { text?: string; priority?: string; estimatedMinutes?: number }) => ({
-        text: String(subtask.text || '').slice(0, 200),
-        priority: ['low', 'medium', 'high', 'urgent'].includes(subtask.priority || '')
-          ? subtask.priority as ParsedSubtask['priority']
-          : 'medium',
-        estimatedMinutes: typeof subtask.estimatedMinutes === 'number'
-          ? Math.min(Math.max(subtask.estimatedMinutes, 5), 480)
-          : undefined,
-      }))
-      .filter((subtask: ParsedSubtask) => subtask.text.length > 0);
-
-    if (validatedSubtasks.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Could not extract any action items from this content' },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      subtasks: validatedSubtasks,
-      summary: String(result.summary || '').slice(0, 300),
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error parsing content to subtasks', error, { component: 'ParseContentToSubtasksAPI', details: errorMessage });
-    return NextResponse.json(
-      { success: false, error: 'Failed to parse content', details: errorMessage },
-      { status: 500 }
-    );
-  }
 }
+
+/**
+ * Fallback parsing when AI is not available
+ */
+function fallbackParse(content: string): ParsedSubtask[] {
+  // Split by sentences/newlines as fallback
+  const lines = content
+    .split(/[.\n]+/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 5 && line.length < 200);
+
+  const fallbackSubtasks: ParsedSubtask[] = lines.slice(0, 8).map((line) => ({
+    text: line,
+    priority: 'medium' as const,
+  }));
+
+  return fallbackSubtasks.length > 0
+    ? fallbackSubtasks
+    : [{ text: content.slice(0, 200), priority: 'medium' as const }];
+}
+
+async function handleParseContentToSubtasks(request: NextRequest) {
+  // Validate request
+  const validation = await validateAiRequest(request, {
+    customValidator: (body) => {
+      if (!body.content || typeof body.content !== 'string') {
+        return 'Content is required';
+      }
+      if ((body.content as string).trim().length < 10) {
+        return 'Content is too short to parse into subtasks';
+      }
+      return null;
+    },
+  });
+
+  if (!validation.valid) {
+    return validation.response;
+  }
+
+  const { content, contentType, parentTaskText } = validation.body as {
+    content: string;
+    contentType?: string;
+    parentTaskText?: string;
+  };
+
+  // If AI not configured, return a simple fallback
+  if (!isAiConfigured()) {
+    return aiSuccessResponse({ subtasks: fallbackParse(content) });
+  }
+
+  const today = dateHelpers.getTodayISO();
+  const contentTypeLabel =
+    contentType === 'email'
+      ? 'email'
+      : contentType === 'voicemail'
+        ? 'voicemail transcription'
+        : 'message';
+
+  // Build prompt and call Claude
+  const prompt = buildPrompt(content, contentTypeLabel, parentTaskText, today);
+
+  const aiResult = await callClaude({
+    userMessage: prompt,
+    maxTokens: 1200,
+    component: 'ParseContentToSubtasksAPI',
+  });
+
+  if (!aiResult.success) {
+    return aiErrorResponse('Failed to parse content', 500, aiResult.error);
+  }
+
+  // Parse the JSON response
+  const result = parseAiJsonResponse<{
+    subtasks?: Array<{ text?: string; priority?: string; estimatedMinutes?: number }>;
+    summary?: string;
+  }>(aiResult.content);
+
+  if (!result) {
+    logger.error('Failed to parse AI response', undefined, {
+      component: 'ParseContentToSubtasksAPI',
+      responseText: aiResult.content,
+    });
+    return aiErrorResponse('Failed to parse AI response', 500);
+  }
+
+  // Validate and clean up the response
+  const validatedSubtasks: ParsedSubtask[] = (result.subtasks || [])
+    .slice(0, 10)
+    .map((subtask) => ({
+      text: String(subtask.text || '').slice(0, 200),
+      priority: validators.sanitizePriority(subtask.priority),
+      estimatedMinutes: validators.clampEstimatedMinutes(subtask.estimatedMinutes),
+    }))
+    .filter((subtask) => subtask.text.length > 0);
+
+  if (validatedSubtasks.length === 0) {
+    return aiErrorResponse('Could not extract any action items from this content', 400);
+  }
+
+  return aiSuccessResponse({
+    subtasks: validatedSubtasks,
+    summary: String(result.summary || '').slice(0, 300),
+  });
+}
+
+export const POST = withAiErrorHandling(
+  'ParseContentToSubtasksAPI',
+  handleParseContentToSubtasks
+);

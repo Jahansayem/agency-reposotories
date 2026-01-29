@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
 import AttachmentList from './AttachmentList';
@@ -53,7 +53,7 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
   return (
     <div
       className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-2.5 rounded-[var(--radius-md)] transition-colors ${
-        subtask.completed ? 'bg-[var(--surface-2)] opacity-60' : 'bg-[var(--surface)]'
+        subtask.completed ? 'bg-[var(--surface-2)] opacity-75' : 'bg-[var(--surface)]'
       }`}
     >
       {/* Checkbox */}
@@ -191,7 +191,82 @@ const getDueDateStatus = (date: string, completed: boolean): 'overdue' | 'today'
   return 'future';
 };
 
-export default function TodoItem({
+/**
+ * Custom comparison function for React.memo
+ * Only re-renders when essential todo properties change
+ * This prevents all TodoItems from re-rendering when one item changes
+ */
+function areTodoItemPropsEqual(
+  prevProps: TodoItemProps,
+  nextProps: TodoItemProps
+): boolean {
+  // Check essential todo properties that affect display
+  const prevTodo = prevProps.todo;
+  const nextTodo = nextProps.todo;
+  
+  if (
+    prevTodo.id !== nextTodo.id ||
+    prevTodo.completed !== nextTodo.completed ||
+    prevTodo.text !== nextTodo.text ||
+    prevTodo.priority !== nextTodo.priority ||
+    prevTodo.status !== nextTodo.status ||
+    prevTodo.due_date !== nextTodo.due_date ||
+    prevTodo.assigned_to !== nextTodo.assigned_to ||
+    prevTodo.waiting_for_response !== nextTodo.waiting_for_response ||
+    prevTodo.notes !== nextTodo.notes ||
+    prevTodo.recurrence !== nextTodo.recurrence ||
+    prevTodo.reminder_at !== nextTodo.reminder_at ||
+    prevTodo.reminder_sent !== nextTodo.reminder_sent ||
+    prevTodo.transcription !== nextTodo.transcription ||
+    prevTodo.updated_at !== nextTodo.updated_at
+  ) {
+    return false;
+  }
+  
+  // Check subtasks array (shallow comparison of length and completion states)
+  const prevSubtasks = prevTodo.subtasks || [];
+  const nextSubtasks = nextTodo.subtasks || [];
+  if (prevSubtasks.length !== nextSubtasks.length) return false;
+  for (let i = 0; i < prevSubtasks.length; i++) {
+    if (
+      prevSubtasks[i].id !== nextSubtasks[i].id ||
+      prevSubtasks[i].completed !== nextSubtasks[i].completed ||
+      prevSubtasks[i].text !== nextSubtasks[i].text
+    ) {
+      return false;
+    }
+  }
+  
+  // Check attachments array (shallow comparison)
+  const prevAttachments = prevTodo.attachments || [];
+  const nextAttachments = nextTodo.attachments || [];
+  if (prevAttachments.length !== nextAttachments.length) return false;
+  for (let i = 0; i < prevAttachments.length; i++) {
+    if (prevAttachments[i].id !== nextAttachments[i].id) return false;
+  }
+  
+  // Check other props that affect rendering
+  if (
+    prevProps.selected !== nextProps.selected ||
+    prevProps.autoExpand !== nextProps.autoExpand ||
+    prevProps.currentUserName !== nextProps.currentUserName
+  ) {
+    return false;
+  }
+  
+  // Check users array (reference equality is fine for this)
+  if (prevProps.users !== nextProps.users && 
+      prevProps.users.length !== nextProps.users.length) {
+    return false;
+  }
+  
+  // Callbacks are typically stable (useCallback), so we skip checking them
+  // If they change reference but are functionally the same, re-render is wasteful
+  
+  return true;
+}
+
+function TodoItemComponent({
   todo,
   users,
   currentUserName,
@@ -239,8 +314,17 @@ export default function TodoItem({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
+  // Inline input saving states for loading feedback
+  const [savingDate, setSavingDate] = useState(false);
+  const [savingAssignee, setSavingAssignee] = useState(false);
+  const [savingPriority, setSavingPriority] = useState(false);
+  const [savedField, setSavedField] = useState<'date' | 'assignee' | 'priority' | null>(null);
+  const [focusedMenuIndex, setFocusedMenuIndex] = useState(-1);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuItemsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const deleteDialogRef = useRef<HTMLDivElement>(null);
+  const deleteDescriptionId = `delete-dialog-description-${todo.id}`;
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const priority = todo.priority || 'medium';
   const status = todo.status || 'todo';
@@ -298,6 +382,71 @@ export default function TodoItem({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showActionsMenu, todo.id]);
+
+  // Keyboard navigation for dropdown menu
+  useEffect(() => {
+    if (!showActionsMenu) {
+      setFocusedMenuIndex(-1);
+      return;
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const menuItems = menuItemsRef.current.filter(Boolean);
+      const itemCount = menuItems.length;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setFocusedMenuIndex(prev => {
+            const next = prev < itemCount - 1 ? prev + 1 : 0;
+            menuItems[next]?.focus();
+            return next;
+          });
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setFocusedMenuIndex(prev => {
+            const next = prev > 0 ? prev - 1 : itemCount - 1;
+            menuItems[next]?.focus();
+            return next;
+          });
+          break;
+        case 'Escape':
+          e.preventDefault();
+          setShowActionsMenu(false);
+          setShowSnoozeMenu(false);
+          menuButtonRef.current?.focus();
+          break;
+        case 'Tab':
+          // Close menu on tab out
+          setShowActionsMenu(false);
+          setShowSnoozeMenu(false);
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showActionsMenu]);
+
+  // Focus first menu item when menu opens
+  useEffect(() => {
+    if (showActionsMenu && menuItemsRef.current[0]) {
+      // Small delay to ensure portal is rendered
+      setTimeout(() => {
+        menuItemsRef.current[0]?.focus();
+        setFocusedMenuIndex(0);
+      }, 10);
+    }
+  }, [showActionsMenu]);
+
+  // Focus management for delete confirmation dialog
+  useEffect(() => {
+    if (showDeleteConfirm && deleteDialogRef.current) {
+      // Focus the dialog when it opens
+      deleteDialogRef.current.focus();
+    }
+  }, [showDeleteConfirm]);
 
   // Helper to get date offset for snooze
   const getSnoozeDate = (days: number) => {
@@ -412,7 +561,7 @@ export default function TodoItem({
 
     // Completed tasks - keep priority bar but fade overall
     if (todo.completed) {
-      return `bg-[var(--surface)] border-[var(--border-subtle)] opacity-60 ${priorityBorder}`;
+      return `bg-[var(--surface)] border-[var(--border-subtle)] opacity-75 ${priorityBorder}`;
     }
     // Selected state
     if (selected) {
@@ -420,17 +569,25 @@ export default function TodoItem({
     }
     // Overdue severity hierarchy
     if (dueDateStatus === 'overdue') {
-      const isHighPriority = priority === 'urgent' || priority === 'high';
+      const isUrgentPriority = priority === 'urgent';
+      const isHighPriority = priority === 'high';
+      if (isUrgentPriority) {
+        // CRITICAL OVERDUE URGENT: Pulse animation + thicker border (4px) for maximum urgency
+        return `bg-red-500/10 dark:bg-red-500/15 border-red-500/50 border-4 urgent-pulse ${priorityBorder}`;
+      }
       if (isHighPriority) {
-        // CRITICAL: Full red background for high-priority overdue
-        return `bg-red-500/10 dark:bg-red-500/15 border-red-500/30 ${priorityBorder}`;
+        // HIGH PRIORITY OVERDUE: Full red background, thicker border
+        return `bg-red-500/10 dark:bg-red-500/15 border-red-500/40 border-[3px] ${priorityBorder}`;
       }
       // Medium/Low overdue - priority bar + subtle styling
-      return `bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
+      return `bg-red-50 dark:bg-red-900/10 border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
     }
     // Default card with priority border
     return `bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
   };
+
+  // Check if task is overdue for metadata visibility
+  const isOverdue = dueDateStatus === 'overdue' && !todo.completed;
 
   return (
     <div
@@ -440,41 +597,49 @@ export default function TodoItem({
     >
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* Selection checkbox (for bulk actions) */}
+        {/* Selection checkbox (for bulk actions) - 44x44px touch target */}
         {onSelect && (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={(e) => onSelect(todo.id, e.target.checked)}
-            className="w-4 h-4 rounded-[var(--radius-sm)] border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
-          />
+          <div className="relative flex items-center justify-center w-11 h-11 -m-2" style={{ touchAction: 'manipulation' }}>
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => onSelect(todo.id, e.target.checked)}
+              aria-label={`Select task: ${todo.text}`}
+              className="w-4 h-4 rounded-[var(--radius-sm)] border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
+            />
+            {/* Visible checkmark overlay for selected state */}
+            {selected && (
+              <Check
+                className="absolute w-3 h-3 text-white pointer-events-none"
+                strokeWidth={3}
+                aria-hidden="true"
+              />
+            )}
+          </div>
         )}
 
-        {/* Completion checkbox - prominent one-click complete */}
+        {/* Completion checkbox - prominent one-click complete with 44x44px touch target */}
         <button
           onClick={handleToggle}
-          className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 touch-manipulation hover:scale-110 active:scale-95 ${
-            todo.completed
-              ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
-              : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10 hover:shadow-md active:border-[var(--success)]'
-          }`}
+          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0 transition-all duration-200 hover:scale-110 active:scale-95`}
+          style={{ touchAction: 'manipulation' }}
           title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
         >
-          {todo.completed && <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
+          {/* Visual checkbox */}
+          <span className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center transition-all duration-200 ${
+            todo.completed
+              ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
+              : 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
+          }`}>
+            {todo.completed && <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
+          </span>
         </button>
 
-        {/* Content */}
-        <div
-          className="flex-1 min-w-0 cursor-pointer"
+        {/* Content - using semantic button for keyboard accessibility */}
+        <button
+          type="button"
+          className="flex-1 min-w-0 cursor-pointer text-left bg-transparent border-none p-0"
           onClick={() => setExpanded(!expanded)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setExpanded(!expanded);
-            }
-          }}
-          tabIndex={0}
-          role="button"
           aria-expanded={expanded}
           aria-label={`${todo.text}. Press Enter to ${expanded ? 'collapse' : 'expand'} details`}
         >
@@ -571,14 +736,21 @@ export default function TodoItem({
             </div>
 
             {/* SECONDARY ROW: Hidden by default, revealed on hover - Progressive Disclosure */}
+            {/* Shows only when there's secondary metadata AND (hovered OR expanded OR overdue OR on mobile for non-completed) */}
             {/* Shows only when there's secondary metadata AND (hovered OR expanded) */}
             {(subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0) || todo.recurrence || (todo.reminder_at && !todo.reminder_sent && !todo.completed) || todo.merged_from?.length) && (
               <>
-                {/* Separator */}
-                <div className="w-px h-4 bg-[var(--border)] mx-1 hidden group-hover:block sm:group-hover:block" />
+                {/* Separator - always show on mobile for non-completed, or on hover for desktop */}
+                <div className={`w-px h-4 bg-[var(--border)] mx-1 ${!todo.completed || isOverdue ? 'block sm:hidden sm:group-hover:block' : 'hidden group-hover:block'}`} />
 
-                {/* Secondary metadata - only visible on hover/focus */}
-                <div className={`flex items-center gap-2 transition-opacity duration-200 ${expanded ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}>
+                {/* Secondary metadata - always visible on mobile for non-completed tasks, on hover for desktop, always for overdue */}
+                <div className={`flex items-center gap-2 transition-opacity duration-200 ${
+                  expanded || isOverdue
+                    ? 'opacity-100'
+                    : !todo.completed
+                      ? 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100'
+                      : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                }`}>
                   {/* Recurrence - indicates recurring task */}
                   {todo.recurrence && (
                     <Badge
@@ -706,38 +878,106 @@ export default function TodoItem({
               className="hidden sm:flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
-              <input
-                type="date"
-                value={todo.due_date ? todo.due_date.split('T')[0] : ''}
-                onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
-                aria-label="Set due date"
-              />
-              <select
-                value={todo.assigned_to || ''}
-                onChange={(e) => onAssign(todo.id, e.target.value || null)}
-                className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none min-w-[90px]"
-                aria-label="Assign task to user"
-              >
-                <option value="">Unassigned</option>
-                {users.map((user) => (
-                  <option key={user} value={user}>{user}</option>
-                ))}
-              </select>
-              <select
-                value={priority}
-                onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-                className="text-xs px-2 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] outline-none"
-                aria-label="Set task priority"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
+              {/* Due date with loading/success feedback */}
+              <div className="relative inline-flex items-center">
+                <input
+                  type="date"
+                  value={todo.due_date ? todo.due_date.split('T')[0] : ''}
+                  onChange={async (e) => {
+                    setSavingDate(true);
+                    await onSetDueDate(todo.id, e.target.value || null);
+                    setSavingDate(false);
+                    setSavedField('date');
+                    setTimeout(() => setSavedField(null), 1500);
+                  }}
+                  disabled={savingDate}
+                  className={`text-xs px-2 py-1 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none transition-all ${
+                    savingDate
+                      ? 'border-[var(--accent)] opacity-70 cursor-wait'
+                      : savedField === 'date'
+                        ? 'border-[var(--success)]'
+                        : 'border-[var(--border)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]'
+                  }`}
+                  aria-label="Set due date"
+                />
+                {savingDate && (
+                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin" />
+                )}
+                {savedField === 'date' && !savingDate && (
+                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)]" />
+                )}
+              </div>
+
+              {/* Assignee with loading/success feedback */}
+              <div className="relative inline-flex items-center">
+                <select
+                  value={todo.assigned_to || ''}
+                  onChange={async (e) => {
+                    setSavingAssignee(true);
+                    await onAssign(todo.id, e.target.value || null);
+                    setSavingAssignee(false);
+                    setSavedField('assignee');
+                    setTimeout(() => setSavedField(null), 1500);
+                  }}
+                  disabled={savingAssignee}
+                  className={`text-xs px-2 py-1 pr-5 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none min-w-[90px] transition-all ${
+                    savingAssignee
+                      ? 'border-[var(--accent)] opacity-70 cursor-wait'
+                      : savedField === 'assignee'
+                        ? 'border-[var(--success)]'
+                        : 'border-[var(--border)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]'
+                  }`}
+                  aria-label="Assign task to user"
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((user) => (
+                    <option key={user} value={user}>{user}</option>
+                  ))}
+                </select>
+                {savingAssignee && (
+                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin pointer-events-none" />
+                )}
+                {savedField === 'assignee' && !savingAssignee && (
+                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)] pointer-events-none" />
+                )}
+              </div>
+
+              {/* Priority with loading/success feedback */}
+              <div className="relative inline-flex items-center">
+                <select
+                  value={priority}
+                  onChange={async (e) => {
+                    setSavingPriority(true);
+                    await onSetPriority(todo.id, e.target.value as TodoPriority);
+                    setSavingPriority(false);
+                    setSavedField('priority');
+                    setTimeout(() => setSavedField(null), 1500);
+                  }}
+                  disabled={savingPriority}
+                  className={`text-xs px-2 py-1 pr-5 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none transition-all ${
+                    savingPriority
+                      ? 'border-[var(--accent)] opacity-70 cursor-wait'
+                      : savedField === 'priority'
+                        ? 'border-[var(--success)]'
+                        : 'border-[var(--border)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]'
+                  }`}
+                  aria-label="Set task priority"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+                {savingPriority && (
+                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin pointer-events-none" />
+                )}
+                {savedField === 'priority' && !savingPriority && (
+                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)] pointer-events-none" />
+                )}
+              </div>
             </div>
           )}
-        </div>
+        </button>
 
         {/* Action buttons - expand and three-dot menu */}
         <div className="flex items-center gap-1">
@@ -768,95 +1008,119 @@ export default function TodoItem({
 
             {/* Dropdown rendered via Portal to escape stacking context */}
             {showActionsMenu && dropdownPosition && typeof document !== 'undefined' && createPortal(
-              <div
-                id={`todo-dropdown-${todo.id}`}
-                className="fixed bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl py-1 min-w-[180px]"
-                style={{
-                  top: dropdownPosition.top,
-                  left: dropdownPosition.left,
-                  zIndex: 99999,
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Edit */}
-                {onUpdateText && (
-                  <button
-                    onClick={() => { setEditingText(true); setExpanded(true); setShowActionsMenu(false); }}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
-                  >
-                    <Pencil className="w-4 h-4 text-[var(--text-muted)]" />
-                    Edit
-                  </button>
-                )}
+              (() => {
+                // Reset menu items ref array for keyboard navigation
+                menuItemsRef.current = [];
+                let menuItemIndex = 0;
 
-                {/* Duplicate */}
-                {onDuplicate && (
-                  <button
-                    onClick={() => { onDuplicate(todo); setShowActionsMenu(false); }}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
+                return (
+                  <div
+                    id={`todo-dropdown-${todo.id}`}
+                    role="menu"
+                    aria-label="Task actions menu"
+                    className="fixed bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl py-1 min-w-[180px]"
+                    style={{
+                      top: dropdownPosition.top,
+                      left: dropdownPosition.left,
+                      zIndex: 99999,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Copy className="w-4 h-4 text-[var(--text-muted)]" />
-                    Duplicate
-                  </button>
-                )}
+                    {/* Edit */}
+                    {onUpdateText && (
+                      <button
+                        ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                        role="menuitem"
+                        onClick={() => { setEditingText(true); setExpanded(true); setShowActionsMenu(false); }}
+                        className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+                      >
+                        <Pencil className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                        Edit
+                      </button>
+                    )}
 
-                {/* Snooze submenu */}
-                {!todo.completed && (
-                  <div className="relative group/snooze">
-                    <button
-                      onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
-                      className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
-                    >
-                      <Clock className="w-4 h-4 text-[var(--text-muted)]" />
-                      Snooze
-                      <ChevronDown className="w-3 h-3 ml-auto text-[var(--text-muted)]" />
-                    </button>
-                    {showSnoozeMenu && (
-                      <div className="pl-6 py-1 border-t border-[var(--border)]">
-                        <button onClick={() => { handleSnooze(1); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">Tomorrow</button>
-                        <button onClick={() => { handleSnooze(2); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">In 2 Days</button>
-                        <button onClick={() => { handleSnooze(7); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">Next Week</button>
-                        <button onClick={() => { handleSnooze(30); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--text-muted)]">Next Month</button>
+                    {/* Duplicate */}
+                    {onDuplicate && (
+                      <button
+                        ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                        role="menuitem"
+                        onClick={() => { onDuplicate(todo); setShowActionsMenu(false); }}
+                        className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+                      >
+                        <Copy className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                        Duplicate
+                      </button>
+                    )}
+
+                    {/* Snooze submenu */}
+                    {!todo.completed && (
+                      <div className="relative group/snooze" role="none">
+                        <button
+                          ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                          role="menuitem"
+                          aria-haspopup="true"
+                          aria-expanded={showSnoozeMenu}
+                          onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+                        >
+                          <Clock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                          Snooze
+                          <ChevronDown className="w-3 h-3 ml-auto text-[var(--text-muted)]" aria-hidden="true" />
+                        </button>
+                        {showSnoozeMenu && (
+                          <div className="pl-6 py-1 border-t border-[var(--border)]" role="menu" aria-label="Snooze options">
+                            <button role="menuitem" onClick={() => { handleSnooze(1); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Tomorrow</button>
+                            <button role="menuitem" onClick={() => { handleSnooze(2); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">In 2 Days</button>
+                            <button role="menuitem" onClick={() => { handleSnooze(7); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Next Week</button>
+                            <button role="menuitem" onClick={() => { handleSnooze(30); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Next Month</button>
+                          </div>
+                        )}
                       </div>
                     )}
+
+                    <div className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />
+
+                    {/* Save as Template */}
+                    {onSaveAsTemplate && (
+                      <button
+                        ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                        role="menuitem"
+                        onClick={() => { onSaveAsTemplate(todo); setShowActionsMenu(false); }}
+                        className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+                      >
+                        <FileText className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                        Save as Template
+                      </button>
+                    )}
+
+                    {/* Email Customer */}
+                    {onEmailCustomer && (
+                      <button
+                        ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                        role="menuitem"
+                        onClick={() => { onEmailCustomer(todo); setShowActionsMenu(false); }}
+                        className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+                      >
+                        <Mail className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                        Email Summary
+                      </button>
+                    )}
+
+                    <div className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />
+
+                    {/* Delete - shows confirmation */}
+                    <button
+                      ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                      role="menuitem"
+                      onClick={() => { setShowDeleteConfirm(true); setShowActionsMenu(false); }}
+                      className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] focus:bg-[var(--danger-light)] focus:outline-none text-[var(--danger)] flex items-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
+                      Delete
+                    </button>
                   </div>
-                )}
-
-                <div className="h-px bg-[var(--border)] my-1" />
-
-                {/* Save as Template */}
-                {onSaveAsTemplate && (
-                  <button
-                    onClick={() => { onSaveAsTemplate(todo); setShowActionsMenu(false); }}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
-                  >
-                    <FileText className="w-4 h-4 text-[var(--text-muted)]" />
-                    Save as Template
-                  </button>
-                )}
-
-                {/* Email Customer */}
-                {onEmailCustomer && (
-                  <button
-                    onClick={() => { onEmailCustomer(todo); setShowActionsMenu(false); }}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)] flex items-center gap-2"
-                  >
-                    <Mail className="w-4 h-4 text-[var(--text-muted)]" />
-                    Email Summary
-                  </button>
-                )}
-
-                <div className="h-px bg-[var(--border)] my-1" />
-
-                {/* Delete - shows confirmation */}
-                <button
-                  onClick={() => { setShowDeleteConfirm(true); setShowActionsMenu(false); }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] text-[var(--danger)] flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </button>
-              </div>,
+                );
+              })(),
               document.body
             )}
           </div>
@@ -867,19 +1131,25 @@ export default function TodoItem({
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
           <div
-            className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-xl max-w-sm w-full p-6"
+            ref={deleteDialogRef}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby={`delete-dialog-title-${todo.id}`}
+            aria-describedby={deleteDescriptionId}
+            tabIndex={-1}
+            className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-xl max-w-sm w-full p-6 focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center" aria-hidden="true">
                 <AlertTriangle className="w-5 h-5 text-red-500" />
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--foreground)]">Delete Task?</h3>
+                <h3 id={`delete-dialog-title-${todo.id}`} className="font-semibold text-[var(--foreground)]">Delete Task?</h3>
                 <p className="text-sm text-[var(--text-muted)]">This action cannot be undone.</p>
               </div>
             </div>
-            <p className="text-sm text-[var(--text-muted)] mb-6 line-clamp-2">
+            <p id={deleteDescriptionId} className="text-sm text-[var(--text-muted)] mb-6 line-clamp-2">
               &ldquo;{todo.text}&rdquo;
             </p>
             <div className="flex gap-3">
@@ -1320,3 +1590,12 @@ export default function TodoItem({
     </div>
   );
 }
+
+/**
+ * Memoized TodoItem component
+ * Uses custom comparison to prevent unnecessary re-renders when todo list changes
+ * Only re-renders when the specific todo's relevant properties change
+ */
+const TodoItem = memo(TodoItemComponent, areTodoItemPropsEqual);
+
+export default TodoItem;

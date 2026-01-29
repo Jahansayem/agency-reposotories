@@ -1,47 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
-import { logger } from '@/lib/logger';
+import { NextRequest } from 'next/server';
+import {
+  validateAiRequest,
+  callClaude,
+  parseAiJsonResponse,
+  aiSuccessResponse,
+  isAiConfigured,
+  validators,
+  dateHelpers,
+  withAiErrorHandling,
+} from '@/lib/aiApiHelper';
 
-// Parse voicemail transcription to extract multiple tasks
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { transcription, users } = body;
+interface ParsedTask {
+  text: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  dueDate: string;
+  assignedTo: string;
+}
 
-    if (!transcription || typeof transcription !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'No transcription provided' },
-        { status: 400 }
-      );
-    }
-
-    if (!process.env.ANTHROPIC_API_KEY) {
-      // Return the transcription as a single task if no AI available
-      return NextResponse.json({
-        success: true,
-        tasks: [{
-          text: transcription.trim(),
-          priority: 'medium',
-          dueDate: '',
-          assignedTo: '',
-        }],
-      });
-    }
-
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    });
-
-    const userList = users && users.length > 0 ? users.join(', ') : 'none specified';
-    const today = new Date().toISOString().split('T')[0];
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `You are a task extraction assistant. Analyze this voicemail transcription and extract ALL distinct action items or tasks mentioned.
+function buildPrompt(
+  transcription: string,
+  userList: string,
+  today: string
+): string {
+  return `You are a task extraction assistant. Analyze this voicemail transcription and extract ALL distinct action items or tasks mentioned.
 
 Voicemail transcription:
 "${transcription}"
@@ -71,75 +52,102 @@ Respond ONLY with valid JSON in this exact format:
 
 If the transcription doesn't contain any clear tasks, still return one task with the cleaned-up text.
 Leave dueDate as empty string "" if no date is mentioned.
-Leave assignedTo as empty string "" if no person is mentioned.`,
+Leave assignedTo as empty string "" if no person is mentioned.`;
+}
+
+async function handleParseVoicemail(request: NextRequest) {
+  // Validate request
+  const validation = await validateAiRequest(request, {
+    customValidator: (body) => {
+      if (!body.transcription || typeof body.transcription !== 'string') {
+        return 'No transcription provided';
+      }
+      return null;
+    },
+  });
+
+  if (!validation.valid) {
+    return validation.response;
+  }
+
+  const { transcription, users } = validation.body as {
+    transcription: string;
+    users?: string[];
+  };
+
+  // If AI not configured, return the transcription as a single task
+  if (!isAiConfigured()) {
+    return aiSuccessResponse({
+      tasks: [
+        {
+          text: transcription.trim(),
+          priority: 'medium',
+          dueDate: '',
+          assignedTo: '',
         },
       ],
     });
+  }
 
-    // Extract text from the response
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+  const userList = dateHelpers.formatUserList(users);
+  const today = dateHelpers.getTodayISO();
 
-    // Try to parse JSON from response
-    let parsedResponse;
-    try {
-      // Find JSON in the response (it might be wrapped in markdown code blocks)
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedResponse = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
-      }
-    } catch {
-      // If parsing fails, return the transcription as a single task
-      return NextResponse.json({
-        success: true,
-        tasks: [{
+  // Build prompt and call Claude
+  const prompt = buildPrompt(transcription, userList, today);
+
+  const aiResult = await callClaude({
+    userMessage: prompt,
+    maxTokens: 1024,
+    component: 'ParseVoicemailAPI',
+  });
+
+  // If AI call fails, return the transcription as a single task
+  if (!aiResult.success) {
+    return aiSuccessResponse({
+      tasks: [
+        {
           text: transcription.trim(),
           priority: 'medium',
           dueDate: '',
           assignedTo: '',
-        }],
-      });
-    }
+        },
+      ],
+    });
+  }
 
-    // Validate the response structure
-    if (!parsedResponse.tasks || !Array.isArray(parsedResponse.tasks)) {
-      return NextResponse.json({
-        success: true,
-        tasks: [{
-          text: transcription.trim(),
-          priority: 'medium',
-          dueDate: '',
-          assignedTo: '',
-        }],
-      });
-    }
-
-    // Validate each task and ensure proper structure
-    const validatedTasks = parsedResponse.tasks.map((task: {
+  // Parse the JSON response
+  const parsedResponse = parseAiJsonResponse<{
+    tasks?: Array<{
       text?: string;
       priority?: string;
       dueDate?: string;
       assignedTo?: string;
-    }) => ({
-      text: task.text || transcription.trim(),
-      priority: ['low', 'medium', 'high', 'urgent'].includes(task.priority || '')
-        ? task.priority
-        : 'medium',
-      dueDate: task.dueDate || '',
-      assignedTo: task.assignedTo || '',
-    }));
+    }>;
+  }>(aiResult.content);
 
-    return NextResponse.json({
-      success: true,
-      tasks: validatedTasks,
+  // If parsing fails, return the transcription as a single task
+  if (!parsedResponse || !Array.isArray(parsedResponse.tasks)) {
+    return aiSuccessResponse({
+      tasks: [
+        {
+          text: transcription.trim(),
+          priority: 'medium',
+          dueDate: '',
+          assignedTo: '',
+        },
+      ],
     });
-
-  } catch (error) {
-    logger.error('Voicemail parsing error', error, { component: 'ParseVoicemailAPI' });
-    return NextResponse.json(
-      { success: false, error: 'Failed to parse voicemail' },
-      { status: 500 }
-    );
   }
+
+  // Validate each task and ensure proper structure
+  const validatedTasks: ParsedTask[] = parsedResponse.tasks.map((task) => ({
+    text: task.text || transcription.trim(),
+    priority: validators.sanitizePriority(task.priority),
+    dueDate: task.dueDate || '',
+    assignedTo: task.assignedTo || '',
+  }));
+
+  return aiSuccessResponse({ tasks: validatedTasks });
 }
+
+export const POST = withAiErrorHandling('ParseVoicemailAPI', handleParseVoicemail);

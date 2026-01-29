@@ -43,6 +43,9 @@ const IDLE_TIMEOUT_MINUTES = 30;
 /**
  * Validate a session from request headers
  *
+ * SECURITY: Only accepts proper session tokens. X-User-Name header
+ * is NOT trusted as a standalone authentication method.
+ *
  * Checks for session token in:
  * 1. HttpOnly session_token cookie (preferred, most secure)
  * 2. X-Session-Token header
@@ -81,37 +84,14 @@ export async function validateSession(
       sessionToken = sessionCookie?.value || null;
     }
 
-    // Also check for legacy userName header (for backward compatibility during migration)
-    const legacyUserName = request.headers.get('X-User-Name');
+    // SECURITY: X-User-Name header is NOT accepted as standalone authentication
+    // This prevents spoofing attacks where an attacker simply sets the header
+    // to impersonate another user
 
-    if (!sessionToken && !legacyUserName) {
+    if (!sessionToken) {
       return {
         valid: false,
-        error: 'No session token provided',
-      };
-    }
-
-    // If we have a legacy userName, validate it exists (temporary backward compatibility)
-    if (!sessionToken && legacyUserName) {
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id, name, role')
-        .eq('name', legacyUserName)
-        .single();
-
-      if (error || !user) {
-        return {
-          valid: false,
-          error: 'Invalid user',
-        };
-      }
-
-      // Accept legacy auth during migration period
-      return {
-        valid: true,
-        userId: user.id,
-        userName: user.name,
-        userRole: user.role || 'member',
+        error: 'No session token provided. Please log in.',
       };
     }
 

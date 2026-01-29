@@ -67,6 +67,9 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6' },
   reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444' },
   reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981' },
+  marked_waiting: { icon: Clock, label: 'marked waiting for response', color: '#8b5cf6' },
+  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: '#10b981' },
+  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: '#ef4444' },
 };
 
 // Activity type filter options

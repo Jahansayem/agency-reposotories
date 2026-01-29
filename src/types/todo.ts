@@ -4,6 +4,9 @@ export type TodoPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export type RecurrencePattern = 'daily' | 'weekly' | 'monthly' | null;
 
+// Waiting for customer response types
+export type WaitingContactType = 'call' | 'email' | 'other';
+
 export interface Subtask {
   id: string;
   text: string;
@@ -87,6 +90,11 @@ export interface Todo {
   reminder_sent?: boolean; // Whether simple reminder has been sent
   reminders?: TaskReminder[]; // Multiple reminders (from task_reminders table)
   agency_id?: string; // Multi-tenancy: which agency this task belongs to
+  // Waiting for customer response tracking
+  waiting_for_response?: boolean;
+  waiting_since?: string;
+  waiting_contact_type?: WaitingContactType;
+  follow_up_after_hours?: number; // Default 48 hours
 }
 
 // ============================================
@@ -187,7 +195,7 @@ export const REMINDER_PRESETS: Record<ReminderPreset, ReminderPresetConfig> = {
 };
 
 export type SortOption = 'created' | 'due_date' | 'priority' | 'alphabetical' | 'custom' | 'urgency';
-export type QuickFilter = 'all' | 'my_tasks' | 'due_today' | 'overdue';
+export type QuickFilter = 'all' | 'my_tasks' | 'due_today' | 'overdue' | 'waiting' | 'needs_followup';
 
 export type ViewMode = 'list' | 'kanban';
 
@@ -240,6 +248,45 @@ export const STATUS_CONFIG: Record<TodoStatus, { label: string; color: string; b
   in_progress: { label: 'In Progress', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
   done: { label: 'Done', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
 };
+
+// Waiting for customer response configuration
+export const WAITING_CONTACT_CONFIG: Record<WaitingContactType, { label: string; icon: string; color: string }> = {
+  call: { label: 'Phone Call', icon: '📞', color: '#8b5cf6' },
+  email: { label: 'Email', icon: '✉️', color: '#3b82f6' },
+  other: { label: 'Other', icon: '💬', color: '#6b7280' },
+};
+
+// Default follow-up time in hours
+export const DEFAULT_FOLLOW_UP_HOURS = 48;
+
+// Helper to calculate waiting duration
+export function getWaitingDuration(waitingSince: string): { hours: number; days: number; isOverdue: boolean; followUpHours?: number } {
+  const since = new Date(waitingSince);
+  const now = new Date();
+  const diffMs = now.getTime() - since.getTime();
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  return { hours, days, isOverdue: false }; // isOverdue determined by follow_up_after_hours
+}
+
+// Helper to check if follow-up is overdue
+export function isFollowUpOverdue(todo: Pick<Todo, 'waiting_for_response' | 'waiting_since' | 'follow_up_after_hours'>): boolean {
+  if (!todo.waiting_for_response || !todo.waiting_since) return false;
+  const since = new Date(todo.waiting_since);
+  const now = new Date();
+  const diffHours = (now.getTime() - since.getTime()) / (1000 * 60 * 60);
+  const threshold = todo.follow_up_after_hours ?? DEFAULT_FOLLOW_UP_HOURS;
+  return diffHours >= threshold;
+}
+
+// Format waiting duration for display
+export function formatWaitingDuration(waitingSince: string): string {
+  const { hours, days } = getWaitingDuration(waitingSince);
+  if (days > 0) {
+    return days === 1 ? '1 day' : `${days} days`;
+  }
+  return hours === 1 ? '1 hour' : `${hours} hours`;
+}
 
 // Tapback reaction types (iMessage-style)
 export type TapbackType = 'heart' | 'thumbsup' | 'thumbsdown' | 'haha' | 'exclamation' | 'question';
@@ -336,7 +383,10 @@ export type ActivityAction =
   | 'tasks_merged'
   | 'reminder_added'
   | 'reminder_removed'
-  | 'reminder_sent';
+  | 'reminder_sent'
+  | 'marked_waiting'
+  | 'customer_responded'
+  | 'follow_up_overdue';
 
 export interface ActivityLogEntry {
   id: string;

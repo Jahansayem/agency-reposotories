@@ -13,6 +13,7 @@ import { AppShell, useAppShell, ActiveView } from './layout';
 import { useTodoStore } from '@/store/todoStore';
 import { ErrorBoundary } from './ErrorBoundary';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
+import SyncStatusIndicator from './SyncStatusIndicator';
 
 // Lazy load DashboardModal for better initial load performance
 const DashboardModal = dynamic(() => import('./DashboardModal'), {
@@ -479,6 +480,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         onClose={closeShortcuts}
         darkMode={darkMode}
       />
+
+      {/* Sync status indicator - shows real-time connection state */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <SyncStatusIndicator showLabel />
+      </div>
     </>
   );
 }

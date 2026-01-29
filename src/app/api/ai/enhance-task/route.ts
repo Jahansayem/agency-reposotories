@@ -1,30 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { NextRequest } from 'next/server';
+import {
+  validateAiRequest,
+  callClaude,
+  parseAiJsonResponse,
+  aiErrorResponse,
+  aiSuccessResponse,
+  validators,
+  dateHelpers,
+  withAiErrorHandling,
+} from '@/lib/aiApiHelper';
 import { logger } from '@/lib/logger';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+interface EnhancedTask {
+  text: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  dueDate: string;
+  assignedTo: string;
+  wasEnhanced: boolean;
+}
 
-export async function POST(request: NextRequest) {
-  try {
-    const { text, users } = await request.json();
-
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Task text is required' },
-        { status: 400 }
-      );
-    }
-
-    const userList = Array.isArray(users) && users.length > 0
-      ? users.join(', ')
-      : 'no team members registered';
-
-    const today = new Date().toISOString().split('T')[0];
-    const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-
-    const prompt = `You are a task enhancement assistant for a small business team. Take the user's task input and improve it.
+function buildPrompt(text: string, userList: string, today: string, dayOfWeek: string): string {
+  return `You are a task enhancement assistant for a small business team. Take the user's task input and improve it.
 
 User's task input: "${text}"
 
@@ -58,50 +54,69 @@ Examples:
 - "Send email to client" -> { "text": "Send email to client", "priority": "medium", "dueDate": "", "assignedTo": "", "wasEnhanced": false }
 
 Respond with ONLY the JSON object, no other text.`;
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
-
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'EnhanceTaskAPI', responseText });
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
-
-    const enhanced = JSON.parse(jsonMatch[0]);
-
-    // Validate the response structure
-    const validatedResult = {
-      text: enhanced.text || text,
-      priority: ['low', 'medium', 'high', 'urgent'].includes(enhanced.priority)
-        ? enhanced.priority
-        : 'medium',
-      dueDate: enhanced.dueDate || '',
-      assignedTo: enhanced.assignedTo || '',
-      wasEnhanced: Boolean(enhanced.wasEnhanced),
-    };
-
-    return NextResponse.json({
-      success: true,
-      enhanced: validatedResult,
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error enhancing task', error, { component: 'EnhanceTaskAPI', details: errorMessage });
-    return NextResponse.json(
-      { success: false, error: 'Failed to enhance task', details: errorMessage },
-      { status: 500 }
-    );
-  }
 }
+
+async function handleEnhanceTask(request: NextRequest) {
+  // Validate request
+  const validation = await validateAiRequest(request, {
+    customValidator: (body) => {
+      if (!body.text || typeof body.text !== 'string') {
+        return 'Task text is required';
+      }
+      return null;
+    },
+  });
+
+  if (!validation.valid) {
+    return validation.response;
+  }
+
+  const { text, users } = validation.body as { text: string; users?: string[] };
+
+  const userList = dateHelpers.formatUserList(users);
+  const today = dateHelpers.getTodayISO();
+  const dayOfWeek = dateHelpers.getDayOfWeek();
+
+  // Build prompt and call Claude
+  const prompt = buildPrompt(text, userList, today, dayOfWeek);
+
+  const aiResult = await callClaude({
+    userMessage: prompt,
+    maxTokens: 300,
+    component: 'EnhanceTaskAPI',
+  });
+
+  if (!aiResult.success) {
+    return aiErrorResponse('Failed to enhance task', 500, aiResult.error);
+  }
+
+  // Parse the JSON response
+  const enhanced = parseAiJsonResponse<{
+    text?: string;
+    priority?: string;
+    dueDate?: string;
+    assignedTo?: string;
+    wasEnhanced?: boolean;
+  }>(aiResult.content);
+
+  if (!enhanced) {
+    logger.error('Failed to parse AI response', undefined, {
+      component: 'EnhanceTaskAPI',
+      responseText: aiResult.content,
+    });
+    return aiErrorResponse('Failed to parse AI response', 500);
+  }
+
+  // Validate the response structure
+  const validatedResult: EnhancedTask = {
+    text: enhanced.text || text,
+    priority: validators.sanitizePriority(enhanced.priority),
+    dueDate: enhanced.dueDate || '',
+    assignedTo: enhanced.assignedTo || '',
+    wasEnhanced: Boolean(enhanced.wasEnhanced),
+  };
+
+  return aiSuccessResponse({ enhanced: validatedResult });
+}
+
+export const POST = withAiErrorHandling('EnhanceTaskAPI', handleEnhanceTask);

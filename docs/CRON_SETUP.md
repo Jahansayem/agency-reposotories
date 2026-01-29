@@ -1,4 +1,64 @@
-# Scheduled Digest Generation Setup
+# Scheduled Jobs Setup
+
+This document covers all scheduled/cron jobs for the application.
+
+---
+
+## 1. Check Waiting for Response (Overdue Follow-ups)
+
+The waiting for response feature needs periodic checking to flag tasks where customers haven't responded within the expected timeframe.
+
+### How It Works
+
+1. External cron service calls `GET /api/todos/check-waiting`
+2. API checks all tasks with `waiting_for_response = true`
+3. Compares `waiting_since` + `follow_up_after_hours` against current time
+4. Creates `follow_up_overdue` activity log entries for overdue tasks
+5. Deduplicates to avoid spamming (only one notification per task per day)
+
+### Setup with cron-job.org
+
+1. Click "Create cronjob"
+2. Fill in the details:
+   - **Title**: `Check Waiting Tasks`
+   - **URL**: `https://shared-todo-list-production.up.railway.app/api/todos/check-waiting`
+   - **Schedule**: Custom cron expression: `0 * * * *` (every hour)
+   - **Timezone**: `America/Los_Angeles` (Pacific Time)
+   - **Request method**: `GET`
+   - **Request headers**:
+     ```
+     Authorization: Bearer <your-cron-secret>
+     ```
+3. Click "Create"
+
+### Environment Variable
+
+Set `CRON_SECRET` in Railway to secure the endpoint:
+```
+CRON_SECRET=your-secure-random-string
+```
+
+### Testing the Endpoint
+
+```bash
+curl -X GET "https://shared-todo-list-production.up.railway.app/api/todos/check-waiting" \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+```
+
+### Expected Response
+
+```json
+{
+  "message": "Check complete",
+  "checked": 5,
+  "overdue": 2,
+  "newNotifications": 2
+}
+```
+
+---
+
+## 2. Daily Digest Generation
 
 The daily digest feature generates personalized AI briefings for all users at scheduled times:
 - **Morning digest**: 5:00 AM Pacific Time

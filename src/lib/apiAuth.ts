@@ -3,21 +3,86 @@
  *
  * Provides helper functions for validating user authentication
  * and authorization in API routes.
+ *
+ * SECURITY: User identity must come from validated sessions, NOT from
+ * client-provided headers which can be spoofed.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { Todo, Attachment } from '@/types/todo';
+import { validateSession } from './sessionValidator';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 /**
- * Extract userName from request
- * Checks header first, then query params
+ * Extract and validate userName from request
+ *
+ * SECURITY: This function validates the session first, then extracts the userName
+ * from the validated session. The X-User-Name header is only used as a HINT
+ * when session validation returns a valid result, and only if it matches.
+ *
+ * NEVER trust client-provided headers directly!
+ */
+export async function extractAndValidateUserName(
+  request: NextRequest
+): Promise<{ userName: string | null; error?: NextResponse }> {
+  // First, validate the session
+  const sessionResult = await validateSession(request);
+
+  if (!sessionResult.valid) {
+    return {
+      userName: null,
+      error: NextResponse.json(
+        {
+          success: false,
+          error: sessionResult.error || 'Authentication required',
+        },
+        { status: 401 }
+      ),
+    };
+  }
+
+  // Session is valid - use the userName from the validated session
+  if (sessionResult.userName) {
+    return { userName: sessionResult.userName };
+  }
+
+  // Fallback: If session is valid but userName wasn't returned,
+  // check query params (for backward compatibility with some endpoints)
+  const { searchParams } = new URL(request.url);
+  const queryUserName = searchParams.get('userName');
+  if (queryUserName && queryUserName.trim()) {
+    return { userName: queryUserName.trim() };
+  }
+
+  return {
+    userName: null,
+    error: NextResponse.json(
+      { success: false, error: 'Could not determine user identity' },
+      { status: 401 }
+    ),
+  };
+}
+
+/**
+ * Extract userName from request (DEPRECATED - use extractAndValidateUserName instead)
+ *
+ * SECURITY WARNING: This function trusts client-provided headers.
+ * Only use this for non-sensitive operations or when session is already validated.
+ *
+ * @deprecated Use extractAndValidateUserName for secure user identification
  */
 export function extractUserName(request: NextRequest): string | null {
-  // Check header first (X-User-Name)
+  // Log deprecation warning in development
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      '[SECURITY] extractUserName is deprecated. Use extractAndValidateUserName for secure auth.'
+    );
+  }
+
+  // Check header first (X-User-Name) - only as hint, not trusted auth
   const headerUserName = request.headers.get('X-User-Name');
   if (headerUserName && headerUserName.trim()) {
     return headerUserName.trim();

@@ -18,6 +18,9 @@ import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 import { createAutoReminders, updateAutoReminders } from '@/lib/reminderService';
 
+// Number of todos to fetch per page
+const TODOS_PER_PAGE = 200;
+
 export function useTodoData(currentUser: AuthUser) {
   const {
     setTodos,
@@ -30,12 +33,18 @@ export function useTodoData(currentUser: AuthUser) {
     setConnected,
     setError,
     setShowWelcomeBack,
+    setTotalTodoCount,
+    setHasMoreTodos,
+    setLoadingMore,
+    appendTodos,
     todos,
+    hasMoreTodos,
+    loadingMore,
   } = useTodoStore();
 
   const userName = currentUser.name;
 
-  // Fetch todos and users
+  // Fetch todos and users with pagination
   const fetchTodos = useCallback(async () => {
     if (!isSupabaseConfigured()) {
       setError('Supabase is not configured. Please check your environment variables.');
@@ -43,8 +52,10 @@ export function useTodoData(currentUser: AuthUser) {
       return;
     }
 
-    const [todosResult, usersResult] = await Promise.all([
-      supabase.from('todos').select('*').order('created_at', { ascending: false }),
+    // Fetch count, initial todos (limited), and users in parallel
+    const [countResult, todosResult, usersResult] = await Promise.all([
+      supabase.from('todos').select('*', { count: 'exact', head: true }),
+      supabase.from('todos').select('*').order('created_at', { ascending: false }).limit(TODOS_PER_PAGE),
       supabase.from('users').select('name, color').order('name'),
     ]);
 
@@ -52,9 +63,15 @@ export function useTodoData(currentUser: AuthUser) {
       logger.error('Error fetching todos', todosResult.error, { component: 'useTodoData' });
       setError('Failed to connect to database. Please check your Supabase configuration.');
     } else {
-      setTodos(todosResult.data || []);
+      const fetchedTodos = todosResult.data || [];
+      const totalCount = countResult.count || fetchedTodos.length;
+      
+      setTodos(fetchedTodos);
+      setTotalTodoCount(totalCount);
+      setHasMoreTodos(fetchedTodos.length < totalCount);
+      
       const registeredUsers = (usersResult.data || []).map((u: { name: string }) => u.name);
-      const todoUsers = [...new Set((todosResult.data || []).map((t: Todo) => t.created_by).filter(Boolean))];
+      const todoUsers = [...new Set((fetchedTodos).map((t: Todo) => t.created_by).filter(Boolean))];
       setUsers([...new Set([...registeredUsers, ...todoUsers])]);
       setUsersWithColors((usersResult.data || []).map((u: { name: string; color: string }) => ({
         name: u.name,
@@ -63,7 +80,7 @@ export function useTodoData(currentUser: AuthUser) {
       setError(null);
     }
     setLoading(false);
-  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError]);
+  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos]);
 
   // Setup real-time subscription
   useEffect(() => {
@@ -372,11 +389,41 @@ export function useTodoData(currentUser: AuthUser) {
     await fetchTodos();
   }, [fetchTodos, setLoading]);
 
+  /**
+   * Load more todos for pagination
+   * Fetches the next page of todos and appends them to the existing list
+   */
+  const loadMoreTodos = useCallback(async () => {
+    if (!hasMoreTodos || loadingMore) return;
+    
+    setLoadingMore(true);
+    
+    try {
+      const currentCount = todos.length;
+      const { data, error } = await supabase
+        .from('todos')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(currentCount, currentCount + TODOS_PER_PAGE - 1);
+      
+      if (error) {
+        logger.error('Error loading more todos', error, { component: 'useTodoData' });
+      } else if (data) {
+        appendTodos(data);
+        // If we got fewer than requested, there are no more
+        setHasMoreTodos(data.length === TODOS_PER_PAGE);
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMoreTodos, loadingMore, todos.length, setLoadingMore, appendTodos, setHasMoreTodos]);
+
   return {
     createTodo,
     updateTodo,
     deleteTodo,
     toggleComplete,
     refresh,
+    loadMoreTodos,
   };
 }

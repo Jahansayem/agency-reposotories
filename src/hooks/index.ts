@@ -39,3 +39,7 @@ export {
   getIsMac,
 } from './useKeyboardShortcuts';
 export type { KeyboardShortcut, UseKeyboardShortcutsOptions } from './useKeyboardShortcuts';
+
+// Chat Hooks
+export { useChatSubscription } from './useChatSubscription';
+export { useChatMessages } from './useChatMessages';

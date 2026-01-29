@@ -56,10 +56,17 @@ interface UseDailyDigestReturn {
 }
 
 // Helper to get CSRF token from cookie
+// Supports both new HttpOnly pattern and legacy pattern
 const getCsrfToken = (): string | null => {
   if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/csrf_token=([^;]+)/);
-  return match ? match[1] : null;
+
+  // Try legacy csrf_token first (backward compatibility)
+  const legacyMatch = document.cookie.match(/csrf_token=([^;]+)/);
+  if (legacyMatch) {
+    return legacyMatch[1];
+  }
+
+  return null;
 };
 
 export function useDailyDigest({

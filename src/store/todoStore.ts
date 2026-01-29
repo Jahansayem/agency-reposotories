@@ -11,6 +11,7 @@
 
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 import { Todo, TodoStatus, TodoPriority, QuickFilter, SortOption, ViewMode } from '@/types/todo';
 
 // Helper functions
@@ -83,6 +84,11 @@ export interface TodoState {
   loading: boolean;
   connected: boolean;
   error: string | null;
+  
+  // Pagination state for large todo lists
+  totalTodoCount: number;
+  hasMoreTodos: boolean;
+  loadingMore: boolean;
 
   // Filters
   filters: TodoFilters;
@@ -106,6 +112,12 @@ export interface TodoState {
   setLoading: (loading: boolean) => void;
   setConnected: (connected: boolean) => void;
   setError: (error: string | null) => void;
+  
+  // Actions - Pagination
+  setTotalTodoCount: (count: number) => void;
+  setHasMoreTodos: (hasMore: boolean) => void;
+  setLoadingMore: (loading: boolean) => void;
+  appendTodos: (todos: Todo[]) => void;
 
   // Actions - Filters
   setFilters: (filters: Partial<TodoFilters>) => void;
@@ -197,6 +209,9 @@ export const useTodoStore = create<TodoState>()(
       loading: true,
       connected: false,
       error: null,
+      totalTodoCount: 0,
+      hasMoreTodos: false,
+      loadingMore: false,
       filters: defaultFilters,
       bulkActions: defaultBulkActions,
       ui: defaultUI,
@@ -240,6 +255,20 @@ export const useTodoStore = create<TodoState>()(
       setLoading: (loading) => set({ loading }, false, 'setLoading'),
       setConnected: (connected) => set({ connected }, false, 'setConnected'),
       setError: (error) => set({ error }, false, 'setError'),
+
+      // Pagination actions
+      setTotalTodoCount: (totalTodoCount) => set({ totalTodoCount }, false, 'setTotalTodoCount'),
+      setHasMoreTodos: (hasMoreTodos) => set({ hasMoreTodos }, false, 'setHasMoreTodos'),
+      setLoadingMore: (loadingMore) => set({ loadingMore }, false, 'setLoadingMore'),
+      appendTodos: (newTodos) => set(
+        (state) => ({
+          todos: [...state.todos, ...newTodos.filter(
+            (newTodo) => !state.todos.some((t) => t.id === newTodo.id)
+          )],
+        }),
+        false,
+        'appendTodos'
+      ),
 
       // Filter actions
       setFilters: (filterUpdates) => set(
@@ -645,3 +674,104 @@ export const hydrateFocusMode = () => {
 
 // Export helper functions for use in components
 export { isDueToday, isOverdue, priorityOrder };
+
+/**
+ * Granular selectors with shallow equality comparison
+ * 
+ * These hooks use shallow comparison to prevent unnecessary re-renders.
+ * Components should use these instead of selecting the entire store state.
+ * 
+ * Usage:
+ * ```tsx
+ * // Instead of:
+ * const { todos, loading, error } = useTodoStore();
+ * 
+ * // Use:
+ * const { todos, loading, error } = useTodos();
+ * ```
+ */
+
+/**
+ * Select core todo data with shallow equality
+ * Use this when you need access to todos, loading state, or error
+ */
+export const useTodos = () => useTodoStore(
+  useShallow((state) => ({
+    todos: state.todos,
+    loading: state.loading,
+    error: state.error,
+    connected: state.connected,
+    totalTodoCount: state.totalTodoCount,
+    hasMoreTodos: state.hasMoreTodos,
+    loadingMore: state.loadingMore,
+  }))
+);
+
+/**
+ * Select filter state with shallow equality
+ * Use this when you need access to filters
+ */
+export const useFilters = () => useTodoStore(
+  useShallow((state) => ({
+    filters: state.filters,
+    setFilters: state.setFilters,
+    setSearchQuery: state.setSearchQuery,
+    setQuickFilter: state.setQuickFilter,
+    setSortOption: state.setSortOption,
+    setShowCompleted: state.setShowCompleted,
+    setHighPriorityOnly: state.setHighPriorityOnly,
+    setStatusFilter: state.setStatusFilter,
+    setAssignedToFilter: state.setAssignedToFilter,
+    resetFilters: state.resetFilters,
+  }))
+);
+
+/**
+ * Select UI state with shallow equality
+ * Use this when you need access to UI flags
+ */
+export const useUiState = () => useTodoStore(
+  useShallow((state) => ({
+    ui: state.ui,
+    setViewMode: state.setViewMode,
+    setShowAdvancedFilters: state.setShowAdvancedFilters,
+    setShowCelebration: state.setShowCelebration,
+    setShowProgressSummary: state.setShowProgressSummary,
+    setShowWelcomeBack: state.setShowWelcomeBack,
+    setShowWeeklyChart: state.setShowWeeklyChart,
+    setShowShortcuts: state.setShowShortcuts,
+    setShowActivityFeed: state.setShowActivityFeed,
+    setShowStrategicDashboard: state.setShowStrategicDashboard,
+    setShowArchiveView: state.setShowArchiveView,
+    setFocusMode: state.setFocusMode,
+    toggleFocusMode: state.toggleFocusMode,
+  }))
+);
+
+/**
+ * Select bulk action state with shallow equality
+ * Use this when you need bulk selection functionality
+ */
+export const useBulkActions = () => useTodoStore(
+  useShallow((state) => ({
+    bulkActions: state.bulkActions,
+    setSelectedTodos: state.setSelectedTodos,
+    toggleTodoSelection: state.toggleTodoSelection,
+    selectAllTodos: state.selectAllTodos,
+    clearSelection: state.clearSelection,
+    setShowBulkActions: state.setShowBulkActions,
+  }))
+);
+
+/**
+ * Select user data with shallow equality
+ * Use this when you need access to user lists
+ */
+export const useUsers = () => useTodoStore(
+  useShallow((state) => ({
+    users: state.users,
+    usersWithColors: state.usersWithColors,
+    setUsers: state.setUsers,
+    setUsersWithColors: state.setUsersWithColors,
+  }))
+);

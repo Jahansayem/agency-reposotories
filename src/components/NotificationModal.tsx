@@ -69,6 +69,9 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6', verb: 'set reminder for' },
   reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444', verb: 'removed reminder from' },
   reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981', verb: 'reminder sent for' },
+  marked_waiting: { icon: Clock, label: 'marked waiting', color: '#8b5cf6', verb: 'waiting for response on' },
+  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: '#10b981', verb: 'got response on' },
+  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: '#ef4444', verb: 'needs follow-up on' },
 };
 
 // Local storage key for last seen notification
