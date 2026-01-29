@@ -1,94 +1,40 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { motion, AnimatePresence } from 'framer-motion';
-import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, isOwner, WaitingContactType, DEFAULT_FOLLOW_UP_HOURS } from '@/types/todo';
-import SortableTodoItem from './SortableTodoItem';
-import AddTodo from './AddTodo';
-import AddTaskModal from './AddTaskModal';
-import KanbanBoard from './KanbanBoard';
 import { logger } from '@/lib/logger';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder, hydrateFocusMode } from '@/store/todoStore';
-import { useTodoData, useFilters, useBulkActions, useIsDesktopWide, useEscapeKey, useTodoModals } from '@/hooks';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import CelebrationEffect from './CelebrationEffect';
-import ProgressSummary from './ProgressSummary';
-import WelcomeBackNotification from './WelcomeBackNotification';
-import ConfirmDialog from './ConfirmDialog';
-import EmptyState from './EmptyState';
-// Note: KeyboardShortcutsModal moved to MainApp.tsx
+import { useTodoData, useFilters, useBulkActions, useEscapeKey, useTodoModals } from '@/hooks';
+import { arrayMove } from '@dnd-kit/sortable';
+import { DragEndEvent } from '@dnd-kit/core';
 import PullToRefresh from './PullToRefresh';
 import StatusLine from './StatusLine';
 import BottomTabs from './BottomTabs';
 import { ExitFocusModeButton } from './FocusModeToggle';
-import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, TodoModals } from './todo';
-import TaskSections, { useShouldUseSections } from './TaskSections';
+import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, BulkActionBar, TodoModals } from './todo';
+import { useShouldUseSections } from './TaskSections';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  Search, AlertTriangle,
-  ArrowUpDown, User, CheckSquare,
-  Trash2, X, ChevronDown, GitMerge, Layers,
-  Paperclip, Filter, RotateCcw, Check, FileText, MoreHorizontal
+  Search, X, ChevronDown, GitMerge,
+  Paperclip, Check, Trash2
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
-import SaveTemplateModal from './SaveTemplateModal';
-import TemplatePicker from './TemplatePicker';
-import ArchivedTaskModal from './ArchivedTaskModal';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAppShell } from './layout/AppShell';
 import { logActivity } from '@/lib/activityLogger';
-import { findPotentialDuplicates, shouldCheckForDuplicates, DuplicateMatch } from '@/lib/duplicateDetection';
+import { findPotentialDuplicates, shouldCheckForDuplicates } from '@/lib/duplicateDetection';
 import { sendTaskAssignmentNotification, sendTaskCompletionNotification, sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { getNextSuggestedTasks, calculateCompletionStreak, getEncouragementMessage } from '@/lib/taskSuggestions';
-import DuplicateDetectionModal from './DuplicateDetectionModal';
-import CustomerEmailModal from './CustomerEmailModal';
-import { CompletionCelebration } from './CompletionCelebration';
-import { TaskCompletionSummary } from './TaskCompletionSummary';
-import { CelebrationData, ActivityLogEntry } from '@/types/todo';
+import { ActivityLogEntry } from '@/types/todo';
 import {
-  ChatPanelSkeleton,
   StrategicDashboardSkeleton,
   ActivityFeedSkeleton,
-  // Note: WeeklyProgressChartSkeleton moved to MainApp.tsx
 } from './LoadingSkeletons';
 
 // Lazy load secondary features for better initial load performance
-// These components are not needed immediately on page load
-// NOTE: FloatingChat removed - Chat is now accessible via navigation sidebar
-// const FloatingChat = dynamic(() => import('./FloatingChat'), {
-//   ssr: false,
-//   loading: () => null,
-// });
-
-// NOTE: UtilitySidebar removed - navigation now in AppShell sidebar
-// const UtilitySidebar = dynamic(() => import('./UtilitySidebar'), {
-//   ssr: false,
-//   loading: () => <div className="w-[280px] bg-[var(--surface)] animate-pulse" />,
-// });
-
-const ChatPanel = dynamic(() => import('./ChatPanel'), {
-  ssr: false,
-  loading: () => <ChatPanelSkeleton />,
-});
-
 const StrategicDashboard = dynamic(() => import('./StrategicDashboard'), {
   ssr: false,
   loading: () => <StrategicDashboardSkeleton />,
@@ -98,8 +44,6 @@ const ActivityFeed = dynamic(() => import('./ActivityFeed'), {
   ssr: false,
   loading: () => <ActivityFeedSkeleton />,
 });
-
-// Note: WeeklyProgressChart moved to MainApp.tsx
 
 interface TodoListProps {
   currentUser: AuthUser;
@@ -369,18 +313,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
   // Add Task modal state (separate from useTodoModals as it's a different concern)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
-
-  // DnD sensors for drag-and-drop reordering
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Minimum drag distance before activating
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1740,581 +1672,98 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
         {/* Compact Filter Bar - hidden in focus mode */}
         {!focusMode && (
-        <div className="mb-4">
-          {/* Single Row: All filters, sort, select (search moved to header) */}
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* Quick filter dropdown - compact */}
-            <div className="relative">
-              <select
-                value={quickFilter}
-                onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
-                className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
-              >
-                <option value="all">All</option>
-                <option value="my_tasks">Mine</option>
-                <option value="due_today">Today</option>
-                <option value="overdue">Overdue</option>
-              </select>
-              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[var(--text-muted)]" />
-            </div>
-
-            {/* High Priority toggle - icon only on mobile */}
-            <button
-              type="button"
-              onClick={() => setHighPriorityOnly(!highPriorityOnly)}
-              className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                highPriorityOnly
-                  ? 'bg-[var(--danger)] text-white'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-              }`}
-              aria-pressed={highPriorityOnly}
-              title="High Priority"
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Urgent</span>
-            </button>
-
-            {/* Show completed toggle - icon only on mobile */}
-            <button
-              type="button"
-              onClick={() => setShowCompleted(!showCompleted)}
-              className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                showCompleted
-                  ? 'bg-[var(--success)] text-white'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-              }`}
-              aria-pressed={showCompleted}
-              title="Show Completed"
-            >
-              <CheckSquare className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Done</span>
-            </button>
-
-            {/* More filters button */}
-            <button
-              type="button"
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                showAdvancedFilters || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end
-                  ? 'bg-[var(--accent)] text-white'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-              }`}
-              aria-expanded={showAdvancedFilters}
-              title="More Filters"
-            >
-              <Filter className="w-3.5 h-3.5" />
-              {(statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
-                <span className="px-1 py-0.5 text-[10px] rounded-full bg-white/20 leading-none">
-                  {[statusFilter !== 'all', assignedToFilter !== 'all', customerFilter !== 'all', hasAttachmentsFilter !== null, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length}
-                </span>
-              )}
-            </button>
-
-            {/* Sort dropdown - compact */}
-            <div className="relative">
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value as SortOption)}
-                aria-label="Sort tasks"
-                className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
-              >
-                <option value="created">New</option>
-                <option value="due_date">Due</option>
-                <option value="priority">Priority</option>
-                <option value="urgency">Urgency</option>
-                <option value="alphabetical">A-Z</option>
-                <option value="custom">Manual</option>
-              </select>
-              <ArrowUpDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[var(--text-muted)]" />
-            </div>
-
-            {/* More dropdown - contains Templates, Select, and Sections */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-                className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  showMoreDropdown || showBulkActions || useSectionedView
-                    ? 'bg-[var(--accent)] text-white'
-                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-                }`}
-                aria-expanded={showMoreDropdown}
-                aria-haspopup="menu"
-                title="More options"
-              >
-                <MoreHorizontal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">More</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${showMoreDropdown ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showMoreDropdown && (
-                <>
-                  {/* Backdrop */}
-                  <div className="fixed inset-0 z-40" onClick={() => setShowMoreDropdown(false)} />
-
-                  {/* Dropdown */}
-                  <div className={`absolute right-0 top-full mt-1 w-48 rounded-lg shadow-lg border z-50 overflow-hidden ${
-                    darkMode ? 'bg-[var(--surface)] border-[var(--border)]' : 'bg-white border-slate-200'
-                  }`}>
-                    {/* Templates button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowMoreDropdown(false);
-                        setShowTemplatePicker(true);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                        darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <FileText className="w-4 h-4 text-[var(--text-muted)]" />
-                      <span>Templates</span>
-                    </button>
-
-                    {/* Select/Bulk actions button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (showBulkActions) {
-                          clearSelection();
-                        }
-                        setShowBulkActions(!showBulkActions);
-                        setShowMoreDropdown(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                        showBulkActions
-                          ? 'bg-[var(--brand-sky)]/10 text-[var(--brand-sky)]'
-                          : darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <CheckSquare className="w-4 h-4 text-[var(--text-muted)]" />
-                      <span>{showBulkActions ? 'Cancel Selection' : 'Select Tasks'}</span>
-                    </button>
-
-                    {/* Sections Toggle - Show in both list and board views when not using custom sort */}
-                    {shouldUseSections && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUseSectionedView(!useSectionedView);
-                          setShowMoreDropdown(false);
-                        }}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                          useSectionedView
-                            ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                            : darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                        aria-pressed={useSectionedView}
-                      >
-                        <Layers className="w-4 h-4 text-[var(--text-muted)]" />
-                        <span>Sections</span>
-                        {useSectionedView && <Check className="w-3.5 h-3.5 ml-auto" />}
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Template Picker - controlled from More dropdown */}
-            <div className="relative">
-              <TemplatePicker
-                currentUserName={userName}
-                users={users}
-                darkMode={darkMode}
-                isOpen={showTemplatePicker}
-                onOpenChange={setShowTemplatePicker}
-                hideTrigger={true}
-                onSelectTemplate={(text, priority, assignedTo, subtasks) => {
-                  addTodo(text, priority, undefined, assignedTo, subtasks);
-                  setShowTemplatePicker(false);
-                }}
-              />
-            </div>
-
-            {/* Clear all - only when filters active */}
-            {(quickFilter !== 'all' || highPriorityOnly || showCompleted || searchQuery || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickFilter('all');
-                  setHighPriorityOnly(false);
-                  setShowCompleted(false);
-                  setSearchQuery('');
-                  setStatusFilter('all');
-                  setAssignedToFilter('all');
-                  setCustomerFilter('all');
-                  setHasAttachmentsFilter(null);
-                  setDateRangeFilter({ start: '', end: '' });
-                }}
-                className="flex items-center gap-1 px-2 py-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-dark)] font-medium"
-                title="Clear all filters"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span className="hidden sm:inline">Clear</span>
-              </button>
-            )}
-          </div>
-
-          {/* Selection mode hint */}
-          {showBulkActions && (
-            <div className="mt-2 text-xs text-[var(--text-muted)]">
-              Click tasks to select them
-            </div>
-          )}
-
-          {/* Advanced Filters Panel - expandable */}
-          <AnimatePresence>
-            {showAdvancedFilters && (
-              <motion.div
-                initial={prefersReducedMotion() ? false : { opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: DURATION.normal }}
-                className="overflow-hidden"
-              >
-                <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  {/* Status filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Status</label>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as TodoStatus | 'all')}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">All</option>
-                      <option value="todo">To Do</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="done">Done</option>
-                    </select>
-                  </div>
-
-                  {/* Assigned to filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Assigned</label>
-                    <select
-                      value={assignedToFilter}
-                      onChange={(e) => setAssignedToFilter(e.target.value)}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">Anyone</option>
-                      <option value="unassigned">Unassigned</option>
-                      {users.map((user) => (
-                        <option key={user} value={user}>{user}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Customer filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Customer</label>
-                    <select
-                      value={customerFilter}
-                      onChange={(e) => setCustomerFilter(e.target.value)}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">All</option>
-                      {uniqueCustomers.map((customer) => (
-                        <option key={customer} value={customer}>{customer}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Has attachments filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Attachments</label>
-                    <select
-                      value={hasAttachmentsFilter === null ? 'all' : hasAttachmentsFilter ? 'yes' : 'no'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setHasAttachmentsFilter(val === 'all' ? null : val === 'yes');
-                      }}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">Any</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
-
-                  {/* Date range filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Due Range</label>
-                    <div className="flex gap-1">
-                      <input
-                        type="date"
-                        value={dateRangeFilter.start}
-                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
-                        className="flex-1 text-xs py-1.5 px-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
-                      />
-                      <input
-                        type="date"
-                        value={dateRangeFilter.end}
-                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
-                        className="flex-1 text-xs py-1.5 px-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+          <TodoFiltersBar
+            quickFilter={quickFilter}
+            setQuickFilter={setQuickFilter}
+            highPriorityOnly={highPriorityOnly}
+            setHighPriorityOnly={setHighPriorityOnly}
+            showCompleted={showCompleted}
+            setShowCompleted={setShowCompleted}
+            showAdvancedFilters={showAdvancedFilters}
+            setShowAdvancedFilters={setShowAdvancedFilters}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            assignedToFilter={assignedToFilter}
+            setAssignedToFilter={setAssignedToFilter}
+            customerFilter={customerFilter}
+            setCustomerFilter={setCustomerFilter}
+            hasAttachmentsFilter={hasAttachmentsFilter}
+            setHasAttachmentsFilter={setHasAttachmentsFilter}
+            dateRangeFilter={dateRangeFilter}
+            setDateRangeFilter={setDateRangeFilter}
+            sortOption={sortOption}
+            setSortOption={setSortOption}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            showMoreDropdown={showMoreDropdown}
+            setShowMoreDropdown={setShowMoreDropdown}
+            showTemplatePicker={showTemplatePicker}
+            setShowTemplatePicker={setShowTemplatePicker}
+            showBulkActions={showBulkActions}
+            setShowBulkActions={setShowBulkActions}
+            clearSelection={clearSelection}
+            useSectionedView={useSectionedView}
+            setUseSectionedView={setUseSectionedView}
+            shouldUseSections={shouldUseSections}
+            users={users}
+            uniqueCustomers={uniqueCustomers}
+            onAddFromTemplate={(text, priority, assignedTo, subtasks) => {
+              // Ensure subtasks have all required Subtask fields
+              const normalizedSubtasks: Subtask[] | undefined = subtasks?.map(s => ({
+                id: s.id,
+                text: s.text,
+                completed: s.completed,
+                priority: ('priority' in s ? (s as Subtask).priority : 'medium') as TodoPriority,
+              }));
+              addTodo(text, priority, undefined, assignedTo, normalizedSubtasks);
+            }}
+            darkMode={darkMode}
+            userName={userName}
+          />
         )}
 
-        {/* List or Kanban - with smooth view transition */}
-        <AnimatePresence mode="wait" initial={false}>
-          {viewMode === 'list' ? (
-            <motion.div
-              key="list-view"
-              initial={prefersReducedMotion() ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={prefersReducedMotion() ? undefined : { opacity: 0, y: -10 }}
-              transition={{ duration: DURATION.fast }}
-            >
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={filteredAndSortedTodos.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {/* Render sectioned view or flat list based on toggle */}
-                  {useSectionedView && shouldUseSections ? (
-                    <TaskSections
-                      todos={filteredAndSortedTodos}
-                      users={users}
-                      currentUserName={userName}
-                      selectedTodos={selectedTodos}
-                      showBulkActions={showBulkActions}
-                      onSelectTodo={showBulkActions ? handleSelectTodo : undefined}
-                      onToggle={toggleTodo}
-                      onDelete={confirmDeleteTodo}
-                      onAssign={assignTodo}
-                      onSetDueDate={setDueDate}
-                      onSetReminder={setReminder}
-                      onMarkWaiting={markWaiting}
-                      onClearWaiting={clearWaiting}
-                      onSetPriority={setPriority}
-                      onStatusChange={updateStatus}
-                      onUpdateText={updateText}
-                      onDuplicate={duplicateTodo}
-                      onUpdateNotes={updateNotes}
-                      onSetRecurrence={setRecurrence}
-                      onUpdateSubtasks={updateSubtasks}
-                      onUpdateAttachments={updateAttachments}
-                      onSaveAsTemplate={(t) => openTemplateModal(t)}
-                      onEmailCustomer={(todo) => {
-                        openEmailModal([todo]);
-                      }}
-                      isDragEnabled={!showBulkActions && sortOption === 'custom'}
-                      renderTodoItem={(todo, index) => (
-                        <motion.div
-                          key={todo.id}
-                          layout={!prefersReducedMotion()}
-                          variants={prefersReducedMotion() ? undefined : listItemVariants}
-                          initial={prefersReducedMotion() ? false : 'hidden'}
-                          animate="visible"
-                          exit="exit"
-                          transition={{
-                            layout: { type: 'spring', stiffness: 350, damping: 25 },
-                            delay: Math.min(index * 0.02, 0.1),
-                          }}
-                        >
-                          <SortableTodoItem
-                            todo={todo}
-                            users={users}
-                            currentUserName={userName}
-                            selected={selectedTodos.has(todo.id)}
-                            autoExpand={todo.id === selectedTaskId}
-                            onAutoExpandHandled={onSelectedTaskHandled}
-                            onSelect={showBulkActions ? handleSelectTodo : undefined}
-                            onToggle={toggleTodo}
-                            onDelete={confirmDeleteTodo}
-                            onAssign={assignTodo}
-                            onSetDueDate={setDueDate}
-                            onSetReminder={setReminder}
-                            onMarkWaiting={markWaiting}
-                            onClearWaiting={clearWaiting}
-                            onSetPriority={setPriority}
-                            onStatusChange={updateStatus}
-                            onUpdateText={updateText}
-                            onDuplicate={duplicateTodo}
-                            onUpdateNotes={updateNotes}
-                            onSetRecurrence={setRecurrence}
-                            onUpdateSubtasks={updateSubtasks}
-                            onUpdateAttachments={updateAttachments}
-                            onSaveAsTemplate={(t) => openTemplateModal(t)}
-                            onEmailCustomer={(todo) => {
-                              openEmailModal([todo]);
-                            }}
-                            isDragEnabled={!showBulkActions && sortOption === 'custom'}
-                          />
-                        </motion.div>
-                      )}
-                      emptyState={
-                        <motion.div
-                          key="empty-state"
-                          initial={prefersReducedMotion() ? false : { opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: DURATION.fast }}
-                        >
-                          <EmptyState
-                            variant={
-                              searchQuery
-                                ? 'no-results'
-                                : quickFilter === 'due_today'
-                                  ? 'no-due-today'
-                                  : quickFilter === 'overdue'
-                                    ? 'no-overdue'
-                                    : stats.total === 0
-                                      ? 'no-tasks'
-                                      : stats.completed === stats.total && stats.total > 0
-                                        ? 'all-done'
-                                        : 'no-tasks'
-                            }
-                            darkMode={darkMode}
-                            searchQuery={searchQuery}
-                            onAddTask={() => {
-                              const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
-                              if (input) input.focus();
-                            }}
-                            onClearSearch={() => setSearchQuery('')}
-                            userName={userName}
-                          />
-                        </motion.div>
-                      }
-                    />
-                  ) : (
-                    /* Flat list view (original behavior) */
-                    <div className="space-y-2" role="list" aria-label="Task list">
-                      <AnimatePresence mode="popLayout" initial={false}>
-                        {filteredAndSortedTodos.length === 0 ? (
-                          <motion.div
-                            key="empty-state"
-                            initial={prefersReducedMotion() ? false : { opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: DURATION.fast }}
-                          >
-                            <EmptyState
-                              variant={
-                                searchQuery
-                                  ? 'no-results'
-                                  : quickFilter === 'due_today'
-                                    ? 'no-due-today'
-                                    : quickFilter === 'overdue'
-                                      ? 'no-overdue'
-                                      : stats.total === 0
-                                        ? 'no-tasks'
-                                        : stats.completed === stats.total && stats.total > 0
-                                          ? 'all-done'
-                                          : 'no-tasks'
-                              }
-                              darkMode={darkMode}
-                              searchQuery={searchQuery}
-                              onAddTask={() => {
-                                const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
-                                if (input) input.focus();
-                              }}
-                              onClearSearch={() => setSearchQuery('')}
-                              userName={userName}
-                            />
-                          </motion.div>
-                        ) : (
-                          filteredAndSortedTodos.map((todo, index) => (
-                            <motion.div
-                              key={todo.id}
-                              layout={!prefersReducedMotion()}
-                              variants={prefersReducedMotion() ? undefined : listItemVariants}
-                              initial={prefersReducedMotion() ? false : 'hidden'}
-                              animate="visible"
-                              exit="exit"
-                              transition={{
-                                layout: { type: 'spring', stiffness: 350, damping: 25 },
-                                delay: Math.min(index * 0.02, 0.1),
-                              }}
-                            >
-                              <SortableTodoItem
-                                todo={todo}
-                                users={users}
-                                currentUserName={userName}
-                                selected={selectedTodos.has(todo.id)}
-                                autoExpand={todo.id === selectedTaskId}
-                                onAutoExpandHandled={onSelectedTaskHandled}
-                                onSelect={showBulkActions ? handleSelectTodo : undefined}
-                                onToggle={toggleTodo}
-                                onDelete={confirmDeleteTodo}
-                                onAssign={assignTodo}
-                                onSetDueDate={setDueDate}
-                                onSetReminder={setReminder}
-                                onMarkWaiting={markWaiting}
-                                onClearWaiting={clearWaiting}
-                                onSetPriority={setPriority}
-                                onStatusChange={updateStatus}
-                                onUpdateText={updateText}
-                                onDuplicate={duplicateTodo}
-                                onUpdateNotes={updateNotes}
-                                onSetRecurrence={setRecurrence}
-                                onUpdateSubtasks={updateSubtasks}
-                                onUpdateAttachments={updateAttachments}
-                                onSaveAsTemplate={(t) => openTemplateModal(t)}
-                                onEmailCustomer={(todo) => {
-                                  openEmailModal([todo]);
-                                }}
-                                isDragEnabled={!showBulkActions && sortOption === 'custom'}
-                              />
-                            </motion.div>
-                          ))
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
-                </SortableContext>
-              </DndContext>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="kanban-view"
-              initial={prefersReducedMotion() ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={prefersReducedMotion() ? undefined : { opacity: 0, y: -10 }}
-              transition={{ duration: DURATION.fast }}
-            >
-              <KanbanBoard
-                todos={filteredAndSortedTodos}
-                users={users}
-                darkMode={darkMode}
-                onStatusChange={updateStatus}
-                onDelete={confirmDeleteTodo}
-                onAssign={assignTodo}
-                onSetDueDate={setDueDate}
-                onSetReminder={setReminder}
-                onMarkWaiting={markWaiting}
-                onClearWaiting={clearWaiting}
-                onSetPriority={setPriority}
-                onUpdateNotes={updateNotes}
-                onUpdateText={updateText}
-                onUpdateSubtasks={updateSubtasks}
-                onToggle={toggleTodo}
-                onDuplicate={duplicateTodo}
-                onSetRecurrence={setRecurrence}
-                onUpdateAttachments={updateAttachments}
-                onSaveAsTemplate={(t) => openTemplateModal(t)}
-                onEmailCustomer={(todo) => {
-                  openEmailModal([todo]);
-                }}
-                showBulkActions={showBulkActions}
-                selectedTodos={selectedTodos}
-                onSelectTodo={handleSelectTodo}
-                useSectionedView={useSectionedView}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* List or Kanban content - delegated to TodoListContent */}
+        <TodoListContent
+          todos={filteredAndSortedTodos}
+          users={users}
+          currentUserName={userName}
+          viewMode={viewMode}
+          useSectionedView={useSectionedView}
+          shouldUseSections={shouldUseSections}
+          sortOption={sortOption}
+          darkMode={darkMode}
+          selectedTodos={selectedTodos}
+          showBulkActions={showBulkActions}
+          searchQuery={searchQuery}
+          quickFilter={quickFilter}
+          stats={stats}
+          selectedTaskId={selectedTaskId}
+          onSelectedTaskHandled={onSelectedTaskHandled}
+          onDragEnd={handleDragEnd}
+          onSelectTodo={(id: string) => handleSelectTodo(id, true)}
+          onToggle={toggleTodo}
+          onDelete={confirmDeleteTodo}
+          onAssign={assignTodo}
+          onSetDueDate={setDueDate}
+          onSetReminder={setReminder}
+          onMarkWaiting={markWaiting}
+          onClearWaiting={clearWaiting}
+          onSetPriority={setPriority}
+          onStatusChange={updateStatus}
+          onUpdateText={updateText}
+          onDuplicate={duplicateTodo}
+          onUpdateNotes={updateNotes}
+          onSetRecurrence={setRecurrence}
+          onUpdateSubtasks={updateSubtasks}
+          onUpdateAttachments={updateAttachments}
+          onSaveAsTemplate={(t) => openTemplateModal(t)}
+          onEmailCustomer={(todo) => openEmailModal([todo])}
+          onClearSearch={() => setSearchQuery('')}
+          onAddTask={() => {
+            const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
+            if (input) input.focus();
+          }}
+        />
 
         {/* Keyboard shortcuts hint - hidden in focus mode */}
         {!focusMode && (
@@ -2343,49 +1792,59 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       {/* NOTE: Chat moved to dedicated navigation view - no longer floating widget
           Access chat via the "Messages" item in the navigation sidebar */}
 
-      <CelebrationEffect
-        show={showCelebration}
-        onComplete={() => dismissCelebration()}
-        taskText={celebrationText}
-      />
-
-      <ProgressSummary
-        show={showProgressSummary}
-        onClose={() => closeProgressSummary()}
-        todos={todos}
+      {/* Modals: Celebration, Progress, Welcome, Confirm, AddTask, Template,
+          Duplicate, Email, Enhanced Celebration, Completion Summary, Archived Detail */}
+      <TodoModals
         currentUser={currentUser}
-        onUserUpdate={onUserChange}
-      />
-
-      <WelcomeBackNotification
-        show={showWelcomeBack}
-        onClose={() => closeWelcomeBack()}
-        onViewProgress={() => openProgressSummary()}
-        todos={todos}
-        currentUser={currentUser}
-        onUserUpdate={onUserChange}
-      />
-
-      <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmLabel="Delete"
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={() => closeConfirmDialog()}
-      />
-
-      {/* Note: WeeklyProgressChart and KeyboardShortcutsModal are rendered in MainApp.tsx
-          using AppShell context state, so they're accessible from any view */}
-
-      {/* Add Task Modal */}
-      <AddTaskModal
-        isOpen={showAddTaskModal}
-        onClose={() => setShowAddTaskModal(false)}
-        onAdd={addTodo}
-        users={users}
+        onUserChange={onUserChange}
         darkMode={darkMode}
-        currentUserId={currentUser.id}
+        todos={todos}
+        users={users}
+        showCelebration={showCelebration}
+        celebrationText={celebrationText}
+        dismissCelebration={dismissCelebration}
+        showEnhancedCelebration={showEnhancedCelebration}
+        celebrationData={celebrationData}
+        dismissEnhancedCelebration={dismissEnhancedCelebration}
+        showProgressSummary={showProgressSummary}
+        closeProgressSummary={closeProgressSummary}
+        showWelcomeBack={showWelcomeBack}
+        closeWelcomeBack={closeWelcomeBack}
+        openProgressSummary={openProgressSummary}
+        confirmDialog={confirmDialog}
+        closeConfirmDialog={closeConfirmDialog}
+        showAddTaskModal={showAddTaskModal}
+        setShowAddTaskModal={setShowAddTaskModal}
+        onAddTodo={addTodo}
+        templateTodo={templateTodo}
+        closeTemplateModal={closeTemplateModal}
+        onSaveAsTemplate={saveAsTemplate}
+        showCompletionSummary={showCompletionSummary}
+        completedTaskForSummary={completedTaskForSummary}
+        closeCompletionSummary={closeCompletionSummary}
+        openCompletionSummary={openCompletionSummary}
+        userName={userName}
+        showDuplicateModal={showDuplicateModal}
+        pendingTask={pendingTask}
+        duplicateMatches={duplicateMatches}
+        onCreateTaskAnyway={handleCreateTaskAnyway}
+        onAddToExistingTask={handleAddToExistingTask}
+        onCancelDuplicateDetection={handleCancelDuplicateDetection}
+        showEmailModal={showEmailModal}
+        emailTargetTodos={emailTargetTodos}
+        closeEmailModal={closeEmailModal}
+        selectedArchivedTodo={selectedArchivedTodo}
+        selectArchivedTodo={selectArchivedTodo}
+        onNextTaskClick={(taskId) => {
+          const taskElement = document.getElementById(`todo-${taskId}`);
+          if (taskElement) {
+            taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            taskElement.classList.add('ring-2', 'ring-blue-500');
+            setTimeout(() => {
+              taskElement.classList.remove('ring-2', 'ring-blue-500');
+            }, 2000);
+          }
+        }}
       />
 
       {/* Activity Feed - Full Page View */}
@@ -2543,23 +2002,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         </div>
       )}
 
-      {/* Archived Task Detail Modal */}
-      {selectedArchivedTodo && (
-        <ArchivedTaskModal
-          todo={selectedArchivedTodo}
-          onClose={() => selectArchivedTodo(null)}
-        />
-      )}
-
-      {/* Save Template Modal */}
-      {templateTodo && (
-        <SaveTemplateModal
-          todo={templateTodo}
-          darkMode={darkMode}
-          onClose={() => closeTemplateModal()}
-          onSave={saveAsTemplate}
-        />
-      )}
 
       {/* Merge Tasks Modal */}
       {showMergeModal && mergeTargets.length >= 2 && (
@@ -2706,164 +2148,20 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         </div>
       )}
 
-      {/* Duplicate Detection Modal */}
-      {showDuplicateModal && pendingTask && (
-        <DuplicateDetectionModal
-          isOpen={showDuplicateModal}
-          darkMode={darkMode}
-          newTaskText={pendingTask.text}
-          newTaskPriority={pendingTask.priority}
-          newTaskDueDate={pendingTask.dueDate}
-          newTaskAssignedTo={pendingTask.assignedTo}
-          newTaskSubtasks={pendingTask.subtasks}
-          newTaskTranscription={pendingTask.transcription}
-          newTaskSourceFile={pendingTask.sourceFile}
-          duplicates={duplicateMatches}
-          onCreateAnyway={handleCreateTaskAnyway}
-          onAddToExisting={handleAddToExistingTask}
-          onCancel={handleCancelDuplicateDetection}
-        />
-      )}
-
-      {/* Customer Email Modal */}
-      {showEmailModal && emailTargetTodos.length > 0 && (
-        <CustomerEmailModal
-          todos={emailTargetTodos}
-          currentUser={currentUser}
-          onClose={() => {
-            closeEmailModal();
-          }}
-          darkMode={darkMode}
-        />
-      )}
-
-      {/* Enhanced Celebration Modal (Feature 3) */}
-      {showEnhancedCelebration && celebrationData && (
-        <CompletionCelebration
-          celebrationData={celebrationData}
-          onDismiss={() => {
-            dismissEnhancedCelebration();
-          }}
-          onNextTaskClick={(taskId) => {
-            dismissEnhancedCelebration();
-            // Scroll to task - highlight it briefly
-            const taskElement = document.getElementById(`todo-${taskId}`);
-            if (taskElement) {
-              taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              taskElement.classList.add('ring-2', 'ring-blue-500');
-              setTimeout(() => {
-                taskElement.classList.remove('ring-2', 'ring-blue-500');
-              }, 2000);
-            }
-          }}
-          onShowSummary={() => {
-            openCompletionSummary(celebrationData.completedTask);
-          }}
-        />
-      )}
-
-      {/* Task Completion Summary Modal (Feature 1) */}
-      {showCompletionSummary && completedTaskForSummary && (
-        <TaskCompletionSummary
-          todo={completedTaskForSummary}
-          completedBy={userName}
-          onClose={() => {
-            closeCompletionSummary();
-          }}
-        />
-      )}
-
       {/* Floating Bulk Action Bar - Sticky at bottom */}
       {showBulkActions && selectedTodos.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
-          <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
-            <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
-              <div className="flex items-center justify-between gap-4">
-                {/* Left side - selection info with dismiss button */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={clearSelection}
-                    className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
-                    title="Clear selection"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[var(--foreground)]">{selectedTodos.size}</span>
-                    <span className="text-sm text-[var(--text-muted)]">selected</span>
-                  </div>
-                  <div className="hidden sm:block w-px h-5 bg-[var(--border)]" />
-                </div>
-
-                {/* Action buttons - horizontal inline */}
-                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
-                  {/* Mark Complete */}
-                  <button
-                    onClick={bulkComplete}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span className="hidden sm:inline">Mark Complete</span>
-                  </button>
-
-                  {/* Reassign dropdown */}
-                  <div className="relative">
-                    <select
-                      onChange={(e) => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}
-                      className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
-                      aria-label="Reassign"
-                    >
-                      <option value="">Reassign</option>
-                      {users.map((user) => (
-                        <option key={user} value={user}>{user}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
-                  </div>
-
-                  {/* Change Date dropdown */}
-                  <div className="relative">
-                    <select
-                      onChange={(e) => {
-                        if (e.target.value) bulkReschedule(e.target.value);
-                        e.target.value = '';
-                      }}
-                      className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
-                      aria-label="Change Date"
-                    >
-                      <option value="">Change Date</option>
-                      <option value={getDateOffset(0)}>Today</option>
-                      <option value={getDateOffset(1)}>Tomorrow</option>
-                      <option value={getDateOffset(7)}>Next Week</option>
-                      <option value={getDateOffset(30)}>Next Month</option>
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
-                  </div>
-
-                  {/* Merge - only show when 2+ selected */}
-                  {selectedTodos.size >= 2 && (
-                    <button
-                      onClick={initiateMerge}
-                      className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
-                    >
-                      <GitMerge className="w-4 h-4" />
-                      Merge
-                    </button>
-                  )}
-
-                  {/* Delete */}
-                  <button
-                    onClick={bulkDelete}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--danger)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Delete</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <BulkActionBar
+          selectedCount={selectedTodos.size}
+          users={users}
+          viewMode={viewMode}
+          onClearSelection={clearSelection}
+          onBulkDelete={bulkDelete}
+          onBulkComplete={bulkComplete}
+          onBulkAssign={bulkAssign}
+          onBulkReschedule={bulkReschedule}
+          onInitiateMerge={initiateMerge}
+          getDateOffset={getDateOffset}
+        />
       )}
 
       {/* NOTE: ChatPanel removed from task view - access via navigation sidebar "Messages" */}

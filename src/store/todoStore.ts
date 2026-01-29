@@ -14,23 +14,39 @@ import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import { Todo, TodoStatus, TodoPriority, QuickFilter, SortOption, ViewMode } from '@/types/todo';
 
-// Helper functions
+/**
+ * Cached midnight timestamp for date calculations.
+ * Refreshes every 60 seconds to avoid stale comparisons while
+ * eliminating redundant Date object creation during filtering/sorting.
+ */
+const getTodayMidnight = (() => {
+  let cached: number | null = null;
+  let lastCheck = 0;
+  return () => {
+    const now = Date.now();
+    if (!cached || now - lastCheck > 60_000) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      cached = d.getTime();
+      lastCheck = now;
+    }
+    return cached;
+  };
+})();
+
+// Helper functions — use the cached midnight value
 const isDueToday = (dueDate?: string) => {
   if (!dueDate) return false;
   const d = new Date(dueDate);
-  const today = new Date();
   d.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  return d.getTime() === today.getTime();
+  return d.getTime() === getTodayMidnight();
 };
 
 const isOverdue = (dueDate?: string, completed?: boolean) => {
   if (!dueDate || completed) return false;
   const d = new Date(dueDate);
-  const today = new Date();
   d.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
-  return d < today;
+  return d.getTime() < getTodayMidnight();
 };
 
 const priorityOrder: Record<TodoPriority, number> = {

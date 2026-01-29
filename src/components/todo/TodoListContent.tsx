@@ -3,7 +3,7 @@
 import { memo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
-import { Todo, SortOption } from '@/types/todo';
+import { Todo, SortOption, WaitingContactType, Subtask, Attachment } from '@/types/todo';
 import SortableTodoItem from '../SortableTodoItem';
 import KanbanBoard from '../KanbanBoard';
 import TaskSections from '../TaskSections';
@@ -42,6 +42,10 @@ interface TodoListContentProps {
   quickFilter: string;
   stats: { total: number; completed: number };
 
+  // Task auto-expand (for navigating to a specific task)
+  selectedTaskId?: string | null;
+  onSelectedTaskHandled?: () => void;
+
   // Handlers
   onDragEnd: (event: DragEndEvent) => void;
   onSelectTodo: (id: string) => void;
@@ -50,14 +54,16 @@ interface TodoListContentProps {
   onAssign: (id: string, user: string | null) => void;
   onSetDueDate: (id: string, date: string | null) => void;
   onSetReminder: (id: string, date: string | null) => void;
+  onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
+  onClearWaiting?: (id: string) => Promise<void>;
   onSetPriority: (id: string, priority: 'low' | 'medium' | 'high' | 'urgent') => void;
   onStatusChange: (id: string, status: 'todo' | 'in_progress' | 'done') => void;
   onUpdateText: (id: string, text: string) => void;
   onDuplicate: (todo: Todo) => void;
   onUpdateNotes: (id: string, notes: string) => void;
   onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | 'monthly' | null) => void;
-  onUpdateSubtasks: (id: string, subtasks: { id: string; text: string; completed: boolean }[]) => void;
-  onUpdateAttachments: (id: string, attachments: unknown[]) => void;
+  onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void;
+  onUpdateAttachments: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onSaveAsTemplate: (todo: Todo) => void;
   onEmailCustomer: (todo: Todo) => void;
   onClearSearch: () => void;
@@ -78,6 +84,8 @@ function TodoListContent({
   searchQuery,
   quickFilter,
   stats,
+  selectedTaskId,
+  onSelectedTaskHandled,
   onDragEnd,
   onSelectTodo,
   onToggle,
@@ -85,6 +93,8 @@ function TodoListContent({
   onAssign,
   onSetDueDate,
   onSetReminder,
+  onMarkWaiting,
+  onClearWaiting,
   onSetPriority,
   onStatusChange,
   onUpdateText,
@@ -159,12 +169,16 @@ function TodoListContent({
         users={users}
         currentUserName={currentUserName}
         selected={selectedTodos.has(todo.id)}
+        autoExpand={todo.id === selectedTaskId}
+        onAutoExpandHandled={onSelectedTaskHandled}
         onSelect={showBulkActions ? onSelectTodo : undefined}
         onToggle={onToggle}
         onDelete={onDelete}
         onAssign={onAssign}
         onSetDueDate={onSetDueDate}
         onSetReminder={onSetReminder}
+        onMarkWaiting={onMarkWaiting}
+        onClearWaiting={onClearWaiting}
         onSetPriority={onSetPriority}
         onStatusChange={onStatusChange}
         onUpdateText={onUpdateText}
@@ -240,6 +254,8 @@ function TodoListContent({
                   onAssign={onAssign}
                   onSetDueDate={onSetDueDate}
                   onSetReminder={onSetReminder}
+                  onMarkWaiting={onMarkWaiting}
+                  onClearWaiting={onClearWaiting}
                   onSetPriority={onSetPriority}
                   onStatusChange={onStatusChange}
                   onUpdateText={onUpdateText}
@@ -286,6 +302,8 @@ function TodoListContent({
             onAssign={onAssign}
             onSetDueDate={onSetDueDate}
             onSetReminder={onSetReminder}
+            onMarkWaiting={onMarkWaiting}
+            onClearWaiting={onClearWaiting}
             onSetPriority={onSetPriority}
             onUpdateNotes={onUpdateNotes}
             onUpdateText={onUpdateText}

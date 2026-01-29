@@ -1,16 +1,23 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Mail, Copy, Sparkles, Check,
   User, Phone, AtSign, FileText, ChevronDown, ChevronUp,
-  RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info, Languages
+  RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info, Languages,
+  AlertCircle, CheckCircle
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 import { extractPhoneNumbers, extractEmails, extractPotentialNames } from '@/lib/duplicateDetection';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey, useFocusTrap } from '@/hooks';
+import {
+  validateEmail as validateEmailField,
+  validatePhone as validatePhoneField,
+  required,
+  formatPhoneNumber,
+} from '@/lib/validation';
 
 interface CustomerEmailModalProps {
   todos: Todo[];
@@ -53,6 +60,88 @@ export default function CustomerEmailModal({
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [detectedCustomer, setDetectedCustomer] = useState<DetectedCustomer | null>(null);
+
+  // ── Field validation state ──
+  const [fieldErrors, setFieldErrors] = useState<{
+    customerName?: string | null;
+    customerEmail?: string | null;
+    customerPhone?: string | null;
+  }>({});
+  const [fieldTouched, setFieldTouched] = useState<{
+    customerName?: boolean;
+    customerEmail?: boolean;
+    customerPhone?: boolean;
+  }>({});
+
+  const nameValidator = useCallback(required('Customer name'), []);
+
+  const validateFieldOnBlur = useCallback(
+    (field: 'customerName' | 'customerEmail' | 'customerPhone', value: string) => {
+      let fieldError: string | null = null;
+      if (field === 'customerName') {
+        fieldError = nameValidator(value);
+      } else if (field === 'customerEmail') {
+        fieldError = validateEmailField(value);
+      } else if (field === 'customerPhone') {
+        fieldError = validatePhoneField(value);
+      }
+      setFieldErrors((prev) => ({ ...prev, [field]: fieldError }));
+      setFieldTouched((prev) => ({ ...prev, [field]: true }));
+      return fieldError;
+    },
+    [nameValidator]
+  );
+
+  // Re-validate on change only after the field has been blurred once
+  const handleFieldChange = useCallback(
+    (
+      field: 'customerName' | 'customerEmail' | 'customerPhone',
+      value: string,
+      setter: (v: string) => void
+    ) => {
+      setter(value);
+      if (fieldTouched[field]) {
+        let fieldError: string | null = null;
+        if (field === 'customerName') {
+          fieldError = nameValidator(value);
+        } else if (field === 'customerEmail') {
+          fieldError = validateEmailField(value);
+        } else if (field === 'customerPhone') {
+          fieldError = validatePhoneField(value);
+        }
+        setFieldErrors((prev) => ({ ...prev, [field]: fieldError }));
+      }
+    },
+    [fieldTouched, nameValidator]
+  );
+
+  // Validate all customer fields (called before submission)
+  const validateAllCustomerFields = useCallback((): boolean => {
+    const nameError = nameValidator(customerName);
+    const emailError = validateEmailField(customerEmail);
+    const phoneError = validatePhoneField(customerPhone);
+
+    setFieldErrors({
+      customerName: nameError,
+      customerEmail: emailError,
+      customerPhone: phoneError,
+    });
+    setFieldTouched({
+      customerName: true,
+      customerEmail: true,
+      customerPhone: true,
+    });
+
+    return !nameError && !emailError && !phoneError;
+  }, [customerName, customerEmail, customerPhone, nameValidator]);
+
+  // Helper: check if a touched field is valid (for success indicator)
+  const isFieldValid = useCallback(
+    (field: 'customerName' | 'customerEmail' | 'customerPhone', value: string) => {
+      return fieldTouched[field] && !fieldErrors[field] && value.trim().length > 0;
+    },
+    [fieldTouched, fieldErrors]
+  );
 
   // Email generation
   const [tone, setTone] = useState<EmailTone>('friendly');
@@ -114,8 +203,9 @@ export default function CustomerEmailModal({
   }, [todos]);
 
   const generateEmail = async () => {
-    if (!customerName.trim()) {
-      setError('Please enter a customer name');
+    // Run validation on all customer info fields
+    if (!validateAllCustomerFields()) {
+      setError('Please fix the errors above before generating');
       return;
     }
 
@@ -224,15 +314,7 @@ export default function CustomerEmailModal({
     window.open(mailtoUrl, '_blank');
   };
 
-  const formatPhoneDisplay = (phone: string) => {
-    if (phone.length === 10) {
-      return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}`;
-    }
-    if (phone.length === 11 && phone.startsWith('1')) {
-      return `+1 (${phone.slice(1, 4)}) ${phone.slice(4, 7)}-${phone.slice(7)}`;
-    }
-    return phone;
-  };
+  // Phone display formatting is now handled by formatPhoneNumber from @/lib/validation
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -302,55 +384,145 @@ export default function CustomerEmailModal({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Customer Name (required) */}
               <div>
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
-                  Name *
+                <label
+                  htmlFor="customer-name"
+                  className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}
+                >
+                  Name <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Customer name"
-                  className={`w-full px-3 py-2 rounded-lg text-sm ${
-                    darkMode
-                      ? 'bg-white/10 border-white/20 focus:border-blue-500'
-                      : 'bg-white border-gray-200 focus:border-blue-500'
-                  } border outline-none transition-colors`}
-                />
+                <div className="relative">
+                  <input
+                    id="customer-name"
+                    type="text"
+                    value={customerName}
+                    onChange={(e) =>
+                      handleFieldChange('customerName', e.target.value, setCustomerName)
+                    }
+                    onBlur={() => validateFieldOnBlur('customerName', customerName)}
+                    placeholder="Customer name"
+                    aria-invalid={fieldTouched.customerName && !!fieldErrors.customerName || undefined}
+                    aria-describedby={fieldErrors.customerName ? 'customer-name-error' : undefined}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors ${
+                      fieldTouched.customerName && fieldErrors.customerName
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-500/10'
+                        : isFieldValid('customerName', customerName)
+                        ? 'border-green-500'
+                        : darkMode
+                        ? 'bg-white/10 border-white/20 focus:border-blue-500'
+                        : 'bg-white border-gray-200 focus:border-blue-500'
+                    } ${fieldTouched.customerName && fieldErrors.customerName ? 'animate-shake' : ''}`}
+                  />
+                  {isFieldValid('customerName', customerName) && (
+                    <CheckCircle className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
+                {fieldTouched.customerName && fieldErrors.customerName && (
+                  <p
+                    id="customer-name-error"
+                    role="alert"
+                    className="mt-1 flex items-center gap-1 text-xs text-red-500"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {fieldErrors.customerName}
+                  </p>
+                )}
               </div>
+
+              {/* Customer Email */}
               <div>
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label
+                  htmlFor="customer-email"
+                  className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}
+                >
                   <AtSign className="w-3 h-3 inline mr-1" />
                   Email
                 </label>
-                <input
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  className={`w-full px-3 py-2 rounded-lg text-sm ${
-                    darkMode
-                      ? 'bg-white/10 border-white/20 focus:border-blue-500'
-                      : 'bg-white border-gray-200 focus:border-blue-500'
-                  } border outline-none transition-colors`}
-                />
+                <div className="relative">
+                  <input
+                    id="customer-email"
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) =>
+                      handleFieldChange('customerEmail', e.target.value, setCustomerEmail)
+                    }
+                    onBlur={() => validateFieldOnBlur('customerEmail', customerEmail)}
+                    placeholder="email@example.com"
+                    aria-invalid={fieldTouched.customerEmail && !!fieldErrors.customerEmail || undefined}
+                    aria-describedby={fieldErrors.customerEmail ? 'customer-email-error' : undefined}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors ${
+                      fieldTouched.customerEmail && fieldErrors.customerEmail
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-500/10'
+                        : isFieldValid('customerEmail', customerEmail)
+                        ? 'border-green-500'
+                        : darkMode
+                        ? 'bg-white/10 border-white/20 focus:border-blue-500'
+                        : 'bg-white border-gray-200 focus:border-blue-500'
+                    } ${fieldTouched.customerEmail && fieldErrors.customerEmail ? 'animate-shake' : ''}`}
+                  />
+                  {isFieldValid('customerEmail', customerEmail) && (
+                    <CheckCircle className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
+                {fieldTouched.customerEmail && fieldErrors.customerEmail && (
+                  <p
+                    id="customer-email-error"
+                    role="alert"
+                    className="mt-1 flex items-center gap-1 text-xs text-red-500"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {fieldErrors.customerEmail}
+                  </p>
+                )}
               </div>
+
+              {/* Customer Phone */}
               <div>
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label
+                  htmlFor="customer-phone"
+                  className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}
+                >
                   <Phone className="w-3 h-3 inline mr-1" />
                   Phone
                 </label>
-                <input
-                  type="tel"
-                  value={customerPhone ? formatPhoneDisplay(customerPhone) : ''}
-                  onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="(555) 123-4567"
-                  className={`w-full px-3 py-2 rounded-lg text-sm ${
-                    darkMode
-                      ? 'bg-white/10 border-white/20 focus:border-blue-500'
-                      : 'bg-white border-gray-200 focus:border-blue-500'
-                  } border outline-none transition-colors`}
-                />
+                <div className="relative">
+                  <input
+                    id="customer-phone"
+                    type="tel"
+                    value={customerPhone ? formatPhoneNumber(customerPhone) : ''}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      handleFieldChange('customerPhone', digits, setCustomerPhone);
+                    }}
+                    onBlur={() => validateFieldOnBlur('customerPhone', customerPhone)}
+                    placeholder="(555) 123-4567"
+                    aria-invalid={fieldTouched.customerPhone && !!fieldErrors.customerPhone || undefined}
+                    aria-describedby={fieldErrors.customerPhone ? 'customer-phone-error' : undefined}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors ${
+                      fieldTouched.customerPhone && fieldErrors.customerPhone
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-500/10'
+                        : isFieldValid('customerPhone', customerPhone)
+                        ? 'border-green-500'
+                        : darkMode
+                        ? 'bg-white/10 border-white/20 focus:border-blue-500'
+                        : 'bg-white border-gray-200 focus:border-blue-500'
+                    } ${fieldTouched.customerPhone && fieldErrors.customerPhone ? 'animate-shake' : ''}`}
+                  />
+                  {isFieldValid('customerPhone', customerPhone) && (
+                    <CheckCircle className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
+                {fieldTouched.customerPhone && fieldErrors.customerPhone && (
+                  <p
+                    id="customer-phone-error"
+                    role="alert"
+                    className="mt-1 flex items-center gap-1 text-xs text-red-500"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {fieldErrors.customerPhone}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -509,7 +681,7 @@ export default function CustomerEmailModal({
           {!generatedEmail && (
             <button
               onClick={generateEmail}
-              disabled={isGenerating || !customerName.trim()}
+              disabled={isGenerating || !customerName.trim() || (fieldTouched.customerEmail === true && !!fieldErrors.customerEmail) || (fieldTouched.customerPhone === true && !!fieldErrors.customerPhone)}
               className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                 isGenerating || !customerName.trim()
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'

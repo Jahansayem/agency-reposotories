@@ -6,14 +6,22 @@
  *
  * This hook consolidates modal state that was previously scattered
  * across 20+ useState calls in TodoList.tsx.
+ *
+ * Refactored in Sprint 4 to compose two smaller hooks:
+ * - useModalState: raw useState pairs
+ * - useTodoModalActions: action handlers combining state changes
+ *
+ * This file preserves full backward compatibility -- the return type
+ * and public API are unchanged.
  */
 
-import { useState, useCallback } from 'react';
 import { Todo, TodoPriority, Subtask, CelebrationData, ActivityLogEntry } from '@/types/todo';
 import { DuplicateMatch } from '@/lib/duplicateDetection';
+import { useModalState } from './useModalState';
+import { useTodoModalActions } from './useTodoModalActions';
 
 // ============================================
-// Types & Interfaces
+// Types & Interfaces (re-exported for consumers)
 // ============================================
 
 export interface UseTodoModalsOptions {
@@ -200,15 +208,12 @@ export interface UseTodoModalsReturn {
   closeAllModals: () => void;
 }
 
-const defaultConfirmDialog: ConfirmDialogState = {
-  isOpen: false,
-  title: '',
-  message: '',
-  onConfirm: () => {},
-};
-
 /**
- * Hook that manages all modal visibility state for the TodoList component
+ * Hook that manages all modal visibility state for the TodoList component.
+ *
+ * Now composed from two smaller hooks:
+ * - `useModalState` for raw state
+ * - `useTodoModalActions` for action handlers
  *
  * @param options - Configuration options
  * @returns Modal state and actions
@@ -235,475 +240,70 @@ const defaultConfirmDialog: ConfirmDialogState = {
 export function useTodoModals(
   options: UseTodoModalsOptions = {}
 ): UseTodoModalsReturn {
-  const { onModalOpen, onModalClose } = options;
+  // Raw state from useModalState
+  const state = useModalState();
 
-  // ============================================
-  // State - Celebration
-  // ============================================
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [celebrationText, setCelebrationText] = useState('');
-  const [showEnhancedCelebration, setShowEnhancedCelebration] = useState(false);
-  const [celebrationData, setCelebrationData] = useState<CelebrationData | null>(null);
-
-  // ============================================
-  // State - Progress & Welcome
-  // ============================================
-  const [showProgressSummary, setShowProgressSummary] = useState(false);
-  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
-  const [showWeeklyChart, setShowWeeklyChart] = useState(false);
-
-  // ============================================
-  // State - Utility Modals
-  // ============================================
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showActivityFeed, setShowActivityFeed] = useState(false);
-  const [showStrategicDashboard, setShowStrategicDashboard] = useState(false);
-
-  // ============================================
-  // State - Template
-  // ============================================
-  const [templateTodo, setTemplateTodo] = useState<Todo | null>(null);
-
-  // ============================================
-  // State - Confirm Dialog
-  // ============================================
-  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>(defaultConfirmDialog);
-
-  // ============================================
-  // State - Completion Summary
-  // ============================================
-  const [showCompletionSummary, setShowCompletionSummary] = useState(false);
-  const [completedTaskForSummary, setCompletedTaskForSummary] = useState<Todo | null>(null);
-
-  // ============================================
-  // State - Duplicate Detection
-  // ============================================
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [duplicateMatches, setDuplicateMatches] = useState<DuplicateMatch[]>([]);
-  const [pendingTask, setPendingTask] = useState<PendingTaskData | null>(null);
-
-  // ============================================
-  // State - Email Modal
-  // ============================================
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [emailTargetTodos, setEmailTargetTodos] = useState<Todo[]>([]);
-
-  // ============================================
-  // State - Archive
-  // ============================================
-  const [showArchiveView, setShowArchiveView] = useState(false);
-  const [selectedArchivedTodo, setSelectedArchivedTodo] = useState<Todo | null>(null);
-  const [archiveQuery, setArchiveQueryState] = useState('');
-  const [archiveTick, setArchiveTick] = useState(0);
-
-  // ============================================
-  // State - Merge Modal
-  // ============================================
-  const [showMergeModal, setShowMergeModal] = useState(false);
-  const [mergeTargets, setMergeTargets] = useState<Todo[]>([]);
-  const [selectedPrimaryId, setSelectedPrimaryId] = useState<string | null>(null);
-  const [isMerging, setIsMerging] = useState(false);
-
-  // ============================================
-  // State - Activity Log
-  // ============================================
-  const [activityLog, setActivityLogState] = useState<ActivityLogEntry[]>([]);
-
-  // ============================================
-  // Actions - Celebration
-  // ============================================
-  const triggerCelebration = useCallback((text: string) => {
-    setCelebrationText(text);
-    setShowCelebration(true);
-    onModalOpen?.('celebration');
-  }, [onModalOpen]);
-
-  const dismissCelebration = useCallback(() => {
-    setShowCelebration(false);
-    setCelebrationText('');
-    onModalClose?.('celebration');
-  }, [onModalClose]);
-
-  const triggerEnhancedCelebration = useCallback((data: CelebrationData) => {
-    setCelebrationData(data);
-    setShowEnhancedCelebration(true);
-    onModalOpen?.('enhancedCelebration');
-  }, [onModalOpen]);
-
-  const dismissEnhancedCelebration = useCallback(() => {
-    setShowEnhancedCelebration(false);
-    setCelebrationData(null);
-    onModalClose?.('enhancedCelebration');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Progress & Welcome
-  // ============================================
-  const openProgressSummary = useCallback(() => {
-    setShowProgressSummary(true);
-    onModalOpen?.('progressSummary');
-  }, [onModalOpen]);
-
-  const closeProgressSummary = useCallback(() => {
-    setShowProgressSummary(false);
-    onModalClose?.('progressSummary');
-  }, [onModalClose]);
-
-  const openWelcomeBack = useCallback(() => {
-    setShowWelcomeBack(true);
-    onModalOpen?.('welcomeBack');
-  }, [onModalOpen]);
-
-  const closeWelcomeBack = useCallback(() => {
-    setShowWelcomeBack(false);
-    onModalClose?.('welcomeBack');
-  }, [onModalClose]);
-
-  const openWeeklyChart = useCallback(() => {
-    setShowWeeklyChart(true);
-    onModalOpen?.('weeklyChart');
-  }, [onModalOpen]);
-
-  const closeWeeklyChart = useCallback(() => {
-    setShowWeeklyChart(false);
-    onModalClose?.('weeklyChart');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Utility Modals
-  // ============================================
-  const openShortcuts = useCallback(() => {
-    setShowShortcuts(true);
-    onModalOpen?.('shortcuts');
-  }, [onModalOpen]);
-
-  const closeShortcuts = useCallback(() => {
-    setShowShortcuts(false);
-    onModalClose?.('shortcuts');
-  }, [onModalClose]);
-
-  const openActivityFeed = useCallback(() => {
-    setShowActivityFeed(true);
-    onModalOpen?.('activityFeed');
-  }, [onModalOpen]);
-
-  const closeActivityFeed = useCallback(() => {
-    setShowActivityFeed(false);
-    onModalClose?.('activityFeed');
-  }, [onModalClose]);
-
-  const openStrategicDashboard = useCallback(() => {
-    setShowStrategicDashboard(true);
-    onModalOpen?.('strategicDashboard');
-  }, [onModalOpen]);
-
-  const closeStrategicDashboard = useCallback(() => {
-    setShowStrategicDashboard(false);
-    onModalClose?.('strategicDashboard');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Template
-  // ============================================
-  const openTemplateModal = useCallback((todo: Todo) => {
-    setTemplateTodo(todo);
-    onModalOpen?.('template');
-  }, [onModalOpen]);
-
-  const closeTemplateModal = useCallback(() => {
-    setTemplateTodo(null);
-    onModalClose?.('template');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Confirm Dialog
-  // ============================================
-  const openConfirmDialog = useCallback((title: string, message: string, onConfirm: () => void) => {
-    setConfirmDialog({ isOpen: true, title, message, onConfirm });
-    onModalOpen?.('confirmDialog');
-  }, [onModalOpen]);
-
-  const closeConfirmDialog = useCallback(() => {
-    setConfirmDialog(defaultConfirmDialog);
-    onModalClose?.('confirmDialog');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Completion Summary
-  // ============================================
-  const openCompletionSummary = useCallback((todo: Todo) => {
-    setCompletedTaskForSummary(todo);
-    setShowCompletionSummary(true);
-    onModalOpen?.('completionSummary');
-  }, [onModalOpen]);
-
-  const closeCompletionSummary = useCallback(() => {
-    setShowCompletionSummary(false);
-    setCompletedTaskForSummary(null);
-    onModalClose?.('completionSummary');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Duplicate Detection
-  // ============================================
-  const openDuplicateModal = useCallback((task: PendingTaskData, matches: DuplicateMatch[]) => {
-    setPendingTask(task);
-    setDuplicateMatches(matches);
-    setShowDuplicateModal(true);
-    onModalOpen?.('duplicateDetection');
-  }, [onModalOpen]);
-
-  const closeDuplicateModal = useCallback(() => {
-    setShowDuplicateModal(false);
-    onModalClose?.('duplicateDetection');
-  }, [onModalClose]);
-
-  const clearDuplicateState = useCallback(() => {
-    setShowDuplicateModal(false);
-    setDuplicateMatches([]);
-    setPendingTask(null);
-    onModalClose?.('duplicateDetection');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Email
-  // ============================================
-  const openEmailModal = useCallback((todos: Todo[]) => {
-    setEmailTargetTodos(todos);
-    setShowEmailModal(true);
-    onModalOpen?.('email');
-  }, [onModalOpen]);
-
-  const closeEmailModal = useCallback(() => {
-    setShowEmailModal(false);
-    setEmailTargetTodos([]);
-    onModalClose?.('email');
-  }, [onModalClose]);
-
-  // ============================================
-  // Actions - Archive
-  // ============================================
-  const openArchiveView = useCallback(() => {
-    setShowArchiveView(true);
-    onModalOpen?.('archive');
-  }, [onModalOpen]);
-
-  const closeArchiveView = useCallback(() => {
-    setShowArchiveView(false);
-    setSelectedArchivedTodo(null);
-    setArchiveQueryState('');
-    onModalClose?.('archive');
-  }, [onModalClose]);
-
-  const selectArchivedTodo = useCallback((todo: Todo | null) => {
-    setSelectedArchivedTodo(todo);
-  }, []);
-
-  const setArchiveQuery = useCallback((query: string) => {
-    setArchiveQueryState(query);
-  }, []);
-
-  const incrementArchiveTick = useCallback(() => {
-    setArchiveTick((prev) => prev + 1);
-  }, []);
-
-  // ============================================
-  // Actions - Merge
-  // ============================================
-  const openMergeModal = useCallback((targets: Todo[]) => {
-    setMergeTargets(targets);
-    setSelectedPrimaryId(targets[0]?.id || null);
-    setShowMergeModal(true);
-    onModalOpen?.('merge');
-  }, [onModalOpen]);
-
-  const closeMergeModal = useCallback(() => {
-    setShowMergeModal(false);
-    setMergeTargets([]);
-    setSelectedPrimaryId(null);
-    setIsMerging(false);
-    onModalClose?.('merge');
-  }, [onModalClose]);
-
-  const setMergePrimaryId = useCallback((id: string | null) => {
-    setSelectedPrimaryId(id);
-  }, []);
-
-  const setMergingState = useCallback((merging: boolean) => {
-    setIsMerging(merging);
-  }, []);
-
-  // ============================================
-  // Actions - Activity Log
-  // ============================================
-  const setActivityLog = useCallback((log: ActivityLogEntry[]) => {
-    setActivityLogState(log);
-  }, []);
-
-  // ============================================
-  // Utility Actions
-  // ============================================
-  const closeAllModals = useCallback(() => {
-    // Close celebration modals
-    setShowCelebration(false);
-    setCelebrationText('');
-    setShowEnhancedCelebration(false);
-    setCelebrationData(null);
-
-    // Close progress & welcome modals
-    setShowProgressSummary(false);
-    setShowWelcomeBack(false);
-    setShowWeeklyChart(false);
-
-    // Close utility modals
-    setShowShortcuts(false);
-    setShowActivityFeed(false);
-    setShowStrategicDashboard(false);
-
-    // Close template modal
-    setTemplateTodo(null);
-
-    // Close confirm dialog
-    setConfirmDialog(defaultConfirmDialog);
-
-    // Close completion summary
-    setShowCompletionSummary(false);
-    setCompletedTaskForSummary(null);
-
-    // Close duplicate detection
-    setShowDuplicateModal(false);
-    setDuplicateMatches([]);
-    setPendingTask(null);
-
-    // Close email modal
-    setShowEmailModal(false);
-    setEmailTargetTodos([]);
-
-    // Close archive view
-    setShowArchiveView(false);
-    setSelectedArchivedTodo(null);
-    setArchiveQueryState('');
-
-    // Close merge modal
-    setShowMergeModal(false);
-    setMergeTargets([]);
-    setSelectedPrimaryId(null);
-    setIsMerging(false);
-
-    onModalClose?.('all');
-  }, [onModalClose]);
+  // Actions that compose state changes with lifecycle callbacks
+  const actions = useTodoModalActions(state, options);
 
   return {
-    // Celebration state
-    showCelebration,
-    celebrationText,
-    showEnhancedCelebration,
-    celebrationData,
+    // ============================================
+    // State values (from useModalState)
+    // ============================================
 
-    // Progress & welcome state
-    showProgressSummary,
-    showWelcomeBack,
-    showWeeklyChart,
+    // Celebration
+    showCelebration: state.showCelebration,
+    celebrationText: state.celebrationText,
+    showEnhancedCelebration: state.showEnhancedCelebration,
+    celebrationData: state.celebrationData,
 
-    // Utility modals state
-    showShortcuts,
-    showActivityFeed,
-    showStrategicDashboard,
+    // Progress & Welcome
+    showProgressSummary: state.showProgressSummary,
+    showWelcomeBack: state.showWelcomeBack,
+    showWeeklyChart: state.showWeeklyChart,
 
-    // Template state
-    templateTodo,
+    // Utility Modals
+    showShortcuts: state.showShortcuts,
+    showActivityFeed: state.showActivityFeed,
+    showStrategicDashboard: state.showStrategicDashboard,
 
-    // Confirm dialog state
-    confirmDialog,
+    // Template
+    templateTodo: state.templateTodo,
 
-    // Completion summary state
-    showCompletionSummary,
-    completedTaskForSummary,
+    // Confirm Dialog
+    confirmDialog: state.confirmDialog,
 
-    // Duplicate detection state
-    showDuplicateModal,
-    duplicateMatches,
-    pendingTask,
+    // Completion Summary
+    showCompletionSummary: state.showCompletionSummary,
+    completedTaskForSummary: state.completedTaskForSummary,
 
-    // Email modal state
-    showEmailModal,
-    emailTargetTodos,
+    // Duplicate Detection
+    showDuplicateModal: state.showDuplicateModal,
+    duplicateMatches: state.duplicateMatches,
+    pendingTask: state.pendingTask,
 
-    // Archive state
-    showArchiveView,
-    selectedArchivedTodo,
-    archiveQuery,
-    archiveTick,
+    // Email Modal
+    showEmailModal: state.showEmailModal,
+    emailTargetTodos: state.emailTargetTodos,
 
-    // Merge modal state
-    showMergeModal,
-    mergeTargets,
-    selectedPrimaryId,
-    isMerging,
+    // Archive
+    showArchiveView: state.showArchiveView,
+    selectedArchivedTodo: state.selectedArchivedTodo,
+    archiveQuery: state.archiveQuery,
+    archiveTick: state.archiveTick,
 
-    // Activity log state
-    activityLog,
+    // Merge Modal
+    showMergeModal: state.showMergeModal,
+    mergeTargets: state.mergeTargets,
+    selectedPrimaryId: state.selectedPrimaryId,
+    isMerging: state.isMerging,
 
-    // Actions - Celebration
-    triggerCelebration,
-    dismissCelebration,
-    triggerEnhancedCelebration,
-    dismissEnhancedCelebration,
+    // Activity Log
+    activityLog: state.activityLog,
 
-    // Actions - Progress & welcome
-    openProgressSummary,
-    closeProgressSummary,
-    openWelcomeBack,
-    closeWelcomeBack,
-    openWeeklyChart,
-    closeWeeklyChart,
-
-    // Actions - Utility modals
-    openShortcuts,
-    closeShortcuts,
-    openActivityFeed,
-    closeActivityFeed,
-    openStrategicDashboard,
-    closeStrategicDashboard,
-
-    // Actions - Template
-    openTemplateModal,
-    closeTemplateModal,
-
-    // Actions - Confirm dialog
-    openConfirmDialog,
-    closeConfirmDialog,
-
-    // Actions - Completion summary
-    openCompletionSummary,
-    closeCompletionSummary,
-
-    // Actions - Duplicate detection
-    openDuplicateModal,
-    closeDuplicateModal,
-    clearDuplicateState,
-
-    // Actions - Email
-    openEmailModal,
-    closeEmailModal,
-
-    // Actions - Archive
-    openArchiveView,
-    closeArchiveView,
-    selectArchivedTodo,
-    setArchiveQuery,
-    incrementArchiveTick,
-
-    // Actions - Merge
-    openMergeModal,
-    closeMergeModal,
-    setMergePrimaryId,
-    setMergingState,
-
-    // Actions - Activity log
-    setActivityLog,
-
-    // Utility actions
-    closeAllModals,
+    // ============================================
+    // Actions (from useTodoModalActions)
+    // ============================================
+    ...actions,
   };
 }

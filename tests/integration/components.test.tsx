@@ -193,17 +193,23 @@ describe('Component Integration Tests', () => {
   });
 
   describe('BulkActionBar + Store', () => {
+    const getDateOffset = (days: number) => {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      return date.toISOString().split('T')[0];
+    };
+
     const defaultProps = {
       selectedCount: 2,
       users: ['Derrick', 'Sefra'],
+      viewMode: 'list' as const,
       onClearSelection: vi.fn(),
       onBulkDelete: vi.fn(),
       onBulkComplete: vi.fn(),
       onBulkAssign: vi.fn(),
       onBulkReschedule: vi.fn(),
-      onBulkSetPriority: vi.fn(),
       onInitiateMerge: vi.fn(),
-      onGenerateEmail: vi.fn(),
+      getDateOffset,
     };
 
     it('should show selected count from store', () => {
@@ -219,19 +225,20 @@ describe('Component Integration Tests', () => {
 
       render(<BulkActionBar {...defaultProps} selectedCount={selectedCount} />);
 
-      expect(screen.getByText('2 selected')).toBeInTheDocument();
+      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText('selected')).toBeInTheDocument();
     });
 
     it('should call handlers when buttons are clicked', () => {
       render(<BulkActionBar {...defaultProps} />);
 
       // Click complete button
-      const completeButton = screen.getByTitle('Mark all as complete');
+      const completeButton = screen.getByText('Mark Complete');
       fireEvent.click(completeButton);
       expect(defaultProps.onBulkComplete).toHaveBeenCalled();
 
       // Click delete button
-      const deleteButton = screen.getByTitle('Delete selected');
+      const deleteButton = screen.getByText('Delete');
       fireEvent.click(deleteButton);
       expect(defaultProps.onBulkDelete).toHaveBeenCalled();
     });
@@ -242,34 +249,30 @@ describe('Component Integration Tests', () => {
       );
 
       // Merge should not be visible with 1 selected
-      expect(screen.queryByTitle('Merge selected tasks')).not.toBeInTheDocument();
+      expect(screen.queryByText('Merge')).not.toBeInTheDocument();
 
       rerender(<BulkActionBar {...defaultProps} selectedCount={2} />);
 
       // Merge should be visible with 2 selected
-      expect(screen.getByTitle('Merge selected tasks')).toBeInTheDocument();
+      expect(screen.getByText('Merge')).toBeInTheDocument();
     });
 
     it('should show assign dropdown with users', () => {
       render(<BulkActionBar {...defaultProps} />);
 
-      const assignButton = screen.getByTitle('Assign to user');
-      fireEvent.click(assignButton);
+      const reassignSelect = screen.getByLabelText('Reassign');
 
-      // Users should appear in dropdown
-      expect(screen.getByText('Derrick')).toBeInTheDocument();
-      expect(screen.getByText('Sefra')).toBeInTheDocument();
+      // Users should appear in select options
+      const options = reassignSelect.querySelectorAll('option');
+      expect(options[1].textContent).toBe('Derrick');
+      expect(options[2].textContent).toBe('Sefra');
     });
 
     it('should call onBulkAssign when user is selected', () => {
       render(<BulkActionBar {...defaultProps} />);
 
-      // Open dropdown
-      const assignButton = screen.getByTitle('Assign to user');
-      fireEvent.click(assignButton);
-
-      // Click user
-      fireEvent.click(screen.getByText('Derrick'));
+      const reassignSelect = screen.getByLabelText('Reassign');
+      fireEvent.change(reassignSelect, { target: { value: 'Derrick' } });
 
       expect(defaultProps.onBulkAssign).toHaveBeenCalledWith('Derrick');
     });

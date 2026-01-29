@@ -6,10 +6,10 @@ import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
 import { DashboardModalSkeleton, ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton } from './LoadingSkeletons';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser, Todo, QuickFilter } from '@/types/todo';
+import { AuthUser, QuickFilter, Todo } from '@/types/todo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
-import { AppShell, useAppShell, ActiveView } from './layout';
+import { AppShell, useAppShell } from './layout';
 import { useTodoStore } from '@/store/todoStore';
 import { ErrorBoundary } from './ErrorBoundary';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
@@ -77,11 +77,15 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   } = useAppShell();
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
+
+  // Read todos from Zustand store instead of fetching independently.
+  // useTodoData (called inside TodoList) handles fetching and real-time sync.
+  // This eliminates the duplicate API call + subscription that MainApp previously owned.
+  const todos = useTodoStore((state) => state.todos);
+  const loading = useTodoStore((state) => state.loading);
   const usersWithColors = useTodoStore((state) => state.usersWithColors);
   const users = useTodoStore((state) => state.users);
 
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [initialFilter, setInitialFilter] = useState<QuickFilter | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
   // Initialize showDashboard to false - we'll check for daily show AFTER data loads
@@ -89,51 +93,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const [hasCheckedDailyDashboard, setHasCheckedDailyDashboard] = useState(false);
   // Track which task to auto-expand when navigating from dashboard/notifications
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-
-  // Fetch todos
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!isSupabaseConfigured()) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const todosResult = await supabase
-          .from('todos')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (todosResult.data) {
-          setTodos(todosResult.data);
-        }
-      } catch (error) {
-        logger.error('Failed to fetch data', error, { component: 'MainApp' });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-
-    // Set up realtime subscription for todos
-    const channel = supabase
-      .channel('dashboard-todos')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setTodos(prev => [payload.new as Todo, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setTodos(prev => prev.map(t => t.id === payload.new.id ? payload.new as Todo : t));
-        } else if (payload.eventType === 'DELETE') {
-          setTodos(prev => prev.filter(t => t.id !== payload.old.id));
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   // Check if we should show daily dashboard on first login of the day
   // Only check ONCE after initial data load - prevents flash on hard refresh

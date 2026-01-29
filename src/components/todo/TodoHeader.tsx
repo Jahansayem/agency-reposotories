@@ -54,6 +54,37 @@ function TodoHeader({
   const { focusMode } = useTodoStore((state) => state.ui);
   const { setActiveView } = useAppShell();
 
+  // ── Debounced search input ────────────────────────────────────────────
+  // Local state gives instant keystroke feedback.
+  // The actual Zustand store update is debounced by 300 ms so filtering
+  // doesn't run on every character typed.
+  const [localSearchInput, setLocalSearchInput] = useState(searchQuery);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync local input when the store query is cleared externally
+  useEffect(() => {
+    if (searchQuery === '' && localSearchInput !== '') {
+      setLocalSearchInput('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  const handleSearchChange = useCallback((value: string) => {
+    setLocalSearchInput(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => setSearchQuery(value), 300);
+  }, [setSearchQuery]);
+
+  const handleSearchClear = useCallback(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setLocalSearchInput('');
+    setSearchQuery('');
+  }, [setSearchQuery]);
+
+  useEffect(() => () => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+  }, []);
+
   // Notification state
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -200,13 +231,14 @@ function TodoHeader({
             )}
 
             {/* Integrated Search Field - hidden in focus mode */}
+            {/* Uses local state for instant keystroke feedback; store update is debounced */}
             {!focusMode && (
               <div className="relative flex items-center flex-1 max-w-[240px]">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-light)] pointer-events-none" />
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={localSearchInput}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search tasks..."
                   aria-label="Search tasks"
                   className={`w-full pl-8 pr-7 py-1.5 text-xs rounded-md border transition-colors ${
@@ -215,9 +247,9 @@ function TodoHeader({
                       : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:border-[var(--accent)]/50'
                   } focus:outline-none`}
                 />
-                {searchQuery && (
+                {localSearchInput && (
                   <button
-                    onClick={() => setSearchQuery('')}
+                    onClick={handleSearchClear}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
                     aria-label="Clear search"
                   >

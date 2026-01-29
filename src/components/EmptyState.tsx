@@ -71,10 +71,14 @@ const variants = {
   },
 };
 
-// Refined SVG illustrations
+// ═══════════════════════════════════════════════════════════════════════════
+// RESPONSIVE SVG ILLUSTRATIONS
+// Mobile: 80x70px, Desktop: 140x120px (using viewBox + responsive classes)
+// ═══════════════════════════════════════════════════════════════════════════
+
 function TaskIllustration({ color }: { color: string }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Clipboard body */}
       <motion.rect
         initial={{ opacity: 0, y: 10 }}
@@ -139,7 +143,7 @@ function TaskIllustration({ color }: { color: string }) {
 
 function SearchIllustration({ color }: { color: string }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Magnifying glass */}
       <motion.circle
         initial={{ scale: 0.8, opacity: 0 }}
@@ -203,7 +207,7 @@ function SearchIllustration({ color }: { color: string }) {
 
 function CelebrationIllustration({ color }: { color: string }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Trophy */}
       <motion.path
         initial={{ opacity: 0, y: 10 }}
@@ -277,7 +281,7 @@ function CelebrationIllustration({ color }: { color: string }) {
 
 function WelcomeIllustration({ color }: { color: string }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Rocket */}
       <motion.g
         animate={{
@@ -376,7 +380,7 @@ function WelcomeIllustration({ color }: { color: string }) {
 
 function CalendarIllustration({ color }: { color: string }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Calendar body */}
       <motion.rect
         initial={{ opacity: 0, y: 10 }}
@@ -488,7 +492,7 @@ export default function EmptyState({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="flex flex-col items-center justify-center py-16 px-6"
+      className="flex flex-col items-center justify-center py-8 px-4 sm:py-16 sm:px-6"
     >
       {/* Background glow */}
       <div className={`absolute inset-0 bg-gradient-radial ${config.gradient} opacity-30 blur-3xl pointer-events-none`} />
@@ -523,7 +527,7 @@ export default function EmptyState({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35, duration: 0.4 }}
-        className="text-xl font-semibold mb-2 text-[var(--foreground)]"
+        className="text-lg sm:text-xl font-semibold mb-2 text-[var(--foreground)]"
       >
         {variant === 'first-time' && userName ? `Welcome, ${userName}!` : config.title}
       </motion.h3>
@@ -549,7 +553,7 @@ export default function EmptyState({
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleAction}
-          className="mt-6 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg"
+          className="mt-6 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg w-full sm:w-auto"
           style={{
             backgroundColor: config.color,
             color: 'white',

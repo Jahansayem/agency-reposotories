@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, RefObject } from 'react';
-import { motion } from 'framer-motion';
-import { MessageSquare, Users, ChevronLeft } from 'lucide-react';
+import { useCallback, useEffect, RefObject } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageSquare, Users, ChevronLeft, X } from 'lucide-react';
 import { AuthUser, ChatConversation, ChatMessage } from '@/types/todo';
 import { sanitizeHTML } from '@/lib/chatUtils';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface DockedChatPanelProps {
   currentUser: AuthUser;
@@ -24,6 +25,8 @@ interface DockedChatPanelProps {
   getInitials: (name: string) => string;
   getConversationTitle: () => string;
   extractMentions: (text: string, userNames: string[]) => string[];
+  /** Callback to close the chat panel (used in mobile/tablet overlay modes) */
+  onClose?: () => void;
 }
 
 export function DockedChatPanel({
@@ -44,7 +47,22 @@ export function DockedChatPanel({
   getInitials,
   getConversationTitle,
   extractMentions,
+  onClose,
 }: DockedChatPanelProps) {
+  // Responsive breakpoints: mobile (<640px), tablet (640-1024px), desktop (>1024px)
+  const isMobile = useIsMobile(640);
+  const isTablet = useIsMobile(1024);
+  // isTablet is true for both mobile and tablet; isMobile is true only for mobile
+
+  // Lock body scroll when mobile overlay is open
+  useEffect(() => {
+    if (isMobile) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isMobile]);
   // Render message text with mentions
   const renderMessageText = useCallback((text: string) => {
     const sanitizedText = sanitizeHTML(text);
@@ -83,15 +101,16 @@ export function DockedChatPanel({
     }
   }, [inputValue, extractMentions, users, onSendMessage, onInputChange]);
 
-  return (
+  // The inner chat content is shared across all viewport sizes
+  const chatContent = (
     <div className="h-full flex flex-col bg-[var(--surface-dark)]">
-      {/* Docked Header */}
+      {/* Header */}
       <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
           {!showConversationList && (
             <button
               onClick={onShowConversationList}
-              className="p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white"
+              className="p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Back to conversations"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -126,6 +145,17 @@ export function DockedChatPanel({
             </p>
           </div>
         </div>
+
+        {/* Close button for mobile/tablet overlay */}
+        {(isMobile || (isTablet && !isMobile)) && onClose && (
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="Close chat"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Conversation List or Chat Content */}
@@ -134,7 +164,7 @@ export function DockedChatPanel({
           <div className="h-full overflow-y-auto p-3 space-y-2">
             <button
               onClick={() => onSelectConversation({ type: 'team' })}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left touch-manipulation"
             >
               <div className="w-10 h-10 rounded-full bg-[var(--accent)]/15 flex items-center justify-center">
                 <Users className="w-5 h-5 text-[var(--accent)]" />
@@ -149,7 +179,7 @@ export function DockedChatPanel({
               <button
                 key={user.name}
                 onClick={() => onSelectConversation({ type: 'dm', userName: user.name })}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left touch-manipulation"
               >
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
@@ -168,7 +198,7 @@ export function DockedChatPanel({
           <div className="h-full flex flex-col">
             <button
               onClick={onShowConversationList}
-              className="flex items-center gap-2 px-4 py-2 text-white/60 hover:text-white transition-colors text-sm"
+              className="flex items-center gap-2 px-4 py-2 text-white/60 hover:text-white transition-colors text-sm touch-manipulation"
             >
               <ChevronLeft className="w-4 h-4" />
               Back to conversations
@@ -224,7 +254,7 @@ export function DockedChatPanel({
               )}
             </div>
 
-            <div className="p-3 border-t border-white/10">
+            <div className="p-3 border-t border-white/10" style={{ paddingBottom: isMobile ? 'max(0.75rem, env(safe-area-inset-bottom))' : undefined }}>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -245,7 +275,7 @@ export function DockedChatPanel({
                 <button
                   onClick={handleSend}
                   disabled={!inputValue.trim()}
-                  className="p-2.5 rounded-xl bg-[var(--accent)] text-white disabled:opacity-50 transition-opacity hover:bg-[var(--accent)]/90"
+                  className="p-2.5 rounded-xl bg-[var(--accent)] text-white disabled:opacity-50 transition-opacity hover:bg-[var(--accent)]/90 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -258,4 +288,34 @@ export function DockedChatPanel({
       </div>
     </div>
   );
+
+  // Mobile (<640px): Full-screen overlay
+  if (isMobile) {
+    return (
+      <div className="chat-mobile-overlay" role="dialog" aria-label="Chat" aria-modal="true">
+        {chatContent}
+      </div>
+    );
+  }
+
+  // Tablet (640-1024px): Slide-in panel with backdrop
+  if (isTablet) {
+    return (
+      <>
+        {onClose && (
+          <div
+            className="chat-mobile-backdrop"
+            onClick={onClose}
+            aria-hidden="true"
+          />
+        )}
+        <div className="chat-tablet-panel" role="dialog" aria-label="Chat" aria-modal="true">
+          {chatContent}
+        </div>
+      </>
+    );
+  }
+
+  // Desktop (>1024px): Standard docked behavior (no wrapper needed)
+  return chatContent;
 }

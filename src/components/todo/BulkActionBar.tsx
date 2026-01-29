@@ -1,226 +1,120 @@
 'use client';
 
-import { memo, useState } from 'react';
-import { X, Trash2, Check, Calendar, User, GitMerge, Mail, Zap } from 'lucide-react';
-import { TodoPriority } from '@/types/todo';
+import { memo } from 'react';
+import { X, Trash2, Check, GitMerge, ChevronDown } from 'lucide-react';
 
 interface BulkActionBarProps {
   selectedCount: number;
   users: string[];
+  viewMode: 'list' | 'kanban';
   onClearSelection: () => void;
   onBulkDelete: () => void;
   onBulkComplete: () => void;
   onBulkAssign: (assignedTo: string) => void;
   onBulkReschedule: (date: string) => void;
-  onBulkSetPriority: (priority: TodoPriority) => void;
   onInitiateMerge: () => void;
-  onGenerateEmail: () => void;
+  getDateOffset: (days: number) => string;
 }
 
 function BulkActionBar({
   selectedCount,
   users,
+  viewMode,
   onClearSelection,
   onBulkDelete,
   onBulkComplete,
   onBulkAssign,
   onBulkReschedule,
-  onBulkSetPriority,
   onInitiateMerge,
-  onGenerateEmail,
+  getDateOffset,
 }: BulkActionBarProps) {
-  const [showAssignDropdown, setShowAssignDropdown] = useState(false);
-  const [showRescheduleDropdown, setShowRescheduleDropdown] = useState(false);
-  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
-
-  // Helper to get date offset
-  const getDateOffset = (days: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
-  };
-
   return (
-    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-200">
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-[var(--shadow-xl)] px-4 py-3 flex items-center gap-3 backdrop-blur-xl">
-        <div className="flex items-center gap-2 pr-3 border-r border-[var(--border)]">
-          <button
-            onClick={onClearSelection}
-            className="p-1.5 hover:bg-[var(--surface-2)] rounded-lg transition-colors"
-            aria-label="Clear selection"
-          >
-            <X className="w-4 h-4 text-[var(--text-muted)]" />
-          </button>
-          <span className="text-sm font-medium text-[var(--foreground)]">
-            {selectedCount} selected
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {/* Complete */}
-          <button
-            onClick={onBulkComplete}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--success)] hover:bg-[var(--success-light)] rounded-lg transition-colors"
-            title="Mark all as complete"
-          >
-            <Check className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Complete</span>
-          </button>
-
-          {/* Assign dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowAssignDropdown(!showAssignDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent-light)] rounded-lg transition-colors"
-              title="Assign to user"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Assign</span>
-            </button>
-            {showAssignDropdown && (
-              <div className="absolute bottom-full left-0 mb-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg p-1 min-w-[120px]">
-                {users.map((user) => (
-                  <button
-                    key={user}
-                    onClick={() => {
-                      onBulkAssign(user);
-                      setShowAssignDropdown(false);
-                    }}
-                    className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors"
-                  >
-                    {user}
-                  </button>
-                ))}
+    <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
+      <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
+        <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
+          <div className="flex items-center justify-between gap-4">
+            {/* Left side - selection info with dismiss button */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={onClearSelection}
+                className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                title="Clear selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-[var(--foreground)]">{selectedCount}</span>
+                <span className="text-sm text-[var(--text-muted)]">selected</span>
               </div>
-            )}
-          </div>
+              <div className="hidden sm:block w-px h-5 bg-[var(--border)]" />
+            </div>
 
-          {/* Reschedule dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowRescheduleDropdown(!showRescheduleDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--warning)] hover:bg-[var(--warning-light)] rounded-lg transition-colors"
-              title="Reschedule"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reschedule</span>
-            </button>
-            {showRescheduleDropdown && (
-              <div className="absolute bottom-full left-0 mb-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg p-1 min-w-[120px]">
-                <button
-                  onClick={() => {
-                    onBulkReschedule(getDateOffset(0));
-                    setShowRescheduleDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors"
+            {/* Action buttons - horizontal inline */}
+            <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+              {/* Mark Complete */}
+              <button
+                onClick={onBulkComplete}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+              >
+                <Check className="w-4 h-4" />
+                <span className="hidden sm:inline">Mark Complete</span>
+              </button>
+
+              {/* Reassign dropdown */}
+              <div className="relative">
+                <select
+                  onChange={(e) => { if (e.target.value) onBulkAssign(e.target.value); e.target.value = ''; }}
+                  className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                  aria-label="Reassign"
                 >
-                  Today
-                </button>
-                <button
-                  onClick={() => {
-                    onBulkReschedule(getDateOffset(1));
-                    setShowRescheduleDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors"
-                >
-                  Tomorrow
-                </button>
-                <button
-                  onClick={() => {
-                    onBulkReschedule(getDateOffset(7));
-                    setShowRescheduleDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors"
-                >
-                  Next week
-                </button>
+                  <option value="">Reassign</option>
+                  {users.map((user) => (
+                    <option key={user} value={user}>{user}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
               </div>
-            )}
-          </div>
 
-          {/* Priority dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-2)] rounded-lg transition-colors"
-              title="Set priority"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Priority</span>
-            </button>
-            {showPriorityDropdown && (
-              <div className="absolute bottom-full left-0 mb-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg p-1 min-w-[100px]">
-                <button
-                  onClick={() => {
-                    onBulkSetPriority('urgent');
-                    setShowPriorityDropdown(false);
+              {/* Change Date dropdown */}
+              <div className="relative">
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) onBulkReschedule(e.target.value);
+                    e.target.value = '';
                   }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors text-[var(--danger)]"
+                  className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                  aria-label="Change Date"
                 >
-                  Urgent
-                </button>
-                <button
-                  onClick={() => {
-                    onBulkSetPriority('high');
-                    setShowPriorityDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors text-[var(--warning)]"
-                >
-                  High
-                </button>
-                <button
-                  onClick={() => {
-                    onBulkSetPriority('medium');
-                    setShowPriorityDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors text-[var(--accent)]"
-                >
-                  Medium
-                </button>
-                <button
-                  onClick={() => {
-                    onBulkSetPriority('low');
-                    setShowPriorityDropdown(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--surface-2)] rounded transition-colors text-[var(--text-muted)]"
-                >
-                  Low
-                </button>
+                  <option value="">Change Date</option>
+                  <option value={getDateOffset(0)}>Today</option>
+                  <option value={getDateOffset(1)}>Tomorrow</option>
+                  <option value={getDateOffset(7)}>Next Week</option>
+                  <option value={getDateOffset(30)}>Next Month</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
               </div>
-            )}
+
+              {/* Merge - only show when 2+ selected */}
+              {selectedCount >= 2 && (
+                <button
+                  onClick={onInitiateMerge}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+                >
+                  <GitMerge className="w-4 h-4" />
+                  Merge
+                </button>
+              )}
+
+              {/* Delete */}
+              <button
+                onClick={onBulkDelete}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--danger)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Delete</span>
+              </button>
+            </div>
           </div>
-
-          {/* Merge (only if 2+ selected) */}
-          {selectedCount >= 2 && (
-            <button
-              onClick={onInitiateMerge}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-2)] rounded-lg transition-colors"
-              title="Merge selected tasks"
-            >
-              <GitMerge className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Merge</span>
-            </button>
-          )}
-
-          {/* Generate Email */}
-          <button
-            onClick={onGenerateEmail}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--surface-2)] rounded-lg transition-colors"
-            title="Generate customer email"
-          >
-            <Mail className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Email</span>
-          </button>
-
-          {/* Delete */}
-          <button
-            onClick={onBulkDelete}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--danger)] hover:bg-[var(--danger-light)] rounded-lg transition-colors"
-            title="Delete selected"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Delete</span>
-          </button>
         </div>
       </div>
     </div>

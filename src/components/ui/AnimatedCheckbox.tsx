@@ -102,66 +102,77 @@ export function AnimatedCheckbox({
   };
 
   return (
-    <motion.button
+    // Outer touch target - 48px minimum for WCAG 2.5.5 compliance
+    <button
       type="button"
       onClick={onChange}
       disabled={disabled}
       aria-label={ariaLabel || (checked ? 'Mark as incomplete' : 'Mark as complete')}
       aria-checked={checked}
       role="checkbox"
-      variants={reducedMotion ? undefined : containerVariants}
-      initial={false}
-      animate={checked ? 'checked' : 'unchecked'}
-      whileHover={
-        disabled || reducedMotion
-          ? undefined
-          : {
-              scale: 1.05,
-              borderColor: checked ? 'var(--success)' : 'var(--success)',
-            }
-      }
-      whileTap={disabled || reducedMotion ? undefined : { scale: 0.95 }}
       className={`
-        ${config.box}
-        ${config.border}
-        rounded-lg
+        min-w-[48px] min-h-[48px]
         flex items-center justify-center
         flex-shrink-0
         touch-manipulation
-        transition-colors
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-        ${
-          checked
-            ? 'border-[var(--success)] bg-[var(--success)]'
-            : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10'
-        }
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        focus-visible:rounded-lg
+        ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
         ${className}
       `}
     >
-      <AnimatePresence mode="wait">
-        {checked && (
-          <motion.svg
-            key="checkmark"
-            viewBox="0 0 24 24"
-            className={`${config.icon} text-white`}
-            initial={reducedMotion ? false : 'hidden'}
-            animate="visible"
-            exit="hidden"
-          >
-            <motion.path
-              d="M5 13l4 4L19 7"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={3.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              variants={reducedMotion ? undefined : checkmarkVariants}
-            />
-          </motion.svg>
-        )}
-      </AnimatePresence>
-    </motion.button>
+      {/* Visual checkbox - smaller than the touch target */}
+      <motion.span
+        variants={reducedMotion ? undefined : containerVariants}
+        initial={false}
+        animate={checked ? 'checked' : 'unchecked'}
+        whileHover={
+          disabled || reducedMotion
+            ? undefined
+            : {
+                scale: 1.05,
+                borderColor: checked ? 'var(--success)' : 'var(--success)',
+              }
+        }
+        whileTap={disabled || reducedMotion ? undefined : { scale: 0.95 }}
+        className={`
+          ${config.box}
+          ${config.border}
+          rounded-lg
+          flex items-center justify-center
+          transition-colors
+          ${
+            checked
+              ? 'border-[var(--success)] bg-[var(--success)]'
+              : 'border-[var(--border)] hover:border-[var(--success)] hover:bg-[var(--success)]/10'
+          }
+          ${disabled ? 'opacity-50' : ''}
+        `}
+      >
+        <AnimatePresence mode="wait">
+          {checked && (
+            <motion.svg
+              key="checkmark"
+              viewBox="0 0 24 24"
+              className={`${config.icon} text-white`}
+              initial={reducedMotion ? false : 'hidden'}
+              animate="visible"
+              exit="hidden"
+            >
+              <motion.path
+                d="M5 13l4 4L19 7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={3.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                variants={reducedMotion ? undefined : checkmarkVariants}
+              />
+            </motion.svg>
+          )}
+        </AnimatePresence>
+      </motion.span>
+    </button>
   );
 }
 
@@ -187,45 +198,57 @@ export function SubtaskCheckbox({
   const reducedMotion = prefersReducedMotion();
 
   return (
-    <motion.button
+    // Outer touch target - 48px minimum for WCAG 2.5.5 compliance
+    <button
       type="button"
       onClick={onChange}
       disabled={disabled}
       aria-label={ariaLabel || (checked ? 'Mark subtask as incomplete' : 'Mark subtask as complete')}
       aria-checked={checked}
       role="checkbox"
-      whileHover={disabled || reducedMotion ? undefined : { scale: 1.1 }}
-      whileTap={disabled || reducedMotion ? undefined : { scale: 0.9 }}
       className={`
-        w-5 h-5 sm:w-4 sm:h-4
-        rounded
-        border-2
+        min-w-[48px] min-h-[48px]
         flex items-center justify-center
         flex-shrink-0
         touch-manipulation
-        transition-all duration-150
-        ${
-          checked
-            ? 'bg-[var(--accent)] border-[var(--accent)]'
-            : 'border-[var(--border)] hover:border-[var(--accent)]'
-        }
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+        focus-visible:rounded-lg
+        ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
         ${className}
       `}
     >
-      <AnimatePresence mode="wait">
-        {checked && (
-          <motion.div
-            initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ duration: DURATION.fast }}
-          >
-            <Check className="w-3 h-3 sm:w-2.5 sm:h-2.5 text-white" strokeWidth={3} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.button>
+      {/* Visual checkbox - smaller than the touch target */}
+      <motion.span
+        whileHover={disabled || reducedMotion ? undefined : { scale: 1.1 }}
+        whileTap={disabled || reducedMotion ? undefined : { scale: 0.9 }}
+        className={`
+          w-5 h-5 sm:w-4 sm:h-4
+          rounded
+          border-2
+          flex items-center justify-center
+          transition-all duration-150
+          ${
+            checked
+              ? 'bg-[var(--accent)] border-[var(--accent)]'
+              : 'border-[var(--border)] hover:border-[var(--accent)]'
+          }
+          ${disabled ? 'opacity-50' : ''}
+        `}
+      >
+        <AnimatePresence mode="wait">
+          {checked && (
+            <motion.div
+              initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ duration: DURATION.fast }}
+            >
+              <Check className="w-3 h-3 sm:w-2.5 sm:h-2.5 text-white" strokeWidth={3} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.span>
+    </button>
   );
 }
 

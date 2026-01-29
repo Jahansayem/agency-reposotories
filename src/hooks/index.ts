@@ -43,3 +43,7 @@ export type { KeyboardShortcut, UseKeyboardShortcutsOptions } from './useKeyboar
 // Chat Hooks
 export { useChatSubscription } from './useChatSubscription';
 export { useChatMessages } from './useChatMessages';
+
+// Form Hooks
+export { useForm, useUnsavedChanges } from './useForm';
+export type { UseFormOptions, UseFormReturn, UseUnsavedChangesOptions } from './useForm';

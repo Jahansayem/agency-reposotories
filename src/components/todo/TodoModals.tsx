@@ -1,14 +1,12 @@
 'use client';
 
 import { memo } from 'react';
-import dynamic from 'next/dynamic';
 import { Todo, AuthUser, CelebrationData, Subtask } from '@/types/todo';
 import { DuplicateMatch } from '@/lib/duplicateDetection';
 import CelebrationEffect from '../CelebrationEffect';
 import ProgressSummary from '../ProgressSummary';
 import WelcomeBackNotification from '../WelcomeBackNotification';
 import ConfirmDialog from '../ConfirmDialog';
-import KeyboardShortcutsModal from '../KeyboardShortcutsModal';
 import AddTaskModal from '../AddTaskModal';
 import SaveTemplateModal from '../SaveTemplateModal';
 import ArchivedTaskModal from '../ArchivedTaskModal';
@@ -16,15 +14,6 @@ import DuplicateDetectionModal from '../DuplicateDetectionModal';
 import CustomerEmailModal from '../CustomerEmailModal';
 import { CompletionCelebration } from '../CompletionCelebration';
 import { TaskCompletionSummary } from '../TaskCompletionSummary';
-import {
-  WeeklyProgressChartSkeleton,
-} from '../LoadingSkeletons';
-
-// Lazy load WeeklyProgressChart
-const WeeklyProgressChart = dynamic(() => import('../WeeklyProgressChart'), {
-  ssr: false,
-  loading: () => <WeeklyProgressChartSkeleton />,
-});
 
 interface ConfirmDialogState {
   isOpen: boolean;
@@ -53,7 +42,6 @@ interface TodoModalsProps {
 
   // Todos for various modals
   todos: Todo[];
-  visibleTodos: Todo[];
   users: string[];
 
   // Celebration
@@ -71,17 +59,9 @@ interface TodoModalsProps {
   closeWelcomeBack: () => void;
   openProgressSummary: () => void;
 
-  // Weekly Chart
-  showWeeklyChart: boolean;
-  closeWeeklyChart: () => void;
-
   // Confirm Dialog
   confirmDialog: ConfirmDialogState;
   closeConfirmDialog: () => void;
-
-  // Shortcuts
-  showShortcuts: boolean;
-  closeShortcuts: () => void;
 
   // Add Task Modal
   showAddTaskModal: boolean;
@@ -91,7 +71,7 @@ interface TodoModalsProps {
     priority: 'low' | 'medium' | 'high' | 'urgent',
     dueDate?: string,
     assignedTo?: string,
-    subtasks?: { id: string; text: string; completed: boolean }[],
+    subtasks?: Subtask[],
     transcription?: string,
     sourceFile?: File,
     reminderAt?: string
@@ -135,7 +115,6 @@ function TodoModals({
   onUserChange,
   darkMode,
   todos,
-  visibleTodos,
   users,
   showCelebration,
   celebrationText,
@@ -148,12 +127,8 @@ function TodoModals({
   showWelcomeBack,
   closeWelcomeBack,
   openProgressSummary,
-  showWeeklyChart,
-  closeWeeklyChart,
   confirmDialog,
   closeConfirmDialog,
-  showShortcuts,
-  closeShortcuts,
   showAddTaskModal,
   setShowAddTaskModal,
   onAddTodo,
@@ -210,22 +185,6 @@ function TodoModals({
         confirmLabel="Delete"
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirmDialog}
-      />
-
-      {/* Only render when shown to prevent skeleton flash during dynamic import */}
-      {showWeeklyChart && (
-        <WeeklyProgressChart
-          todos={visibleTodos}
-          darkMode={darkMode}
-          show={showWeeklyChart}
-          onClose={closeWeeklyChart}
-        />
-      )}
-
-      <KeyboardShortcutsModal
-        show={showShortcuts}
-        onClose={closeShortcuts}
-        darkMode={darkMode}
       />
 
       {/* Add Task Modal */}

@@ -1256,7 +1256,7 @@ function TodoItemComponent({
           {/* PRIMARY ACTION - Mark Done/Reopen prominently displayed */}
           <div className="flex items-center justify-between mb-4">
             <Button
-              variant={todo.completed ? 'secondary' : 'success'}
+              variant={todo.completed ? 'secondary' : 'primary'}
               size="md"
               leftIcon={<Check className="w-4 h-4" />}
               onClick={handleToggle}

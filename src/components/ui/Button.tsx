@@ -5,9 +5,24 @@ import { motion, HTMLMotionProps } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { buttonHoverVariants, iconButtonVariants, prefersReducedMotion } from '@/lib/animations';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// TYPES & INTERFACES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Core button variants (consolidated from 8 to 4)
+ *
+ * Migration guide:
+ * - `brand`   -> use `primary` (same gradient)
+ * - `outline` -> use `secondary` (outlined style)
+ * - `warning` -> use `danger` with different label text
+ * - `success` -> use `primary` with className override for green color
+ */
+export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'brand';
+
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  /** Button variant */
-  variant?: 'primary' | 'secondary' | 'danger' | 'warning' | 'ghost' | 'outline' | 'brand' | 'success';
+  /** Button variant - determines visual style */
+  variant?: ButtonVariant;
   /** Button size */
   size?: 'sm' | 'md' | 'lg';
   /** Show loading spinner */
@@ -20,61 +35,53 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-const variantClasses = {
+// ═══════════════════════════════════════════════════════════════════════════
+// STANDARDIZED STYLES
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Consolidated variant styles with standardized hover/active states:
+ *
+ * Hover:  brightness-105, -translate-y-px, shadow-lg
+ * Active: scale-[0.98], translate-y-px, shadow-sm
+ * Transition: all duration-150 ease-out (applied in component className)
+ */
+const variantClasses: Record<ButtonVariant, string> = {
   primary: `
     bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)]
     text-white font-semibold
     shadow-[var(--shadow-md)]
-    hover:opacity-90 hover:shadow-[var(--shadow-lg)]
-    active:scale-[0.98]
-    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:opacity-50
+    hover:brightness-105 hover:-translate-y-px hover:shadow-[var(--shadow-lg)]
+    active:scale-[0.98] active:translate-y-px active:shadow-[var(--shadow-sm)]
+    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:hover:translate-y-0 disabled:hover:shadow-[var(--shadow-md)]
   `,
   secondary: `
     bg-[var(--surface-2)] text-[var(--foreground)]
     border border-[var(--border)]
-    hover:bg-[var(--surface-3)] hover:border-[var(--border-hover)]
-    active:scale-[0.98]
-    disabled:opacity-50 disabled:cursor-not-allowed
+    hover:bg-[var(--surface-3)] hover:border-[var(--border-hover)] hover:brightness-105 hover:-translate-y-px hover:shadow-[var(--shadow-lg)]
+    active:scale-[0.98] active:translate-y-px active:shadow-[var(--shadow-sm)]
+    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--surface-2)] disabled:hover:translate-y-0
   `,
   danger: `
     bg-[var(--danger)] text-white font-semibold
-    hover:bg-[#B91C1C]
-    active:scale-[0.98]
-    disabled:opacity-50 disabled:cursor-not-allowed
-  `,
-  warning: `
-    bg-[var(--warning)] text-white font-semibold
-    hover:bg-[#B45309]
-    active:scale-[0.98]
-    disabled:opacity-50 disabled:cursor-not-allowed
+    shadow-[var(--shadow-md)]
+    hover:brightness-105 hover:-translate-y-px hover:shadow-[var(--shadow-lg)]
+    active:scale-[0.98] active:translate-y-px active:shadow-[var(--shadow-sm)]
+    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:hover:translate-y-0
   `,
   ghost: `
     text-[var(--foreground)]
-    hover:bg-[var(--surface-2)]
-    active:scale-[0.98]
-    disabled:opacity-50 disabled:cursor-not-allowed
-  `,
-  outline: `
-    border-2 border-[var(--accent)] text-[var(--accent)]
-    hover:bg-[var(--accent-light)]
-    active:scale-[0.98]
-    disabled:opacity-50 disabled:cursor-not-allowed
+    hover:bg-[var(--surface-2)] hover:brightness-105 hover:-translate-y-px hover:shadow-[var(--shadow-lg)]
+    active:scale-[0.98] active:translate-y-px active:shadow-[var(--shadow-sm)]
+    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:translate-y-0
   `,
   brand: `
     bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)]
     text-white font-semibold
-    shadow-[var(--elevation-2)] shadow-[var(--shadow-blue)]
-    hover:shadow-[var(--elevation-3)] hover:brightness-105 hover:-translate-y-[1px]
-    active:scale-[0.98] active:shadow-[var(--elevation-1)]
-    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none
-  `,
-  success: `
-    bg-gradient-to-br from-[var(--success)] to-[var(--success-vivid)]
-    text-white font-semibold
-    shadow-[0_4px_12px_rgba(5,150,105,0.25)]
-    hover:brightness-105 hover:-translate-y-[1px]
-    active:scale-[0.98]
-    disabled:opacity-50 disabled:cursor-not-allowed
+    shadow-[var(--shadow-md)]
+    hover:brightness-105 hover:-translate-y-px hover:shadow-[var(--shadow-lg)]
+    active:scale-[0.98] active:translate-y-px active:shadow-[var(--shadow-sm)]
+    disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:brightness-100 disabled:hover:translate-y-0 disabled:hover:shadow-[var(--shadow-md)]
   `,
 };
 
@@ -84,14 +91,19 @@ const sizeClasses = {
   lg: 'px-6 py-3 text-base min-h-[52px] rounded-xl gap-2.5',
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+// BUTTON COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Standardized Button Component
  *
  * Features:
+ * - 4 core variants: primary, secondary, danger, ghost
  * - Consistent sizing with minimum touch targets (44px+)
- * - Multiple variants for different use cases
+ * - Standardized hover/active states across all variants
  * - Loading state with spinner
- * - Support for icons
+ * - Support for left/right icons
  * - Accessible with proper focus states
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -142,6 +154,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 
 Button.displayName = 'Button';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ICON BUTTON COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Icon Button variant for icon-only buttons
@@ -199,13 +215,17 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
 
 IconButton.displayName = 'IconButton';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MOTION-ENHANCED BUTTON
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Motion-enhanced Button with Framer Motion animations
  * Use this for primary CTAs where polished hover effects are desired
  */
 export interface MotionButtonProps extends Omit<HTMLMotionProps<'button'>, 'ref' | 'children'> {
   /** Button variant */
-  variant?: 'primary' | 'secondary' | 'danger' | 'warning' | 'ghost' | 'outline' | 'brand' | 'success';
+  variant?: ButtonVariant;
   /** Button size */
   size?: 'sm' | 'md' | 'lg';
   /** Show loading spinner */
@@ -274,6 +294,10 @@ export const MotionButton = forwardRef<HTMLButtonElement, MotionButtonProps>(
 
 MotionButton.displayName = 'MotionButton';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MOTION-ENHANCED ICON BUTTON
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * Motion-enhanced Icon Button with Framer Motion animations
  */
@@ -283,7 +307,7 @@ export interface MotionIconButtonProps extends Omit<HTMLMotionProps<'button'>, '
   /** Accessible label (required for icon-only buttons) */
   'aria-label': string;
   /** Button variant */
-  variant?: 'primary' | 'secondary' | 'danger' | 'warning' | 'ghost' | 'outline' | 'brand' | 'success';
+  variant?: ButtonVariant;
   /** Button size */
   size?: 'sm' | 'md' | 'lg';
   /** Show loading spinner */

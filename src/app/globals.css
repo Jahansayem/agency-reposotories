@@ -606,10 +606,12 @@ input[type="radio"]:focus-visible {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ACCESSIBILITY: REDUCED MOTION
-   Respects user preference for reduced animations
+   Comprehensive prefers-reduced-motion support.
+   Disables all decorative animations while preserving essential visual states.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @media (prefers-reduced-motion: reduce) {
+  /* ─── Global: Disable all animations and transitions ─── */
   *,
   *::before,
   *::after {
@@ -619,29 +621,109 @@ input[type="radio"]:focus-visible {
     scroll-behavior: auto !important;
   }
 
-  /* Preserve essential loading indicators but make them instant */
-  .loading-spinner {
-    animation: spin 0.01ms linear 1 !important;
-  }
-
-  /* Disable decorative animations */
-  .float,
-  .pulse-glow,
+  /* ─── Shimmer / Skeleton loading ─── */
   .shimmer,
-  .gradient-animate {
-    animation: none !important;
-  }
-
-  /* Keep opacity for shimmer visible without animation */
   .shimmer::after {
     animation: none !important;
     transform: none !important;
   }
+  .shimmer::after {
+    opacity: 0.3;
+  }
+  .skeleton {
+    animation: none !important;
+    background: var(--surface-2) !important;
+  }
 
-  /* Disable hover transforms */
+  /* ─── Pulse animations (priority badges, status dots, attention) ─── */
+  .pulse-glow,
+  .pulse-attention,
+  .animate-pulse-subtle,
+  .status-dot.online::after {
+    animation: none !important;
+  }
+
+  /* ─── Float animations (empty state illustrations) ─── */
+  .float {
+    animation: none !important;
+  }
+
+  /* ─── Spin animations (loading spinners) ─── */
+  .loading-spinner {
+    animation: none !important;
+    border-top-width: 3px;
+  }
+
+  /* ─── Shake / wiggle animations (form errors) ─── */
+  .animate-shake,
+  .wiggle {
+    animation: none !important;
+  }
+
+  /* ─── Gradient shift animations ─── */
+  .gradient-animate {
+    animation: none !important;
+    background-position: 0% 50% !important;
+  }
+
+  /* ─── Task priority pulse ─── */
+  .task-urgent:not(.task-completed) {
+    animation: none !important;
+    border-left-width: 5px !important;
+  }
+
+  /* ─── Progress bar shine ─── */
+  .progress-bar-fill::after {
+    animation: none !important;
+    display: none;
+  }
+
+  /* ─── Notification highlight ─── */
+  .notification-highlight {
+    animation: none !important;
+    box-shadow: 0 0 0 3px var(--accent) !important;
+  }
+
+  /* ─── Bounce / success animations ─── */
+  .bounce-success {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* ─── Stagger children fade ─── */
+  .stagger-children > * {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* ─── Fade slide up ─── */
+  .fade-slide-up {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* ─── Hover transforms (buttons, cards, lift effects) ─── */
   .btn-primary:hover,
   .btn-sky:hover,
-  .card-elevated:hover {
+  .btn-brand:hover,
+  .btn-success:hover,
+  .card-elevated:hover,
+  .card-interactive:hover,
+  .card-hoverable:hover,
+  .task-card:hover,
+  .stat-card:hover,
+  .hover-lift:hover,
+  .quick-action-btn:hover,
+  .chart-bar:hover {
+    transform: none !important;
+  }
+
+  /* ─── Active/press transforms ─── */
+  .press-scale:active,
+  .btn-press:active,
+  .card-hoverable:active,
+  .task-card:active,
+  .quick-action-btn:active {
     transform: none !important;
   }
 }
@@ -1532,30 +1614,10 @@ input[type="radio"]:focus-visible {
   }
 }
 
-/* Reduce motion for accessibility */
-@media (prefers-reduced-motion: reduce) {
-  .hover-lift:hover,
-  .press-scale:active {
-    transform: none;
-  }
-
-  .pulse-attention,
-  .wiggle,
-  .bounce-success,
-  .status-dot.online::after {
-    animation: none;
-  }
-
-  .skeleton {
-    animation: none;
-    background: var(--surface-2);
-  }
-
-  .progress-bar-fill::after {
-    animation: none;
-    display: none;
-  }
-}
+/* NOTE: Reduced motion styles are consolidated in the main
+   "ACCESSIBILITY: REDUCED MOTION" section above.
+   All animation/transition overrides for prefers-reduced-motion
+   are maintained in a single block for consistency. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DASHBOARD COMPONENTS
@@ -1773,4 +1835,112 @@ input[type="radio"]:focus-visible {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
+}
+
+/* ─── Form Field Shake Animation ─── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%, 75% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* .animate-shake reduced motion handled in main block above */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SPRINT 2: MOBILE & ACCESSIBILITY ADDITIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Priority Badge Urgent Pulse ─── */
+@keyframes priority-badge-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+  }
+}
+
+.priority-badge-urgent-pulse {
+  animation: priority-badge-pulse 2s ease-in-out infinite;
+}
+
+/* Disable pulse for reduced motion */
+.priority-badge-no-pulse,
+.priority-badge-no-pulse.priority-badge-urgent-pulse {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .priority-badge-urgent-pulse {
+    animation: none !important;
+  }
+}
+
+/* ─── Form Field Styles ─── */
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shake animation for form field errors */
+@keyframes form-field-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+.form-field-shake {
+  animation: form-field-shake 0.4s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-field-shake {
+    animation: none !important;
+  }
+}
+
+/* ─── Mobile Chat Overlay ─── */
+.chat-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-dark);
+  /* Safe area insets for notched phones */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.chat-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Tablet slide-in panel */
+.chat-tablet-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 85vw;
+  z-index: 50;
+  background: var(--surface-dark);
+  box-shadow: var(--shadow-xl);
+  /* Safe area insets */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
