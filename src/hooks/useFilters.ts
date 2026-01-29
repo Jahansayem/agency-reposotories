@@ -7,7 +7,7 @@
 
 import { useMemo, useCallback } from 'react';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder } from '@/store/todoStore';
-import { TodoStatus, SortOption, QuickFilter, UserRole } from '@/types/todo';
+import { TodoStatus, SortOption, QuickFilter, isFollowUpOverdue } from '@/types/todo';
 import { extractPotentialNames } from '@/lib/duplicateDetection';
 
 export interface FilterState {
@@ -24,7 +24,7 @@ export interface FilterState {
   showAdvancedFilters: boolean;
 }
 
-export function useFilters(userName: string, userRole?: UserRole) {
+export function useFilters(userName: string) {
   const {
     todos,
     filters,
@@ -59,38 +59,10 @@ export function useFilters(userName: string, userRole?: UserRole) {
 
   const archivedIds = useMemo(() => new Set(archivedTodos.map((todo) => todo.id)), [archivedTodos]);
 
-  // Visible todos (excluding archived and filtered by personal role visibility)
+  // Visible todos (excluding archived)
   const visibleTodos = useMemo(() => {
-    let result = todos.filter((todo) => !archivedIds.has(todo.id));
-
-    // Personal role visibility logic:
-    // - Personal users can ONLY see their own tasks (created_by or assigned_to matches their name)
-    // - Other users (admin/member) cannot see tasks created by personal users
-    if (userRole === 'personal') {
-      // Personal users only see their own tasks
-      result = result.filter((todo) =>
-        todo.created_by === userName || todo.assigned_to === userName
-      );
-    } else {
-      // Non-personal users filter out tasks created by personal role users
-      // We need to check if the task creator has 'personal' role
-      // Since we don't have creator role info in todo, we'll filter by convention:
-      // Tasks where created_by matches a personal user should be hidden
-      // For now, we mark personal tasks by checking if created_by === assigned_to
-      // This is a simplification; ideally we'd store creator role in the todo
-    }
-
-    // Filter private tasks - only creator and assignee can see them
-    result = result.filter((todo) => {
-      // Non-private tasks are visible to everyone
-      if (!todo.is_private) return true;
-      // Private tasks only visible to creator or assignee
-      return todo.created_by === userName || todo.assigned_to === userName;
-    });
-
-    return result;
-  }, [todos, archivedIds, userRole, userName]);
-
+    return todos.filter((todo) => !archivedIds.has(todo.id));
+  }, [todos, archivedIds]);
 
   // Extract unique customer names for filtering
   const uniqueCustomers = useMemo(() => {
@@ -148,6 +120,12 @@ export function useFilters(userName: string, userRole?: UserRole) {
         break;
       case 'overdue':
         result = result.filter((todo) => isOverdue(todo.due_date, todo.completed));
+        break;
+      case 'waiting':
+        result = result.filter((todo) => todo.waiting_for_response && !todo.completed);
+        break;
+      case 'needs_followup':
+        result = result.filter((todo) => todo.waiting_for_response && !todo.completed && isFollowUpOverdue(todo));
         break;
     }
 
@@ -285,6 +263,7 @@ export function useFilters(userName: string, userRole?: UserRole) {
   // Filter counts for UI
   const filterCounts = useMemo(() => {
     const activeTodos = visibleTodos.filter(t => !t.completed);
+    const waitingTodos = visibleTodos.filter(t => t.waiting_for_response && !t.completed);
     return {
       all: visibleTodos.length,
       active: activeTodos.length,
@@ -293,6 +272,8 @@ export function useFilters(userName: string, userRole?: UserRole) {
       dueToday: visibleTodos.filter(t => isDueToday(t.due_date) && !t.completed).length,
       overdue: visibleTodos.filter(t => isOverdue(t.due_date, t.completed)).length,
       urgent: visibleTodos.filter(t => t.priority === 'urgent' && !t.completed).length,
+      waiting: waitingTodos.length,
+      needsFollowup: waitingTodos.filter(t => isFollowUpOverdue(t)).length,
     };
   }, [visibleTodos, userName]);
 

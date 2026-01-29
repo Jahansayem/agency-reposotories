@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, OWNER_USERNAME } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, isOwner, WaitingContactType, DEFAULT_FOLLOW_UP_HOURS } from '@/types/todo';
 import SortableTodoItem from './SortableTodoItem';
 import AddTodo from './AddTodo';
 import AddTaskModal from './AddTaskModal';
@@ -478,7 +478,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }, [fetchActivityLog]);
 
   // Check for duplicates and either show modal or create task directly
-  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, isPrivate?: boolean) => {
+  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
     // Check if we should look for duplicates
     const combinedText = `${text} ${transcription || ''}`;
     if (shouldCheckForDuplicates(combinedText)) {
@@ -490,11 +490,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       }
     }
     // No duplicates found, create directly
-    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, isPrivate);
+    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt);
   };
 
   // Actually create the todo (called after duplicate check or when user confirms)
-  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, isPrivate?: boolean) => {
+  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
     const newTodo: Todo = {
       id: uuidv4(),
       text,
@@ -509,7 +509,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       transcription: transcription,
       reminder_at: reminderAt,
       reminder_sent: false,
-      is_private: isPrivate || false,
     };
 
     // Optimistic update using store action
@@ -533,7 +532,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       insertData.reminder_at = newTodo.reminder_at;
       insertData.reminder_sent = false;
     }
-    if (newTodo.is_private) insertData.is_private = newTodo.is_private;
 
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
@@ -1151,33 +1149,86 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
-  const setPrivacy = async (id: string, isPrivate: boolean) => {
+  // Mark a task as waiting for customer response
+  const markWaiting = async (id: string, contactType: WaitingContactType, followUpHours: number = DEFAULT_FOLLOW_UP_HOURS) => {
+    const oldTodo = todos.find((t) => t.id === id);
+    const now = new Date().toISOString();
+
+    // Optimistic update using store action
+    updateTodoInStore(id, {
+      waiting_for_response: true,
+      waiting_since: now,
+      waiting_contact_type: contactType,
+      follow_up_after_hours: followUpHours,
+    });
+
+    try {
+      const response = await fetchWithCsrf('/api/todos/waiting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Name': userName,
+        },
+        body: JSON.stringify({ todoId: id, contactType, followUpAfterHours: followUpHours }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark as waiting');
+      }
+
+      // Activity is logged by the API
+    } catch (error) {
+      logger.error('Error marking task as waiting', error, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback optimistic update
+        updateTodoInStore(id, {
+          waiting_for_response: oldTodo.waiting_for_response,
+          waiting_since: oldTodo.waiting_since,
+          waiting_contact_type: oldTodo.waiting_contact_type,
+          follow_up_after_hours: oldTodo.follow_up_after_hours,
+        });
+      }
+      throw error;
+    }
+  };
+
+  // Clear waiting status when customer responds
+  const clearWaiting = async (id: string) => {
     const oldTodo = todos.find((t) => t.id === id);
 
     // Optimistic update using store action
-    updateTodoInStore(id, { is_private: isPrivate });
+    updateTodoInStore(id, {
+      waiting_for_response: false,
+      waiting_since: undefined,
+      waiting_contact_type: undefined,
+    });
 
-    const { error: updateError } = await supabase
-      .from('todos')
-      .update({ is_private: isPrivate })
-      .eq('id', id);
+    try {
+      const response = await fetchWithCsrf('/api/todos/waiting', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Name': userName,
+        },
+        body: JSON.stringify({ todoId: id }),
+      });
 
-    if (updateError) {
-      logger.error('Error setting privacy', updateError, { component: 'TodoList' });
+      if (!response.ok) {
+        throw new Error('Failed to clear waiting status');
+      }
+
+      // Activity is logged by the API
+    } catch (error) {
+      logger.error('Error clearing waiting status', error, { component: 'TodoList' });
       if (oldTodo) {
         // Rollback optimistic update
-        updateTodoInStore(id, { is_private: oldTodo.is_private });
+        updateTodoInStore(id, {
+          waiting_for_response: oldTodo.waiting_for_response,
+          waiting_since: oldTodo.waiting_since,
+          waiting_contact_type: oldTodo.waiting_contact_type,
+        });
       }
-    } else if (oldTodo && oldTodo.is_private !== isPrivate) {
-      logActivity({
-        action: 'privacy_changed',
-        userName,
-        todoId: id,
-        todoText: oldTodo.text,
-        details: {
-          privacy_changed: { from: oldTodo.is_private, to: isPrivate }
-        },
-      });
+      throw error;
     }
   };
 
@@ -2044,7 +2095,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                       onAssign={assignTodo}
                       onSetDueDate={setDueDate}
                       onSetReminder={setReminder}
-                      onSetPrivacy={setPrivacy}
+                      onMarkWaiting={markWaiting}
+                      onClearWaiting={clearWaiting}
                       onSetPriority={setPriority}
                       onStatusChange={updateStatus}
                       onUpdateText={updateText}
@@ -2084,7 +2136,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                             onAssign={assignTodo}
                             onSetDueDate={setDueDate}
                             onSetReminder={setReminder}
-                            onSetPrivacy={setPrivacy}
+                            onMarkWaiting={markWaiting}
+                            onClearWaiting={clearWaiting}
                             onSetPriority={setPriority}
                             onStatusChange={updateStatus}
                             onUpdateText={updateText}
@@ -2198,7 +2251,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                                 onAssign={assignTodo}
                                 onSetDueDate={setDueDate}
                                 onSetReminder={setReminder}
-                                onSetPrivacy={setPrivacy}
+                                onMarkWaiting={markWaiting}
+                                onClearWaiting={clearWaiting}
                                 onSetPriority={setPriority}
                                 onStatusChange={updateStatus}
                                 onUpdateText={updateText}
@@ -2239,7 +2293,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 onAssign={assignTodo}
                 onSetDueDate={setDueDate}
                 onSetReminder={setReminder}
-                onSetPrivacy={setPrivacy}
+                onMarkWaiting={markWaiting}
+                onClearWaiting={clearWaiting}
                 onSetPriority={setPriority}
                 onUpdateNotes={updateNotes}
                 onUpdateText={updateText}
@@ -2374,7 +2429,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       )}
 
       {/* Strategic Dashboard - Owner only */}
-      {showStrategicDashboard && userName === OWNER_USERNAME && (
+      {showStrategicDashboard && isOwner({ name: userName, role: currentUser?.role }) && (
         <StrategicDashboard
           userName={userName}
           darkMode={darkMode}

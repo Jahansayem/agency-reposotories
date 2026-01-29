@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Lock } from 'lucide-react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
@@ -20,13 +20,6 @@ interface ActivityFeedProps {
 const INITIAL_LOAD_LIMIT = 50;
 const LOAD_MORE_LIMIT = 25;
 const MAX_ACTIVITIES_IN_MEMORY = 200; // Prevent unbounded memory growth
-
-// Type for todo privacy info (minimal fields needed for filtering)
-interface TodoPrivacyInfo {
-  is_private: boolean;
-  created_by: string;
-  assigned_to: string | null;
-}
 
 // Local storage key for notification settings
 const NOTIFICATION_SETTINGS_KEY = 'activityNotificationSettings';
@@ -74,7 +67,9 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6' },
   reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444' },
   reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981' },
-  privacy_changed: { icon: Lock, label: 'changed privacy', color: '#8b5cf6' },
+  marked_waiting: { icon: Clock, label: 'marked waiting for response', color: '#8b5cf6' },
+  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: '#10b981' },
+  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: '#ef4444' },
 };
 
 // Activity type filter options
@@ -102,7 +97,6 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
   const [showSettings, setShowSettings] = useState(false);
   const [filterType, setFilterType] = useState<ActivityFilterType>('all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [todosPrivacyMap, setTodosPrivacyMap] = useState<Map<string, TodoPrivacyInfo>>(new Map());
   const lastActivityIdRef = useRef<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -112,64 +106,6 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
   // Load notification settings on mount
   useEffect(() => {
     setNotificationSettings(getNotificationSettings());
-  }, []);
-
-  // Fetch todos privacy info and subscribe to changes
-  useEffect(() => {
-    const fetchTodosPrivacy = async () => {
-      const { data, error } = await supabase
-        .from('todos')
-        .select('id, is_private, created_by, assigned_to');
-
-      if (data && !error) {
-        const map = new Map<string, TodoPrivacyInfo>();
-        data.forEach(todo => {
-          map.set(todo.id, {
-            is_private: todo.is_private ?? false,
-            created_by: todo.created_by,
-            assigned_to: todo.assigned_to,
-          });
-        });
-        setTodosPrivacyMap(map);
-      }
-    };
-
-    fetchTodosPrivacy();
-
-    // Subscribe to todo changes to keep privacy map updated
-    const channel = supabase
-      .channel('activity-feed-todos-privacy')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'todos' },
-        (payload) => {
-          if (payload.eventType === 'DELETE') {
-            // Remove deleted todo from map
-            setTodosPrivacyMap(prev => {
-              const next = new Map(prev);
-              next.delete(payload.old.id);
-              return next;
-            });
-          } else {
-            // INSERT or UPDATE - add/update todo privacy info
-            const todo = payload.new as { id: string; is_private?: boolean; created_by: string; assigned_to: string | null };
-            setTodosPrivacyMap(prev => {
-              const next = new Map(prev);
-              next.set(todo.id, {
-                is_private: todo.is_private ?? false,
-                created_by: todo.created_by,
-                assigned_to: todo.assigned_to,
-              });
-              return next;
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   // Create notification sound using Web Audio API
@@ -341,37 +277,17 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
         (payload) => {
           const newActivity = payload.new as ActivityLogEntry;
 
-          // Check privacy - don't show notifications for private tasks the user shouldn't see
-          let isPrivateAndNotOwner = false;
-          if (newActivity.todo_id) {
-            const todoPrivacy = todosPrivacyMap.get(newActivity.todo_id);
-            if (todoPrivacy?.is_private) {
-              const isOwner = todoPrivacy.created_by === currentUserName || todoPrivacy.assigned_to === currentUserName;
-              if (!isOwner) {
-                isPrivateAndNotOwner = true;
-                logger.debug('Skipping notification for private task activity', {
-                  component: 'ActivityFeed',
-                  todo_id: newActivity.todo_id,
-                  action: newActivity.action,
-                });
-              }
-            }
-          }
-
           // Check if this is from another user
           const isOtherUser = newActivity.user_name !== currentUserName;
 
           // Notify for activities from other users (or all if notifyOwnActions is enabled)
-          // But skip notifications for private tasks the user shouldn't see
-          const shouldNotify = notificationSettings.enabled &&
-            (isOtherUser || notificationSettings.notifyOwnActions) &&
-            !isPrivateAndNotOwner;
+          const shouldNotify = notificationSettings.enabled && (isOtherUser || notificationSettings.notifyOwnActions);
           if (shouldNotify) {
             playNotificationSound();
             showBrowserNotification(newActivity);
           }
 
-          // Always add to activities - the filteredActivities useMemo will filter out private ones
+          // Add to activities with memory limit to prevent unbounded growth
           setActivities((prev) => {
             const updated = [newActivity, ...prev];
             // Trim to max size to prevent memory issues
@@ -379,7 +295,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
           });
 
           // Log for debugging
-          logger.debug('Received realtime activity', { component: 'ActivityFeed', action: newActivity.action, from: newActivity.user_name, shouldNotify, isPrivateAndNotOwner });
+          logger.debug('Received realtime activity', { component: 'ActivityFeed', action: newActivity.action, from: newActivity.user_name, shouldNotify });
         }
       )
       .subscribe((status) => {
@@ -389,37 +305,15 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserName, notificationSettings.enabled, notificationSettings.notifyOwnActions, playNotificationSound, showBrowserNotification, todosPrivacyMap]);
+  }, [currentUserName, notificationSettings.enabled, notificationSettings.notifyOwnActions, playNotificationSound, showBrowserNotification]);
 
-  // Filter out private task activities from non-owners
-  const filterPrivateActivities = useCallback((activitiesToFilter: ActivityLogEntry[]) => {
-    return activitiesToFilter.filter(activity => {
-      // Non-task activities are always visible
-      if (!activity.todo_id) return true;
-
-      const todoPrivacy = todosPrivacyMap.get(activity.todo_id);
-      // If todo not found in map, show activity (task may be deleted or not yet loaded)
-      if (!todoPrivacy) return true;
-
-      // Public tasks are visible to all
-      if (!todoPrivacy.is_private) return true;
-
-      // Private task - only show to creator or assignee
-      return todoPrivacy.created_by === currentUserName || todoPrivacy.assigned_to === currentUserName;
-    });
-  }, [todosPrivacyMap, currentUserName]);
-
-  // Filter activities based on selected filter type and privacy
+  // Filter activities based on selected filter type
   const filteredActivities = useMemo(() => {
-    // First apply privacy filter
-    const privacyFiltered = filterPrivateActivities(activities);
-
-    // Then apply type filter
-    if (filterType === 'all') return privacyFiltered;
+    if (filterType === 'all') return activities;
     const filterConfig = FILTER_OPTIONS.find(f => f.value === filterType);
-    if (!filterConfig) return privacyFiltered;
-    return privacyFiltered.filter(a => filterConfig.actions.includes(a.action));
-  }, [activities, filterType, filterPrivateActivities]);
+    if (!filterConfig) return activities;
+    return activities.filter(a => filterConfig.actions.includes(a.action));
+  }, [activities, filterType]);
 
   // Group activities by date (memoized for performance)
   const groupedActivities = useMemo(() => {
@@ -445,7 +339,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
   };
 
   return (
-    <div className={`flex-1 flex flex-col min-h-0 ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
+    <div className={`h-full flex flex-col ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
       {/* Toolbar - Controls for filtering and settings */}
       <div className={`px-4 py-2.5 border-b flex items-center justify-between ${darkMode ? 'border-[var(--border)]' : 'border-[var(--border)]'}`}>
         <div className="flex items-center gap-3">

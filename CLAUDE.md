@@ -1,8 +1,47 @@
 # Claude Code Developer Guide
 
-This document provides comprehensive context for AI assistants (like Claude Code) working on the Wavezly Todo List codebase.
+This document provides comprehensive context for AI assistants (like Claude Code) working on the Bealer Agency Todo List codebase.
 
 > **For Multi-Agent Orchestrators**: See [ORCHESTRATOR.md](./ORCHESTRATOR.md) for a structured, quick-reference guide optimized for orchestrator agents.
+
+---
+
+## 🔒 Security Hardening Status (January 2026)
+
+**Allstate security compliance work completed.** The following has been implemented:
+
+### Completed
+- ✅ **Server-side login lockout** - Redis-based, 5 attempts/5 min lockout (`serverLockout.ts`)
+- ✅ **Role-based access control** - `isOwner()`/`isAdmin()` functions, database role column
+- ✅ **Field-level encryption** - AES-256-GCM for PII fields (`fieldEncryption.ts`)
+- ✅ **Security monitoring** - SIEM integration, webhook alerts (`securityMonitor.ts`)
+- ✅ **CI/CD security scanning** - CodeQL, Semgrep, TruffleHog, npm audit (`.github/workflows/security.yml`)
+- ✅ **Rate limiting** - Fail-closed design (`rateLimit.ts`)
+- ✅ **Session security** - HttpOnly cookies, 30-min idle timeout (`sessionCookies.ts`, `sessionValidator.ts`)
+- ✅ **Audit logging** - Database triggers, security event tables
+- ✅ **CSP hardening** - Strict Content-Security-Policy (`next.config.ts`)
+- ✅ **Log sanitization** - PII filtering in all logs (`logger.ts`)
+
+### Documentation Created
+- `docs/ALLSTATE_SECURITY_CHECKLIST.md` - Compliance checklist (81% complete)
+- `docs/SECURITY_RUNBOOKS.md` - Incident response, key rotation, vendor assessment
+
+### Pending (Business Decision)
+- ❌ **MFA** - PIN authentication retained per user request
+- ⚠️ **Webhook URL** - Set `SECURITY_WEBHOOK_URL` for Slack/Discord alerts
+
+### Key Security Files
+```
+src/lib/serverLockout.ts      # Redis login lockout
+src/lib/fieldEncryption.ts    # AES-256-GCM encryption
+src/lib/securityMonitor.ts    # SIEM & alerting
+src/lib/sessionCookies.ts     # HttpOnly session management
+src/lib/sessionValidator.ts   # Session validation & timeout
+src/app/api/security/events/  # Security dashboard API
+src/app/api/todos/            # Encrypted todo API
+```
+
+---
 
 ## Table of Contents
 
@@ -28,7 +67,7 @@ This document provides comprehensive context for AI assistants (like Claude Code
 
 ### What This App Does
 
-The Wavezly Todo List is a **comprehensive collaborative task management platform** built specifically for the Wavezly (Allstate insurance agency). It combines:
+The Bealer Agency Todo List is a **comprehensive collaborative task management platform** built specifically for the Bealer Agency (Allstate insurance agency). It combines:
 
 - **Task Management**: Full CRUD with subtasks, attachments, notes, recurrence
 - **Team Collaboration**: Real-time chat, DMs, message reactions, presence tracking

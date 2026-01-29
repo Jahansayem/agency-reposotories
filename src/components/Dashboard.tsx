@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle2,
@@ -44,6 +44,43 @@ interface UpcomingTask {
   priority: string;
 }
 
+/**
+ * Memoized greeting component that handles its own time-based updates
+ * This isolates the every-minute re-render to just this small component
+ * instead of causing the entire Dashboard to re-render
+ */
+const GreetingDisplay = memo(function GreetingDisplay() {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    // Update every minute to potentially change greeting
+    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const hour = currentTime.getHours();
+  let text: string;
+  let Icon: typeof Sunrise;
+  
+  if (hour < 12) {
+    text = 'Good morning';
+    Icon = Sunrise;
+  } else if (hour < 17) {
+    text = 'Good afternoon';
+    Icon = Sun;
+  } else {
+    text = 'Good evening';
+    Icon = Moon;
+  }
+
+  return (
+    <div className="flex items-center gap-2 mb-1">
+      <Icon className="w-4 h-4 text-white/60" />
+      <span className="text-white/60 text-sm font-medium">{text}</span>
+    </div>
+  );
+});
+
 export default function Dashboard({
   todos,
   currentUser,
@@ -53,13 +90,6 @@ export default function Dashboard({
   onFilterDueToday,
   darkMode = false,
 }: DashboardProps) {
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(interval);
-  }, []);
-
   const stats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -154,15 +184,6 @@ export default function Dashboard({
     };
   }, [todos]);
 
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return { text: 'Good morning', Icon: Sunrise };
-    if (hour < 17) return { text: 'Good afternoon', Icon: Sun };
-    return { text: 'Good evening', Icon: Moon };
-  };
-
-  const greeting = getGreeting();
-
   const formatDueDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const today = new Date();
@@ -190,11 +211,8 @@ export default function Dashboard({
         />
 
         <div className="relative max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-6 py-8 sm:py-10">
-          {/* Greeting row */}
-          <div className="flex items-center gap-2 mb-1">
-            <greeting.Icon className="w-4 h-4 text-white/60" />
-            <span className="text-white/60 text-sm font-medium">{greeting.text}</span>
-          </div>
+          {/* Greeting row - uses memoized component to isolate time-based re-renders */}
+          <GreetingDisplay />
 
           {/* Name */}
           <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
@@ -280,12 +298,25 @@ export default function Dashboard({
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-3 py-2">
-              <CheckCircle2 className="w-5 h-5 text-[var(--success)]" />
-              <span className="text-sm text-[var(--text-secondary)]">
-                No tasks due today
-              </span>
-            </div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center gap-2 py-4 text-center"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6 text-[var(--success)]" />
+                <span className="text-lg font-semibold text-[var(--foreground)]">
+                  You&apos;re all caught up!
+                </span>
+                <span role="img" aria-label="celebration" className="text-xl">
+                  🎉
+                </span>
+              </div>
+              <p className="text-sm text-[var(--text-muted)]">
+                No tasks due today. Enjoy your free time!
+              </p>
+            </motion.div>
           )}
         </Card>
 
