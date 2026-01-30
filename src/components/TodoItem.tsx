@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2 } from 'lucide-react';
-import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
+import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO, WaitingContactType } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
 import AttachmentList from './AttachmentList';
 import AttachmentUpload from './AttachmentUpload';
 import Celebration from './Celebration';
 import ReminderPicker from './ReminderPicker';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
+import { WaitingStatusBadge, WaitingBadge } from './WaitingStatusBadge';
 import { sanitizeTranscription } from '@/lib/sanitize';
 
 // Map priority levels to Badge variants
@@ -143,6 +144,8 @@ interface TodoItemProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onEmailCustomer?: (todo: Todo) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
+  onClearWaiting?: (id: string) => Promise<void>;
 }
 
 const formatDueDate = (date: string, includeYear = false) => {
@@ -289,6 +292,8 @@ function TodoItemComponent({
   onUpdateAttachments,
   onEmailCustomer,
   onSetReminder,
+  onMarkWaiting,
+  onClearWaiting,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -725,6 +730,9 @@ function TodoItemComponent({
                   {todo.assigned_to}
                 </Badge>
               )}
+
+              {/* Waiting for response badge */}
+              <WaitingBadge todo={todo} />
 
               {/* "Has more" indicator - subtle dot when task has hidden content */}
               {!expanded && (subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0) || todo.merged_from?.length) && (
@@ -1397,6 +1405,18 @@ function TodoItemComponent({
               </div>
             )}
           </div>
+
+          {/* Waiting for Customer Response */}
+          {onMarkWaiting && onClearWaiting && !todo.completed && (
+            <div className="mt-4">
+              <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Customer Response</label>
+              <WaitingStatusBadge
+                todo={todo}
+                onMarkWaiting={(contactType, followUpHours) => onMarkWaiting(todo.id, contactType, followUpHours)}
+                onClearWaiting={() => onClearWaiting(todo.id)}
+              />
+            </div>
+          )}
 
           {/* SECTION DIVIDER */}
           <div className="h-px bg-[var(--border)] my-4" />
