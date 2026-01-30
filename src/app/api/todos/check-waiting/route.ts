@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Use service role for cron job
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 /**
  * GET /api/todos/check-waiting
  * Cron endpoint to check for overdue follow-ups and log activity
  * Should be called periodically (e.g., every hour)
  */
 export async function GET(request: Request) {
+  // Initialize inside handler to avoid build-time errors
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
   // Verify cron secret for security
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
