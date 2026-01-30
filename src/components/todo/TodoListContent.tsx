@@ -68,6 +68,7 @@ interface TodoListContentProps {
   onEmailCustomer: (todo: Todo) => void;
   onClearSearch: () => void;
   onAddTask: () => void;
+  onOpenDetail?: (todoId: string) => void;
 }
 
 function TodoListContent({
@@ -107,6 +108,7 @@ function TodoListContent({
   onEmailCustomer,
   onClearSearch,
   onAddTask,
+  onOpenDetail,
 }: TodoListContentProps) {
   // DnD sensors for drag-and-drop reordering
   const sensors = useSensors(
@@ -189,6 +191,7 @@ function TodoListContent({
         onUpdateAttachments={onUpdateAttachments}
         onSaveAsTemplate={onSaveAsTemplate}
         onEmailCustomer={onEmailCustomer}
+        onOpenDetail={onOpenDetail}
         isDragEnabled={isDragEnabled}
       />
     </motion.div>
@@ -314,6 +317,7 @@ function TodoListContent({
             onUpdateAttachments={onUpdateAttachments}
             onSaveAsTemplate={onSaveAsTemplate}
             onEmailCustomer={onEmailCustomer}
+            onOpenDetail={onOpenDetail}
             showBulkActions={showBulkActions}
             selectedTodos={selectedTodos}
             onSelectTodo={onSelectTodo}

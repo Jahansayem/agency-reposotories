@@ -82,6 +82,7 @@ interface KanbanBoardProps {
   onSelectTodo?: (id: string, selected: boolean) => void;
   // Sectioned view - groups tasks by date within each column
   useSectionedView?: boolean;
+  onOpenDetail?: (todoId: string) => void;
 }
 
 // Task Detail Modal Component
@@ -851,6 +852,7 @@ export default function KanbanBoard({
   selectedTodos,
   onSelectTodo,
   useSectionedView = false,
+  onOpenDetail,
 }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -1008,7 +1010,7 @@ export default function KanbanBoard({
               onAssign={onAssign}
               onSetDueDate={onSetDueDate}
               onSetPriority={onSetPriority}
-              onCardClick={setSelectedTodo}
+              onCardClick={onOpenDetail ? (todo: Todo) => onOpenDetail(todo.id) : setSelectedTodo}
               showBulkActions={showBulkActions}
               selectedTodos={selectedTodos}
               onSelectTodo={onSelectTodo}
@@ -1024,9 +1026,9 @@ export default function KanbanBoard({
         </DragOverlay>
       </DndContext>
 
-      {/* Task Detail Modal */}
+      {/* Task Detail Modal - only used as fallback when onOpenDetail is not provided */}
       <AnimatePresence>
-        {selectedTodo && (
+        {!onOpenDetail && selectedTodo && (
           <TaskDetailModal
             todo={selectedTodo}
             users={users}

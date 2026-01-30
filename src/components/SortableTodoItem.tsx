@@ -32,6 +32,7 @@ interface SortableTodoItemProps {
   onSetReminder?: (id: string, reminderAt: string | null) => void;
   onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
   onClearWaiting?: (id: string) => Promise<void>;
+  onOpenDetail?: (todoId: string) => void;
   isDragEnabled?: boolean;
 }
 

@@ -14,6 +14,7 @@ import StatusLine from './StatusLine';
 import BottomTabs from './BottomTabs';
 import { ExitFocusModeButton } from './FocusModeToggle';
 import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, BulkActionBar, TodoModals } from './todo';
+import { TaskDetailModal } from './task-detail';
 import { useShouldUseSections } from './TaskSections';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -1326,6 +1327,40 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
+  // Detail modal state
+  const [detailTodoId, setDetailTodoId] = useState<string | null>(null);
+
+  const detailTodo = useMemo(() =>
+    detailTodoId ? todos.find(t => t.id === detailTodoId) || null : null,
+    [detailTodoId, todos]
+  );
+
+  const handleDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
+    const oldTodo = todos.find(t => t.id === id);
+    updateTodoInStore(id, updates);
+
+    const { error } = await supabase
+      .from('todos')
+      .update({ ...updates, updated_at: new Date().toISOString(), updated_by: userName })
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Error updating todo', error, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback
+        const rollback: Partial<Todo> = {};
+        for (const key of Object.keys(updates)) {
+          (rollback as unknown as Record<string, unknown>)[key] = (oldTodo as unknown as Record<string, unknown>)[key];
+        }
+        updateTodoInStore(id, rollback);
+      }
+    }
+  }, [todos, updateTodoInStore, userName]);
+
+  const handleOpenDetail = useCallback((todoId: string) => {
+    setDetailTodoId(todoId);
+  }, []);
+
   // Save task as template
   const saveAsTemplate = async (name: string, isShared: boolean) => {
     if (!templateTodo) return;
@@ -1758,12 +1793,34 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           onUpdateAttachments={updateAttachments}
           onSaveAsTemplate={(t) => openTemplateModal(t)}
           onEmailCustomer={(todo) => openEmailModal([todo])}
+          onOpenDetail={handleOpenDetail}
           onClearSearch={() => setSearchQuery('')}
           onAddTask={() => {
             const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
             if (input) input.focus();
           }}
         />
+
+        {/* Task Detail Modal */}
+        {detailTodo && (
+          <TaskDetailModal
+            todo={detailTodo}
+            isOpen={!!detailTodo}
+            onClose={() => setDetailTodoId(null)}
+            currentUser={currentUser}
+            users={users}
+            onUpdate={handleDetailUpdate}
+            onDelete={async (id: string) => { confirmDeleteTodo(id); }}
+            onComplete={toggleTodo}
+            onMarkWaiting={markWaiting}
+            onClearWaiting={clearWaiting}
+            onSetReminder={setReminder}
+            onDuplicate={duplicateTodo}
+            onSaveAsTemplate={(t) => openTemplateModal(t)}
+            onEmailCustomer={(todo) => openEmailModal([todo])}
+            onUpdateAttachments={updateAttachments}
+          />
+        )}
 
         {/* Keyboard shortcuts hint - hidden in focus mode */}
         {!focusMode && (

@@ -146,6 +146,7 @@ interface TodoItemProps {
   onSetReminder?: (id: string, reminderAt: string | null) => void;
   onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
   onClearWaiting?: (id: string) => Promise<void>;
+  onOpenDetail?: (todoId: string) => void;
 }
 
 const formatDueDate = (date: string, includeYear = false) => {
@@ -294,6 +295,7 @@ function TodoItemComponent({
   onSetReminder,
   onMarkWaiting,
   onClearWaiting,
+  onOpenDetail,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -644,9 +646,15 @@ function TodoItemComponent({
         <button
           type="button"
           className="flex-1 min-w-0 cursor-pointer text-left bg-transparent border-none p-0"
-          onClick={() => setExpanded(!expanded)}
+          onClick={() => {
+            if (onOpenDetail) {
+              onOpenDetail(todo.id);
+            } else {
+              setExpanded(!expanded);
+            }
+          }}
           aria-expanded={expanded}
-          aria-label={`${todo.text}. Press Enter to ${expanded ? 'collapse' : 'expand'} details`}
+          aria-label={`${todo.text}. Press Enter to ${onOpenDetail ? 'open details' : expanded ? 'collapse' : 'expand'} details`}
         >
           {editingText ? (
             <input
