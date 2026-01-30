@@ -11,6 +11,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { AppShell, useAppShell } from './layout';
 import { useTodoStore } from '@/store/todoStore';
+import { useTodoData } from '@/hooks';
 import { ErrorBoundary } from './ErrorBoundary';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import SyncStatusIndicator from './SyncStatusIndicator';
@@ -78,9 +79,12 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const { theme } = useTheme();
   const darkMode = theme === 'dark';
 
-  // Read todos from Zustand store instead of fetching independently.
-  // useTodoData (called inside TodoList) handles fetching and real-time sync.
-  // This eliminates the duplicate API call + subscription that MainApp previously owned.
+  // Kick off data fetching & real-time subscriptions so the Zustand store
+  // gets populated. This must run here (not only in TodoList) because
+  // MainApp reads `loading` from the store to decide whether to show
+  // the spinner — if useTodoData never runs, loading stays true forever.
+  useTodoData(currentUser);
+
   const todos = useTodoStore((state) => state.todos);
   const loading = useTodoStore((state) => state.loading);
   const usersWithColors = useTodoStore((state) => state.usersWithColors);
