@@ -54,7 +54,7 @@ export default function TaskDetailFooter({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, delay: 0.1 }}
-      className="flex items-center justify-between border-t border-[var(--border)] py-3 px-4 bg-[var(--surface-2)]/60 backdrop-blur-sm"
+      className="flex-shrink-0 flex items-center justify-between border-t border-[var(--border)] py-3 px-4 bg-[var(--surface-2)]/60 backdrop-blur-sm"
     >
       {/* Left side: metadata */}
       <div className="text-xs text-[var(--text-muted)] leading-relaxed">

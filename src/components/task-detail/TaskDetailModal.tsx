@@ -139,11 +139,11 @@ export default function TaskDetailModal({
       </div>
 
       {/* Scrollable body with gradient fade hints */}
-      <div className="relative flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0 overflow-hidden">
         {/* Top fade */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-gradient-to-b from-[var(--surface-elevated)] to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-gradient-to-b from-[var(--surface)] to-transparent" />
 
-        <div className="flex-1 h-full overflow-y-auto px-5 py-4 space-y-1">
+        <div className="h-full overflow-y-auto px-5 py-4 space-y-1">
           {/* Key-value metadata rows */}
           <MetadataSection
             todo={todo}
@@ -231,7 +231,7 @@ export default function TaskDetailModal({
         </div>
 
         {/* Bottom fade */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-4 bg-gradient-to-t from-[var(--surface-elevated)] to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-4 bg-gradient-to-t from-[var(--surface)] to-transparent" />
       </div>
 
       {/* Footer with timestamps and complete button */}
