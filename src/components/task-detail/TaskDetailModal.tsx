@@ -102,7 +102,7 @@ export default function TaskDetailModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={todo.text}
-      size="lg"
+      size="2xl"
       showCloseButton={false}
       className="flex flex-col"
     >
