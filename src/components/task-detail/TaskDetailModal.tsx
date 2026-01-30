@@ -104,7 +104,7 @@ export default function TaskDetailModal({
       title={todo.text}
       size="2xl"
       showCloseButton={false}
-      className="flex flex-col"
+      className="flex flex-col h-[85vh]"
     >
       {/* Header with overflow menu positioned inside a relative container */}
       <div className="relative">
