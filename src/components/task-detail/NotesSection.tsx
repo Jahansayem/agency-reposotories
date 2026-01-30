@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronDown, ChevronUp, FileText, Mic } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,26 +18,45 @@ export default function NotesSection({
   transcription,
 }: NotesSectionProps) {
   const [isOpen, setIsOpen] = useState(!!notes || !!transcription);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    const lineHeight = 20;
+    const minHeight = lineHeight * 3;
+    const maxHeight = lineHeight * 12;
+    const scrollHeight = el.scrollHeight;
+    el.style.height = `${Math.min(Math.max(scrollHeight, minHeight), maxHeight)}px`;
+    el.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }, []);
+
+  useEffect(() => {
+    autoResize();
+  }, [notes, isOpen, autoResize]);
 
   return (
     <div>
-      <button
+      <motion.button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        className="flex items-center justify-between w-full py-2 text-left"
-        style={{ color: 'var(--foreground)' }}
+        initial={{ opacity: 0, y: -4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="flex items-center justify-between w-full py-2 text-left text-[var(--foreground)]"
       >
-        <span className="flex items-center gap-2 text-sm font-semibold">
-          <FileText className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+        <span className="flex items-center gap-2 text-[13px] font-semibold">
+          <FileText className="w-4 h-4 text-[var(--accent)]" />
           Notes
         </span>
         {isOpen ? (
-          <ChevronUp className="w-4 h-4" style={{ color: 'var(--text-light)' }} />
+          <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
         ) : (
-          <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-light)' }} />
+          <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
         )}
-      </button>
+      </motion.button>
 
       <AnimatePresence initial={false}>
         {isOpen && (
@@ -46,53 +65,35 @@ export default function NotesSection({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
+            className="overflow-hidden"
           >
             <div className="pt-1 pb-2 space-y-3">
-              <textarea
-                value={notes}
-                onChange={(e) => onNotesChange(e.target.value)}
-                onBlur={onSaveNotes}
-                placeholder="Add notes or context..."
-                rows={4}
-                className="w-full px-3 py-2 text-sm resize-y"
-                style={{
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--foreground)',
-                  outline: 'none',
-                }}
-              />
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  value={notes}
+                  onChange={(e) => {
+                    onNotesChange(e.target.value);
+                    autoResize();
+                  }}
+                  onBlur={onSaveNotes}
+                  placeholder="Add notes or context..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-[13px] resize-none bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-lg)] text-[var(--foreground)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] placeholder:text-[var(--text-muted)]"
+                />
+                <span className="absolute bottom-2 right-3 text-[11px] text-[var(--text-muted)] pointer-events-none select-none">
+                  {notes.length}
+                </span>
+              </div>
 
               {transcription && (
-                <div
-                  className="flex gap-3 p-3 rounded-lg"
-                  style={{
-                    background: 'var(--surface-2)',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  <div
-                    className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                    style={{
-                      background: 'var(--accent-light)',
-                      color: 'var(--accent)',
-                    }}
-                  >
-                    <Mic className="w-4 h-4" />
-                  </div>
+                <div className="bg-[var(--surface-2)] border border-[var(--border)] border-l-2 border-l-[var(--accent)] rounded-[var(--radius-md)] p-3">
                   <div className="flex-1 min-w-0">
-                    <p
-                      className="text-xs font-semibold mb-1"
-                      style={{ color: 'var(--text-light)' }}
-                    >
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1 flex items-center gap-1.5">
+                      <Mic className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Voicemail Transcription
                     </p>
-                    <p
-                      className="text-sm leading-relaxed"
-                      style={{ color: 'var(--foreground)' }}
-                    >
+                    <p className="text-[13px] leading-relaxed text-[var(--foreground)]">
                       {transcription}
                     </p>
                   </div>

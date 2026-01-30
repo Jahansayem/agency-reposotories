@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { X, MoreVertical, Edit3, Check } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { X, MoreHorizontal, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { TodoPriority } from '@/types/todo';
 import { PRIORITY_CONFIG } from '@/types/todo';
 
@@ -16,7 +17,7 @@ interface TaskDetailHeaderProps {
   onCancelEditTitle: (originalTitle: string) => void;
   onClose: () => void;
   onOverflowClick: () => void;
-  todoText: string; // original text for cancel
+  todoText: string;
 }
 
 export default function TaskDetailHeader({
@@ -43,15 +44,23 @@ export default function TaskDetailHeader({
     if (editingTitle && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.select();
+      // Auto-resize
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
   }, [editingTitle]);
 
-  const handleLocalChange = (value: string) => {
+  const handleLocalChange = useCallback((value: string) => {
     setLocalTitle(value);
     onTitleChange(value);
-  };
+    // Auto-resize textarea
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [onTitleChange]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       onSaveTitle();
@@ -59,95 +68,114 @@ export default function TaskDetailHeader({
       setLocalTitle(todoText);
       onCancelEditTitle(todoText);
     }
-  };
+  }, [onSaveTitle, todoText, onCancelEditTitle]);
 
   const priorityColor = PRIORITY_CONFIG[priority].color;
 
   return (
-    <div className="flex-shrink-0">
-      {/* Priority color bar */}
+    <div className="flex-shrink-0 relative">
+      {/* Priority color bar — thick enough to be intentional */}
       <div
-        className="h-1 w-full rounded-t-lg"
+        className="h-1.5 w-full rounded-t-2xl"
         style={{ backgroundColor: priorityColor }}
-        aria-label={`Priority: ${PRIORITY_CONFIG[priority].label}`}
       />
 
       {/* Header content */}
-      <div className="flex items-start gap-2 px-4 pt-3 pb-2">
-        {/* Title area */}
-        <div className="flex-1 min-w-0 flex items-start gap-2">
-          {editingTitle ? (
-            <div className="flex-1 flex flex-col gap-2">
-              <textarea
-                ref={textareaRef}
-                value={localTitle}
-                onChange={(e) => handleLocalChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full resize-none rounded-md border px-3 py-2 text-base font-semibold leading-snug bg-[var(--surface)] text-[var(--foreground)] border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-blue)]"
-                rows={2}
-                aria-label="Edit task title"
-              />
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={onSaveTitle}
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium bg-[var(--brand-blue)] text-white hover:opacity-90 transition-opacity"
-                  aria-label="Save title"
-                >
-                  <Check size={14} />
-                  Save
-                </button>
-                <button
-                  onClick={() => {
-                    setLocalTitle(todoText);
-                    onCancelEditTitle(todoText);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-[var(--foreground-muted)] hover:bg-[var(--surface-hover)] transition-colors"
-                  aria-label="Cancel editing title"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
+      <div className="px-5 pt-4 pb-3">
+        {/* Top row: action buttons */}
+        <div className="flex items-center justify-between mb-3">
+          {/* Priority pill */}
+          <motion.span
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.05 }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold tracking-wide uppercase"
+            style={{
+              backgroundColor: priorityColor + '18',
+              color: priorityColor,
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: priorityColor }}
+            />
+            {PRIORITY_CONFIG[priority].label}
+          </motion.span>
+
+          {/* Action buttons */}
+          <div className="flex items-center gap-0.5">
             <button
-              onClick={onStartEditTitle}
-              className="flex-1 flex items-start gap-2 text-left group min-w-0"
-              aria-label="Click to edit task title"
+              onClick={onOverflowClick}
+              className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-all duration-150"
+              aria-label="More options"
             >
-              <Edit3
-                size={16}
-                className="mt-1 flex-shrink-0 text-[var(--foreground-muted)] opacity-0 group-hover:opacity-100 transition-opacity"
-              />
-              <h2
-                className={`text-base font-semibold leading-snug text-[var(--foreground)] ${
-                  completed ? 'line-through opacity-60' : ''
-                }`}
-              >
-                {title}
-              </h2>
+              <MoreHorizontal size={18} />
             </button>
-          )}
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-all duration-150"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={onOverflowClick}
-            className="flex items-center justify-center rounded-md text-[var(--foreground-muted)] hover:bg-[var(--surface-hover)] transition-colors"
-            style={{ minWidth: 44, minHeight: 44 }}
-            aria-label="More options"
+        {/* Title */}
+        {editingTitle ? (
+          <div className="space-y-2.5">
+            <textarea
+              ref={textareaRef}
+              value={localTitle}
+              onChange={(e) => handleLocalChange(e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="w-full resize-none rounded-lg border-2 px-3 py-2.5 text-lg font-semibold leading-snug bg-[var(--surface)] text-[var(--foreground)] border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] placeholder:text-[var(--text-muted)]"
+              rows={1}
+              aria-label="Edit task title"
+              placeholder="Task title..."
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onSaveTitle}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium bg-[var(--accent)] text-white hover:opacity-90 transition-opacity shadow-sm"
+                aria-label="Save title"
+              >
+                <Check size={14} />
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setLocalTitle(todoText);
+                  onCancelEditTitle(todoText);
+                }}
+                className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+                aria-label="Cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <motion.button
+            onClick={onStartEditTitle}
+            className="w-full text-left group rounded-lg -mx-2 px-2 py-1 hover:bg-[var(--surface-2)] transition-colors duration-150"
+            aria-label="Click to edit task title"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
           >
-            <MoreVertical size={20} />
-          </button>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center rounded-md text-[var(--foreground-muted)] hover:bg-[var(--surface-hover)] transition-colors"
-            style={{ minWidth: 44, minHeight: 44 }}
-            aria-label="Close task detail"
-          >
-            <X size={20} />
-          </button>
-        </div>
+            <h2
+              className={`text-lg font-semibold leading-snug text-[var(--foreground)] transition-opacity ${
+                completed ? 'line-through opacity-50' : ''
+              }`}
+            >
+              {title}
+            </h2>
+            <span className="text-xs text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 block">
+              Click to edit
+            </span>
+          </motion.button>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, RotateCcw } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface TaskDetailFooterProps {
   createdBy?: string;
@@ -12,14 +13,31 @@ interface TaskDetailFooterProps {
   onClose: () => void;
 }
 
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return '';
+function formatAbsoluteDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSeconds < 60) return 'Just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return formatAbsoluteDate(dateStr);
 }
 
 export default function TaskDetailFooter({
@@ -32,18 +50,27 @@ export default function TaskDetailFooter({
   onClose,
 }: TaskDetailFooterProps) {
   return (
-    <div className="flex items-center justify-between border-t border-[var(--border)] py-3 px-4">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, delay: 0.1 }}
+      className="flex items-center justify-between border-t border-[var(--border)] py-3 px-4 bg-[var(--surface-2)]/60 backdrop-blur-sm"
+    >
       {/* Left side: metadata */}
       <div className="text-xs text-[var(--text-muted)] leading-relaxed">
         {createdBy && (
-          <span>
+          <span title={createdAt ? formatAbsoluteDate(createdAt) : undefined}>
             Created by {createdBy}
-            {createdAt && <> &middot; {formatDate(createdAt)}</>}
+            {createdAt && <> &middot; {formatRelativeTime(createdAt)}</>}
           </span>
         )}
         {updatedBy && (
-          <span className="hidden sm:inline">
+          <span
+            className="hidden sm:inline"
+            title={updatedAt ? formatAbsoluteDate(updatedAt) : undefined}
+          >
             {' '}&middot; Updated by {updatedBy}
+            {updatedAt && <> {formatRelativeTime(updatedAt)}</>}
           </span>
         )}
       </div>
@@ -52,9 +79,9 @@ export default function TaskDetailFooter({
       <button
         onClick={onToggleComplete}
         className={`
-          flex items-center gap-1.5 rounded-[var(--radius-lg)] px-4 py-2 text-sm font-medium text-white transition-colors
+          flex items-center gap-1.5 rounded-[var(--radius-lg)] px-5 py-2.5 text-sm font-medium text-white transition-colors shadow-[var(--shadow-sm)]
           ${completed
-            ? 'bg-green-600 hover:bg-green-700'
+            ? 'bg-emerald-600 hover:bg-emerald-700'
             : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)]'
           }
         `}
@@ -71,6 +98,6 @@ export default function TaskDetailFooter({
           </>
         )}
       </button>
-    </div>
+    </motion.div>
   );
 }

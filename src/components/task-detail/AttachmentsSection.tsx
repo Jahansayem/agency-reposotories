@@ -48,35 +48,32 @@ export default function AttachmentsSection({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           aria-expanded={isOpen}
-          className="flex items-center gap-2 py-2 text-left"
-          style={{ color: 'var(--foreground)' }}
+          className="flex items-center gap-2 py-2 text-left text-[var(--foreground)]"
         >
           {isOpen ? (
-            <ChevronUp className="w-4 h-4" style={{ color: 'var(--text-light)' }} />
+            <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
           ) : (
-            <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-light)' }} />
+            <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
           )}
-          <Paperclip
-            className="w-4 h-4"
-            style={{ color: 'var(--accent-gold)' }}
-          />
-          <span className="text-sm font-semibold">
-            Attachments ({attachments.length}/{maxAttachments})
+          <Paperclip className="w-4 h-4 text-[var(--accent)]" />
+          <span className="text-[13px] font-semibold">
+            Attachments
           </span>
+          {attachments.length > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-[var(--accent-light)] text-[var(--accent)]">
+              {attachments.length}
+            </span>
+          )}
         </button>
 
-        {attachments.length < maxAttachments && (
+        {attachments.length > 0 && attachments.length < maxAttachments && (
           <button
             type="button"
             onClick={() => {
               if (!isOpen) setIsOpen(true);
               setShowUpload(true);
             }}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors"
-            style={{
-              color: 'var(--accent-gold)',
-              background: 'var(--accent-gold-light)',
-            }}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-[var(--radius-md)] transition-colors text-[var(--accent)] bg-[var(--accent-light)] hover:brightness-95"
           >
             <Plus className="w-3 h-3" />
             Add
@@ -91,7 +88,7 @@ export default function AttachmentsSection({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
+            className="overflow-hidden"
           >
             <div className="pt-1 pb-2">
               {attachments.length > 0 ? (
@@ -105,16 +102,14 @@ export default function AttachmentsSection({
                 <button
                   type="button"
                   onClick={() => setShowUpload(true)}
-                  className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-lg cursor-pointer transition-colors"
-                  style={{
-                    border: '2px dashed var(--border)',
-                    color: 'var(--text-light)',
-                    background: 'var(--surface)',
-                  }}
+                  className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-xl cursor-pointer transition-colors border-2 border-dashed border-[var(--border)] text-[var(--text-muted)] bg-[var(--surface)] hover:border-[var(--accent)] hover:bg-[var(--accent-light)]"
                 >
                   <Paperclip className="w-6 h-6" />
-                  <span className="text-sm">
+                  <span className="text-[13px]">
                     Drop files here or click to browse
+                  </span>
+                  <span className="text-[11px] text-[var(--text-muted)]">
+                    {maxAttachments - attachments.length} of {maxAttachments} slots available
                   </span>
                 </button>
               )}

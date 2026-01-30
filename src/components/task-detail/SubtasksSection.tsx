@@ -77,16 +77,15 @@ export default function SubtasksSection({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           aria-expanded={isOpen}
-          className="flex items-center gap-2 py-2 text-left"
-          style={{ color: 'var(--foreground)' }}
+          className="flex items-center gap-2 py-2 text-left text-[var(--foreground)]"
         >
           {isOpen ? (
-            <ChevronUp className="w-4 h-4" style={{ color: 'var(--text-light)' }} />
+            <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
           ) : (
-            <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-light)' }} />
+            <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
           )}
-          <ListTree className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-          <span className="text-sm font-semibold">
+          <ListTree className="w-4 h-4 text-[var(--accent)]" />
+          <span className="text-[13px] font-semibold">
             Subtasks ({completedCount}/{subtasks.length})
           </span>
         </button>
@@ -94,11 +93,7 @@ export default function SubtasksSection({
         <button
           type="button"
           onClick={onImportSubtasks}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors"
-          style={{
-            color: 'var(--accent)',
-            background: 'var(--accent-light)',
-          }}
+          className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-[var(--radius-md)] transition-colors text-[var(--accent)] bg-[var(--accent-light)] hover:brightness-95"
         >
           <Mail className="w-3 h-3" />
           Import
@@ -112,117 +107,106 @@ export default function SubtasksSection({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
+            className="overflow-hidden"
           >
             <div className="pt-1 pb-2 space-y-2">
               {/* Progress bar */}
-              <div
-                className="w-full h-[2px] rounded-full"
-                style={{ background: 'var(--border)' }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${progress}%`,
-                    background: 'var(--accent)',
-                  }}
-                />
-              </div>
+              {subtasks.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-[3px] rounded-full bg-[var(--border)]">
+                    <div
+                      className="h-full rounded-full bg-[var(--accent)] transition-all duration-500"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
+                    {Math.round(progress)}%
+                  </span>
+                </div>
+              )}
 
               {/* Subtask list */}
-              <ul className="space-y-1">
-                {subtasks.map((subtask) => (
-                  <li
-                    key={subtask.id}
-                    className="flex items-center gap-2 group py-1 px-1 rounded-md"
-                    style={{ background: 'transparent' }}
-                  >
-                    {/* Checkbox */}
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={subtask.completed}
-                      onClick={() => onToggleSubtask(subtask.id)}
-                      className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded border-2 transition-colors"
-                      style={{
-                        borderColor: subtask.completed
-                          ? 'var(--accent)'
-                          : 'var(--border)',
-                        background: subtask.completed
-                          ? 'var(--accent)'
-                          : 'transparent',
-                        color: subtask.completed ? '#fff' : 'transparent',
-                      }}
+              <ul className="space-y-0.5">
+                <AnimatePresence initial={false}>
+                  {subtasks.map((subtask) => (
+                    <motion.li
+                      key={subtask.id}
+                      layout
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -16, transition: { duration: 0.15 } }}
+                      transition={{ duration: 0.2 }}
+                      className="flex items-center gap-2 group py-1.5 px-2 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
                     >
-                      {subtask.completed && <Check className="w-3 h-3" />}
-                    </button>
-
-                    {/* Text / Inline edit */}
-                    {editingId === subtask.id ? (
-                      <input
-                        type="text"
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        onBlur={() => commitEdit(subtask.id)}
-                        onKeyDown={(e) => handleEditKeyDown(e, subtask.id)}
-                        autoFocus
-                        className="flex-1 text-sm px-2 py-0.5 rounded"
-                        style={{
-                          background: 'var(--surface-2)',
-                          border: '1px solid var(--accent)',
-                          color: 'var(--foreground)',
-                          outline: 'none',
-                        }}
-                      />
-                    ) : (
-                      <span
-                        className="flex-1 text-sm cursor-pointer"
-                        onClick={() => startEditing(subtask)}
-                        style={{
-                          color: subtask.completed
-                            ? 'var(--text-light)'
-                            : 'var(--foreground)',
-                          textDecoration: subtask.completed
-                            ? 'line-through'
-                            : 'none',
-                        }}
+                      {/* Checkbox */}
+                      <button
+                        type="button"
+                        role="checkbox"
+                        aria-checked={subtask.completed}
+                        onClick={() => onToggleSubtask(subtask.id)}
+                        className={`flex-shrink-0 flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                          subtask.completed
+                            ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                            : 'border-[var(--border)] bg-transparent text-transparent hover:border-[var(--border-hover)]'
+                        }`}
                       >
-                        {subtask.text}
-                      </span>
-                    )}
+                        {subtask.completed && <Check className="w-3 h-3" />}
+                      </button>
 
-                    {/* Action buttons */}
-                    {editingId !== subtask.id && (
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          type="button"
+                      {/* Text / Inline edit */}
+                      {editingId === subtask.id ? (
+                        <input
+                          type="text"
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          onBlur={() => commitEdit(subtask.id)}
+                          onKeyDown={(e) => handleEditKeyDown(e, subtask.id)}
+                          autoFocus
+                          className="flex-1 text-[13px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--accent)] text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                        />
+                      ) : (
+                        <span
+                          className={`flex-1 text-[13px] cursor-pointer ${
+                            subtask.completed
+                              ? 'text-[var(--text-muted)] line-through opacity-60'
+                              : 'text-[var(--foreground)]'
+                          }`}
                           onClick={() => startEditing(subtask)}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: 'var(--text-light)' }}
-                          aria-label={`Edit subtask: ${subtask.text}`}
                         >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDeleteSubtask(subtask.id)}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: 'var(--danger)' }}
-                          aria-label={`Delete subtask: ${subtask.text}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
+                          {subtask.text}
+                        </span>
+                      )}
+
+                      {/* Action buttons - always visible on mobile, hover on desktop */}
+                      {editingId !== subtask.id && (
+                        <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => startEditing(subtask)}
+                            className="p-1 rounded-[var(--radius-sm)] transition-colors text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]"
+                            aria-label={`Edit subtask: ${subtask.text}`}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteSubtask(subtask.id)}
+                            className="p-1 rounded-[var(--radius-sm)] transition-colors text-[var(--danger)] hover:bg-[var(--danger-light)]"
+                            aria-label={`Delete subtask: ${subtask.text}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
               </ul>
 
               {/* Add subtask input */}
               <div className="flex items-center gap-2 pt-1">
                 <Plus
-                  className="w-4 h-4 flex-shrink-0"
-                  style={{ color: 'var(--text-light)' }}
+                  className="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]"
                 />
                 <input
                   type="text"
@@ -230,13 +214,7 @@ export default function SubtasksSection({
                   onChange={(e) => onNewSubtaskTextChange(e.target.value)}
                   onKeyDown={handleAddKeyDown}
                   placeholder="Add a subtask (press Enter)..."
-                  className="flex-1 text-sm px-2 py-1.5 rounded-md"
-                  style={{
-                    background: 'var(--surface-2)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--foreground)',
-                    outline: 'none',
-                  }}
+                  className="flex-1 text-[13px] px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-transparent text-[var(--foreground)] outline-none transition-colors hover:border-[var(--border)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)] placeholder:text-[var(--text-muted)]"
                 />
               </div>
             </div>
