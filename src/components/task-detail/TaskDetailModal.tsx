@@ -143,7 +143,7 @@ export default function TaskDetailModal({
         {/* Top fade */}
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-gradient-to-b from-[var(--surface)] to-transparent" />
 
-        <div className="absolute inset-0 overflow-y-auto px-5 py-4 space-y-1">
+        <div className="absolute inset-0 overflow-y-auto px-5 py-3 space-y-1">
           {/* Key-value metadata rows */}
           <MetadataSection
             todo={todo}

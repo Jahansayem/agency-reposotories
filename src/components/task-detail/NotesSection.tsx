@@ -24,9 +24,9 @@ export default function NotesSection({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = 'auto';
-    const lineHeight = 20;
-    const minHeight = lineHeight * 3;
-    const maxHeight = lineHeight * 12;
+    const lineHeight = 22;
+    const minHeight = lineHeight * 4;
+    const maxHeight = lineHeight * 14;
     const scrollHeight = el.scrollHeight;
     el.style.height = `${Math.min(Math.max(scrollHeight, minHeight), maxHeight)}px`;
     el.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
@@ -47,7 +47,7 @@ export default function NotesSection({
         transition={{ duration: 0.2 }}
         className="flex items-center justify-between w-full py-2 text-left text-[var(--foreground)]"
       >
-        <span className="flex items-center gap-2 text-[13px] font-semibold">
+        <span className="flex items-center gap-2 text-sm font-semibold">
           <FileText className="w-4 h-4 text-[var(--accent)]" />
           Notes
         </span>
@@ -78,8 +78,8 @@ export default function NotesSection({
                   }}
                   onBlur={onSaveNotes}
                   placeholder="Add notes or context..."
-                  rows={3}
-                  className="w-full px-3 py-2 text-[13px] resize-none bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-lg)] text-[var(--foreground)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] placeholder:text-[var(--text-muted)]"
+                  rows={4}
+                  className="w-full px-3 py-2.5 text-sm leading-relaxed resize-none bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-lg)] text-[var(--foreground)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] placeholder:text-[var(--text-muted)]"
                 />
                 <span className="absolute bottom-2 right-3 text-[11px] text-[var(--text-muted)] pointer-events-none select-none">
                   {notes.length}
@@ -93,7 +93,7 @@ export default function NotesSection({
                       <Mic className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Voicemail Transcription
                     </p>
-                    <p className="text-[13px] leading-relaxed text-[var(--foreground)]">
+                    <p className="text-sm leading-relaxed text-[var(--foreground)]">
                       {transcription}
                     </p>
                   </div>

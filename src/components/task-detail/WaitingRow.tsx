@@ -19,17 +19,15 @@ export default function WaitingRow({
   }
 
   return (
-    <div className="flex items-center py-2.5 border-b border-[var(--border-subtle)]">
-      <span className="w-28 text-sm text-[var(--text-muted)] shrink-0">
+    <div className="flex items-center py-2 gap-3">
+      <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] shrink-0">
         Customer Response
       </span>
-      <div className="flex-1">
-        <WaitingStatusBadge
-          todo={todo}
-          onMarkWaiting={onMarkWaiting}
-          onClearWaiting={onClearWaiting}
-        />
-      </div>
+      <WaitingStatusBadge
+        todo={todo}
+        onMarkWaiting={onMarkWaiting}
+        onClearWaiting={onClearWaiting}
+      />
     </div>
   );
 }

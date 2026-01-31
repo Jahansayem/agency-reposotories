@@ -45,10 +45,9 @@ const SNOOZE_OPTIONS = [
   { label: 'Next month', days: 30 },
 ];
 
-const rowClass = 'flex items-center py-3 gap-3 border-b border-[var(--border-subtle)] last:border-b-0';
-const labelClass = 'flex items-center gap-2 text-[13px] text-[var(--text-muted)] w-32 flex-shrink-0';
+const labelClass = 'flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1';
 const selectClass = [
-  'w-full rounded-lg px-2.5 py-[7px] text-[13px] font-medium',
+  'w-full rounded-lg px-2.5 py-[6px] text-sm font-medium',
   'bg-[var(--surface-2)] text-[var(--foreground)]',
   'border border-transparent',
   'hover:border-[var(--border)] hover:bg-[var(--surface)]',
@@ -110,14 +109,15 @@ export default function MetadataSection({
   };
 
   return (
-    <div className="rounded-xl bg-[var(--surface-2)]/40 border border-[var(--border-subtle)] px-4">
-      {/* Status */}
-      <motion.div className={rowClass} {...stagger} transition={{ delay: 0.04 }}>
-        <div className={labelClass}>
-          <StatusIcon size={15} style={{ color: currentStatus.color }} />
-          Status
-        </div>
-        <div className="flex-1">
+    <div className="rounded-xl bg-[var(--surface-2)]/40 border border-[var(--border-subtle)] p-3">
+      {/* Compact 2-column grid for metadata */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+        {/* Status */}
+        <motion.div {...stagger} transition={{ delay: 0.04 }}>
+          <div className={labelClass}>
+            <StatusIcon size={12} style={{ color: currentStatus.color }} />
+            Status
+          </div>
           <select
             value={todo.status}
             onChange={(e) => onStatusChange(e.target.value as TodoStatus)}
@@ -130,19 +130,17 @@ export default function MetadataSection({
               </option>
             ))}
           </select>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* Priority */}
-      <motion.div className={rowClass} {...stagger} transition={{ delay: 0.06 }}>
-        <div className={labelClass}>
-          <span
-            className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0"
-            style={{ borderColor: priorityColor, backgroundColor: priorityColor + '30' }}
-          />
-          Priority
-        </div>
-        <div className="flex-1">
+        {/* Priority */}
+        <motion.div {...stagger} transition={{ delay: 0.06 }}>
+          <div className={labelClass}>
+            <span
+              className="w-2.5 h-2.5 rounded-full border-2 flex-shrink-0"
+              style={{ borderColor: priorityColor, backgroundColor: priorityColor + '30' }}
+            />
+            Priority
+          </div>
           <select
             value={todo.priority}
             onChange={(e) => onPriorityChange(e.target.value as TodoPriority)}
@@ -155,83 +153,76 @@ export default function MetadataSection({
               </option>
             ))}
           </select>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* Due Date */}
-      <motion.div className={rowClass} {...stagger} transition={{ delay: 0.08 }}>
-        <div className={labelClass}>
-          <CalendarDays size={15} />
-          Due Date
-        </div>
-        <div className="flex-1 flex items-center gap-2">
-          <div className="flex-1 relative">
+        {/* Due Date */}
+        <motion.div {...stagger} transition={{ delay: 0.08 }}>
+          <div className={labelClass}>
+            <CalendarDays size={12} />
+            Due Date
+            {dueDateStatus === 'overdue' && !todo.completed && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[var(--danger-light)] text-[var(--danger)] ml-1">
+                <AlertTriangle size={9} />
+                Overdue
+              </span>
+            )}
+            {dueDateStatus === 'today' && !todo.completed && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 ml-1">
+                Today
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
             <input
               type="date"
               value={todo.due_date ? new Date(todo.due_date).toISOString().split('T')[0] : ''}
               onChange={(e) => onDueDateChange(e.target.value || null)}
-              className={selectClass}
+              className={`${selectClass} flex-1`}
               aria-label="Due date"
             />
-          </div>
-
-          {/* Status badge */}
-          {dueDateStatus === 'overdue' && !todo.completed && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-[var(--danger-light)] text-[var(--danger)] whitespace-nowrap">
-              <AlertTriangle size={11} />
-              Overdue
-            </span>
-          )}
-          {dueDateStatus === 'today' && !todo.completed && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 whitespace-nowrap">
-              Today
-            </span>
-          )}
-
-          {/* Snooze */}
-          <div className="relative" ref={snoozeRef}>
-            <button
-              type="button"
-              onClick={() => setSnoozeOpen(!snoozeOpen)}
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-all duration-150"
-              title="Snooze"
-              aria-label="Snooze due date"
-            >
-              <Clock size={14} />
-            </button>
-            {snoozeOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -4, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.12 }}
-                className="absolute right-0 top-full mt-1.5 z-50 min-w-[150px] rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] shadow-[var(--shadow-lg)] py-1.5 overflow-hidden"
+            {/* Snooze */}
+            <div className="relative" ref={snoozeRef}>
+              <button
+                type="button"
+                onClick={() => setSnoozeOpen(!snoozeOpen)}
+                className="flex items-center justify-center w-7 h-7 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-all duration-150"
+                title="Snooze"
+                aria-label="Snooze due date"
               >
-                {SNOOZE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.days}
-                    type="button"
-                    onClick={() => {
-                      onSnooze(opt.days);
-                      setSnoozeOpen(false);
-                    }}
-                    className="w-full text-left px-3.5 py-2 text-[13px] text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors duration-100"
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </motion.div>
-            )}
+                <Clock size={13} />
+              </button>
+              {snoozeOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-full mt-1.5 z-50 min-w-[150px] rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] shadow-[var(--shadow-lg)] py-1.5 overflow-hidden"
+                >
+                  {SNOOZE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.days}
+                      type="button"
+                      onClick={() => {
+                        onSnooze(opt.days);
+                        setSnoozeOpen(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors duration-100"
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* Assigned To */}
-      <motion.div className={rowClass} {...stagger} transition={{ delay: 0.1 }}>
-        <div className={labelClass}>
-          <User size={15} />
-          Assigned To
-        </div>
-        <div className="flex-1">
+        {/* Assigned To */}
+        <motion.div {...stagger} transition={{ delay: 0.1 }}>
+          <div className={labelClass}>
+            <User size={12} />
+            Assigned To
+          </div>
           <select
             value={todo.assigned_to || ''}
             onChange={(e) => onAssignChange(e.target.value || null)}
@@ -245,22 +236,20 @@ export default function MetadataSection({
               </option>
             ))}
           </select>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* Recurrence */}
-      <motion.div className={rowClass} {...stagger} transition={{ delay: 0.12 }}>
-        <div className={labelClass}>
-          <Repeat size={15} />
-          Repeat
-        </div>
-        <div className="flex-1">
+        {/* Recurrence - spans full width */}
+        <motion.div className="col-span-2" {...stagger} transition={{ delay: 0.12 }}>
+          <div className={labelClass}>
+            <Repeat size={12} />
+            Repeat
+          </div>
           <select
             value={todo.recurrence || ''}
             onChange={(e) =>
               onRecurrenceChange((e.target.value || null) as RecurrencePattern)
             }
-            className={selectClass}
+            className={`${selectClass} max-w-[50%]`}
             aria-label="Recurrence"
           >
             {RECURRENCE_OPTIONS.map((opt) => (
@@ -269,8 +258,8 @@ export default function MetadataSection({
               </option>
             ))}
           </select>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }

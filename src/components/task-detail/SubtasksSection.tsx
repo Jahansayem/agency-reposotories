@@ -85,7 +85,7 @@ export default function SubtasksSection({
             <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
           )}
           <ListTree className="w-4 h-4 text-[var(--accent)]" />
-          <span className="text-[13px] font-semibold">
+          <span className="text-sm font-semibold">
             Subtasks ({completedCount}/{subtasks.length})
           </span>
         </button>
@@ -136,7 +136,7 @@ export default function SubtasksSection({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -16, transition: { duration: 0.15 } }}
                       transition={{ duration: 0.2 }}
-                      className="flex items-center gap-2 group py-1.5 px-2 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
+                      className="flex items-center gap-2.5 group py-2 px-2 rounded-lg transition-colors hover:bg-[var(--surface-2)]"
                     >
                       {/* Checkbox */}
                       <button
@@ -144,7 +144,7 @@ export default function SubtasksSection({
                         role="checkbox"
                         aria-checked={subtask.completed}
                         onClick={() => onToggleSubtask(subtask.id)}
-                        className={`flex-shrink-0 flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                        className={`flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-[5px] border-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
                           subtask.completed
                             ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
                             : 'border-[var(--border)] bg-transparent text-transparent hover:border-[var(--border-hover)]'
@@ -162,11 +162,11 @@ export default function SubtasksSection({
                           onBlur={() => commitEdit(subtask.id)}
                           onKeyDown={(e) => handleEditKeyDown(e, subtask.id)}
                           autoFocus
-                          className="flex-1 text-[13px] px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--accent)] text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                          className="flex-1 text-sm px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--accent)] text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--accent)]"
                         />
                       ) : (
                         <span
-                          className={`flex-1 text-[13px] cursor-pointer ${
+                          className={`flex-1 text-sm cursor-pointer ${
                             subtask.completed
                               ? 'text-[var(--text-muted)] line-through opacity-60'
                               : 'text-[var(--foreground)]'
@@ -214,7 +214,7 @@ export default function SubtasksSection({
                   onChange={(e) => onNewSubtaskTextChange(e.target.value)}
                   onKeyDown={handleAddKeyDown}
                   placeholder="Add a subtask (press Enter)..."
-                  className="flex-1 text-[13px] px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-transparent text-[var(--foreground)] outline-none transition-colors hover:border-[var(--border)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)] placeholder:text-[var(--text-muted)]"
+                  className="flex-1 text-sm px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-transparent text-[var(--foreground)] outline-none transition-colors hover:border-[var(--border)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)] placeholder:text-[var(--text-muted)]"
                 />
               </div>
             </div>

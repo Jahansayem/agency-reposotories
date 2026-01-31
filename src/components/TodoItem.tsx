@@ -259,8 +259,9 @@ function areTodoItemPropsEqual(
   }
   
   // Check users array (reference equality is fine for this)
-  if (prevProps.users !== nextProps.users && 
-      prevProps.users.length !== nextProps.users.length) {
+  if (prevProps.users !== nextProps.users &&
+      (prevProps.users.length !== nextProps.users.length ||
+       prevProps.users.some((u, i) => u !== nextProps.users[i]))) {
     return false;
   }
   
@@ -330,12 +331,22 @@ function TodoItemComponent({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuItemsRef = useRef<(HTMLButtonElement | null)[]>([]);
+  const menuFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedFieldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteDialogRef = useRef<HTMLDivElement>(null);
   const deleteDescriptionId = `delete-dialog-description-${todo.id}`;
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const priority = todo.priority || 'medium';
   const status = todo.status || 'todo';
   void status; // Used for status-based logic elsewhere
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (menuFocusTimerRef.current) clearTimeout(menuFocusTimerRef.current);
+      if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
+    };
+  }, []);
 
   // Calculate dropdown position when menu opens
   useEffect(() => {
@@ -440,7 +451,8 @@ function TodoItemComponent({
   useEffect(() => {
     if (showActionsMenu && menuItemsRef.current[0]) {
       // Small delay to ensure portal is rendered
-      setTimeout(() => {
+      if (menuFocusTimerRef.current) clearTimeout(menuFocusTimerRef.current);
+      menuFocusTimerRef.current = setTimeout(() => {
         menuItemsRef.current[0]?.focus();
         setFocusedMenuIndex(0);
       }, 10);
@@ -905,7 +917,8 @@ function TodoItemComponent({
                     await onSetDueDate(todo.id, e.target.value || null);
                     setSavingDate(false);
                     setSavedField('date');
-                    setTimeout(() => setSavedField(null), 1500);
+                    if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
+                    savedFieldTimerRef.current = setTimeout(() => setSavedField(null), 1500);
                   }}
                   disabled={savingDate}
                   className={`text-xs px-2 py-1 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none transition-all ${
@@ -934,7 +947,8 @@ function TodoItemComponent({
                     await onAssign(todo.id, e.target.value || null);
                     setSavingAssignee(false);
                     setSavedField('assignee');
-                    setTimeout(() => setSavedField(null), 1500);
+                    if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
+                    savedFieldTimerRef.current = setTimeout(() => setSavedField(null), 1500);
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
@@ -970,7 +984,8 @@ function TodoItemComponent({
                     await onSetPriority(todo.id, e.target.value as TodoPriority);
                     setSavingPriority(false);
                     setSavedField('priority');
-                    setTimeout(() => setSavedField(null), 1500);
+                    if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
+                    savedFieldTimerRef.current = setTimeout(() => setSavedField(null), 1500);
                   }}
                   disabled={savingPriority}
                   className={`text-xs px-2 py-1 pr-5 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none transition-all ${
@@ -1273,7 +1288,7 @@ function TodoItemComponent({
         <div className="px-4 pb-4 pt-3 border-t border-[var(--border-subtle)]">
 
           {/* PRIMARY ACTION - Mark Done/Reopen prominently displayed */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <Button
               variant={todo.completed ? 'secondary' : 'primary'}
               size="md"
@@ -1315,17 +1330,17 @@ function TodoItemComponent({
             </div>
           </div>
 
-          {/* SECTION 1: Core Fields */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+          {/* SECTION 1: Core Fields - Compact Grid */}
+          <div className="rounded-xl bg-[var(--surface-2)]/40 border border-[var(--border-subtle)] p-3">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2">
               {/* Status */}
               {onStatusChange && (
                 <div>
-                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Status</label>
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Status</label>
                   <select
                     value={status}
                     onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
-                    className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+                    className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
                   >
                     <option value="todo">To Do</option>
                     <option value="in_progress">In Progress</option>
@@ -1336,11 +1351,11 @@ function TodoItemComponent({
 
               {/* Priority */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Priority</label>
+                <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-                  className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+                  className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -1351,12 +1366,12 @@ function TodoItemComponent({
 
               {/* Due date with overdue warning */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block flex items-center gap-1.5">
+                <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block flex items-center gap-1.5">
                   Due Date
                   {dueDateStatus === 'overdue' && !todo.completed && (
-                    <span className="inline-flex items-center gap-1 text-red-500">
+                    <span className="inline-flex items-center gap-0.5 text-red-500">
                       <AlertTriangle className="w-3 h-3" />
-                      <span className="text-[10px] font-semibold">OVERDUE</span>
+                      <span className="text-[10px] font-semibold normal-case">Overdue</span>
                     </span>
                   )}
                 </label>
@@ -1364,7 +1379,7 @@ function TodoItemComponent({
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                  className={`input-refined w-full text-sm px-3 py-2 text-[var(--foreground)] ${
+                  className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${
                     dueDateStatus === 'overdue' && !todo.completed ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''
                   }`}
                 />
@@ -1372,13 +1387,13 @@ function TodoItemComponent({
 
               {/* Assign to */}
               <div>
-                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Assigned To</label>
+                <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Assigned To</label>
                 <select
                   value={todo.assigned_to || ''}
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+                  className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
                 >
                   <option value="">Unassigned</option>
                   {users.map((user) => (
@@ -1386,65 +1401,68 @@ function TodoItemComponent({
                   ))}
                 </select>
               </div>
+
+              {/* Recurrence - half width */}
+              {onSetRecurrence && (
+                <div>
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Repeat</label>
+                  <select
+                    value={todo.recurrence || ''}
+                    onChange={(e) => onSetRecurrence(todo.id, (e.target.value || null) as RecurrencePattern)}
+                    className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
+                  >
+                    <option value="">No repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Reminder - half width */}
+              {onSetReminder && !todo.completed && (
+                <div>
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Reminder</label>
+                  <ReminderPicker
+                    value={todo.reminder_at || undefined}
+                    dueDate={todo.due_date || undefined}
+                    onChange={(time) => onSetReminder(todo.id, time)}
+                    compact
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Recurrence - full width */}
-            {onSetRecurrence && (
-              <div>
-                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Repeat</label>
-                <select
-                  value={todo.recurrence || ''}
-                  onChange={(e) => onSetRecurrence(todo.id, (e.target.value || null) as RecurrencePattern)}
-                  className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
-                >
-                  <option value="">No repeat</option>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-            )}
-
-            {/* Reminder */}
-            {onSetReminder && !todo.completed && (
-              <div className="col-span-2">
-                <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Reminder</label>
-                <ReminderPicker
-                  value={todo.reminder_at || undefined}
-                  dueDate={todo.due_date || undefined}
-                  onChange={(time) => onSetReminder(todo.id, time)}
-                  compact
+            {/* Waiting for Customer Response - inline */}
+            {onMarkWaiting && onClearWaiting && !todo.completed && (
+              <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-[var(--border-subtle)]">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] shrink-0">Customer Response</span>
+                <WaitingStatusBadge
+                  todo={todo}
+                  onMarkWaiting={(contactType, followUpHours) => onMarkWaiting(todo.id, contactType, followUpHours)}
+                  onClearWaiting={() => onClearWaiting(todo.id)}
                 />
               </div>
             )}
           </div>
 
-          {/* Waiting for Customer Response */}
-          {onMarkWaiting && onClearWaiting && !todo.completed && (
-            <div className="mt-4">
-              <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Customer Response</label>
-              <WaitingStatusBadge
-                todo={todo}
-                onMarkWaiting={(contactType, followUpHours) => onMarkWaiting(todo.id, contactType, followUpHours)}
-                onClearWaiting={() => onClearWaiting(todo.id)}
-              />
-            </div>
-          )}
-
           {/* SECTION DIVIDER */}
-          <div className="h-px bg-[var(--border)] my-4" />
+          <div className="h-px bg-[var(--border)] my-3" />
 
-          {/* SECTION 2: Notes */}
+          {/* SECTION 2: Notes - Prominent */}
           {onUpdateNotes && (
             <div className="mb-4">
-              <label className="text-xs font-medium text-[var(--text-muted)] mb-1.5 block">Notes</label>
+              <label className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] mb-2">
+                <FileText className="w-4 h-4 text-[var(--accent)]" />
+                Notes
+              </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 onBlur={handleNotesBlur}
                 placeholder="Add notes or context..."
-                className="input-refined w-full text-sm px-3 py-2.5 text-[var(--foreground)] resize-none"
-                rows={2}
+                className="input-refined w-full text-sm leading-relaxed px-3 py-2.5 text-[var(--foreground)] resize-none"
+                rows={4}
               />
             </div>
           )}
