@@ -390,7 +390,6 @@ export default function DashboardModal({
                       progress={aiData.productivityScore}
                       size={56}
                       strokeWidth={5}
-                      darkMode={true}
                       gradientId="headerProgressGradient"
                     >
                       <div className="flex flex-col items-center">
@@ -492,7 +491,6 @@ export default function DashboardModal({
                     >
                       {/* Quick Actions */}
                       <QuickActions
-                        darkMode={darkMode}
                         onAddTask={() => handleAction(onAddTask)}
                         onOpenChat={onOpenChat ? () => handleAction(onOpenChat) : undefined}
                       />
@@ -874,7 +872,6 @@ export default function DashboardModal({
                           value={managerData.teamOverview.totalActive}
                           icon={ListTodo}
                           variant="info"
-                          darkMode={darkMode}
                           delay={0}
                         />
                         <StatCard
@@ -882,7 +879,6 @@ export default function DashboardModal({
                           value={managerData.teamOverview.totalOverdue}
                           icon={AlertTriangle}
                           variant={managerData.teamOverview.totalOverdue > 0 ? 'danger' : 'success'}
-                          darkMode={darkMode}
                           delay={0.1}
                         />
                         <StatCard
@@ -890,7 +886,6 @@ export default function DashboardModal({
                           value={managerData.teamOverview.weeklyTeamCompleted}
                           icon={CalendarDays}
                           variant="default"
-                          darkMode={darkMode}
                           delay={0.2}
                         />
                         <StatCard
@@ -899,7 +894,6 @@ export default function DashboardModal({
                           icon={TrendingUp}
                           variant="success"
                           suffix="%"
-                          darkMode={darkMode}
                           delay={0.3}
                         />
                       </div>

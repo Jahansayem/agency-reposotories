@@ -62,7 +62,7 @@ export function ChatConversationList({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.3 }}
-            className={`px-4 py-4 flex items-center gap-4 transition-all duration-200 border-b border-white/[0.04] hover:bg-white/[0.04] ${unreadCount > 0 && !isMuted ? 'bg-[var(--accent)]/5' : ''}`}
+            className={`px-4 py-4 flex items-center gap-4 transition-all duration-200 border-b border-[var(--chat-surface)] hover:bg-[var(--chat-surface)] ${unreadCount > 0 && !isMuted ? 'bg-[var(--accent)]/5' : ''}`}
           >
             <button
               onClick={() => onSelectConversation(conv)}
@@ -70,7 +70,7 @@ export function ChatConversationList({
             >
               <div className="relative flex-shrink-0">
                 <motion.div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold shadow-lg ring-1 ring-white/10"
+                  className="w-12 h-12 rounded-[var(--radius-xl)] flex items-center justify-center text-white font-bold shadow-lg ring-1 ring-white/10"
                   style={{ backgroundColor: userColor }}
                   whileHover={{ scale: 1.05 }}
                 >
@@ -99,19 +99,19 @@ export function ChatConversationList({
                     {isTeam ? 'Team Chat' : userName}
                   </span>
                   {lastMessage && (
-                    <span className={`text-xs flex-shrink-0 ${unreadCount > 0 && !isMuted ? 'text-[var(--accent)] font-medium' : 'text-white/40'}`}>
+                    <span className={`text-xs flex-shrink-0 ${unreadCount > 0 && !isMuted ? 'text-[var(--accent)] font-medium' : 'text-[var(--chat-text-secondary)]'}`}>
                       {formatRelativeTime(lastMessage.created_at)}
                     </span>
                   )}
                 </div>
-                <div className={`text-sm truncate mt-1 ${unreadCount > 0 && !isMuted ? 'text-white/80 font-medium' : 'text-white/40'}`}>
+                <div className={`text-sm truncate mt-1 ${unreadCount > 0 && !isMuted ? 'text-white/80 font-medium' : 'text-[var(--chat-text-secondary)]'}`}>
                   {lastMessage ? (
                     <>
                       {lastMessage.created_by === currentUserName ? 'You: ' : `${lastMessage.created_by}: `}
                       {lastMessage.text.slice(0, 35)}{lastMessage.text.length > 35 ? '...' : ''}
                     </>
                   ) : (
-                    <span className="italic text-white/30">No messages yet</span>
+                    <span className="italic text-[var(--chat-text-muted)]">No messages yet</span>
                   )}
                 </div>
               </div>
@@ -121,7 +121,7 @@ export function ChatConversationList({
                 e.stopPropagation();
                 onToggleMute(convKey);
               }}
-              className={`p-2 rounded-xl transition-all duration-200 ${isMuted ? 'bg-white/[0.06] text-white/40' : 'hover:bg-white/[0.06] text-white/30 hover:text-white/60'}`}
+              className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 ${isMuted ? 'bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-muted)] hover:text-white/60'}`}
               title={isMuted ? 'Unmute' : 'Mute'}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -135,20 +135,20 @@ export function ChatConversationList({
       {!hasOtherUsers && (
         <div className="px-6 py-12 text-center">
           <motion.div
-            className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.05] border border-white/[0.1] flex items-center justify-center"
+            className="w-16 h-16 mx-auto mb-4 rounded-[var(--radius-2xl)] bg-[var(--chat-surface)] border border-[var(--chat-border)] flex items-center justify-center"
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           >
             <Users className="w-8 h-8 text-[var(--accent)]/50" />
           </motion.div>
           <p className="font-semibold text-white/90 text-lg">No teammates yet</p>
-          <p className="text-sm mt-2 text-white/50 max-w-[200px] mx-auto">
+          <p className="text-sm mt-2 text-[var(--chat-text-secondary)] max-w-[200px] mx-auto">
             Invite your team members to collaborate and chat in real-time
           </p>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="mt-5 px-5 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-medium shadow-lg shadow-[var(--accent)]/20"
+            className="mt-5 px-5 py-2.5 rounded-[var(--radius-xl)] bg-[var(--accent)] text-white text-sm font-medium shadow-lg shadow-[var(--accent)]/20"
           >
             <span className="flex items-center gap-2">
               <Plus className="w-4 h-4" />

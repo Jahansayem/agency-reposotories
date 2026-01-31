@@ -7,7 +7,6 @@ import { RefreshCw } from 'lucide-react';
 interface PullToRefreshProps {
   onRefresh: () => Promise<void>;
   children: ReactNode;
-  darkMode?: boolean;
 }
 
 const PULL_THRESHOLD = 80;
@@ -16,7 +15,6 @@ const MAX_PULL = 120;
 export default function PullToRefresh({
   onRefresh,
   children,
-  darkMode = true,
 }: PullToRefreshProps) {
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -106,8 +104,7 @@ export default function PullToRefresh({
           >
             <div
               className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-lg ${
-                darkMode ? 'bg-slate-700' : 'bg-white'
-              }`}
+                'bg-[var(--surface)]'}`}
             >
               <motion.div
                 animate={{
@@ -123,16 +120,12 @@ export default function PullToRefresh({
                   className={`w-5 h-5 ${
                     shouldTrigger || isRefreshing
                       ? 'text-[#0033A0]'
-                      : darkMode
-                        ? 'text-slate-400'
-                        : 'text-slate-500'
-                  }`}
+                      : 'text-slate-500'}`}
                 />
               </motion.div>
               <span
                 className={`text-sm font-medium ${
-                  darkMode ? 'text-slate-300' : 'text-slate-600'
-                }`}
+                  'text-slate-600'}`}
               >
                 {isRefreshing
                   ? 'Refreshing...'

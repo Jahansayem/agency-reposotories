@@ -174,10 +174,10 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
       <div ref={dropdownRef} className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
+          className="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
         >
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-semibold shadow-md"
+            className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-white text-sm font-semibold shadow-md"
             style={{ backgroundColor: currentUser.color }}
           >
             {getUserInitials(currentUser.name)}
@@ -191,7 +191,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
             <div className="p-3 bg-[var(--surface-2)] border-b border-[var(--border-subtle)]">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold shadow-md"
+                  className="w-10 h-10 rounded-[var(--radius-xl)] flex items-center justify-center text-white font-semibold shadow-md"
                   style={{ backgroundColor: currentUser.color }}
                 >
                   {getUserInitials(currentUser.name)}
@@ -218,7 +218,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
                       className="w-full flex items-center gap-3 px-3 py-2.5 sm:py-2 hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors text-left min-h-[44px] touch-manipulation"
                     >
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
+                        className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
                         style={{ backgroundColor: user.color }}
                       >
                         {getUserInitials(user.name)}
@@ -252,7 +252,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl max-w-[calc(100vw-2rem)] sm:max-w-sm w-full overflow-hidden"
+            className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl max-w-[calc(100vw-2rem)] sm:max-w-sm w-full overflow-hidden"
           >
             {/* Modal header */}
             <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-100">
@@ -261,7 +261,8 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
               </h3>
               <button
                 onClick={closeModal}
-                className="p-2 sm:p-1.5 rounded-lg hover:bg-slate-100 active:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center touch-manipulation"
+                aria-label="Close PIN dialog"
+                className="p-2 sm:p-1.5 rounded-[var(--radius-lg)] hover:bg-slate-100 active:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center touch-manipulation"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -271,7 +272,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
               <div className="p-4 sm:p-6">
                 <div className="text-center mb-4 sm:mb-6">
                   <div
-                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-white text-lg sm:text-xl font-bold mx-auto mb-2 sm:mb-3 shadow-lg"
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-[var(--radius-2xl)] flex items-center justify-center text-white text-lg sm:text-xl font-bold mx-auto mb-2 sm:mb-3 shadow-lg"
                     style={{ backgroundColor: selectedUser.color }}
                   >
                     {getUserInitials(selectedUser.name)}
@@ -292,7 +293,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
                       onChange={(e) => handlePinChange(index, e.target.value, pinInputRefs, pin, setPin)}
                       onKeyDown={(e) => handlePinKeyDown(e, index, pinInputRefs, pin)}
                       disabled={lockoutSeconds > 0 || isSubmitting}
-                      className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold rounded-xl border-2 transition-all focus:outline-none touch-manipulation ${
+                      className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold rounded-[var(--radius-xl)] border-2 transition-all focus:outline-none touch-manipulation ${
                         lockoutSeconds > 0
                           ? 'border-red-200 bg-red-50'
                           : digit
@@ -304,7 +305,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
                 </div>
 
                 {(error || lockoutSeconds > 0) && (
-                  <div className="flex items-center justify-center gap-2 text-red-500 text-sm bg-red-50 py-2 px-4 rounded-lg">
+                  <div className="flex items-center justify-center gap-2 text-red-500 text-sm bg-red-50 py-2 px-4 rounded-[var(--radius-lg)]">
                     <AlertCircle className="w-4 h-4" />
                     {lockoutSeconds > 0 ? `Wait ${lockoutSeconds}s` : error}
                   </div>

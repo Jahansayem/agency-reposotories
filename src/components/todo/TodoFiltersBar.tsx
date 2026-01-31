@@ -72,7 +72,6 @@ interface TodoFiltersBarProps {
   onAddFromTemplate: (text: string, priority: 'low' | 'medium' | 'high' | 'urgent', assignedTo?: string, subtasks?: { id: string; text: string; completed: boolean }[]) => void;
 
   // Theme
-  darkMode: boolean;
   userName: string;
 }
 
@@ -112,7 +111,6 @@ function TodoFiltersBar({
   users,
   uniqueCustomers,
   onAddFromTemplate,
-  darkMode,
   userName,
 }: TodoFiltersBarProps) {
   const hasActiveFilters = quickFilter !== 'all' ||
@@ -155,7 +153,7 @@ function TodoFiltersBar({
           <select
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
-            className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
+            className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
           >
             <option value="all">All</option>
             <option value="my_tasks">Mine</option>
@@ -169,7 +167,7 @@ function TodoFiltersBar({
         <button
           type="button"
           onClick={() => setHighPriorityOnly(!highPriorityOnly)}
-          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
             highPriorityOnly
               ? 'bg-[var(--danger)] text-white'
               : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
@@ -185,7 +183,7 @@ function TodoFiltersBar({
         <button
           type="button"
           onClick={() => setShowCompleted(!showCompleted)}
-          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
             showCompleted
               ? 'bg-[var(--success)] text-white'
               : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
@@ -201,7 +199,7 @@ function TodoFiltersBar({
         <button
           type="button"
           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
             showAdvancedFilters || advancedFilterCount > 0
               ? 'bg-[var(--accent)] text-white'
               : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
@@ -223,7 +221,7 @@ function TodoFiltersBar({
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value as SortOption)}
             aria-label="Sort tasks"
-            className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
+            className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
           >
             <option value="created">New</option>
             <option value="due_date">Due</option>
@@ -240,7 +238,7 @@ function TodoFiltersBar({
           <button
             type="button"
             onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-            className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
+            className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
               showMoreDropdown || showBulkActions || useSectionedView
                 ? 'bg-[var(--accent)] text-white'
                 : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
@@ -260,9 +258,8 @@ function TodoFiltersBar({
               <div className="fixed inset-0 z-40" onClick={() => setShowMoreDropdown(false)} />
 
               {/* Dropdown */}
-              <div className={`absolute right-0 top-full mt-1 w-48 rounded-lg shadow-lg border z-50 overflow-hidden ${
-                darkMode ? 'bg-[var(--surface)] border-[var(--border)]' : 'bg-white border-slate-200'
-              }`}>
+              <div className={`absolute right-0 top-full mt-1 w-48 rounded-[var(--radius-lg)] shadow-lg border z-50 overflow-hidden ${
+                'bg-[var(--surface)] border-[var(--border)]'}`}>
                 {/* Templates button */}
                 <button
                   type="button"
@@ -271,8 +268,7 @@ function TodoFiltersBar({
                     setShowTemplatePicker(true);
                   }}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                    darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                  }`}
+                    'hover:bg-slate-50 text-slate-700'}`}
                 >
                   <FileText className="w-4 h-4 text-[var(--text-muted)]" />
                   <span>Templates</span>
@@ -291,8 +287,7 @@ function TodoFiltersBar({
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                     showBulkActions
                       ? 'bg-[var(--brand-sky)]/10 text-[var(--brand-sky)]'
-                      : darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                  }`}
+                      : 'hover:bg-slate-50 text-slate-700'}`}
                 >
                   <CheckSquare className="w-4 h-4 text-[var(--text-muted)]" />
                   <span>{showBulkActions ? 'Cancel Selection' : 'Select Tasks'}</span>
@@ -309,8 +304,7 @@ function TodoFiltersBar({
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                       useSectionedView
                         ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                        : darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                    }`}
+                        : 'hover:bg-slate-50 text-slate-700'}`}
                     aria-pressed={useSectionedView}
                   >
                     <Layers className="w-4 h-4 text-[var(--text-muted)]" />
@@ -328,7 +322,6 @@ function TodoFiltersBar({
           <TemplatePicker
             currentUserName={userName}
             users={users}
-            darkMode={darkMode}
             isOpen={showTemplatePicker}
             onOpenChange={setShowTemplatePicker}
             hideTrigger={true}
@@ -377,7 +370,7 @@ function TodoFiltersBar({
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as TodoStatus | 'all')}
-                  className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
+                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
                 >
                   <option value="all">All</option>
                   <option value="todo">To Do</option>
@@ -392,7 +385,7 @@ function TodoFiltersBar({
                 <select
                   value={assignedToFilter}
                   onChange={(e) => setAssignedToFilter(e.target.value)}
-                  className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
+                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
                 >
                   <option value="all">Anyone</option>
                   <option value="unassigned">Unassigned</option>
@@ -408,7 +401,7 @@ function TodoFiltersBar({
                 <select
                   value={customerFilter}
                   onChange={(e) => setCustomerFilter(e.target.value)}
-                  className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
+                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
                 >
                   <option value="all">All</option>
                   {uniqueCustomers.map((customer) => (
@@ -426,7 +419,7 @@ function TodoFiltersBar({
                     const val = e.target.value;
                     setHasAttachmentsFilter(val === 'all' ? null : val === 'yes');
                   }}
-                  className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
+                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
                 >
                   <option value="all">Any</option>
                   <option value="yes">Yes</option>
@@ -442,13 +435,13 @@ function TodoFiltersBar({
                     type="date"
                     value={dateRangeFilter.start}
                     onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
-                    className="flex-1 text-xs py-1.5 px-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
+                    className="flex-1 text-xs py-1.5 px-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
                   />
                   <input
                     type="date"
                     value={dateRangeFilter.end}
                     onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
-                    className="flex-1 text-xs py-1.5 px-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
+                    className="flex-1 text-xs py-1.5 px-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
                   />
                 </div>
               </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { Calendar, List, CheckCircle, AlertTriangle } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { QuickFilter } from '@/types/todo';
 
 interface Stats {
@@ -36,8 +35,6 @@ export default function BottomTabs({
   onFilterChange,
   onShowCompletedChange,
 }: BottomTabsProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
 
   const tabs: Tab[] = [
     {
@@ -99,10 +96,7 @@ export default function BottomTabs({
   return (
     <nav
       className={`fixed bottom-0 left-0 right-0 z-40 md:hidden border-t safe-area-inset-bottom ${
-        darkMode
-          ? 'bg-[var(--surface)]/95 backdrop-blur-lg border-white/10'
-          : 'bg-white/95 backdrop-blur-lg border-[var(--border)]'
-      }`}
+        'bg-white/95 backdrop-blur-lg border-[var(--border)]'}`}
       role="tablist"
       aria-label="Task filters"
     >
@@ -121,10 +115,7 @@ export default function BottomTabs({
               className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-3 min-h-[56px] transition-all relative ${
                 active
                   ? ''
-                  : darkMode
-                    ? 'text-white/40'
-                    : 'text-[var(--text-muted)]'
-              }`}
+                  : 'text-[var(--text-muted)]'}`}
               style={active ? { color: tab.activeColor } : undefined}
             >
               {/* Active indicator bar */}
@@ -143,10 +134,7 @@ export default function BottomTabs({
                     className={`absolute -top-1.5 -right-2 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold rounded-full ${
                       active
                         ? 'text-white'
-                        : darkMode
-                          ? 'bg-white/20 text-white/60'
-                          : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                    }`}
+                        : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
                     style={active ? { backgroundColor: tab.activeColor } : undefined}
                   >
                     {tab.count > 99 ? '99+' : tab.count}

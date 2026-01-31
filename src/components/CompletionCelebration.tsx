@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Flame, ChevronRight, Copy, X } from 'lucide-react';
 import { CelebrationData, CelebrationIntensity, PRIORITY_CONFIG } from '@/types/todo';
@@ -27,10 +27,19 @@ export function CompletionCelebration({
   const streakBadge = getStreakBadge(streakCount);
   const dismissText = getDismissButtonText(nextTasks.length);
 
+  // Use a ref to avoid resetting the timer when onDismiss reference changes
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+
   // Auto-dismiss confetti after a bit
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 3000);
-    return () => clearTimeout(timer);
+    // Auto-dismiss the entire modal after 2 seconds
+    const dismissTimer = setTimeout(() => onDismissRef.current(), 2000);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(dismissTimer);
+    };
   }, []);
 
   const getIntensity = (): CelebrationIntensity => {
@@ -64,7 +73,7 @@ export function CompletionCelebration({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+          className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl max-w-md w-full overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header with checkmark */}
@@ -76,7 +85,8 @@ export function CompletionCelebration({
               {/* Close button */}
               <button
                 onClick={onDismiss}
-                className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label="Dismiss celebration"
+                className="absolute top-4 right-4 p-2 rounded-[var(--radius-lg)] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -153,7 +163,7 @@ export function CompletionCelebration({
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.8 + index * 0.1 }}
                     onClick={() => onNextTaskClick(task.id)}
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-[var(--radius-xl)] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
                   >
                     {/* Priority indicator */}
                     <div
@@ -192,14 +202,14 @@ export function CompletionCelebration({
           >
             <button
               onClick={onShowSummary}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-[var(--radius-xl)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
             >
               <Copy className="w-4 h-4" />
               Copy Summary
             </button>
             <button
               onClick={onDismiss}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-[var(--radius-xl)] hover:bg-blue-700 transition-colors"
             >
               {dismissText}
             </button>

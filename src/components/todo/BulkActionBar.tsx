@@ -37,8 +37,9 @@ function BulkActionBar({
             <div className="flex items-center gap-3">
               <button
                 onClick={onClearSelection}
-                className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
                 title="Clear selection"
+                aria-label="Clear selection"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -54,7 +55,7 @@ function BulkActionBar({
               {/* Mark Complete */}
               <button
                 onClick={onBulkComplete}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
               >
                 <Check className="w-4 h-4" />
                 <span className="hidden sm:inline">Mark Complete</span>
@@ -64,7 +65,7 @@ function BulkActionBar({
               <div className="relative">
                 <select
                   onChange={(e) => { if (e.target.value) onBulkAssign(e.target.value); e.target.value = ''; }}
-                  className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                  className="appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
                   aria-label="Reassign"
                 >
                   <option value="">Reassign</option>
@@ -82,7 +83,7 @@ function BulkActionBar({
                     if (e.target.value) onBulkReschedule(e.target.value);
                     e.target.value = '';
                   }}
-                  className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                  className="appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
                   aria-label="Change Date"
                 >
                   <option value="">Change Date</option>
@@ -98,7 +99,7 @@ function BulkActionBar({
               {selectedCount >= 2 && (
                 <button
                   onClick={onInitiateMerge}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
                 >
                   <GitMerge className="w-4 h-4" />
                   Merge
@@ -108,7 +109,7 @@ function BulkActionBar({
               {/* Delete */}
               <button
                 onClick={onBulkDelete}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--danger)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--danger)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
               >
                 <Trash2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Delete</span>

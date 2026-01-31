@@ -230,7 +230,7 @@ export function QuickTaskButtons({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-2 p-2 bg-[var(--warning-light)] border border-[var(--warning)]/30 rounded-lg"
+              className="mb-2 p-2 bg-[var(--warning-light)] border border-[var(--warning)]/30 rounded-[var(--radius-lg)]"
               role="alert"
             >
               <div className="flex items-start gap-2">
@@ -317,7 +317,7 @@ export function QuickTaskButtons({
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="mb-3 p-3 bg-[var(--warning-light)] border border-[var(--warning)]/30 rounded-xl"
+                  className="mb-3 p-3 bg-[var(--warning-light)] border border-[var(--warning)]/30 rounded-[var(--radius-xl)]"
                   role="alert"
                 >
                   <div className="flex items-start gap-3">
@@ -333,7 +333,7 @@ export function QuickTaskButtons({
                         <button
                           type="button"
                           onClick={confirmQuoteSelection}
-                          className="px-3 py-1.5 text-xs font-medium bg-[var(--warning)] text-white rounded-lg hover:brightness-110 transition-all min-h-[32px]"
+                          className="px-3 py-1.5 text-xs font-medium bg-[var(--warning)] text-white rounded-[var(--radius-lg)] hover:brightness-110 transition-all min-h-[32px]"
                         >
                           Continue
                         </button>
@@ -349,7 +349,7 @@ export function QuickTaskButtons({
                     <button
                       type="button"
                       onClick={dismissQuoteWarning}
-                      className="p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+                      className="p-1 rounded-[var(--radius-lg)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
                       aria-label="Dismiss warning"
                     >
                       <X className="w-4 h-4" />

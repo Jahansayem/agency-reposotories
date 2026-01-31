@@ -91,8 +91,8 @@ function TypingIndicator({ userName }: { userName: string }) {
       exit={{ opacity: 0, y: -10 }}
       className="flex items-center gap-3 px-4 py-2"
     >
-      <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/[0.06] border border-white/[0.08]">
-        <span className="text-sm text-white/50">{userName}</span>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-2xl)] bg-[var(--chat-surface-hover)] border border-[var(--chat-border)]">
+        <span className="text-sm text-[var(--chat-text-secondary)]">{userName}</span>
         <div className="flex gap-1">
           {[0, 1, 2].map((i) => (
             <motion.div
@@ -897,7 +897,7 @@ export default function ChatPanel({
             className="fixed bottom-6 right-6 z-50 group"
             aria-label={`Open chat${totalUnreadCount > 0 ? `, ${totalUnreadCount} unread messages` : ''}`}
           >
-            <div className="w-14 h-14 rounded-2xl bg-[var(--accent)] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:bg-[var(--accent)]/90">
+            <div className="w-14 h-14 rounded-[var(--radius-2xl)] bg-[var(--accent)] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:bg-[var(--accent)]/90">
               <MessageSquare className="w-6 h-6 text-white" strokeWidth={2.5} />
             </div>
             {totalUnreadCount > 0 && (
@@ -946,7 +946,7 @@ export default function ChatPanel({
             </div>
 
             {/* Main container */}
-            <div className="relative bg-[var(--surface-dark)] rounded-[28px] border border-white/[0.12] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-full">
+            <div className="relative bg-[var(--surface-dark)] rounded-[28px] border border-[var(--chat-border)] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-full">
               {/* Header */}
               <ChatPanelHeader
                 showConversationList={showConversationList}
@@ -1000,11 +1000,11 @@ export default function ChatPanel({
                       >
                         {!tableExists ? (
                           <div className="flex flex-col items-center justify-center h-full text-center px-6">
-                            <div className="w-20 h-20 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-5">
+                            <div className="w-20 h-20 rounded-[var(--radius-2xl)] bg-[var(--chat-surface)] border border-[var(--chat-border)] flex items-center justify-center mb-5">
                               <MessageSquare className="w-10 h-10 text-white/20" />
                             </div>
                             <p className="font-semibold text-white text-lg">Chat Setup Required</p>
-                            <p className="text-sm mt-2 text-white/40">Run the messages migration in Supabase to enable chat.</p>
+                            <p className="text-sm mt-2 text-[var(--chat-text-secondary)]">Run the messages migration in Supabase to enable chat.</p>
                           </div>
                         ) : (
                           <>
@@ -1048,7 +1048,7 @@ export default function ChatPanel({
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: 10 }}
                             onClick={() => scrollToBottom()}
-                            className="absolute bottom-[130px] left-1/2 -translate-x-1/2 bg-[var(--surface-dark)] border border-white/[0.1] rounded-full px-4 py-2 shadow-xl flex items-center gap-2 text-sm text-white hover:bg-white/[0.06] transition-all"
+                            className="absolute bottom-[130px] left-1/2 -translate-x-1/2 bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-full px-4 py-2 shadow-xl flex items-center gap-2 text-sm text-white hover:bg-[var(--chat-surface-hover)] transition-all"
                           >
                             <ChevronDown className="w-4 h-4" />
                             <span>New messages</span>
@@ -1095,17 +1095,17 @@ export default function ChatPanel({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[var(--surface-dark)] border border-white/[0.1] rounded-2xl shadow-2xl p-6 max-w-md w-full"
+              className="bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-[var(--radius-2xl)] shadow-2xl p-6 max-w-md w-full"
             >
               <h3 className="text-xl font-bold text-white mb-5">Create Task from Message</h3>
-              <div className="p-4 bg-white/[0.04] border border-white/[0.08] rounded-xl mb-5">
-                <p className="text-sm text-white/50 mb-1">From {taskFromMessage.created_by}:</p>
+              <div className="p-4 bg-[var(--chat-surface)] border border-[var(--chat-border)] rounded-[var(--radius-xl)] mb-5">
+                <p className="text-sm text-[var(--chat-text-secondary)] mb-1">From {taskFromMessage.created_by}:</p>
                 <p className="text-white">{taskFromMessage.text}</p>
               </div>
               <div className="flex justify-end gap-3">
                 <motion.button
                   onClick={() => setShowCreateTaskModal(false)}
-                  className="px-5 py-3 rounded-xl border border-white/[0.1] text-white/70 hover:bg-white/[0.04] transition-all font-medium"
+                  className="px-5 py-3 rounded-[var(--radius-xl)] border border-[var(--chat-border)] text-white/70 hover:bg-[var(--chat-surface)] transition-all font-medium"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -1113,7 +1113,7 @@ export default function ChatPanel({
                 </motion.button>
                 <motion.button
                   onClick={handleCreateTask}
-                  className="px-5 py-3 rounded-xl bg-[var(--accent)] text-white font-semibold hover:bg-[var(--accent)]/90 transition-all"
+                  className="px-5 py-3 rounded-[var(--radius-xl)] bg-[var(--accent)] text-white font-semibold hover:bg-[var(--accent)]/90 transition-all"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

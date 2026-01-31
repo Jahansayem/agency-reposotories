@@ -86,9 +86,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses = {
-  sm: 'px-3 py-2 text-sm min-h-[36px] rounded-lg gap-1.5',
-  md: 'px-4 py-2.5 text-sm min-h-[44px] rounded-xl gap-2',
-  lg: 'px-6 py-3 text-base min-h-[52px] rounded-xl gap-2.5',
+  sm: 'px-3 py-2 text-sm min-h-[36px] rounded-[var(--radius-lg)] gap-1.5',
+  md: 'px-4 py-2.5 text-sm min-h-[44px] rounded-[var(--radius-xl)] gap-2',
+  lg: 'px-6 py-3 text-base min-h-[52px] rounded-[var(--radius-xl)] gap-2.5',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -196,7 +196,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         disabled={isDisabled}
         className={`
           inline-flex items-center justify-center
-          rounded-xl
+          rounded-[var(--radius-xl)]
           transition-all duration-150 ease-out
           focus-visible:outline-none focus-visible:ring-2
           focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
@@ -340,7 +340,7 @@ export const MotionIconButton = forwardRef<HTMLButtonElement, MotionIconButtonPr
         whileTap={isDisabled ? undefined : 'tap'}
         className={`
           inline-flex items-center justify-center
-          rounded-xl
+          rounded-[var(--radius-xl)]
           transition-colors duration-150 ease-out
           focus-visible:outline-none focus-visible:ring-2
           focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2

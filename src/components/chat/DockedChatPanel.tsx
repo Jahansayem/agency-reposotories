@@ -77,7 +77,7 @@ export function DockedChatPanel({
           return (
             <span
               key={i}
-              className={`px-1.5 py-0.5 rounded-md font-medium ${
+              className={`px-1.5 py-0.5 rounded-[var(--radius-md)] font-medium ${
                 isMe
                   ? 'bg-[var(--accent)]/30 text-[var(--accent)]'
                   : 'bg-[var(--accent-dark)]/30 text-[var(--accent-dark)] dark:text-[var(--accent)]'
@@ -110,29 +110,29 @@ export function DockedChatPanel({
           {!showConversationList && (
             <button
               onClick={onShowConversationList}
-              className="p-1.5 -ml-1 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-1.5 -ml-1 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="Back to conversations"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
           {showConversationList ? (
-            <div className="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-[var(--radius-xl)] bg-[var(--accent)] flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
           ) : conversation?.type === 'team' ? (
-            <div className="w-8 h-8 rounded-xl bg-[#2563EB] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-[var(--radius-xl)] bg-[#2563EB] flex items-center justify-center">
               <Users className="w-4 h-4 text-white" />
             </div>
           ) : conversation?.type === 'dm' ? (
             <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold text-white"
+              className="w-8 h-8 rounded-[var(--radius-xl)] flex items-center justify-center text-xs font-bold text-white"
               style={{ backgroundColor: getUserColor(conversation.userName) }}
             >
               {getInitials(conversation.userName)}
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-xl bg-[var(--accent)] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-[var(--radius-xl)] bg-[var(--accent)] flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
           )}
@@ -150,7 +150,7 @@ export function DockedChatPanel({
         {(isMobile || (isTablet && !isMobile)) && onClose && (
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+            className="p-2 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Close chat"
           >
             <X className="w-5 h-5" />
@@ -164,7 +164,7 @@ export function DockedChatPanel({
           <div className="h-full overflow-y-auto p-3 space-y-2">
             <button
               onClick={() => onSelectConversation({ type: 'team' })}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left touch-manipulation"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)] hover:bg-white/5 transition-colors text-left touch-manipulation"
             >
               <div className="w-10 h-10 rounded-full bg-[var(--accent)]/15 flex items-center justify-center">
                 <Users className="w-5 h-5 text-[var(--accent)]" />
@@ -179,7 +179,7 @@ export function DockedChatPanel({
               <button
                 key={user.name}
                 onClick={() => onSelectConversation({ type: 'dm', userName: user.name })}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left touch-manipulation"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)] hover:bg-white/5 transition-colors text-left touch-manipulation"
               >
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
@@ -211,7 +211,7 @@ export function DockedChatPanel({
               {filteredMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <motion.div
-                    className="w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center mb-4"
+                    className="w-14 h-14 rounded-[var(--radius-2xl)] bg-white/[0.06] border border-white/[0.1] flex items-center justify-center mb-4"
                     animate={{ y: [-3, 3, -3] }}
                     transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   >
@@ -240,7 +240,7 @@ export function DockedChatPanel({
                       )}
                       {!isOwn && !showAvatar && <div className="w-7" />}
                       <div
-                        className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm ${
+                        className={`max-w-[80%] px-3 py-2 rounded-[var(--radius-2xl)] text-sm ${
                           isOwn
                             ? 'bg-[var(--accent)] text-white'
                             : 'bg-white/10 text-white'
@@ -270,12 +270,12 @@ export function DockedChatPanel({
                     }
                   }}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white placeholder-white/40 text-sm border border-white/10 focus:border-[var(--accent)]/50 focus:outline-none"
+                  className="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] bg-white/10 text-white placeholder-white/40 text-sm border border-white/10 focus:border-[var(--accent)]/50 focus:outline-none"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!inputValue.trim()}
-                  className="p-2.5 rounded-xl bg-[var(--accent)] text-white disabled:opacity-50 transition-opacity hover:bg-[var(--accent)]/90 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  className="p-2.5 rounded-[var(--radius-xl)] bg-[var(--accent)] text-white disabled:opacity-50 transition-opacity hover:bg-[var(--accent)]/90 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

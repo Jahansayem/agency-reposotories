@@ -62,12 +62,12 @@ function DigestContent({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="rounded-xl p-4 bg-red-500/10 border border-red-500/30"
+          className="rounded-[var(--radius-xl)] p-4 bg-red-500/10 border border-red-500/30"
         >
           <button
             onClick={onOverdueClick}
             aria-label={`View all ${digest.overdueTasks.count} overdue tasks`}
-            className="w-full flex items-center justify-between mb-3 group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+            className="w-full flex items-center justify-between mb-3 group rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
           >
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-500" aria-hidden="true" />
@@ -83,7 +83,7 @@ function DigestContent({
               <button
                 key={task.id}
                 onClick={() => onTaskClick?.(task.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-lg)] bg-red-500/10 hover:bg-red-500/20 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
               >
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                 <span className="flex-1 text-sm text-red-200 truncate">{task.text}</span>
@@ -97,7 +97,7 @@ function DigestContent({
             {digest.overdueTasks.count > 3 && (
               <button
                 onClick={onOverdueClick}
-                className="w-full text-center py-2 text-xs text-red-400 hover:text-red-300 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                className="w-full text-center py-2 text-xs text-red-400 hover:text-red-300 rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
               >
                 +{digest.overdueTasks.count - 3} more overdue
               </button>
@@ -111,12 +111,12 @@ function DigestContent({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="rounded-xl p-4 bg-[var(--surface-2)] border border-[var(--border)]"
+        className="rounded-[var(--radius-xl)] p-4 bg-[var(--surface-2)] border border-[var(--border)]"
       >
         <button
           onClick={onTodayClick}
           aria-label={`View all ${digest.todaysTasks.count} tasks due today`}
-          className="w-full flex items-center justify-between mb-3 group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          className="w-full flex items-center justify-between mb-3 group rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         >
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-[var(--brand-blue)]" aria-hidden="true" />
@@ -133,7 +133,7 @@ function DigestContent({
               <button
                 key={task.id}
                 onClick={() => onTaskClick?.(task.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--surface-3)] transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-lg)] hover:bg-[var(--surface-3)] transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
               >
                 <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
                 <span className="flex-1 text-sm text-[var(--foreground)] truncate">{task.text}</span>
@@ -147,7 +147,7 @@ function DigestContent({
             {digest.todaysTasks.count > 4 && (
               <button
                 onClick={onTodayClick}
-                className="w-full text-center py-2 text-xs text-[var(--accent)] hover:underline rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                className="w-full text-center py-2 text-xs text-[var(--accent)] hover:underline rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 +{digest.todaysTasks.count - 4} more today
               </button>
@@ -166,7 +166,7 @@ function DigestContent({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-xl p-4 bg-[var(--surface-2)] border border-[var(--border)]"
+        className="rounded-[var(--radius-xl)] p-4 bg-[var(--surface-2)] border border-[var(--border)]"
       >
         <div className="flex items-center gap-2 mb-3">
           <Users className="w-4 h-4 text-[#C9A227]" />
@@ -193,7 +193,7 @@ function DigestContent({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="rounded-xl p-4 bg-gradient-to-br from-[var(--brand-blue)]/10 to-[#C9A227]/10 border border-[var(--brand-blue)]/30"
+        className="rounded-[var(--radius-xl)] p-4 bg-gradient-to-br from-[var(--brand-blue)]/10 to-[#C9A227]/10 border border-[var(--brand-blue)]/30"
       >
         <div className="flex items-center gap-2 mb-3">
           <Target className="w-4 h-4 text-[var(--brand-blue)]" />
@@ -249,7 +249,7 @@ export default function DailyDigestPanel({
 
   return (
     <div
-      className={`rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden ${className}`}
+      className={`rounded-[var(--radius-2xl)] border border-[var(--border)] bg-[var(--surface)] shadow-sm overflow-hidden ${className}`}
     >
       {/* Collapsible Header */}
       <button
@@ -259,7 +259,7 @@ export default function DailyDigestPanel({
         aria-controls="daily-digest-content"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#C9A227]/10 flex items-center justify-center relative">
+          <div className="w-10 h-10 rounded-[var(--radius-xl)] bg-[#C9A227]/10 flex items-center justify-center relative">
             <Sparkles className="w-5 h-5 text-[#C9A227]" />
             {/* New badge */}
             {isNew && hasDigest && (
@@ -309,7 +309,7 @@ export default function DailyDigestPanel({
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30"
+                  className="flex items-start gap-3 p-4 rounded-[var(--radius-xl)] bg-red-500/10 border border-red-500/30"
                 >
                   <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
@@ -353,7 +353,7 @@ export default function DailyDigestPanel({
                   <button
                     onClick={generateNow}
                     disabled={generating}
-                    className="mt-4 px-4 py-2 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white text-sm font-medium rounded-xl hover:brightness-110 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="mt-4 px-4 py-2 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white text-sm font-medium rounded-[var(--radius-xl)] hover:brightness-110 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     <Sparkles className="w-4 h-4" />
                     Generate Now

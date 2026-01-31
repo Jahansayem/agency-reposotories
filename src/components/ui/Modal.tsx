@@ -183,7 +183,7 @@ export function Modal({
             transition={reducedMotion ? { duration: 0 } : modalTransition}
             className={`
               relative w-full ${sizeClasses[size]}
-              bg-[var(--surface)] rounded-2xl shadow-2xl
+              bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl
               border border-[var(--border-subtle)]
               max-h-[90vh] overflow-hidden
               ${className}
@@ -208,7 +208,7 @@ export function Modal({
                 onClick={onClose}
                 className="
                   absolute top-3 right-3 z-10
-                  p-2 rounded-lg
+                  p-2 rounded-[var(--radius-lg)]
                   text-[var(--text-muted)] hover:text-[var(--foreground)]
                   hover:bg-[var(--surface-2)]
                   transition-colors

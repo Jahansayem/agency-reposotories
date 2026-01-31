@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Minimize2, Maximize2, ChevronDown } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser, Todo } from '@/types/todo';
 import dynamic from 'next/dynamic';
 import { ChatPanelSkeleton } from './LoadingSkeletons';
@@ -43,8 +42,6 @@ export default function FloatingChat({
   onTaskLinkClick,
   unreadCount = 0,
 }: FloatingChatProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const [chatState, setChatState] = useState<ChatState>('closed');
   const [hasNewMessage, setHasNewMessage] = useState(false);
 
@@ -111,10 +108,7 @@ export default function FloatingChat({
               flex items-center justify-center
               shadow-lg shadow-[var(--brand-blue)]/30
               transition-colors
-              ${darkMode
-                ? 'bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)]'
-                : 'bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)]'
-              }
+              ${'bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)]'}
               ${hasNewMessage ? 'animate-pulse' : ''}
             `}
             aria-label="Open chat"
@@ -151,13 +145,10 @@ export default function FloatingChat({
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className={`
               fixed bottom-6 right-6 z-50
-              rounded-2xl overflow-hidden
+              rounded-[var(--radius-2xl)] overflow-hidden
               shadow-2xl
               flex flex-col
-              ${darkMode
-                ? 'bg-[var(--surface)] border border-white/10'
-                : 'bg-white border border-[var(--border)]'
-              }
+              ${'bg-[var(--surface)] border border-[var(--border)]'}
             `}
             style={{
               width: dimensions.width,
@@ -169,10 +160,7 @@ export default function FloatingChat({
               className={`
                 flex items-center justify-between px-4 h-12 flex-shrink-0
                 cursor-pointer select-none
-                ${darkMode
-                  ? 'bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-navy)]'
-                  : 'bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-sky)]'
-                }
+                ${'bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-sky)]'}
               `}
               onClick={chatState === 'minimized' ? openFromMinimized : undefined}
             >
@@ -194,7 +182,7 @@ export default function FloatingChat({
                         e.stopPropagation();
                         expandChat();
                       }}
-                      className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+                      className="p-1.5 rounded-[var(--radius-lg)] hover:bg-white/20 transition-colors"
                       aria-label={chatState === 'expanded' ? 'Shrink' : 'Expand'}
                     >
                       {chatState === 'expanded' ? (
@@ -208,7 +196,7 @@ export default function FloatingChat({
                         e.stopPropagation();
                         minimizeChat();
                       }}
-                      className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+                      className="p-1.5 rounded-[var(--radius-lg)] hover:bg-white/20 transition-colors"
                       aria-label="Minimize"
                     >
                       <ChevronDown className="w-4 h-4 text-white" />
@@ -220,7 +208,7 @@ export default function FloatingChat({
                     e.stopPropagation();
                     closeChat();
                   }}
-                  className="p-1.5 rounded-lg hover:bg-white/20 transition-colors"
+                  className="p-1.5 rounded-[var(--radius-lg)] hover:bg-white/20 transition-colors"
                   aria-label="Close"
                 >
                   <X className="w-4 h-4 text-white" />

@@ -87,7 +87,6 @@ export default function NotificationModal({
   onViewAllActivity,
 }: NotificationModalProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const modalRef = useRef<HTMLDivElement>(null);
 
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
@@ -282,12 +281,9 @@ export default function NotificationModal({
             left: position.left,
           }}
           className={`
-            z-[100] w-[380px] max-h-[520px] rounded-xl overflow-hidden
+            z-[100] w-[380px] max-h-[520px] rounded-[var(--radius-xl)] overflow-hidden
             shadow-2xl border
-            ${darkMode
-              ? 'bg-[var(--surface)] border-white/10'
-              : 'bg-white border-[var(--border)]'
-            }
+            ${'bg-[var(--surface)] border-[var(--border)]'}
           `}
           role="dialog"
           aria-label="Notifications"
@@ -295,11 +291,11 @@ export default function NotificationModal({
           {/* Header */}
           <div className={`
             flex items-center justify-between px-4 py-3 border-b
-            ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+            ${'border-[var(--border)]'}
           `}>
             <div className="flex items-center gap-2">
               <Bell className="w-5 h-5 text-[var(--accent)]" />
-              <h2 className={`font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+              <h2 className={`font-semibold ${'text-[var(--foreground)]'}`}>
                 Notifications
               </h2>
               {unreadCount > 0 && (
@@ -313,11 +309,8 @@ export default function NotificationModal({
                 <button
                   onClick={handleMarkAllReadClick}
                   className={`
-                    px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors
-                    ${darkMode
-                      ? 'text-[var(--accent)] hover:bg-[var(--accent)]/10'
-                      : 'text-[var(--accent)] hover:bg-[var(--accent-light)]'
-                    }
+                    px-2.5 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-colors
+                    ${'text-[var(--accent)] hover:bg-[var(--accent-light)]'}
                   `}
                   aria-label="Mark all notifications as read"
                 >
@@ -327,11 +320,8 @@ export default function NotificationModal({
               <button
                 onClick={onClose}
                 className={`
-                  p-1.5 rounded-lg transition-colors
-                  ${darkMode
-                    ? 'text-white/40 hover:text-white hover:bg-white/10'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  p-1.5 rounded-[var(--radius-lg)] transition-colors
+                  ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                 `}
                 aria-label="Close notifications"
               >
@@ -354,11 +344,8 @@ export default function NotificationModal({
                 <button
                   onClick={fetchActivities}
                   className={`
-                    mt-3 px-4 py-2 text-sm rounded-lg transition-colors
-                    ${darkMode
-                      ? 'bg-white/10 hover:bg-white/20 text-white'
-                      : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]'
-                    }
+                    mt-3 px-4 py-2 text-sm rounded-[var(--radius-lg)] transition-colors
+                    ${'bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]'}
                   `}
                 >
                   Try Again
@@ -367,20 +354,17 @@ export default function NotificationModal({
             ) : activities.length === 0 ? (
               <div className="p-10 text-center">
                 <motion.div
-                  className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
-                    darkMode
-                      ? 'bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/10'
-                      : 'bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200'
-                  }`}
+                  className={`w-16 h-16 mx-auto mb-4 rounded-[var(--radius-2xl)] flex items-center justify-center ${
+                    'bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200'}`}
                   animate={{ scale: [1, 1.03, 1] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <BellRing className={`w-8 h-8 ${darkMode ? 'text-white/30' : 'text-slate-400'}`} />
+                  <BellRing className={`w-8 h-8 ${'text-slate-400'}`} />
                 </motion.div>
-                <p className={`font-semibold text-base ${darkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                <p className={`font-semibold text-base ${'text-slate-700'}`}>
                   No notifications yet
                 </p>
-                <p className={`text-sm mt-2 max-w-[200px] mx-auto ${darkMode ? 'text-white/40' : 'text-slate-500'}`}>
+                <p className={`text-sm mt-2 max-w-[200px] mx-auto ${'text-slate-500'}`}>
                   When there is activity on your tasks, you will be notified here
                 </p>
               </div>
@@ -390,7 +374,6 @@ export default function NotificationModal({
                   <NotificationItem
                     key={activity.id}
                     activity={activity}
-                    darkMode={darkMode}
                     isUnread={isUnread(activity)}
                     onClick={() => handleActivityClick(activity)}
                   />
@@ -403,7 +386,7 @@ export default function NotificationModal({
           {activities.length > 0 && (
             <div className={`
               px-4 py-3 border-t text-center
-              ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+              ${'border-[var(--border)]'}
             `}>
               <button
                 onClick={() => {
@@ -413,7 +396,7 @@ export default function NotificationModal({
                 }}
                 className={`
                   text-sm font-medium transition-colors
-                  ${darkMode ? 'text-[var(--accent)] hover:text-[var(--accent-light)]' : 'text-[var(--accent)] hover:underline'}
+                  ${'text-[var(--accent)] hover:underline'}
                 `}
               >
                 View all activity
@@ -432,12 +415,11 @@ export default function NotificationModal({
 
 interface NotificationItemProps {
   activity: ActivityLogEntry;
-  darkMode: boolean;
   isUnread: boolean;
   onClick: () => void;
 }
 
-function NotificationItem({ activity, darkMode, isUnread, onClick }: NotificationItemProps) {
+function NotificationItem({ activity, isUnread, onClick }: NotificationItemProps) {
   const config = ACTION_CONFIG[activity.action];
   const Icon = config.icon;
   const details = activity.details as Record<string, string | number | undefined>;
@@ -492,13 +474,7 @@ function NotificationItem({ activity, darkMode, isUnread, onClick }: Notificatio
       className={`
         w-full flex items-start gap-3 px-4 py-3 text-left transition-colors
         ${isUnread
-          ? darkMode
-            ? 'bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15'
-            : 'bg-[var(--accent-light)]/50 hover:bg-[var(--accent-light)]'
-          : darkMode
-            ? 'hover:bg-white/5'
-            : 'hover:bg-[var(--surface-2)]'
-        }
+          ? 'bg-[var(--accent-light)]/50 hover:bg-[var(--accent-light)]': 'hover:bg-[var(--surface-2)]'}
       `}
     >
       {/* Icon with colored background */}
@@ -511,11 +487,11 @@ function NotificationItem({ activity, darkMode, isUnread, onClick }: Notificatio
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm leading-snug ${darkMode ? 'text-white/90' : 'text-[var(--foreground)]'}`}>
+        <p className={`text-sm leading-snug ${'text-[var(--foreground)]'}`}>
           {getMessage()}
         </p>
 
-        <div className={`flex items-center gap-2 mt-1 text-xs ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+        <div className={`flex items-center gap-2 mt-1 text-xs ${'text-[var(--text-muted)]'}`}>
           <Clock className="w-3 h-3" />
           {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
         </div>
@@ -527,7 +503,7 @@ function NotificationItem({ activity, darkMode, isUnread, onClick }: Notificatio
       )}
 
       {/* Chevron for clickable hint */}
-      <ChevronRight className={`w-4 h-4 flex-shrink-0 mt-2 ${darkMode ? 'text-white/20' : 'text-[var(--text-light)]'}`} />
+      <ChevronRight className={`w-4 h-4 flex-shrink-0 mt-2 ${'text-[var(--text-light)]'}`} />
     </button>
   );
 }
@@ -546,23 +522,16 @@ interface NotificationBellProps {
   unreadCount: number;
   onClick: () => void;
   isActive: boolean;
-  darkMode: boolean;
 }
 
-export function NotificationBell({ unreadCount, onClick, isActive, darkMode }: NotificationBellProps) {
+export function NotificationBell({ unreadCount, onClick, isActive }: NotificationBellProps) {
   return (
     <button
       onClick={onClick}
       className={`
-        relative p-2 rounded-xl transition-colors
+        relative p-2 rounded-[var(--radius-xl)] transition-colors
         ${isActive
-          ? darkMode
-            ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
-            : 'bg-[var(--accent-light)] text-[var(--accent)]'
-          : darkMode
-            ? 'text-white/60 hover:text-white hover:bg-white/10'
-            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-        }
+          ? 'bg-[var(--accent-light)] text-[var(--accent)]': 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
       `}
       aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
     >

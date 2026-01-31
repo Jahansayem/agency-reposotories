@@ -76,7 +76,6 @@ const getCompletedAtMs = (todo: Todo): number | null => {
 export default function TodoList({ currentUser, onUserChange, onOpenDashboard, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
   const userName = currentUser.name;
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const canViewArchive = currentUser.role === 'admin' || ['derrick', 'adrian'].includes(userName.toLowerCase());
 
   // Get navigation state from AppShell context
@@ -1613,10 +1612,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }
 
   return (
-    <PullToRefresh onRefresh={refreshTodos} darkMode={darkMode}>
+    <PullToRefresh onRefresh={refreshTodos}>
       <div className="min-h-screen transition-colors bg-[var(--background)]">
         {/* Skip link for accessibility */}
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:z-50">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
           Skip to main content
         </a>
 
@@ -1691,12 +1690,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         <div className="mb-4">
           <button
             onClick={() => setShowAddTaskModal(true)}
-            className={`
-              flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm
-              bg-[var(--accent)] text-white
-              hover:bg-[var(--accent)]/90 active:scale-[0.98]
-              transition-all duration-150 shadow-sm hover:shadow
-            `}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-lg)] font-medium text-sm bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 active:scale-[0.98] transition-all duration-150 shadow-sm hover:shadow"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -1752,7 +1746,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               }));
               addTodo(text, priority, undefined, assignedTo, normalizedSubtasks);
             }}
-            darkMode={darkMode}
             userName={userName}
           />
         )}
@@ -1766,7 +1759,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           useSectionedView={useSectionedView}
           shouldUseSections={shouldUseSections}
           sortOption={sortOption}
-          darkMode={darkMode}
           selectedTodos={selectedTodos}
           showBulkActions={showBulkActions}
           searchQuery={searchQuery}
@@ -1826,18 +1818,15 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         {!focusMode && (
           <button
             onClick={() => openShortcuts()}
-            className={`mt-8 w-full text-center text-xs py-2 rounded-lg transition-colors ${
-              darkMode
-                ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800'
-                : 'text-slate-400 hover:text-slate-500 hover:bg-slate-100'
-            }`}
+            className={`mt-8 w-full text-center text-xs py-2 rounded-[var(--radius-lg)] transition-colors ${
+              'text-slate-400 hover:text-slate-500 hover:bg-slate-100'}`}
           >
             <span className="hidden sm:inline">
-              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>N</kbd> new
+              <kbd className={`px-1.5 py-0.5 rounded ${'bg-slate-200'}`}>N</kbd> new
               <span className="mx-2">|</span>
-              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>/</kbd> search
+              <kbd className={`px-1.5 py-0.5 rounded ${'bg-slate-200'}`}>/</kbd> search
               <span className="mx-2">|</span>
-              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>?</kbd> all shortcuts
+              <kbd className={`px-1.5 py-0.5 rounded ${'bg-slate-200'}`}>?</kbd> all shortcuts
             </span>
             <span className="sm:hidden">Tap for keyboard shortcuts</span>
           </button>
@@ -1854,7 +1843,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       <TodoModals
         currentUser={currentUser}
         onUserChange={onUserChange}
-        darkMode={darkMode}
         todos={todos}
         users={users}
         showCelebration={showCelebration}
@@ -1908,12 +1896,12 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       {showActivityFeed && (
         <div className="fixed inset-0 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Activity Feed">
           {/* Full-page container with proper spacing for navigation */}
-          <div className={`flex-1 flex flex-col ${darkMode ? 'bg-[var(--background)]' : 'bg-[var(--background)]'}`}>
+          <div className={`flex-1 flex flex-col ${'bg-[var(--background)]'}`}>
             {/* Header with back button */}
-            <div className={`px-4 sm:px-6 py-4 border-b flex items-center gap-4 ${darkMode ? 'border-[var(--border)] bg-[var(--surface)]' : 'border-[var(--border)] bg-white'}`}>
+            <div className={`px-4 sm:px-6 py-4 border-b flex items-center gap-4 ${'border-[var(--border)] bg-[var(--surface)]'}`}>
               <button
                 onClick={() => { closeActivityFeed(); setActiveView('tasks'); }}
-                className={`p-2 -ml-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]' : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
+                className={`p-2 -ml-2 rounded-[var(--radius-lg)] transition-colors ${'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
                 aria-label="Back to tasks"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1921,10 +1909,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 </svg>
               </button>
               <div>
-                <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                <h1 className={`text-xl font-semibold ${'text-[var(--foreground)]'}`}>
                   Activity Monitor
                 </h1>
-                <p className={`text-sm ${darkMode ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'}`}>
+                <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
                   Track all changes across your tasks
                 </p>
               </div>
@@ -1935,7 +1923,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               <div className="h-full max-w-4xl mx-auto">
                 <ActivityFeed
                   currentUserName={userName}
-                  darkMode={darkMode}
                   onClose={() => { closeActivityFeed(); setActiveView('tasks'); }}
                 />
               </div>
@@ -1948,7 +1935,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       {showStrategicDashboard && isOwner({ name: userName, role: currentUser?.role }) && (
         <StrategicDashboard
           userName={userName}
-          darkMode={darkMode}
           onClose={() => { closeStrategicDashboard(); setActiveView('tasks'); }}
         />
       )}
@@ -1969,7 +1955,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               </div>
               <button
                 onClick={() => { closeArchiveView(); setActiveView('tasks'); }}
-                className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                className="p-2 rounded-[var(--radius-lg)] hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
                 aria-label="Close archive"
               >
                 <X className="w-4 h-4" />
@@ -2071,16 +2057,16 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               }
             }}
           />
-          <div className={`relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
+          <div className={`relative w-full max-w-md rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden ${'bg-[var(--surface)]'}`}>
             {/* Header */}
-            <div className={`px-5 py-4 border-b ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}>
+            <div className={`px-5 py-4 border-b ${'border-[var(--border)] bg-[var(--surface)]'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[var(--brand-blue)]/15 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-[var(--radius-lg)] bg-[var(--brand-blue)]/15 flex items-center justify-center">
                   <GitMerge className="w-4.5 h-4.5 text-[var(--brand-blue)]" />
                 </div>
                 <div>
-                  <h2 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>Merge {mergeTargets.length} Tasks</h2>
-                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+                  <h2 className={`text-base font-semibold ${'text-[var(--foreground)]'}`}>Merge {mergeTargets.length} Tasks</h2>
+                  <p className={`text-xs ${'text-[var(--text-muted)]'}`}>
                     Select the task to keep
                   </p>
                 </div>
@@ -2094,32 +2080,26 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   <button
                     key={todo.id}
                     onClick={() => setMergePrimaryId(todo.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all ${
+                    className={`w-full text-left p-3 rounded-[var(--radius-xl)] border transition-all ${
                       selectedPrimaryId === todo.id
                         ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]/10 ring-1 ring-[var(--brand-blue)]/30'
-                        : darkMode
-                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
-                          : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
-                    }`}
+                        : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)]'}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                         selectedPrimaryId === todo.id
                           ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]'
-                          : darkMode
-                            ? 'border-slate-500'
-                            : 'border-[var(--border)]'
-                      }`}>
+                          : 'border-[var(--border)]'}`}>
                         {selectedPrimaryId === todo.id && (
                           <Check className="w-3 h-3 text-white" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                        <p className={`text-sm font-medium truncate ${'text-[var(--foreground)]'}`}>
                           {todo.text}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+                          <span className={`text-xs ${'text-[var(--text-muted)]'}`}>
                             {new Date(todo.created_at).toLocaleDateString()}
                           </span>
                           {todo.attachments && todo.attachments.length > 0 && (
@@ -2141,7 +2121,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </div>
 
             {/* Info Box */}
-            <div className={`mx-4 mb-3 p-3 rounded-lg text-xs ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
+            <div className={`mx-4 mb-3 p-3 rounded-[var(--radius-lg)] text-xs ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
               <p className="font-medium mb-1.5 text-[var(--text-light)]">When merged:</p>
               <div className="grid grid-cols-2 gap-1">
                 <span>• Notes combined</span>
@@ -2152,7 +2132,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </div>
 
             {/* Footer */}
-            <div className={`px-4 py-3 border-t flex justify-end gap-2 ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}>
+            <div className={`px-4 py-3 border-t flex justify-end gap-2 ${'border-[var(--border)] bg-[var(--surface)]'}`}>
               <button
                 onClick={() => {
                   if (!isMerging) {
@@ -2160,13 +2140,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   }
                 }}
                 disabled={isMerging}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-lg)] transition-colors ${
                   isMerging
                     ? 'opacity-50 cursor-not-allowed'
-                    : darkMode
-                      ? 'text-slate-300 hover:bg-white/10'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
-                }`}
+                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'}`}
               >
                 Cancel
               </button>
@@ -2177,13 +2154,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   }
                 }}
                 disabled={!selectedPrimaryId || isMerging}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-lg)] transition-all flex items-center gap-2 ${
                   selectedPrimaryId && !isMerging
                     ? 'bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue)]/90 shadow-sm'
-                    : darkMode
-                      ? 'bg-white/10 text-slate-500 cursor-not-allowed'
-                      : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'
-                }`}
+                    : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'}`}
               >
                 {isMerging ? (
                   <>

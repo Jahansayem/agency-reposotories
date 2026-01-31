@@ -4,12 +4,10 @@ import { motion } from 'framer-motion';
 
 interface VoiceRecordingIndicatorProps {
   isRecording: boolean;
-  darkMode?: boolean;
 }
 
 export default function VoiceRecordingIndicator({
   isRecording,
-  darkMode = true,
 }: VoiceRecordingIndicatorProps) {
   if (!isRecording) return null;
 
@@ -19,8 +17,7 @@ export default function VoiceRecordingIndicator({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
-        darkMode ? 'bg-red-900/80' : 'bg-red-50'
-      }`}
+        'bg-red-50'}`}
     >
       {/* Pulsing red dot */}
       <motion.div
@@ -56,7 +53,7 @@ export default function VoiceRecordingIndicator({
       </div>
 
       {/* Text label */}
-      <span className={`text-xs font-medium ${darkMode ? 'text-red-200' : 'text-red-600'}`}>
+      <span className={`text-xs font-medium ${'text-red-600'}`}>
         Listening...
       </span>
     </motion.div>

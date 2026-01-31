@@ -69,7 +69,6 @@ export default function TaskBottomSheet({
   onGenerateEmail,
 }: TaskBottomSheetProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const controls = useAnimation();
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -267,7 +266,7 @@ export default function TaskBottomSheet({
               fixed inset-x-0 bottom-0 z-50
               max-h-[92vh] rounded-t-3xl overflow-hidden
               flex flex-col
-              ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}
+              ${'bg-[var(--surface)]'}
             `}
             role="dialog"
             aria-modal="true"
@@ -281,7 +280,7 @@ export default function TaskBottomSheet({
               <div
                 className={`
                   w-10 h-1.5 rounded-full
-                  ${darkMode ? 'bg-white/30' : 'bg-gray-300'}
+                  ${'bg-gray-300'}
                 `}
               />
             </div>
@@ -290,7 +289,7 @@ export default function TaskBottomSheet({
             <header
               className={`
                 flex items-center justify-between px-5 pb-3 border-b flex-shrink-0
-                ${darkMode ? 'border-white/10' : 'border-gray-200'}
+                ${'border-gray-200'}
               `}
             >
               <div className="flex items-center gap-3">
@@ -298,7 +297,7 @@ export default function TaskBottomSheet({
                 <button
                   onClick={handleToggleComplete}
                   className={`
-                    w-7 h-7 rounded-lg border-2 flex items-center justify-center
+                    w-7 h-7 rounded-[var(--radius-lg)] border-2 flex items-center justify-center
                     transition-all touch-manipulation
                     ${
                       task.completed
@@ -313,7 +312,7 @@ export default function TaskBottomSheet({
 
                 <h2
                   id="task-sheet-title"
-                  className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}
+                  className={`font-semibold ${'text-gray-900'}`}
                 >
                   Task Details
                 </h2>
@@ -324,12 +323,9 @@ export default function TaskBottomSheet({
                 <button
                   onClick={() => setShowMoreActions(!showMoreActions)}
                   className={`
-                    p-2.5 rounded-xl transition-colors touch-manipulation
+                    p-2.5 rounded-[var(--radius-xl)] transition-colors touch-manipulation
                     ${
-                      darkMode
-                        ? 'text-white/60 active:bg-white/10'
-                        : 'text-gray-500 active:bg-gray-100'
-                    }
+                      'text-gray-500 active:bg-gray-100'}
                   `}
                   aria-label="More actions"
                   aria-expanded={showMoreActions}
@@ -341,12 +337,9 @@ export default function TaskBottomSheet({
                 <button
                   onClick={onClose}
                   className={`
-                    p-2.5 rounded-xl transition-colors touch-manipulation
+                    p-2.5 rounded-[var(--radius-xl)] transition-colors touch-manipulation
                     ${
-                      darkMode
-                        ? 'text-white/60 active:bg-white/10'
-                        : 'text-gray-500 active:bg-gray-100'
-                    }
+                      'text-gray-500 active:bg-gray-100'}
                   `}
                   aria-label="Close task details"
                 >
@@ -365,7 +358,7 @@ export default function TaskBottomSheet({
                   transition={{ duration: 0.2 }}
                   className={`
                     overflow-hidden border-b flex-shrink-0
-                    ${darkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-gray-50'}
+                    ${'border-gray-200 bg-gray-50'}
                   `}
                 >
                   <div className="flex items-center justify-around px-4 py-3">
@@ -376,15 +369,15 @@ export default function TaskBottomSheet({
                           setShowMoreActions(false);
                         }}
                         className={`
-                          flex flex-col items-center gap-1 p-2 rounded-xl touch-manipulation
-                          ${darkMode ? 'active:bg-white/10' : 'active:bg-gray-200'}
+                          flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
+                          ${'active:bg-gray-200'}
                         `}
                       >
                         <Mail
-                          className={`w-5 h-5 ${darkMode ? 'text-white/70' : 'text-gray-600'}`}
+                          className={`w-5 h-5 ${'text-gray-600'}`}
                         />
                         <span
-                          className={`text-xs ${darkMode ? 'text-white/60' : 'text-gray-500'}`}
+                          className={`text-xs ${'text-gray-500'}`}
                         >
                           Email
                         </span>
@@ -397,15 +390,15 @@ export default function TaskBottomSheet({
                           setShowMoreActions(false);
                         }}
                         className={`
-                          flex flex-col items-center gap-1 p-2 rounded-xl touch-manipulation
-                          ${darkMode ? 'active:bg-white/10' : 'active:bg-gray-200'}
+                          flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
+                          ${'active:bg-gray-200'}
                         `}
                       >
                         <Archive
-                          className={`w-5 h-5 ${darkMode ? 'text-white/70' : 'text-gray-600'}`}
+                          className={`w-5 h-5 ${'text-gray-600'}`}
                         />
                         <span
-                          className={`text-xs ${darkMode ? 'text-white/60' : 'text-gray-500'}`}
+                          className={`text-xs ${'text-gray-500'}`}
                         >
                           Archive
                         </span>
@@ -413,30 +406,30 @@ export default function TaskBottomSheet({
                     )}
                     <button
                       className={`
-                        flex flex-col items-center gap-1 p-2 rounded-xl touch-manipulation
-                        ${darkMode ? 'active:bg-white/10' : 'active:bg-gray-200'}
+                        flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
+                        ${'active:bg-gray-200'}
                       `}
                     >
                       <Copy
-                        className={`w-5 h-5 ${darkMode ? 'text-white/70' : 'text-gray-600'}`}
+                        className={`w-5 h-5 ${'text-gray-600'}`}
                       />
                       <span
-                        className={`text-xs ${darkMode ? 'text-white/60' : 'text-gray-500'}`}
+                        className={`text-xs ${'text-gray-500'}`}
                       >
                         Copy
                       </span>
                     </button>
                     <button
                       className={`
-                        flex flex-col items-center gap-1 p-2 rounded-xl touch-manipulation
-                        ${darkMode ? 'active:bg-white/10' : 'active:bg-gray-200'}
+                        flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
+                        ${'active:bg-gray-200'}
                       `}
                     >
                       <Share2
-                        className={`w-5 h-5 ${darkMode ? 'text-white/70' : 'text-gray-600'}`}
+                        className={`w-5 h-5 ${'text-gray-600'}`}
                       />
                       <span
-                        className={`text-xs ${darkMode ? 'text-white/60' : 'text-gray-500'}`}
+                        className={`text-xs ${'text-gray-500'}`}
                       >
                         Share
                       </span>
@@ -468,13 +461,10 @@ export default function TaskBottomSheet({
                         }}
                         autoFocus
                         className={`
-                          w-full px-4 py-3 rounded-xl border text-base font-medium
+                          w-full px-4 py-3 rounded-[var(--radius-xl)] border text-base font-medium
                           resize-none
                           ${
-                            darkMode
-                              ? 'bg-white/5 border-white/20 text-white focus:border-[var(--accent)]'
-                              : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-[var(--accent)]'
-                          }
+                            'bg-gray-50 border-gray-200 text-gray-900 focus:border-[var(--accent)]'}
                         `}
                         rows={3}
                       />
@@ -482,7 +472,7 @@ export default function TaskBottomSheet({
                         <button
                           onClick={handleSaveText}
                           disabled={saving}
-                          className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold active:brightness-90"
+                          className="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] bg-[var(--accent)] text-white text-sm font-semibold active:brightness-90"
                         >
                           {saving ? 'Saving...' : 'Save'}
                         </button>
@@ -492,12 +482,9 @@ export default function TaskBottomSheet({
                             setIsEditingText(false);
                           }}
                           className={`
-                            px-4 py-2.5 rounded-xl text-sm font-semibold
+                            px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-semibold
                             ${
-                              darkMode
-                                ? 'bg-white/10 text-white/80'
-                                : 'bg-gray-100 text-gray-600'
-                            }
+                              'bg-gray-100 text-gray-600'}
                           `}
                         >
                           Cancel
@@ -508,21 +495,18 @@ export default function TaskBottomSheet({
                     <button
                       onClick={() => setIsEditingText(true)}
                       className={`
-                        w-full text-left text-lg font-semibold p-3 -m-3 rounded-xl
+                        w-full text-left text-lg font-semibold p-3 -m-3 rounded-[var(--radius-xl)]
                         transition-colors group touch-manipulation
                         ${task.completed ? 'line-through opacity-60' : ''}
                         ${
-                          darkMode
-                            ? 'text-white active:bg-white/5'
-                            : 'text-gray-900 active:bg-gray-50'
-                        }
+                          'text-gray-900 active:bg-gray-50'}
                       `}
                     >
                       {task.text}
                       <Edit3
                         className={`
                         inline-block w-4 h-4 ml-2 opacity-0 group-hover:opacity-50
-                        ${darkMode ? 'text-white' : 'text-gray-900'}
+                        ${'text-gray-900'}
                       `}
                       />
                     </button>
@@ -535,19 +519,15 @@ export default function TaskBottomSheet({
                   <PropertyRow
                     label="Status"
                     icon={<Clock className="w-4 h-4" />}
-                    darkMode={darkMode}
                   >
                     <select
                       value={task.status}
                       onChange={(e) => handleStatusChange(e.target.value as TodoStatus)}
                       className={`
-                        w-full px-3 py-2.5 rounded-xl border text-sm font-medium
+                        w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                         cursor-pointer appearance-none
                         ${
-                          darkMode
-                            ? 'bg-white/5 border-white/10 text-white'
-                            : 'bg-gray-50 border-gray-200 text-gray-900'
-                        }
+                          'bg-gray-50 border-gray-200 text-gray-900'}
                       `}
                     >
                       {Object.entries(STATUS_CONFIG).map(([value, config]) => (
@@ -562,19 +542,15 @@ export default function TaskBottomSheet({
                   <PropertyRow
                     label="Priority"
                     icon={<Flag className="w-4 h-4" />}
-                    darkMode={darkMode}
                   >
                     <select
                       value={task.priority}
                       onChange={(e) => handlePriorityChange(e.target.value as TodoPriority)}
                       className={`
-                        w-full px-3 py-2.5 rounded-xl border text-sm font-medium
+                        w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                         cursor-pointer appearance-none
                         ${
-                          darkMode
-                            ? 'bg-white/5 border-white/10 text-white'
-                            : 'bg-gray-50 border-gray-200 text-gray-900'
-                        }
+                          'bg-gray-50 border-gray-200 text-gray-900'}
                       `}
                       style={{ color: priorityConfig.color }}
                     >
@@ -590,19 +566,15 @@ export default function TaskBottomSheet({
                   <PropertyRow
                     label="Assigned to"
                     icon={<User className="w-4 h-4" />}
-                    darkMode={darkMode}
                   >
                     <select
                       value={task.assigned_to || ''}
                       onChange={(e) => handleAssigneeChange(e.target.value || null)}
                       className={`
-                        w-full px-3 py-2.5 rounded-xl border text-sm font-medium
+                        w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                         cursor-pointer appearance-none
                         ${
-                          darkMode
-                            ? 'bg-white/5 border-white/10 text-white'
-                            : 'bg-gray-50 border-gray-200 text-gray-900'
-                        }
+                          'bg-gray-50 border-gray-200 text-gray-900'}
                       `}
                     >
                       <option value="">Unassigned</option>
@@ -618,7 +590,6 @@ export default function TaskBottomSheet({
                   <PropertyRow
                     label="Due date"
                     icon={<Calendar className="w-4 h-4" />}
-                    darkMode={darkMode}
                   >
                     <div className="relative">
                       <input
@@ -632,13 +603,10 @@ export default function TaskBottomSheet({
                           })
                         }
                         className={`
-                          w-full px-3 py-2.5 rounded-xl border text-sm font-medium
+                          w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                           cursor-pointer
                           ${
-                            darkMode
-                              ? 'bg-white/5 border-white/10 text-white'
-                              : 'bg-gray-50 border-gray-200 text-gray-900'
-                          }
+                            'bg-gray-50 border-gray-200 text-gray-900'}
                           ${dueDateInfo?.isOverdue ? 'text-red-500' : ''}
                         `}
                       />
@@ -656,7 +624,6 @@ export default function TaskBottomSheet({
                   count={totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : undefined}
                   isOpen={showSubtasks}
                   onToggle={() => setShowSubtasks(!showSubtasks)}
-                  darkMode={darkMode}
                 >
                   <div className="space-y-2">
                     {/* Existing subtasks */}
@@ -664,14 +631,14 @@ export default function TaskBottomSheet({
                       <div
                         key={subtask.id}
                         className={`
-                          flex items-center gap-3 px-3 py-2.5 rounded-xl group
-                          ${darkMode ? 'active:bg-white/5' : 'active:bg-gray-50'}
+                          flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)] group
+                          ${'active:bg-gray-50'}
                         `}
                       >
                         <button
                           onClick={() => handleToggleSubtask(subtask.id)}
                           className={`
-                            w-5 h-5 rounded-md border-2 flex items-center justify-center
+                            w-5 h-5 rounded-[var(--radius-md)] border-2 flex items-center justify-center
                             transition-all flex-shrink-0 touch-manipulation
                             ${
                               subtask.completed
@@ -689,7 +656,7 @@ export default function TaskBottomSheet({
                           className={`
                             flex-1 text-sm
                             ${subtask.completed ? 'line-through opacity-50' : ''}
-                            ${darkMode ? 'text-white/80' : 'text-gray-700'}
+                            ${'text-gray-700'}
                           `}
                         >
                           {subtask.text}
@@ -698,12 +665,9 @@ export default function TaskBottomSheet({
                         <button
                           onClick={() => handleDeleteSubtask(subtask.id)}
                           className={`
-                            p-1.5 rounded-lg touch-manipulation
+                            p-1.5 rounded-[var(--radius-lg)] touch-manipulation
                             ${
-                              darkMode
-                                ? 'text-white/40 active:text-white active:bg-white/10'
-                                : 'text-gray-400 active:text-red-500 active:bg-red-50'
-                            }
+                              'text-gray-400 active:text-red-500 active:bg-red-50'}
                           `}
                           aria-label="Delete subtask"
                         >
@@ -716,8 +680,7 @@ export default function TaskBottomSheet({
                     <div className="flex items-center gap-2 pt-2">
                       <Plus
                         className={`w-4 h-4 flex-shrink-0 ${
-                          darkMode ? 'text-white/40' : 'text-gray-400'
-                        }`}
+                          'text-gray-400'}`}
                       />
                       <input
                         type="text"
@@ -733,16 +696,13 @@ export default function TaskBottomSheet({
                         className={`
                           flex-1 px-2 py-2 text-sm bg-transparent border-none outline-none
                           ${
-                            darkMode
-                              ? 'text-white placeholder-white/40'
-                              : 'text-gray-900 placeholder-gray-400'
-                          }
+                            'text-gray-900 placeholder-gray-400'}
                         `}
                       />
                       {newSubtask.trim() && (
                         <button
                           onClick={handleAddSubtask}
-                          className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold touch-manipulation"
+                          className="px-3 py-1.5 rounded-[var(--radius-lg)] bg-[var(--accent)] text-white text-xs font-semibold touch-manipulation"
                         >
                           Add
                         </button>
@@ -757,7 +717,6 @@ export default function TaskBottomSheet({
                   icon={<FileText className="w-4 h-4" />}
                   isOpen={showNotes}
                   onToggle={() => setShowNotes(!showNotes)}
-                  darkMode={darkMode}
                 >
                   {isEditingNotes ? (
                     <div className="space-y-3">
@@ -767,13 +726,10 @@ export default function TaskBottomSheet({
                         placeholder="Add notes..."
                         autoFocus
                         className={`
-                          w-full px-4 py-3 rounded-xl border text-sm
+                          w-full px-4 py-3 rounded-[var(--radius-xl)] border text-sm
                           resize-none min-h-[120px]
                           ${
-                            darkMode
-                              ? 'bg-white/5 border-white/20 text-white placeholder-white/40 focus:border-[var(--accent)]'
-                              : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-[var(--accent)]'
-                          }
+                            'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-[var(--accent)]'}
                         `}
                         rows={5}
                       />
@@ -781,7 +737,7 @@ export default function TaskBottomSheet({
                         <button
                           onClick={handleSaveNotes}
                           disabled={saving}
-                          className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold active:brightness-90"
+                          className="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] bg-[var(--accent)] text-white text-sm font-semibold active:brightness-90"
                         >
                           {saving ? 'Saving...' : 'Save'}
                         </button>
@@ -791,12 +747,9 @@ export default function TaskBottomSheet({
                             setIsEditingNotes(false);
                           }}
                           className={`
-                            px-4 py-2.5 rounded-xl text-sm font-semibold
+                            px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-semibold
                             ${
-                              darkMode
-                                ? 'bg-white/10 text-white/80'
-                                : 'bg-gray-100 text-gray-600'
-                            }
+                              'bg-gray-100 text-gray-600'}
                           `}
                         >
                           Cancel
@@ -807,17 +760,11 @@ export default function TaskBottomSheet({
                     <button
                       onClick={() => setIsEditingNotes(true)}
                       className={`
-                        w-full text-left text-sm p-4 rounded-xl
+                        w-full text-left text-sm p-4 rounded-[var(--radius-xl)]
                         transition-colors touch-manipulation
                         ${
                           task.notes
-                            ? darkMode
-                              ? 'text-white/80 active:bg-white/5'
-                              : 'text-gray-700 active:bg-gray-50'
-                            : darkMode
-                              ? 'text-white/40 active:bg-white/5 italic'
-                              : 'text-gray-400 active:bg-gray-50 italic'
-                        }
+                            ? 'text-gray-700 active:bg-gray-50': 'text-gray-400 active:bg-gray-50 italic'}
                       `}
                     >
                       {task.notes || 'Tap to add notes...'}
@@ -832,12 +779,11 @@ export default function TaskBottomSheet({
                     icon={<Mic className="w-4 h-4" />}
                     isOpen={true}
                     onToggle={() => {}}
-                    darkMode={darkMode}
                   >
                     <div
                       className={`
-                        p-4 rounded-xl text-sm italic
-                        ${darkMode ? 'bg-white/5 text-white/70' : 'bg-gray-50 text-gray-600'}
+                        p-4 rounded-[var(--radius-xl)] text-sm italic
+                        ${'bg-gray-50 text-gray-600'}
                       `}
                     >
                       &ldquo;{sanitizeTranscription(task.transcription)}&rdquo;
@@ -853,41 +799,37 @@ export default function TaskBottomSheet({
                     count={task.attachments.length.toString()}
                     isOpen={showAttachments}
                     onToggle={() => setShowAttachments(!showAttachments)}
-                    darkMode={darkMode}
                   >
                     <div className="space-y-2">
                       {task.attachments.map((attachment) => (
                         <div
                           key={attachment.id}
                           className={`
-                            flex items-center gap-3 px-4 py-3 rounded-xl
-                            ${darkMode ? 'bg-white/5' : 'bg-gray-50'}
+                            flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)]
+                            ${'bg-gray-50'}
                           `}
                         >
                           <div
                             className={`
-                              w-10 h-10 rounded-xl flex items-center justify-center
-                              ${darkMode ? 'bg-white/10' : 'bg-gray-200'}
+                              w-10 h-10 rounded-[var(--radius-xl)] flex items-center justify-center
+                              ${'bg-gray-200'}
                             `}
                           >
                             <Paperclip
                               className={`w-5 h-5 ${
-                                darkMode ? 'text-white/60' : 'text-gray-500'
-                              }`}
+                                'text-gray-500'}`}
                             />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p
                               className={`text-sm font-medium truncate ${
-                                darkMode ? 'text-white' : 'text-gray-900'
-                              }`}
+                                'text-gray-900'}`}
                             >
                               {attachment.file_name}
                             </p>
                             <p
                               className={`text-xs ${
-                                darkMode ? 'text-white/40' : 'text-gray-500'
-                              }`}
+                                'text-gray-500'}`}
                             >
                               {(attachment.file_size / 1024).toFixed(1)} KB
                             </p>
@@ -903,10 +845,7 @@ export default function TaskBottomSheet({
                   className={`
                     pt-4 border-t text-xs space-y-1
                     ${
-                      darkMode
-                        ? 'border-white/10 text-white/40'
-                        : 'border-gray-200 text-gray-400'
-                    }
+                      'border-gray-200 text-gray-400'}
                   `}
                 >
                   <p>
@@ -927,19 +866,16 @@ export default function TaskBottomSheet({
             <footer
               className={`
                 flex items-center justify-between px-5 py-4 border-t flex-shrink-0
-                ${darkMode ? 'border-white/10' : 'border-gray-200'}
+                ${'border-gray-200'}
               `}
             >
               <button
                 onClick={handleDeleteTask}
                 className={`
-                  flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                  flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-semibold
                   transition-colors touch-manipulation
                   ${
-                    darkMode
-                      ? 'text-red-400 active:bg-red-500/10'
-                      : 'text-red-500 active:bg-red-50'
-                  }
+                    'text-red-500 active:bg-red-50'}
                 `}
               >
                 <Trash2 className="w-4 h-4" />
@@ -949,14 +885,11 @@ export default function TaskBottomSheet({
               <button
                 onClick={handleToggleComplete}
                 className={`
-                  flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                  flex items-center gap-2 px-5 py-2.5 rounded-[var(--radius-xl)] text-sm font-semibold
                   transition-colors touch-manipulation
                   ${
                     task.completed
-                      ? darkMode
-                        ? 'bg-white/10 text-white/80'
-                        : 'bg-gray-100 text-gray-700'
-                      : 'bg-[var(--success)] text-white'
+                      ? 'bg-gray-100 text-gray-700': 'bg-[var(--success)] text-white'
                   }
                 `}
               >
@@ -979,19 +912,17 @@ function PropertyRow({
   label,
   icon,
   children,
-  darkMode,
 }: {
   label: string;
   icon: React.ReactNode;
   children: React.ReactNode;
-  darkMode: boolean;
 }) {
   return (
     <div className="flex items-center gap-3">
       <div
         className={`
           flex items-center gap-2 text-sm font-medium w-28 flex-shrink-0
-          ${darkMode ? 'text-white/50' : 'text-gray-500'}
+          ${'text-gray-500'}
         `}
       >
         {icon}
@@ -1009,7 +940,6 @@ function CollapsibleSection({
   isOpen,
   onToggle,
   children,
-  darkMode,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -1017,13 +947,12 @@ function CollapsibleSection({
   isOpen: boolean;
   onToggle: () => void;
   children: React.ReactNode;
-  darkMode: boolean;
 }) {
   return (
     <section
       className={`
-        rounded-xl overflow-hidden
-        ${darkMode ? 'bg-white/5' : 'bg-gray-50'}
+        rounded-[var(--radius-xl)] overflow-hidden
+        ${'bg-gray-50'}
       `}
     >
       <button
@@ -1031,7 +960,7 @@ function CollapsibleSection({
         className={`
           w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold
           transition-colors touch-manipulation
-          ${darkMode ? 'text-white/80 active:bg-white/5' : 'text-gray-700 active:bg-gray-100'}
+          ${'text-gray-700 active:bg-gray-100'}
         `}
         aria-expanded={isOpen}
       >
@@ -1041,7 +970,7 @@ function CollapsibleSection({
           <span
             className={`
               px-2 py-0.5 rounded-full text-xs font-medium
-              ${darkMode ? 'bg-white/10 text-white/60' : 'bg-gray-200 text-gray-600'}
+              ${'bg-gray-200 text-gray-600'}
             `}
           >
             {count}

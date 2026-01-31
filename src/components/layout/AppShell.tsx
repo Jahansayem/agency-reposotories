@@ -98,7 +98,6 @@ export default function AppShell({
   onUserChange
 }: AppShellProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   
   // Get users from store for FloatingChatButton
   const users = useTodoStore((state) => state.usersWithColors);
@@ -277,7 +276,7 @@ export default function AppShell({
         className={`
           min-h-screen min-h-[100dvh] flex flex-col
           transition-colors duration-200
-          ${darkMode ? 'bg-[var(--background)]' : 'bg-[var(--background)]'}
+          ${'bg-[var(--background)]'}
         `}
       >
         {/* Skip link for accessibility */}
@@ -300,10 +299,7 @@ export default function AppShell({
           {/* ═══ MAIN CONTENT AREA ═══ */}
           <main
             id="main-content"
-            className={`
-              flex-1 flex flex-col min-w-0 overflow-hidden
-              transition-all duration-300 ease-out
-            `}
+            className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-out"
           >
             {/* Main content with proper overflow handling */}
             <div className="flex-1 overflow-auto">
@@ -324,10 +320,7 @@ export default function AppShell({
                   hidden lg:flex flex-col overflow-hidden
                   border-l flex-shrink-0
                   lg:w-[340px] xl:w-[380px] 2xl:w-[420px]
-                  ${darkMode
-                    ? 'bg-[var(--surface)] border-white/10'
-                    : 'bg-white border-[var(--border)]'
-                  }
+                  ${'bg-[var(--surface)] border-[var(--border)]'}
                 `}
               >
                 {rightPanelContent}
@@ -375,10 +368,7 @@ export default function AppShell({
                 className={`
                   fixed inset-x-0 bottom-0 z-50 lg:hidden
                   max-h-[85vh] rounded-t-3xl overflow-hidden
-                  ${darkMode
-                    ? 'bg-[var(--surface)]'
-                    : 'bg-white'
-                  }
+                  ${'bg-[var(--surface)]'}
                 `}
               >
                 {/* Drag handle */}
@@ -386,7 +376,7 @@ export default function AppShell({
                   <div
                     className={`
                       w-10 h-1 rounded-full
-                      ${darkMode ? 'bg-white/20' : 'bg-[var(--border)]'}
+                      ${'bg-[var(--border)]'}
                     `}
                   />
                 </div>
@@ -420,7 +410,6 @@ export default function AppShell({
 
 function MobileMenuContent({ onClose }: { onClose: () => void }) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const { setActiveView, currentUser } = useAppShell();
 
   const menuItems = [
@@ -436,7 +425,7 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="space-y-2 pb-4">
-      <h2 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+      <h2 className={`text-lg font-semibold mb-4 ${'text-[var(--foreground)]'}`}>
         Navigation
       </h2>
       {menuItems.map(item => (
@@ -444,12 +433,9 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
           key={item.id}
           onClick={() => handleItemClick(item.id)}
           className={`
-            w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left
+            w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
             transition-colors
-            ${darkMode
-              ? 'text-white/80 hover:bg-white/10'
-              : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-            }
+            ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
           `}
         >
           <span className="text-xl">{item.icon}</span>
@@ -459,16 +445,13 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 
       {isOwner(currentUser) && (
         <>
-          <div className={`border-t my-4 ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`} />
+          <div className={`border-t my-4 ${'border-[var(--border)]'}`} />
           <button
             onClick={() => handleItemClick('goals')}
             className={`
-              w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left
+              w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
               transition-colors
-              ${darkMode
-                ? 'text-white/80 hover:bg-white/10'
-                : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
           >
             <span className="text-xl">🎯</span>
@@ -482,14 +465,13 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 
 function MobileFiltersContent({ onClose }: { onClose: () => void }) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
 
   return (
     <div className="space-y-4 pb-4">
-      <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+      <h2 className={`text-lg font-semibold ${'text-[var(--foreground)]'}`}>
         Filters
       </h2>
-      <p className={`text-sm ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>
+      <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
         Filter controls will be rendered here
       </p>
     </div>

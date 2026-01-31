@@ -128,10 +128,10 @@ export function AgencySwitcher({
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
         className={`
-          flex items-center gap-2 rounded-lg
-          bg-white dark:bg-gray-800
-          border border-gray-200 dark:border-gray-700
-          hover:bg-gray-50 dark:hover:bg-gray-700
+          flex items-center gap-2 rounded-[var(--radius-lg)]
+          bg-[var(--surface)]
+          border border-[var(--border)]
+          hover:bg-[var(--surface-2)]
           transition-colors
           ${sizeClasses[size]}
           ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
@@ -175,9 +175,9 @@ export function AgencySwitcher({
             transition={{ duration: 0.15 }}
             className="
               absolute z-50 mt-1 w-72
-              bg-white dark:bg-gray-800
-              border border-gray-200 dark:border-gray-700
-              rounded-lg shadow-lg
+              bg-[var(--surface)]
+              border border-[var(--border)]
+              rounded-[var(--radius-lg)] shadow-lg
               overflow-hidden
             "
             role="listbox"

@@ -139,6 +139,7 @@ export default function AttachmentUpload({
           <button
             onClick={onClose}
             disabled={uploading}
+            aria-label="Close upload dialog"
             className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />

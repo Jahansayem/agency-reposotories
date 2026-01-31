@@ -183,7 +183,7 @@ export default function TaskSections({
             <button
               onClick={() => toggleSection(section.id)}
               className={`
-                w-full flex items-center gap-2 px-3 py-2 rounded-lg
+                w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
                 transition-colors duration-200
                 hover:bg-[var(--surface-2)]
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]

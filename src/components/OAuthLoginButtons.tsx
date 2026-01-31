@@ -33,7 +33,7 @@ export function OAuthLoginButtons() {
       <button
         onClick={() => handleOAuthLogin('google')}
         disabled={loading !== null}
-        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--surface)] border-2 border-[var(--border)] rounded-[var(--radius-lg)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading === 'google' ? (
           <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
@@ -66,7 +66,7 @@ export function OAuthLoginButtons() {
       <button
         onClick={() => handleOAuthLogin('apple')}
         disabled={loading !== null}
-        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white rounded-lg hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white rounded-[var(--radius-lg)] hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading === 'apple' ? (
           <div className="w-5 h-5 border-2 border-white dark:border-black border-t-transparent rounded-full animate-spin" />
@@ -86,7 +86,7 @@ export function OAuthLoginButtons() {
           <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+          <span className="px-4 bg-[var(--surface)] text-[var(--text-muted)]">
             or use PIN
           </span>
         </div>

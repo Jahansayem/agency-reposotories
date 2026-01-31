@@ -26,7 +26,6 @@ interface DashboardProps {
   onFilterOverdue: () => void;
   onFilterDueToday: () => void;
   onFilterMyTasks: () => void;
-  darkMode?: boolean;
 }
 
 interface WeekDay {
@@ -88,7 +87,6 @@ export default function Dashboard({
   onAddTask,
   onFilterOverdue,
   onFilterDueToday,
-  darkMode = false,
 }: DashboardProps) {
   const stats = useMemo(() => {
     const today = new Date();
@@ -198,15 +196,13 @@ export default function Dashboard({
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#0A1628]' : 'bg-slate-50'}`}>
+    <div className={`min-h-screen ${'bg-slate-50'}`}>
       {/* Header */}
       <div className="relative overflow-hidden">
         <div
           className="absolute inset-0"
           style={{
-            background: darkMode
-              ? 'linear-gradient(135deg, #0A1628 0%, #0033A0 50%, #1E3A5F 100%)'
-              : 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
+            background: 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
           }}
         />
 
@@ -271,7 +267,7 @@ export default function Dashboard({
                 <button
                   key={task.id}
                   onClick={onFilterDueToday}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors hover:bg-[var(--surface-2)]"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-colors hover:bg-[var(--surface-2)]"
                 >
                   <Badge
                     variant={
@@ -329,7 +325,7 @@ export default function Dashboard({
 
             <button
               onClick={onNavigateToTasks}
-              className="w-full flex items-start gap-3 px-4 py-3 rounded-xl text-left transition-colors hover:bg-[var(--surface-2)]"
+              className="w-full flex items-start gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-colors hover:bg-[var(--surface-2)]"
             >
               <div className="mt-1">
                 <Badge

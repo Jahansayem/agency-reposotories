@@ -7,7 +7,6 @@ type EmptyStateVariant = 'no-tasks' | 'no-results' | 'all-done' | 'no-due-today'
 
 interface EmptyStateProps {
   variant: EmptyStateVariant;
-  darkMode?: boolean;
   searchQuery?: string;
   onAddTask?: () => void;
   onClearSearch?: () => void;
@@ -512,11 +511,11 @@ export default function EmptyState({
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.3, type: 'spring', stiffness: 300, damping: 20 }}
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 relative"
+        className="w-14 h-14 rounded-[var(--radius-2xl)] flex items-center justify-center mb-5 relative"
         style={{ backgroundColor: config.bgColor }}
       >
         <div
-          className="absolute inset-0 rounded-2xl blur-xl opacity-50"
+          className="absolute inset-0 rounded-[var(--radius-2xl)] blur-xl opacity-50"
           style={{ backgroundColor: config.color }}
         />
         <Icon className="w-7 h-7 relative z-10" style={{ color: config.color }} />
@@ -553,7 +552,7 @@ export default function EmptyState({
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleAction}
-          className="mt-6 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg w-full sm:w-auto"
+          className="mt-6 px-6 py-3 rounded-[var(--radius-xl)] font-semibold text-sm transition-all duration-200 shadow-lg w-full sm:w-auto"
           style={{
             backgroundColor: config.color,
             color: 'white',

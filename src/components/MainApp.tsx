@@ -77,7 +77,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     closeShortcuts,
   } = useAppShell();
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
 
   // Kick off data fetching & real-time subscriptions so the Zustand store
   // gets populated. This must run here (not only in TodoList) because
@@ -431,7 +430,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       {showWeeklyChart && (
         <WeeklyProgressChart
           todos={todos}
-          darkMode={darkMode}
           show={showWeeklyChart}
           onClose={closeWeeklyChart}
         />
@@ -441,7 +439,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <KeyboardShortcutsModal
         show={showShortcuts}
         onClose={closeShortcuts}
-        darkMode={darkMode}
       />
 
       {/* Sync status indicator - shows real-time connection state */}

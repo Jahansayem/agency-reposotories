@@ -98,7 +98,6 @@ export default function TaskCard({
   compact = false,
 }: TaskCardProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
 
   const [isHovered, setIsHovered] = useState(false);
   const [showMobileMetadata, setShowMobileMetadata] = useState(false);
@@ -143,11 +142,11 @@ export default function TaskCard({
       color = 'var(--warning)';
     } else {
       label = format(dueDate, 'MMM d');
-      color = darkMode ? 'var(--text-muted)' : 'var(--text-muted)';
+      color = 'var(--text-muted)';
     }
 
     return { label, color, urgent, isOverdue };
-  }, [task.due_date, task.completed, darkMode]);
+  }, [task.due_date, task.completed]);
 
   // Check if task has additional context
   const hasAttachments = task.attachments && task.attachments.length > 0;
@@ -181,7 +180,7 @@ export default function TaskCard({
       onClick={handleCardClick}
       className={`
         group relative overflow-hidden
-        rounded-xl border cursor-pointer
+        rounded-[var(--radius-xl)] border cursor-pointer
         transition-all duration-200
         ${task.completed
           ? 'opacity-60'
@@ -191,10 +190,7 @@ export default function TaskCard({
           ? 'ring-2 ring-[var(--accent)] ring-offset-2'
           : ''
         }
-        ${darkMode
-          ? 'bg-[var(--surface)] border-white/10 hover:border-white/20'
-          : 'bg-white border-[var(--border)] hover:border-[var(--border-hover)]'
-        }
+        ${'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border-hover)]'}
       `}
       style={{
         borderLeftWidth: task.priority === 'urgent' || task.priority === 'high' ? 4 : 1,
@@ -224,7 +220,7 @@ export default function TaskCard({
             onClick={handleToggleComplete}
             className={`
               flex-shrink-0 mt-0.5
-              w-5 h-5 rounded-md border-2
+              w-5 h-5 rounded-[var(--radius-md)] border-2
               flex items-center justify-center
               transition-all duration-200
               ${task.completed
@@ -256,10 +252,7 @@ export default function TaskCard({
                 text-sm font-medium leading-snug
                 ${task.completed
                   ? 'line-through text-[var(--text-muted)]'
-                  : darkMode
-                    ? 'text-white'
-                    : 'text-[var(--foreground)]'
-                }
+                  : 'text-[var(--foreground)]'}
               `}
             >
               {task.text}
@@ -306,7 +299,7 @@ export default function TaskCard({
                 <span
                   className={`
                     inline-flex items-center gap-1.5 text-xs
-                    ${darkMode ? 'text-white/50' : 'text-[var(--text-muted)]'}
+                    ${'text-[var(--text-muted)]'}
                     ${showMobileMetadata ? 'flex' : 'hidden'} sm:inline-flex
                   `}
                 >
@@ -326,7 +319,7 @@ export default function TaskCard({
                 <span
                   className={`
                     items-center gap-1 text-xs
-                    ${darkMode ? 'text-white/50' : 'text-[var(--text-muted)]'}
+                    ${'text-[var(--text-muted)]'}
                     ${showMobileMetadata ? 'inline-flex' : 'hidden'} sm:inline-flex
                   `}
                 >
@@ -339,7 +332,7 @@ export default function TaskCard({
               {(hasNotes || hasTranscription) && (
                 <span
                   className={`
-                    ${darkMode ? 'text-white/50' : 'text-[var(--text-muted)]'}
+                    ${'text-[var(--text-muted)]'}
                     ${showMobileMetadata ? 'inline-flex' : 'hidden'} sm:inline-flex
                   `}
                 >
@@ -357,7 +350,7 @@ export default function TaskCard({
                   }}
                   className={`
                     inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded
-                    ${darkMode ? 'text-white/40 hover:text-white/60 hover:bg-white/5' : 'text-[var(--text-light)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)]'}
+                    ${'text-[var(--text-light)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)]'}
                     sm:hidden
                     transition-colors
                   `}
@@ -390,7 +383,7 @@ export default function TaskCard({
             <motion.div
               initial={{ opacity: 0, x: -5 }}
               animate={{ opacity: isHovered ? 1 : 0, x: isHovered ? 0 : -5 }}
-              className={`hidden sm:block ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}
+              className={`hidden sm:block ${'text-[var(--text-muted)]'}`}
             >
               <ChevronRight className="w-5 h-5" />
             </motion.div>
@@ -409,7 +402,7 @@ export default function TaskCard({
                     ? 'line-through opacity-50'
                     : ''
                   }
-                  ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}
+                  ${'text-[var(--text-muted)]'}
                 `}
               >
                 {subtask.completed ? (
@@ -421,7 +414,7 @@ export default function TaskCard({
               </div>
             ))}
             {task.subtasks && task.subtasks.length > 3 && (
-              <p className={`text-xs pl-5 ${darkMode ? 'text-white/40' : 'text-[var(--text-light)]'}`}>
+              <p className={`text-xs pl-5 ${'text-[var(--text-light)]'}`}>
                 +{task.subtasks.length - 3} more
               </p>
             )}
@@ -439,10 +432,7 @@ export default function TaskCard({
             className={`
               absolute bottom-0 inset-x-0 px-4 py-2
               hidden sm:flex items-center justify-end gap-2
-              ${darkMode
-                ? 'bg-gradient-to-t from-[var(--surface)] via-[var(--surface)]/80 to-transparent'
-                : 'bg-gradient-to-t from-white via-white/80 to-transparent'
-              }
+              ${'bg-gradient-to-t from-white via-white/80 to-transparent'}
             `}
           >
             <button
@@ -451,12 +441,9 @@ export default function TaskCard({
                 // Quick edit priority
               }}
               className={`
-                p-1.5 rounded-lg text-xs font-medium
+                p-1.5 rounded-[var(--radius-lg)] text-xs font-medium
                 transition-colors
-                ${darkMode
-                  ? 'hover:bg-white/10 text-white/60 hover:text-white'
-                  : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                }
+                ${'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'}
               `}
             >
               <Flag className="w-4 h-4" />
@@ -467,12 +454,9 @@ export default function TaskCard({
                 // Quick edit due date
               }}
               className={`
-                p-1.5 rounded-lg text-xs font-medium
+                p-1.5 rounded-[var(--radius-lg)] text-xs font-medium
                 transition-colors
-                ${darkMode
-                  ? 'hover:bg-white/10 text-white/60 hover:text-white'
-                  : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                }
+                ${'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'}
               `}
             >
               <Calendar className="w-4 h-4" />
@@ -483,12 +467,9 @@ export default function TaskCard({
                 // Quick edit assignee
               }}
               className={`
-                p-1.5 rounded-lg text-xs font-medium
+                p-1.5 rounded-[var(--radius-lg)] text-xs font-medium
                 transition-colors
-                ${darkMode
-                  ? 'hover:bg-white/10 text-white/60 hover:text-white'
-                  : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                }
+                ${'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'}
               `}
             >
               <User className="w-4 h-4" />
@@ -499,12 +480,9 @@ export default function TaskCard({
                 // More options
               }}
               className={`
-                p-1.5 rounded-lg text-xs font-medium
+                p-1.5 rounded-[var(--radius-lg)] text-xs font-medium
                 transition-colors
-                ${darkMode
-                  ? 'hover:bg-white/10 text-white/60 hover:text-white'
-                  : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                }
+                ${'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'}
               `}
             >
               <MoreHorizontal className="w-4 h-4" />
@@ -523,30 +501,26 @@ export default function TaskCard({
 
 export function TaskCardSkeleton({ compact = false }: { compact?: boolean }) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
 
   return (
     <div
       className={`
-        rounded-xl border p-4 animate-pulse
+        rounded-[var(--radius-xl)] border p-4 animate-pulse
         ${compact ? 'py-3' : ''}
-        ${darkMode
-          ? 'bg-[var(--surface)] border-white/10'
-          : 'bg-white border-[var(--border)]'
-        }
+        ${'bg-[var(--surface)] border-[var(--border)]'}
       `}
     >
       <div className="flex items-start gap-3">
-        <div className={`w-5 h-5 rounded-md ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-2)]'}`} />
+        <div className={`w-5 h-5 rounded-[var(--radius-md)] ${'bg-[var(--surface-2)]'}`} />
         <div className="flex-1 space-y-2">
-          <div className={`h-4 rounded w-3/4 ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-2)]'}`} />
+          <div className={`h-4 rounded w-3/4 ${'bg-[var(--surface-2)]'}`} />
           <div className="flex gap-2">
-            <div className={`h-3 rounded w-16 ${darkMode ? 'bg-white/5' : 'bg-[var(--surface-2)]'}`} />
-            <div className={`h-3 rounded w-20 hidden sm:block ${darkMode ? 'bg-white/5' : 'bg-[var(--surface-2)]'}`} />
+            <div className={`h-3 rounded w-16 ${'bg-[var(--surface-2)]'}`} />
+            <div className={`h-3 rounded w-20 hidden sm:block ${'bg-[var(--surface-2)]'}`} />
           </div>
         </div>
         {/* Assignee avatar skeleton - hidden on mobile */}
-        <div className={`w-7 h-7 rounded-full hidden sm:block ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-2)]'}`} />
+        <div className={`w-7 h-7 rounded-full hidden sm:block ${'bg-[var(--surface-2)]'}`} />
       </div>
     </div>
   );

@@ -205,7 +205,7 @@ export function TaskCompletionSummary({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+          className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
@@ -245,7 +245,7 @@ export function TaskCompletionSummary({
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              className="p-2 rounded-[var(--radius-lg)] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
               aria-label="Close task summary modal"
             >
               <X className="w-5 h-5 text-gray-500" aria-hidden="true" />
@@ -291,7 +291,7 @@ export function TaskCompletionSummary({
                       role="radio"
                       aria-checked={isSelected}
                       aria-label={`${option.label}${isSelected ? ' (selected)' : ''}`}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
                         isSelected
                           ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500'
                           : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -317,7 +317,7 @@ export function TaskCompletionSummary({
                 aria-controls={showPreview ? 'summary-panel' : undefined}
                 id="preview-tab"
                 tabIndex={showPreview ? 0 : -1}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                className={`px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
                   showPreview
                     ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -332,7 +332,7 @@ export function TaskCompletionSummary({
                 aria-controls={!showPreview ? 'summary-panel' : undefined}
                 id="raw-tab"
                 tabIndex={!showPreview ? 0 : -1}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                className={`px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
                   !showPreview
                     ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -348,7 +348,7 @@ export function TaskCompletionSummary({
                 id="summary-panel"
                 role="tabpanel"
                 aria-labelledby="preview-tab"
-                className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 space-y-3"
+                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-4 space-y-3"
               >
                 <div className="font-medium text-gray-900 dark:text-white">
                   {todo.text}
@@ -413,7 +413,7 @@ export function TaskCompletionSummary({
                 id="summary-panel"
                 role="tabpanel"
                 aria-labelledby="raw-tab"
-                className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap overflow-x-auto"
+                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-4 text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap overflow-x-auto"
               >
                 {summaryText}
               </pre>
@@ -424,7 +424,7 @@ export function TaskCompletionSummary({
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-[var(--radius-xl)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
             >
               Close
             </button>
@@ -433,7 +433,7 @@ export function TaskCompletionSummary({
               data-primary-action
               disabled={copyState === 'success'}
               aria-describedby={statusMessage ? 'copy-status' : undefined}
-              className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-xl flex items-center justify-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${getCopyButtonStyles()} ${
+              className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-[var(--radius-xl)] flex items-center justify-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${getCopyButtonStyles()} ${
                 copyState === 'success' ? 'cursor-default' : ''
               }`}
             >

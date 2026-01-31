@@ -38,7 +38,6 @@ interface TodoModalsProps {
   onUserChange: (user: AuthUser | null) => void;
 
   // Theme
-  darkMode: boolean;
 
   // Todos for various modals
   todos: Todo[];
@@ -113,7 +112,6 @@ interface TodoModalsProps {
 function TodoModals({
   currentUser,
   onUserChange,
-  darkMode,
   todos,
   users,
   showCelebration,
@@ -193,7 +191,6 @@ function TodoModals({
         onClose={() => setShowAddTaskModal(false)}
         onAdd={onAddTodo}
         users={users}
-        darkMode={darkMode}
         currentUserId={currentUser.id}
       />
 
@@ -201,7 +198,6 @@ function TodoModals({
       {templateTodo && (
         <SaveTemplateModal
           todo={templateTodo}
-          darkMode={darkMode}
           onClose={closeTemplateModal}
           onSave={onSaveAsTemplate}
         />
@@ -211,7 +207,6 @@ function TodoModals({
       {showDuplicateModal && pendingTask && (
         <DuplicateDetectionModal
           isOpen={showDuplicateModal}
-          darkMode={darkMode}
           newTaskText={pendingTask.text}
           newTaskPriority={pendingTask.priority}
           newTaskDueDate={pendingTask.dueDate}
@@ -232,7 +227,6 @@ function TodoModals({
           todos={emailTargetTodos}
           currentUser={currentUser}
           onClose={closeEmailModal}
-          darkMode={darkMode}
         />
       )}
 

@@ -58,7 +58,6 @@ import {
 interface KanbanBoardProps {
   todos: Todo[];
   users: string[];
-  darkMode?: boolean;
   onStatusChange: (id: string, status: TodoStatus) => void;
   onDelete: (id: string) => void;
   onAssign: (id: string, assignedTo: string | null) => void;
@@ -89,7 +88,6 @@ interface KanbanBoardProps {
 interface TaskDetailModalProps {
   todo: Todo;
   users: string[];
-  darkMode?: boolean;
   onClose: () => void;
   onDelete: (id: string) => void;
   onAssign: (id: string, assignedTo: string | null) => void;
@@ -110,7 +108,6 @@ interface TaskDetailModalProps {
 function TaskDetailModal({
   todo,
   users,
-  darkMode,
   onClose,
   onDelete,
   onAssign,
@@ -277,28 +274,20 @@ function TaskDetailModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl ${
-          darkMode ? 'bg-slate-800' : 'bg-white'
-        }`}
+        className={`w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] bg-[var(--surface)]`}
       >
         {/* Priority bar */}
         <div className="h-2" style={{ backgroundColor: priorityConfig.color }} />
 
         {/* Header */}
-        <div className={`flex items-start justify-between p-4 border-b ${
-          darkMode ? 'border-slate-700' : 'border-slate-200'
-        }`}>
+        <div className={`flex items-start justify-between p-4 border-b border-[var(--border)]`}>
           <div className="flex-1 min-w-0 pr-4">
             {editingText ? (
               <div className="space-y-2">
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border text-base font-medium resize-none ${
-                    darkMode
-                      ? 'bg-slate-700 border-slate-600 text-white'
-                      : 'bg-white border-slate-200 text-slate-800'
-                  } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                  className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-base font-medium resize-none bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
                   rows={2}
                   autoFocus
                 />
@@ -314,9 +303,7 @@ function TaskDetailModal({
                       setText(todo.text);
                       setEditingText(false);
                     }}
-                    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      darkMode ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-100'
-                    }`}
+                    className={`px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors text-[var(--text-muted)] hover:bg-[var(--surface-2)]`}
                   >
                     Cancel
                   </button>
@@ -325,9 +312,7 @@ function TaskDetailModal({
             ) : (
               <div
                 onClick={() => onUpdateText && setEditingText(true)}
-                className={`text-lg font-semibold cursor-pointer hover:opacity-80 ${
-                  darkMode ? 'text-white' : 'text-slate-800'
-                } ${todo.completed ? 'line-through opacity-60' : ''}`}
+                className={`text-lg font-semibold cursor-pointer hover:opacity-80 text-[var(--foreground)] ${todo.completed ? 'line-through opacity-60' : ''}`}
               >
                 {todo.text}
                 {onUpdateText && (
@@ -338,9 +323,8 @@ function TaskDetailModal({
           </div>
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg transition-colors ${
-              darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
-            }`}
+            aria-label="Close task details"
+            className={`p-2 rounded-[var(--radius-lg)] transition-colors hover:bg-[var(--surface-2)] text-[var(--text-muted)]`}
           >
             <X className="w-5 h-5" />
           </button>
@@ -351,17 +335,13 @@ function TaskDetailModal({
           {/* Status, Priority, Due Date, Assignee */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <label className={`block text-xs font-medium mb-1.5 text-[var(--text-muted)]`}>
                 Status
               </label>
               <select
                 value={todo.status || 'todo'}
                 onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${
-                  darkMode
-                    ? 'bg-slate-700 border-slate-600 text-white'
-                    : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               >
                 {columns.map((col) => (
                   <option key={col.id} value={col.id}>{col.title}</option>
@@ -370,17 +350,13 @@ function TaskDetailModal({
             </div>
 
             <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <label className={`block text-xs font-medium mb-1.5 text-[var(--text-muted)]`}>
                 Priority
               </label>
               <select
                 value={priority}
                 onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${
-                  darkMode
-                    ? 'bg-slate-700 border-slate-600 text-white'
-                    : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -390,7 +366,7 @@ function TaskDetailModal({
             </div>
 
             <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <label className={`block text-xs font-medium mb-1.5 text-[var(--text-muted)]`}>
                 Due Date
               </label>
               <div className="flex gap-1.5">
@@ -398,58 +374,40 @@ function TaskDetailModal({
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                  className={`flex-1 min-w-0 px-3 py-2 rounded-lg border text-sm ${
-                    darkMode
-                      ? 'bg-slate-700 border-slate-600 text-white'
-                      : 'bg-white border-slate-200 text-slate-800'
-                  } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                  className={`flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
                 />
                 {!todo.completed && (
                   <div className="relative">
                     <button
                       onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
-                      className={`p-2 rounded-lg border text-sm transition-colors ${
-                        darkMode
-                          ? 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-amber-900/30 hover:text-amber-400 hover:border-amber-500/50'
-                          : 'bg-white border-slate-200 text-slate-500 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-300'
-                      }`}
+                      className={`p-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm transition-colors bg-[var(--surface)] text-[var(--text-muted)] hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400`}
                       title="Snooze (quick reschedule)"
                     >
                       <Clock className="w-4 h-4" />
                     </button>
                     {showSnoozeMenu && (
-                      <div className={`absolute right-0 top-full mt-1 rounded-lg shadow-lg z-50 py-1 min-w-[140px] border ${
-                        darkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-200'
-                      }`}>
+                      <div className={`absolute right-0 top-full mt-1 rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-50 py-1 min-w-[140px] border border-[var(--border)] bg-[var(--surface-elevated)]`}>
                         <button
                           onClick={() => handleSnooze(1)}
-                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
-                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors hover:bg-[var(--surface-2)] text-[var(--foreground)]`}
                         >
                           Tomorrow
                         </button>
                         <button
                           onClick={() => handleSnooze(2)}
-                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
-                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors hover:bg-[var(--surface-2)] text-[var(--foreground)]`}
                         >
                           In 2 Days
                         </button>
                         <button
                           onClick={() => handleSnooze(7)}
-                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
-                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors hover:bg-[var(--surface-2)] text-[var(--foreground)]`}
                         >
                           Next Week
                         </button>
                         <button
                           onClick={() => handleSnooze(30)}
-                          className={`w-full px-3 py-2 text-sm text-left transition-colors ${
-                            darkMode ? 'hover:bg-slate-700 text-slate-200' : 'hover:bg-slate-100 text-slate-700'
-                          }`}
+                          className={`w-full px-3 py-2 text-sm text-left transition-colors hover:bg-[var(--surface-2)] text-[var(--foreground)]`}
                         >
                           Next Month
                         </button>
@@ -461,17 +419,13 @@ function TaskDetailModal({
             </div>
 
             <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <label className={`block text-xs font-medium mb-1.5 text-[var(--text-muted)]`}>
                 Assigned To
               </label>
               <select
                 value={todo.assigned_to || ''}
                 onChange={(e) => onAssign(todo.id, e.target.value || null)}
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${
-                  darkMode
-                    ? 'bg-slate-700 border-slate-600 text-white'
-                    : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               >
                 <option value="">Unassigned</option>
                 {users.map((user) => (
@@ -483,7 +437,7 @@ function TaskDetailModal({
 
           {/* Notes */}
           <div>
-            <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <label className={`block text-xs font-medium mb-1.5 text-[var(--text-muted)]`}>
               <FileText className="inline-block w-3.5 h-3.5 mr-1" />
               Notes
             </label>
@@ -493,28 +447,18 @@ function TaskDetailModal({
               onBlur={handleSaveNotes}
               placeholder="Add notes or context..."
               rows={3}
-              className={`w-full px-3 py-2 rounded-lg border text-sm resize-none ${
-                darkMode
-                  ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'
-                  : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
-              } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+              className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm resize-none bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
             />
           </div>
 
           {/* Voicemail Transcription */}
           {todo.transcription && (
-            <div className={`p-3 rounded-lg border ${
-              darkMode
-                ? 'bg-[var(--accent)]/10 border-[var(--accent)]/20'
-                : 'bg-[var(--accent)]/5 border-[var(--accent)]/10'
-            }`}>
+            <div className={`p-3 rounded-[var(--radius-lg)] border border-[var(--accent)]/15 bg-[var(--accent)]/8`}>
               <div className="flex items-center gap-2 mb-2">
                 <Mic className="w-4 h-4 text-[var(--accent)]" />
                 <span className="text-sm font-medium text-[var(--accent)]">Voicemail Transcription</span>
               </div>
-              <p className={`text-sm whitespace-pre-wrap leading-relaxed ${
-                darkMode ? 'text-slate-200' : 'text-slate-700'
-              }`}>
+              <p className={`text-sm whitespace-pre-wrap leading-relaxed text-[var(--foreground)]`}>
                 {todo.transcription}
               </p>
             </div>
@@ -524,17 +468,13 @@ function TaskDetailModal({
           {onUpdateSubtasks && (
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <label className={`text-xs font-medium text-[var(--text-muted)]`}>
                   <CheckSquare className="inline-block w-3.5 h-3.5 mr-1" />
                   Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})
                 </label>
                 <button
                   onClick={() => setShowContentImporter(true)}
-                  className={`text-xs px-2 py-1 rounded-md flex items-center gap-1 transition-colors ${
-                    darkMode
-                      ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
-                      : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                  }`}
+                  className={`text-xs px-2 py-1 rounded-md flex items-center gap-1 transition-colors bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-500/30`}
                 >
                   <Mail className="w-3 h-3" />
                   Import
@@ -545,16 +485,14 @@ function TaskDetailModal({
                 {subtasks.map((subtask, index) => (
                   <div
                     key={subtask.id || index}
-                    className={`flex items-center gap-2 p-2 rounded-lg ${
-                      darkMode ? 'bg-slate-700/50' : 'bg-slate-50'
-                    }`}
+                    className={`flex items-center gap-2 p-2 rounded-[var(--radius-lg)] bg-[var(--surface-2)]`}
                   >
                     <button
                       onClick={() => handleToggleSubtask(index)}
                       className={`flex-shrink-0 ${
                         subtask.completed
                           ? 'text-green-500'
-                          : darkMode ? 'text-slate-400' : 'text-slate-400'
+                          : 'text-[var(--text-muted)]'
                       }`}
                     >
                       {subtask.completed ? (
@@ -566,15 +504,13 @@ function TaskDetailModal({
                     <span className={`flex-1 text-sm ${
                       subtask.completed
                         ? 'line-through opacity-60'
-                        : darkMode ? 'text-white' : 'text-slate-800'
+                        : 'text-[var(--foreground)]'
                     }`}>
                       {subtask.text}
                     </span>
                     <button
                       onClick={() => handleDeleteSubtask(index)}
-                      className={`p-1 rounded transition-colors ${
-                        darkMode ? 'hover:bg-slate-600 text-slate-400' : 'hover:bg-slate-200 text-slate-400'
-                      } hover:text-red-500`}
+                      className={`p-1 rounded transition-colors hover:bg-[var(--surface-3)] text-[var(--text-muted)] hover:text-red-500`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -589,15 +525,12 @@ function TaskDetailModal({
                     onChange={(e) => setNewSubtaskText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
                     placeholder="Add a subtask..."
-                    className={`flex-1 px-3 py-2 rounded-lg border text-sm ${
-                      darkMode
-                        ? 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'
-                        : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
-                    } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                    className={`flex-1 px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
                   />
                   <button
                     onClick={handleAddSubtask}
                     disabled={!newSubtaskText.trim()}
+                    aria-label="Add subtask"
                     className="px-3 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Plus className="w-4 h-4" />
@@ -610,7 +543,7 @@ function TaskDetailModal({
           {/* Recurrence */}
           {onSetRecurrence && (
             <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <label className={`block text-xs font-medium mb-1.5 text-[var(--text-muted)]`}>
                 <Repeat className="inline-block w-3.5 h-3.5 mr-1" />
                 Repeat
               </label>
@@ -620,11 +553,7 @@ function TaskDetailModal({
                   const value = e.target.value;
                   onSetRecurrence(todo.id, value === '' ? null : value as RecurrencePattern);
                 }}
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${
-                  darkMode
-                    ? 'bg-slate-700 border-slate-600 text-white'
-                    : 'bg-white border-slate-200 text-slate-800'
-                } focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
               >
                 {recurrenceOptions.map((opt) => (
                   <option key={opt.value || 'none'} value={opt.value}>{opt.label}</option>
@@ -636,7 +565,7 @@ function TaskDetailModal({
           {/* Attachments */}
           {onUpdateAttachments && (
             <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <label className={`block text-xs font-medium mb-1.5 text-[var(--text-muted)]`}>
                 <Paperclip className="inline-block w-3.5 h-3.5 mr-1" />
                 Attachments ({attachments.length})
               </label>
@@ -649,24 +578,20 @@ function TaskDetailModal({
                     return (
                       <div
                         key={attachment.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg ${
-                          darkMode ? 'bg-slate-700/50' : 'bg-slate-50'
-                        }`}
+                        className={`flex items-center gap-2 p-2 rounded-[var(--radius-lg)] bg-[var(--surface-2)]`}
                       >
                         <FileIcon className={`w-4 h-4 flex-shrink-0 ${
                           attachment.file_type === 'audio' ? 'text-[var(--accent)]' : 'text-amber-500'
                         }`} />
-                        <span className={`flex-1 text-sm truncate ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+                        <span className={`flex-1 text-sm truncate text-[var(--foreground)]`}>
                           {attachment.file_name}
                         </span>
-                        <span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                        <span className={`text-xs text-[var(--text-light)]`}>
                           {formatFileSize(attachment.file_size)}
                         </span>
                         <button
                           onClick={() => handleRemoveAttachment(attachment.id)}
-                          className={`p-1 rounded transition-colors ${
-                            darkMode ? 'hover:bg-slate-600 text-slate-400' : 'hover:bg-slate-200 text-slate-400'
-                          } hover:text-red-500`}
+                          className={`p-1 rounded transition-colors hover:bg-[var(--surface-3)] text-[var(--text-muted)] hover:text-red-500`}
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -687,11 +612,7 @@ function TaskDetailModal({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-dashed text-sm transition-colors ${
-                  darkMode
-                    ? 'border-slate-600 text-slate-400 hover:bg-slate-700/50 hover:border-slate-500'
-                    : 'border-slate-300 text-slate-500 hover:bg-slate-50 hover:border-slate-400'
-                } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] text-sm transition-colors text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)] ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <Upload className="w-4 h-4" />
                 {isUploading ? 'Uploading...' : 'Add files'}
@@ -700,8 +621,8 @@ function TaskDetailModal({
           )}
 
           {/* Quick Actions */}
-          <div className={`pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-            <label className={`block text-xs font-medium mb-2 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <div className={`pt-3 border-t border-[var(--border)]`}>
+            <label className={`block text-xs font-medium mb-2 text-[var(--text-muted)]`}>
               Quick Actions
             </label>
             <div className="flex flex-wrap gap-2">
@@ -709,12 +630,10 @@ function TaskDetailModal({
               {onToggle && (
                 <button
                   onClick={() => onToggle(todo.id, !todo.completed)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-sm transition-colors ${
                     todo.completed
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : darkMode
-                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]'
                   }`}
                 >
                   {todo.completed ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
@@ -729,11 +648,7 @@ function TaskDetailModal({
                     onDuplicate(todo);
                     onClose();
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    darkMode
-                      ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-sm transition-colors bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]`}
                 >
                   <Copy className="w-4 h-4" />
                   Duplicate
@@ -747,11 +662,7 @@ function TaskDetailModal({
                     onSaveAsTemplate(todo);
                     onClose();
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    darkMode
-                      ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-sm transition-colors bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]`}
                 >
                   <BookmarkPlus className="w-4 h-4" />
                   Save Template
@@ -765,11 +676,7 @@ function TaskDetailModal({
                     onEmailCustomer(todo);
                     onClose();
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    darkMode
-                      ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-sm transition-colors bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)]`}
                 >
                   <Mail className="w-4 h-4" />
                   Email Update
@@ -779,9 +686,7 @@ function TaskDetailModal({
           </div>
 
           {/* Meta info */}
-          <div className={`pt-3 border-t text-xs ${
-            darkMode ? 'border-slate-700 text-slate-500' : 'border-slate-200 text-slate-400'
-          }`}>
+          <div className={`pt-3 border-t border-[var(--border)] text-xs text-[var(--text-light)]`}>
             Created by {todo.created_by} • {new Date(todo.created_at).toLocaleDateString()}
             {todo.recurrence && (
               <span className="ml-2">
@@ -793,15 +698,13 @@ function TaskDetailModal({
         </div>
 
         {/* Footer */}
-        <div className={`flex items-center justify-between p-4 border-t ${
-          darkMode ? 'border-slate-700' : 'border-slate-200'
-        }`}>
+        <div className={`flex items-center justify-between p-4 border-t border-[var(--border)]`}>
           <button
             onClick={() => {
               onDelete(todo.id);
               onClose();
             }}
-            className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm"
+            className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[var(--radius-lg)] transition-colors text-sm"
           >
             <Trash2 className="w-4 h-4" />
             Delete Task
@@ -830,7 +733,6 @@ function TaskDetailModal({
 export default function KanbanBoard({
   todos,
   users,
-  darkMode = true,
   onStatusChange,
   onDelete,
   onAssign,
@@ -1032,7 +934,6 @@ export default function KanbanBoard({
           <TaskDetailModal
             todo={selectedTodo}
             users={users}
-            darkMode={darkMode}
             onClose={() => setSelectedTodo(null)}
             onDelete={onDelete}
             onAssign={onAssign}

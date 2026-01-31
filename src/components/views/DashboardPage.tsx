@@ -7,7 +7,6 @@ import {
   Sunrise,
 } from 'lucide-react';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
-import { useTheme } from '@/contexts/ThemeContext';
 import DoerDashboard from '../dashboard/DoerDashboard';
 import ManagerDashboard from '../dashboard/ManagerDashboard';
 import DailyDigestPanel from '../dashboard/DailyDigestPanel';
@@ -33,8 +32,6 @@ export default function DashboardPage({
   onFilterOverdue,
   onFilterDueToday,
 }: DashboardPageProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Check if user has team members (is a manager)
@@ -93,15 +90,13 @@ export default function DashboardPage({
   }, [todos]);
 
   return (
-    <div className={`min-h-full ${darkMode ? 'bg-[var(--background)]' : 'bg-slate-50'}`}>
+    <div className={`min-h-full ${'bg-slate-50'}`}>
       {/* Header */}
       <div className="relative overflow-hidden">
         <div
           className="absolute inset-0"
           style={{
-            background: darkMode
-              ? 'linear-gradient(135deg, #0A1628 0%, #0033A0 50%, #1E3A5F 100%)'
-              : 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
+            background: 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
           }}
         />
         <div className="relative px-6 py-8 max-w-7xl mx-auto">
@@ -124,7 +119,7 @@ export default function DashboardPage({
             <button
               onClick={onFilterOverdue}
               aria-label={`View ${stats.overdue} overdue task${stats.overdue !== 1 ? 's' : ''}`}
-              className={`p-4 rounded-xl text-left transition-all duration-200 min-h-[92px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0033A0] ${
+              className={`p-4 rounded-[var(--radius-xl)] text-left transition-all duration-200 min-h-[92px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0033A0] ${
                 stats.overdue > 0
                   ? 'bg-gradient-to-br from-red-500/25 to-red-500/10 hover:from-red-500/30 hover:to-red-500/15 border-2 border-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
                   : 'bg-white/10 hover:bg-white/15 border border-white/10'
@@ -144,7 +139,7 @@ export default function DashboardPage({
             <button
               onClick={onFilterDueToday}
               aria-label={`View ${stats.dueToday} task${stats.dueToday !== 1 ? 's' : ''} due today`}
-              className={`p-4 rounded-xl text-left transition-all duration-200 min-h-[92px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0033A0] ${
+              className={`p-4 rounded-[var(--radius-xl)] text-left transition-all duration-200 min-h-[92px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0033A0] ${
                 stats.dueToday > 0
                   ? 'bg-gradient-to-br from-amber-500/20 to-amber-500/5 hover:from-amber-500/25 hover:to-amber-500/10 border border-amber-500/30'
                   : 'bg-white/10 hover:bg-white/15 border border-white/10'
@@ -161,7 +156,7 @@ export default function DashboardPage({
             </button>
 
             {/* Due This Week - Informational */}
-            <div className="p-4 rounded-xl text-left bg-white/8 border border-white/10 min-h-[92px]" role="status" aria-label={`${stats.upcoming} tasks due this week`}>
+            <div className="p-4 rounded-[var(--radius-xl)] text-left bg-white/8 border border-white/10 min-h-[92px]" role="status" aria-label={`${stats.upcoming} tasks due this week`}>
               <p className="text-3xl font-bold text-white tabular-nums">
                 {stats.upcoming}
               </p>

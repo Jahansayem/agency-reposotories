@@ -63,20 +63,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             An unexpected error occurred. You can try refreshing the page or going back.
           </p>
           {process.env.NODE_ENV === 'development' && this.state.error && (
-            <pre className="text-left text-xs bg-[var(--surface-2)] p-4 rounded-lg mb-4 max-w-lg overflow-auto text-red-600 dark:text-red-400">
+            <pre className="text-left text-xs bg-[var(--surface-2)] p-4 rounded-[var(--radius-lg)] mb-4 max-w-lg overflow-auto text-red-600 dark:text-red-400">
               {this.state.error.message}
             </pre>
           )}
           <div className="flex gap-3">
             <button
               onClick={this.handleReset}
-              className="px-4 py-2 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] transition-colors"
+              className="px-4 py-2 rounded-[var(--radius-lg)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] transition-colors"
             >
               Try Again
             </button>
             <button
               onClick={this.handleReload}
-              className="px-4 py-2 rounded-lg bg-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/90 text-white transition-colors flex items-center gap-2"
+              className="px-4 py-2 rounded-[var(--radius-lg)] bg-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/90 text-white transition-colors flex items-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
               Reload Page

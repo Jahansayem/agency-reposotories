@@ -15,7 +15,6 @@ import {
 
 interface DuplicateDetectionModalProps {
   isOpen: boolean;
-  darkMode?: boolean;
   newTaskText: string;
   newTaskPriority: TodoPriority;
   newTaskDueDate?: string;
@@ -31,7 +30,6 @@ interface DuplicateDetectionModalProps {
 
 export default function DuplicateDetectionModal({
   isOpen,
-  darkMode = false,
   newTaskText,
   newTaskPriority,
   newTaskDueDate,
@@ -85,27 +83,27 @@ export default function DuplicateDetectionModal({
             animate={reducedMotion ? { opacity: 1 } : 'visible'}
             exit={reducedMotion ? { opacity: 0 } : 'exit'}
             transition={reducedMotion ? { duration: 0 } : modalTransition}
-            className={`relative w-full max-w-xl rounded-[var(--radius-xl)] shadow-xl overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-white'}`}
+            className={`relative w-full max-w-xl rounded-[var(--radius-xl)] shadow-xl overflow-hidden ${'bg-[var(--surface)]'}`}
           >
         {/* Header */}
-        <div className={`px-6 py-4 border-b ${darkMode ? 'border-slate-700' : 'border-[var(--border)]'}`}>
+        <div className={`px-6 py-4 border-b ${'border-[var(--border)]'}`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--warning-light)] flex items-center justify-center">
               <AlertTriangle className="w-5 h-5 text-[var(--warning)]" />
             </div>
             <div>
-              <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+              <h2 className={`text-lg font-bold ${'text-[var(--foreground)]'}`}>
                 Similar Tasks Found
               </h2>
-              <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+              <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
                 We found {duplicates.length} existing task{duplicates.length !== 1 ? 's' : ''} that might be related
               </p>
             </div>
             <button
               onClick={onCancel}
+              aria-label="Close duplicate detection"
               className={`ml-auto p-2 rounded-lg transition-colors ${
-                darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'
-              }`}
+                'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
             >
               <X className="w-5 h-5" />
             </button>
@@ -113,12 +111,12 @@ export default function DuplicateDetectionModal({
         </div>
 
         {/* New task preview */}
-        <div className={`px-6 py-4 border-b ${darkMode ? 'border-slate-700 bg-slate-800/50' : 'border-[var(--border)] bg-[var(--surface-2)]/50'}`}>
-          <p className={`text-xs font-medium uppercase tracking-wide mb-2 ${darkMode ? 'text-slate-500' : 'text-[var(--text-light)]'}`}>
+        <div className={`px-6 py-4 border-b ${'border-[var(--border)] bg-[var(--surface-2)]/50'}`}>
+          <p className={`text-xs font-medium uppercase tracking-wide mb-2 ${'text-[var(--text-light)]'}`}>
             New Task
           </p>
-          <div className={`p-3 rounded-lg ${darkMode ? 'bg-slate-700/50' : 'bg-white'}`}>
-            <p className={`font-medium ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+          <div className={`p-3 rounded-lg ${'bg-[var(--surface)]'}`}>
+            <p className={`font-medium ${'text-[var(--foreground)]'}`}>
               {newTaskText}
             </p>
             <div className="flex items-center gap-3 mt-2 text-xs">
@@ -130,13 +128,13 @@ export default function DuplicateDetectionModal({
                 {priorityConfig.label}
               </span>
               {newTaskDueDate && (
-                <span className={darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}>
+                <span className={'text-[var(--text-muted)]'}>
                   <Calendar className="w-3 h-3 inline mr-1" />
                   {new Date(newTaskDueDate).toLocaleDateString()}
                 </span>
               )}
               {newTaskAssignedTo && (
-                <span className={darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}>
+                <span className={'text-[var(--text-muted)]'}>
                   Assigned to {newTaskAssignedTo}
                 </span>
               )}
@@ -157,7 +155,7 @@ export default function DuplicateDetectionModal({
 
         {/* Existing tasks */}
         <div className="px-6 py-4 max-h-80 overflow-y-auto">
-          <p className={`text-xs font-medium uppercase tracking-wide mb-3 ${darkMode ? 'text-slate-500' : 'text-[var(--text-light)]'}`}>
+          <p className={`text-xs font-medium uppercase tracking-wide mb-3 ${'text-[var(--text-light)]'}`}>
             Existing Similar Tasks
           </p>
           <div className="space-y-3">
@@ -168,14 +166,11 @@ export default function DuplicateDetectionModal({
                   key={todo.id}
                   onClick={() => onAddToExisting(todo.id)}
                   className={`w-full text-left p-4 rounded-xl border-2 transition-all hover:shadow-md ${
-                    darkMode
-                      ? 'bg-slate-700/50 border-slate-600 hover:border-[var(--brand-sky)]'
-                      : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--brand-blue)]'
-                  }`}
+                    'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--brand-blue)]'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className={`font-medium line-clamp-2 ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                      <p className={`font-medium line-clamp-2 ${'text-[var(--foreground)]'}`}>
                         {todo.text}
                       </p>
                       <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
@@ -185,7 +180,7 @@ export default function DuplicateDetectionModal({
                         >
                           {todoPriorityConfig.label}
                         </span>
-                        <span className={darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}>
+                        <span className={'text-[var(--text-muted)]'}>
                           {new Date(todo.created_at).toLocaleDateString()}
                         </span>
                         {todo.attachments && todo.attachments.length > 0 && (
@@ -207,8 +202,7 @@ export default function DuplicateDetectionModal({
                           <span
                             key={i}
                             className={`text-xs px-2 py-0.5 rounded-full ${
-                              darkMode ? 'bg-amber-500/20 text-amber-400' : 'bg-[var(--warning-light)] text-[var(--warning)]'
-                            }`}
+                              'bg-[var(--warning-light)] text-[var(--warning)]'}`}
                           >
                             {reason}
                           </span>
@@ -217,8 +211,7 @@ export default function DuplicateDetectionModal({
                     </div>
                     <div className="flex-shrink-0">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        darkMode ? 'bg-[var(--brand-blue)]/20' : 'bg-[var(--brand-blue)]/10'
-                      }`}>
+                        'bg-[var(--brand-blue)]/10'}`}>
                         <GitMerge className="w-4 h-4 text-[var(--brand-blue)]" />
                       </div>
                     </div>
@@ -230,18 +223,15 @@ export default function DuplicateDetectionModal({
         </div>
 
         {/* Footer */}
-        <div className={`px-6 py-4 border-t flex items-center justify-between gap-3 ${darkMode ? 'border-slate-700 bg-slate-800/50' : 'border-[var(--border)] bg-[var(--surface-2)]/50'}`}>
-          <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+        <div className={`px-6 py-4 border-t flex items-center justify-between gap-3 ${'border-[var(--border)] bg-[var(--surface-2)]/50'}`}>
+          <p className={`text-xs ${'text-[var(--text-muted)]'}`}>
             Click a task above to add your content to it, or create a new task
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={onCancel}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                darkMode
-                  ? 'text-slate-300 hover:bg-slate-700'
-                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
-              }`}
+                'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'}`}
             >
               Cancel
             </button>

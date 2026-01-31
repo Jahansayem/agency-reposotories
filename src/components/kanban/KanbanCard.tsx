@@ -143,10 +143,10 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`group rounded-xl border-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing bg-white dark:bg-slate-800 touch-manipulation ${
+      className={`group rounded-[var(--radius-xl)] border-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing bg-[var(--surface)] touch-manipulation ${
         isDragging
           ? 'shadow-2xl ring-2 ring-[var(--accent)] border-[var(--accent)]'
-          : 'shadow-sm border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-slate-200 dark:hover:border-slate-600'
+          : 'shadow-[var(--shadow-sm)] border-[var(--border-subtle)] hover:shadow-[var(--shadow-md)] hover:border-[var(--border-hover)]'
       }`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
@@ -169,7 +169,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
               <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                 isSelected
                   ? 'bg-[var(--accent)] border-[var(--accent)] text-white'
-                  : 'border-slate-300 dark:border-slate-600 hover:border-[var(--accent)]'
+                  : 'border-[var(--border)] hover:border-[var(--accent)]'
               }`}>
                 {isSelected && <CheckSquare className="w-3 h-3" />}
               </div>
@@ -177,7 +177,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
           )}
           <div className="flex-1 min-w-0">
             <p className={`text-base sm:text-sm font-medium leading-snug ${
-              todo.completed ? 'line-through text-slate-400' : 'text-slate-800 dark:text-white'
+              todo.completed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--foreground)]'
             }`}>
               {todo.text}
             </p>
@@ -197,14 +197,14 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
             {todo.due_date && (
               <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium ${
                 todo.completed
-                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                  ? 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                   : overdue
                     ? 'bg-red-500 text-white'
                     : isDueToday(todo.due_date)
                       ? 'bg-orange-500 text-white'
                       : isDueSoon(todo.due_date)
                         ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                        : 'text-slate-500 dark:text-slate-400'
+                        : 'text-[var(--text-muted)]'
               }`}>
                 {overdue ? <AlertCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
                 {formatDueDate(todo.due_date)}
@@ -222,7 +222,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
             {/* "Has more" indicator - subtle dot when task has hidden content */}
             {(hasNotes || subtaskCount > 0 || attachmentCount > 0 || hasTranscription) && (
               <span
-                className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500 opacity-40 group-hover:opacity-0 transition-opacity"
+                className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] opacity-40 group-hover:opacity-0 transition-opacity"
                 title="Hover for more details"
               />
             )}
@@ -232,17 +232,17 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
           {(hasNotes || subtaskCount > 0 || attachmentCount > 0 || hasTranscription) && (
             <div className="flex items-center gap-2 mt-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
               {hasTranscription && (
-                <span className="inline-flex items-center gap-1 text-xs text-[var(--accent)] dark:text-[#72B5E8]">
+                <span className="inline-flex items-center gap-1 text-xs text-[var(--accent)]">
                   <Mic className="w-3 h-3" />
                 </span>
               )}
               {hasNotes && (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                <span className="inline-flex items-center gap-1 text-xs text-[var(--text-light)]">
                   <FileText className="w-3 h-3" />
                 </span>
               )}
               {subtaskCount > 0 && (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
+                <span className="inline-flex items-center gap-1 text-xs text-[var(--text-light)]">
                   <CheckSquare className="w-3 h-3" />
                   {completedSubtasks}/{subtaskCount}
                 </span>
@@ -250,7 +250,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
               {attachmentCount > 0 && (() => {
                 const hasAudio = todo.attachments?.some(a => a.file_type === 'audio');
                 const AttachmentIcon = hasAudio ? Music : Paperclip;
-                const colorClass = hasAudio ? 'text-[var(--accent)] dark:text-[#72B5E8]' : 'text-amber-500 dark:text-amber-400';
+                const colorClass = hasAudio ? 'text-[var(--accent)]' : 'text-amber-500 dark:text-amber-400';
                 return (
                   <span className={`inline-flex items-center gap-1 text-xs ${colorClass}`}>
                     <AttachmentIcon className="w-3 h-3" />
@@ -263,7 +263,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
 
           {/* Footer row - edit indicator */}
           <div className="flex items-center justify-end mt-2">
-            <Edit3 className="w-3 h-3 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Edit3 className="w-3 h-3 text-[var(--text-light)] opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           </div>
         </div>
@@ -275,7 +275,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 overflow-hidden"
+              className="mt-3 pt-3 border-t border-[var(--border-subtle)] overflow-hidden"
             >
               {/* Row 1: Date and Assignee */}
               <div className="flex gap-2 mb-2">
@@ -284,13 +284,13 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
+                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
                 />
                 <select
                   value={todo.assigned_to || ''}
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
+                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
                 >
                   <option value="">Unassigned</option>
                   {users.map((user) => (
@@ -304,7 +304,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
                   value={priority}
                   onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
+                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -322,7 +322,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
                       }}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      className="p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/30 text-slate-400 hover:text-amber-500 transition-colors touch-manipulation flex items-center justify-center"
+                      className="p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-[var(--radius-lg)] hover:bg-amber-50 dark:hover:bg-amber-900/30 text-[var(--text-muted)] hover:text-amber-500 transition-colors touch-manipulation flex items-center justify-center"
                       aria-label="Snooze task"
                       title="Snooze (reschedule)"
                     >
@@ -330,30 +330,30 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
                     </motion.button>
                     {showSnoozeMenu && (
                       <div
-                        className="absolute right-0 bottom-full mb-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg z-50 py-1 min-w-[140px]"
+                        className="absolute right-0 bottom-full mb-1 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-50 py-1 min-w-[140px]"
                         onPointerDown={(e) => e.stopPropagation()}
                       >
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSnooze(1); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
                         >
                           Tomorrow
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSnooze(2); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
                         >
                           In 2 Days
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSnooze(7); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
                         >
                           Next Week
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleSnooze(30); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
                         >
                           Next Month
                         </button>
@@ -369,7 +369,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
                   }}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  className="flex-shrink-0 p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 transition-colors touch-manipulation flex items-center justify-center"
+                  className="flex-shrink-0 p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-[var(--radius-lg)] hover:bg-red-50 dark:hover:bg-red-900/30 text-[var(--text-muted)] hover:text-red-500 transition-colors touch-manipulation flex items-center justify-center"
                   aria-label="Delete task"
                 >
                   <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -396,10 +396,10 @@ export function KanbanCard({ todo }: { todo: Todo }) {
   const overdue = todo.due_date && !todo.completed && isOverdue(todo.due_date);
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl border-2 border-[var(--accent)] overflow-hidden ring-4 ring-[var(--accent)]/20">
+    <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-2xl border-2 border-[var(--accent)] overflow-hidden ring-4 ring-[var(--accent)]/20">
       <div className="h-1.5" style={{ backgroundColor: priorityConfig.color }} />
       <div className="p-3">
-        <p className="text-sm font-medium text-slate-800 dark:text-white">{todo.text}</p>
+        <p className="text-sm font-medium text-[var(--foreground)]">{todo.text}</p>
         <div className="flex items-center gap-1.5 mt-2">
           <span
             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium"

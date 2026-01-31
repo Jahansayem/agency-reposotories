@@ -509,6 +509,7 @@ export default function StrategicDashboard({
               </div>
               <button
                 onClick={onClose}
+                aria-label="Close strategic dashboard"
                 className={`p-2 rounded-lg transition-colors ${
                   darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
                 }`}
@@ -1116,7 +1117,7 @@ function AddGoalModal({ categories, darkMode, newGoal, setNewGoal, onClose, onCr
             </div>
             <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>New Goal</h2>
           </div>
-          <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
+          <button onClick={onClose} aria-label="Close new goal form" className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1262,7 +1263,7 @@ function EditGoalModal({ goal, categories, darkMode, onClose, onSave, onToggleMi
                 </p>
               </div>
             </div>
-            <button onClick={onClose} className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
+            <button onClick={onClose} aria-label="Close goal details" className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
               <X className="w-5 h-5" />
             </button>
           </div>

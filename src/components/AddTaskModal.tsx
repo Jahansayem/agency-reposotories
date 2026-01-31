@@ -20,7 +20,6 @@ interface AddTaskModalProps {
     reminderAt?: string
   ) => void;
   users: string[];
-  darkMode?: boolean;
   currentUserId?: string;
 }
 
@@ -29,7 +28,6 @@ export default function AddTaskModal({
   onClose,
   onAdd,
   users,
-  darkMode = true,
   currentUserId,
 }: AddTaskModalProps) {
   // Handle escape key to close
@@ -98,24 +96,21 @@ export default function AddTaskModal({
           >
             <div
               className={`
-                rounded-xl border shadow-2xl overflow-hidden flex flex-col max-h-full
-                ${darkMode
-                  ? 'bg-[var(--surface)] border-white/10'
-                  : 'bg-white border-[var(--border)]'
-                }
+                rounded-[var(--radius-xl)] border shadow-2xl overflow-hidden flex flex-col max-h-full
+                ${'bg-[var(--surface)] border-[var(--border)]'}
               `}
             >
               {/* Header */}
               <div
                 className={`
                   flex items-center justify-between px-6 py-5 border-b
-                  ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+                  ${'border-[var(--border)]'}
                 `}
               >
                 <h2
                   className={`
                     text-xl font-semibold
-                    ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
+                    ${'text-[var(--foreground)]'}
                   `}
                 >
                   Add New Task
@@ -123,11 +118,8 @@ export default function AddTaskModal({
                 <button
                   onClick={onClose}
                   className={`
-                    p-2.5 rounded-lg transition-colors
-                    ${darkMode
-                      ? 'text-white/70 hover:text-white hover:bg-white/10'
-                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                    }
+                    p-2.5 rounded-[var(--radius-lg)] transition-colors
+                    ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                   `}
                   aria-label="Close modal"
                 >
@@ -140,7 +132,6 @@ export default function AddTaskModal({
                 <AddTodo
                   onAdd={handleAdd}
                   users={users}
-                  darkMode={darkMode}
                   currentUserId={currentUserId}
                   autoFocus={true}
                 />

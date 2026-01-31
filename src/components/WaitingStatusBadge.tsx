@@ -79,7 +79,7 @@ export function WaitingStatusBadge({
       {isWaiting ? (
         // Currently waiting - show status and clear button
         <div
-          className={`flex items-center gap-3 p-3 rounded-lg border ${
+          className={`flex items-center gap-3 p-3 rounded-[var(--radius-lg)] border ${
             isOverdue
               ? 'bg-red-500/10 border-red-500/30 dark:bg-red-500/15'
               : 'bg-purple-500/10 border-purple-500/30 dark:bg-purple-500/15'
@@ -126,7 +126,7 @@ export function WaitingStatusBadge({
           <button
             onClick={handleClearWaiting}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
           >
             <CheckCircle className="w-4 h-4" />
             <span>Responded</span>
@@ -137,7 +137,7 @@ export function WaitingStatusBadge({
         <div className="relative">
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-sm font-medium transition-colors"
           >
             <Clock className="w-4 h-4 text-purple-500" />
             <span>Mark Waiting</span>
@@ -149,13 +149,13 @@ export function WaitingStatusBadge({
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="absolute top-full left-0 mt-2 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg overflow-hidden min-w-[180px]"
+                className="absolute top-full left-0 mt-2 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-lg overflow-hidden min-w-[180px]"
               >
                 <div className="p-1">
                   <button
                     onClick={() => handleMarkWaiting('call')}
                     disabled={loading}
-                    className="flex items-center gap-2 w-full px-3 py-2 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] hover:bg-[var(--surface-hover)] text-left transition-colors disabled:opacity-50"
                   >
                     <Phone className="w-4 h-4 text-purple-500" />
                     <span>After Phone Call</span>
@@ -163,7 +163,7 @@ export function WaitingStatusBadge({
                   <button
                     onClick={() => handleMarkWaiting('email')}
                     disabled={loading}
-                    className="flex items-center gap-2 w-full px-3 py-2 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] hover:bg-[var(--surface-hover)] text-left transition-colors disabled:opacity-50"
                   >
                     <Mail className="w-4 h-4 text-blue-500" />
                     <span>After Email</span>
@@ -171,7 +171,7 @@ export function WaitingStatusBadge({
                   <button
                     onClick={() => handleMarkWaiting('other')}
                     disabled={loading}
-                    className="flex items-center gap-2 w-full px-3 py-2 rounded-md hover:bg-[var(--surface-hover)] text-left transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] hover:bg-[var(--surface-hover)] text-left transition-colors disabled:opacity-50"
                   >
                     <MessageSquare className="w-4 h-4 text-gray-500" />
                     <span>Other Contact</span>

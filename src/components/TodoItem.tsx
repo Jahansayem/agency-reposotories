@@ -568,7 +568,7 @@ function TodoItemComponent({
 
     // Completed tasks - keep priority bar but fade overall
     if (todo.completed) {
-      return `bg-[var(--surface)] border-[var(--border-subtle)] opacity-75 ${priorityBorder}`;
+      return `bg-white dark:bg-[#162236] border-[var(--border-subtle)] opacity-75 ${priorityBorder}`;
     }
     // Selected state
     if (selected) {
@@ -578,19 +578,20 @@ function TodoItemComponent({
     if (dueDateStatus === 'overdue') {
       const isUrgentPriority = priority === 'urgent';
       const isHighPriority = priority === 'high';
+      const overdueBg = 'bg-[var(--danger-light)]';
       if (isUrgentPriority) {
         // CRITICAL OVERDUE URGENT: Pulse animation + thicker border (4px) for maximum urgency
-        return `bg-red-500/10 dark:bg-red-500/15 border-red-500/50 border-4 urgent-pulse ${priorityBorder}`;
+        return `${overdueBg} border-red-500/50 border-4 urgent-pulse ${priorityBorder}`;
       }
       if (isHighPriority) {
         // HIGH PRIORITY OVERDUE: Full red background, thicker border
-        return `bg-red-500/10 dark:bg-red-500/15 border-red-500/40 border-[3px] ${priorityBorder}`;
+        return `${overdueBg} border-red-500/40 border-[3px] ${priorityBorder}`;
       }
       // Medium/Low overdue - priority bar + subtle styling
-      return `bg-red-50 dark:bg-red-900/10 border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
+      return `${overdueBg} border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
     }
     // Default card with priority border
-    return `bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
+    return `bg-white dark:bg-[#162236] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
   };
 
   // Check if task is overdue for metadata visibility

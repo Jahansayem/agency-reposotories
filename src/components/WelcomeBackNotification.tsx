@@ -142,7 +142,7 @@ export default function WelcomeBackNotification({
           role="status"
           aria-live="polite"
         >
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-xl border border-[var(--border)] overflow-hidden">
             {/* Progress bar for auto-dismiss */}
             <div className="h-1 bg-slate-100 dark:bg-slate-700">
               <div
@@ -188,7 +188,7 @@ export default function WelcomeBackNotification({
                 {/* Close button */}
                 <button
                   onClick={handleClose}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0"
+                  className="p-1.5 rounded-[var(--radius-lg)] hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0"
                   aria-label="Dismiss notification"
                 >
                   <X className="w-4 h-4" />
@@ -210,7 +210,7 @@ export default function WelcomeBackNotification({
                       return (
                         <div
                           key={task.id}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 border-l-2"
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-lg)] bg-slate-50 dark:bg-slate-700/50 border-l-2"
                           style={{ borderLeftColor: priorityConfig.color }}
                         >
                           <div

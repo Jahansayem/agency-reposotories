@@ -408,7 +408,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
               px-3 py-2
               bg-[var(--foreground)] text-[var(--background)]
               text-xs font-medium
-              rounded-lg shadow-lg
+              rounded-[var(--radius-lg)] shadow-lg
               ${className}
             `}
             style={{

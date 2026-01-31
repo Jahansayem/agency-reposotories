@@ -63,7 +63,6 @@ export default function NavigationSidebar({
   onShowShortcuts,
 }: NavigationSidebarProps) {
   const { theme, toggleTheme } = useTheme();
-  const darkMode = theme === 'dark';
   const {
     activeView,
     setActiveView,
@@ -93,15 +92,11 @@ export default function NavigationSidebar({
   };
 
   const navItemClass = (isActive: boolean) => `
-    group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
+    group relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
     font-medium text-sm transition-all duration-150 cursor-pointer
-    ${isActive
-      ? darkMode
-        ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
-        : 'bg-[var(--accent-light)] text-[var(--accent)]'
-      : darkMode
-        ? 'text-white/60 hover:text-white hover:bg-white/5'
-        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+    \${isActive
+      ? 'bg-[var(--accent-light)] text-[var(--accent)]'
+      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
     }
   `;
 
@@ -109,9 +104,7 @@ export default function NavigationSidebar({
     w-5 h-5 flex-shrink-0 transition-colors
     ${isActive
       ? 'text-[var(--accent)]'
-      : darkMode
-        ? 'text-white/40 group-hover:text-white/70'
-        : 'text-[var(--text-muted)] group-hover:text-[var(--foreground)]'
+      : 'text-[var(--text-muted)] group-hover:text-[var(--foreground)]'
     }
   `;
 
@@ -124,14 +117,7 @@ export default function NavigationSidebar({
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       onMouseEnter={() => sidebarCollapsed && setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      className={`
-        hidden md:flex flex-col flex-shrink-0 overflow-hidden
-        border-r transition-colors
-        ${darkMode
-          ? 'bg-[var(--surface)] border-white/10'
-          : 'bg-white border-[var(--border)]'
-        }
-      `}
+      className="hidden md:flex flex-col flex-shrink-0 overflow-hidden border-r transition-colors bg-[var(--surface)] border-[var(--border)]"
       aria-label="Main navigation"
     >
       {/* ─── Header ─── */}
@@ -152,7 +138,7 @@ export default function NavigationSidebar({
                 <>
                   {/* Logo/Brand - fallback when multi-tenancy disabled */}
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                    className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: currentAgency?.primary_color || 'var(--brand-blue)' }}
                   >
                     <span className="text-white font-bold text-sm">
@@ -160,10 +146,10 @@ export default function NavigationSidebar({
                     </span>
                   </div>
                   <div className="overflow-hidden">
-                    <h1 className={`font-semibold text-sm truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                    <h1 className="font-semibold text-sm truncate text-[var(--foreground)]">
                       {currentAgency?.name || 'Bealer Agency'}
                     </h1>
-                    <p className={`text-xs truncate ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+                    <p className="text-xs truncate text-[var(--text-muted)]">
                       Task Manager
                     </p>
                   </div>
@@ -176,7 +162,7 @@ export default function NavigationSidebar({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto"
+              className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center mx-auto"
               style={{ backgroundColor: currentAgency?.primary_color || 'var(--brand-blue)' }}
             >
               <span className="text-white font-bold text-sm">
@@ -191,11 +177,8 @@ export default function NavigationSidebar({
           <button
             onClick={toggleSidebar}
             className={`
-              p-1.5 rounded-lg transition-colors
-              ${darkMode
-                ? 'text-white/40 hover:text-white hover:bg-white/10'
-                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              p-1.5 rounded-[var(--radius-lg)] transition-colors
+              text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
             `}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -213,7 +196,7 @@ export default function NavigationSidebar({
         <button
           onClick={triggerNewTask}
           className={`
-            w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
+            w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[var(--radius-xl)]
             font-medium text-sm transition-all
             bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]
             text-white shadow-md hover:shadow-lg hover:brightness-110
@@ -246,11 +229,11 @@ export default function NavigationSidebar({
         })}
 
         {/* Divider */}
-        <div className={`my-3 border-t ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`} />
+        <div className="my-3 border-t border-[var(--border)]" />
 
         {/* Section label */}
         {isExpanded && (
-          <p className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white/30' : 'text-[var(--text-light)]'}`}>
+          <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-light)]">
             More
           </p>
         )}
@@ -281,22 +264,19 @@ export default function NavigationSidebar({
         {(onShowWeeklyChart || onShowShortcuts) && (
           <>
             {/* Divider before utility actions */}
-            <div className={`my-3 border-t ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`} />
+            <div className="my-3 border-t border-[var(--border)]" />
 
             {/* Weekly Progress */}
             {onShowWeeklyChart && (
               <button
                 onClick={onShowWeeklyChart}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
                   font-medium text-sm transition-all duration-150
-                  ${darkMode
-                    ? 'text-white/60 hover:text-white hover:bg-white/5'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
                 `}
               >
-                <BarChart2 className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+                <BarChart2 className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
                 {isExpanded && <span>Weekly Progress</span>}
               </button>
             )}
@@ -306,19 +286,16 @@ export default function NavigationSidebar({
               <button
                 onClick={onShowShortcuts}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
                   font-medium text-sm transition-all duration-150
-                  ${darkMode
-                    ? 'text-white/60 hover:text-white hover:bg-white/5'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
                 `}
               >
-                <Keyboard className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+                <Keyboard className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
                 {isExpanded && (
                   <>
                     <span className="flex-1 text-left">Shortcuts</span>
-                    <span className={`text-xs ${darkMode ? 'text-white/30' : 'text-[var(--text-light)]'}`}>?</span>
+                    <span className="text-xs text-[var(--text-light)]">?</span>
                   </>
                 )}
               </button>
@@ -328,35 +305,26 @@ export default function NavigationSidebar({
       </nav>
 
       {/* ─── Footer / User Section ─── */}
-      <div className={`
-        mt-auto border-t px-3 py-3 space-y-2
-        ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
-      `}>
+      <div className="mt-auto border-t px-3 py-3 space-y-2 border-[var(--border)]">
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
           className={`
-            w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+            w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
             transition-colors
-            ${darkMode
-              ? 'text-white/60 hover:text-white hover:bg-white/10'
-              : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-            }
+            text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
           `}
-          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {isExpanded && <span className="text-sm">{darkMode ? 'Light' : 'Dark'}</span>}
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          {isExpanded && <span className="text-sm">{theme === 'dark' ? 'Light' : 'Dark'}</span>}
         </button>
 
         {/* User profile */}
         <div className={`
-          flex items-center gap-3 px-3 py-2.5 rounded-xl
+          flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
           transition-colors cursor-pointer
-          ${darkMode
-            ? 'hover:bg-white/5'
-            : 'hover:bg-[var(--surface-2)]'
-          }
+          hover:bg-[var(--surface-2)]
         `}>
           {/* Avatar */}
           <div
@@ -369,10 +337,10 @@ export default function NavigationSidebar({
           {isExpanded && (
             <>
               <div className="flex-1 min-w-0">
-                <p className={`font-medium text-sm truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                <p className="font-medium text-sm truncate text-[var(--foreground)]">
                   {currentUser.name}
                 </p>
-                <p className={`text-xs truncate ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+                <p className="text-xs truncate text-[var(--text-muted)]">
                   {currentUser.role === 'admin' ? 'Administrator' : 'Team Member'}
                 </p>
               </div>
@@ -380,11 +348,8 @@ export default function NavigationSidebar({
               <button
                 onClick={handleLogout}
                 className={`
-                  p-1.5 rounded-lg transition-colors
-                  ${darkMode
-                    ? 'text-white/40 hover:text-white hover:bg-white/10'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  p-1.5 rounded-[var(--radius-lg)] transition-colors
+                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
                 `}
                 aria-label="Log out"
               >

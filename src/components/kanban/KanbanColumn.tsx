@@ -36,12 +36,12 @@ export function DroppableColumn({ id, children, color, isActive, isCurrentOver }
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 p-2 sm:p-3 min-h-[180px] sm:min-h-[250px] space-y-2 sm:space-y-3 transition-all rounded-lg ${
+      className={`flex-1 p-2 sm:p-3 min-h-[180px] sm:min-h-[250px] space-y-2 sm:space-y-3 transition-all rounded-[var(--radius-lg)] ${
         showHighlight
-          ? 'bg-slate-100 dark:bg-slate-800'
+          ? 'bg-[var(--surface-2)]'
           : isActive
-            ? 'bg-slate-50 dark:bg-slate-800/50'
-            : 'bg-slate-50/50 dark:bg-slate-800/30'
+            ? 'bg-[var(--surface-2)]/50'
+            : 'bg-[var(--surface-2)]/30'
       }`}
       style={{
         borderLeft: showHighlight ? `4px solid ${color}` : isActive ? `4px solid ${color}40` : '4px solid transparent',
@@ -95,7 +95,7 @@ export function KanbanColumn({
     <motion.div
       key={column.id}
       layout
-      className="flex flex-col bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl shadow-sm border-2 border-slate-100 dark:border-slate-700 overflow-hidden"
+      className="flex flex-col bg-[var(--surface)] rounded-[var(--radius-xl)] sm:rounded-[var(--radius-2xl)] shadow-[var(--shadow-sm)] border-2 border-[var(--border-subtle)] overflow-hidden"
     >
       {/* Column header */}
       <div
@@ -104,12 +104,12 @@ export function KanbanColumn({
       >
         <div className="flex items-center gap-2">
           <column.Icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: column.color }} />
-          <h3 className="font-semibold text-sm sm:text-base text-slate-800 dark:text-slate-100">
+          <h3 className="font-semibold text-sm sm:text-base text-[var(--foreground)]">
             {column.title}
           </h3>
         </div>
         <span
-          className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-bold"
+          className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-[var(--radius-lg)] text-xs sm:text-sm font-bold"
           style={{ backgroundColor: column.color, color: 'white' }}
         >
           {columnTodos.length}
@@ -215,10 +215,10 @@ function EmptyColumnPlaceholder({ column }: { column: { id: TodoStatus; Icon: Lu
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col items-center justify-center py-8 sm:py-12 text-slate-400 dark:text-slate-500"
+      className="flex flex-col items-center justify-center py-8 sm:py-12 text-[var(--text-muted)]"
     >
       <div
-        className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center mb-2 sm:mb-3"
+        className="w-10 h-10 sm:w-12 sm:h-12 rounded-[var(--radius-xl)] flex items-center justify-center mb-2 sm:mb-3"
         style={{ backgroundColor: column.bgColor }}
       >
         <column.Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: column.color }} />

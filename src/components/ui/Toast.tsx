@@ -153,7 +153,7 @@ function ToastItem({ toast, position, onDismiss }: ToastItemProps) {
       className={`
         relative overflow-hidden
         w-[360px] max-w-[calc(100vw-32px)]
-        rounded-xl border shadow-lg
+        rounded-[var(--radius-xl)] border shadow-lg
         ${config.bgClass}
       `}
       role="alert"
@@ -189,7 +189,7 @@ function ToastItem({ toast, position, onDismiss }: ToastItemProps) {
         {dismissible && (
           <button
             onClick={() => onDismiss(toast.id)}
-            className="flex-shrink-0 p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+            className="flex-shrink-0 p-1 rounded-[var(--radius-lg)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
             aria-label="Dismiss"
           >
             <X className="w-4 h-4" />

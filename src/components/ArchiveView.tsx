@@ -399,7 +399,7 @@ export default function ArchiveView({
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+              className="p-2 rounded-[var(--radius-lg)] hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
               aria-label="Close archive"
             >
               <X className="w-5 h-5" />
@@ -466,7 +466,7 @@ export default function ArchiveView({
             {/* Filter Toggle */}
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium transition-colors ${
                 showFilters || hasActiveFilters
                   ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
                   : 'border-[var(--border)] hover:bg-[var(--surface-2)] text-[var(--foreground)]'
@@ -486,7 +486,7 @@ export default function ArchiveView({
               <select
                 value={filters.sortBy}
                 onChange={(e) => setFilters((f) => ({ ...f, sortBy: e.target.value as ArchiveSortOption }))}
-                className="appearance-none px-3 py-2 pr-8 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-2)]"
+                className="appearance-none px-3 py-2 pr-8 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-2)]"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -500,7 +500,7 @@ export default function ArchiveView({
             {/* Export Button */}
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] hover:bg-[var(--surface-2)] text-sm font-medium text-[var(--foreground)] transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] hover:bg-[var(--surface-2)] text-sm font-medium text-[var(--foreground)] transition-colors"
             >
               <Download className="w-4 h-4" />
               Export
@@ -509,7 +509,7 @@ export default function ArchiveView({
 
           {/* Expanded Filters */}
           {showFilters && (
-            <div className="mt-3 p-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] space-y-4">
+            <div className="mt-3 p-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface-2)] space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {/* Date Preset */}
                 <div>
@@ -524,7 +524,7 @@ export default function ArchiveView({
                       customDateStart: '',
                       customDateEnd: '',
                     }))}
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                    className="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm"
                   >
                     {DATE_PRESETS.map((p) => (
                       <option key={p.value} value={p.value}>{p.label}</option>
@@ -540,7 +540,7 @@ export default function ArchiveView({
                   <select
                     value={filters.assignee}
                     onChange={(e) => setFilters((f) => ({ ...f, assignee: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                    className="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm"
                   >
                     <option value="all">All Users</option>
                     <option value="unassigned">Unassigned</option>
@@ -558,7 +558,7 @@ export default function ArchiveView({
                   <select
                     value={filters.priority}
                     onChange={(e) => setFilters((f) => ({ ...f, priority: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                    className="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm"
                   >
                     <option value="all">All Priorities</option>
                     <option value="urgent">Urgent</option>
@@ -579,7 +579,7 @@ export default function ArchiveView({
                       ...f,
                       hasAttachments: e.target.value === 'all' ? null : e.target.value === 'yes'
                     }))}
-                    className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                    className="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm"
                   >
                     <option value="all">Any</option>
                     <option value="yes">Has Attachments</option>
@@ -595,20 +595,20 @@ export default function ArchiveView({
                   type="date"
                   value={filters.customDateStart}
                   onChange={(e) => setFilters((f) => ({ ...f, customDateStart: e.target.value, datePreset: 'all' }))}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                  className="px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm"
                 />
                 <span className="text-[var(--text-muted)]">to</span>
                 <input
                   type="date"
                   value={filters.customDateEnd}
                   onChange={(e) => setFilters((f) => ({ ...f, customDateEnd: e.target.value, datePreset: 'all' }))}
-                  className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm"
+                  className="px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm"
                 />
 
                 {hasActiveFilters && (
                   <button
                     onClick={resetFilters}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-sm text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     Reset Filters
@@ -643,14 +643,14 @@ export default function ArchiveView({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleBulkRestore}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent)]/90 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent)]/90 transition-colors"
                 >
                   <RotateCcw className="w-4 h-4" />
                   Restore
                 </button>
                 <button
                   onClick={handleBulkDelete}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete
@@ -679,7 +679,7 @@ export default function ArchiveView({
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent)]/90 transition-colors"
+                className="mt-4 flex items-center gap-2 px-4 py-2 rounded-[var(--radius-lg)] bg-[var(--accent)] text-white text-sm font-medium hover:bg-[var(--accent)]/90 transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
                 Reset Filters
@@ -800,7 +800,7 @@ export default function ArchiveView({
                       <button
                         onClick={() => handleRestore(todo.id)}
                         disabled={isProcessing}
-                        className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                        className="p-2 rounded-[var(--radius-lg)] hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
                         title="Restore task"
                       >
                         <RotateCcw className="w-4 h-4" />
@@ -808,7 +808,7 @@ export default function ArchiveView({
                       <button
                         onClick={() => handleDelete(todo.id)}
                         disabled={isProcessing}
-                        className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500 transition-colors"
+                        className="p-2 rounded-[var(--radius-lg)] hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500 transition-colors"
                         title="Delete permanently"
                       >
                         <Trash2 className="w-4 h-4" />

@@ -62,7 +62,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
         className="relative z-10 w-full max-w-md"
       >
         {/* Card */}
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[var(--radius-2xl)] shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
           {/* Allstate Blue Header Bar */}
           <div className="h-2 bg-[#0033A0]" />
 
@@ -72,7 +72,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-[#0033A0] shadow-lg shadow-[#0033A0]/20 mb-6"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-[var(--radius-xl)] bg-[#0033A0] shadow-lg shadow-[#0033A0]/20 mb-6"
             >
               <Shield className="w-8 h-8 text-white" />
             </motion.div>
@@ -121,7 +121,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
                   transition={{ delay: 0.5 + index * 0.1 }}
                   className="flex flex-col items-center gap-2"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-[#0033A0]/10 dark:bg-[#0033A0]/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-[var(--radius-lg)] bg-[#0033A0]/10 dark:bg-[#0033A0]/20 flex items-center justify-center">
                     <feature.icon className="w-5 h-5 text-[#0033A0] dark:text-blue-400" />
                   </div>
                   <span className="text-xs text-slate-600 dark:text-slate-400 text-center font-medium">
@@ -147,7 +147,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
                     fontSize: isFocused || name ? '12px' : '16px',
                     color: isFocused ? '#0033A0' : '#64748b',
                   }}
-                  className="absolute left-4 -translate-y-1/2 px-1 bg-white dark:bg-slate-900 pointer-events-none transition-all z-10 font-medium"
+                  className="absolute left-4 -translate-y-1/2 px-1 bg-[var(--surface)] pointer-events-none transition-all z-10 font-medium"
                 >
                   Your name
                 </motion.label>
@@ -157,7 +157,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
                   onChange={(e) => setName(e.target.value)}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  className="w-full px-4 py-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-lg focus:outline-none focus:border-[#0033A0] dark:focus:border-[#0033A0] transition-colors"
+                  className="w-full px-4 py-4 rounded-[var(--radius-lg)] border-2 border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] text-lg focus:outline-none focus:border-[#0033A0] transition-colors"
                   autoFocus
                 />
               </div>
@@ -167,7 +167,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
                 disabled={!name.trim()}
                 whileHover={{ scale: name.trim() ? 1.01 : 1 }}
                 whileTap={{ scale: name.trim() ? 0.99 : 1 }}
-                className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
+                className={`w-full py-4 rounded-[var(--radius-lg)] font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
                   name.trim()
                     ? 'bg-[#0033A0] hover:bg-[#002878] text-white shadow-lg shadow-[#0033A0]/20'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'

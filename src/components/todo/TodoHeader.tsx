@@ -7,7 +7,6 @@ import { AuthUser, ViewMode, ActivityLogEntry } from '@/types/todo';
 import UserSwitcher from '../UserSwitcher';
 import FocusModeToggle from '../FocusModeToggle';
 import NotificationModal from '../NotificationModal';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useTodoStore } from '@/store/todoStore';
 import { useAppShell } from '../layout/AppShell';
 import { supabase } from '@/lib/supabaseClient';
@@ -49,8 +48,6 @@ function TodoHeader({
   setShowAdvancedFilters,
   onResetFilters,
 }: TodoHeaderProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const { focusMode } = useTodoStore((state) => state.ui);
   const { setActiveView } = useAppShell();
 
@@ -179,10 +176,7 @@ function TodoHeader({
   return (
     <header
       className={`sticky top-0 z-40 border-b ${
-        darkMode
-          ? 'bg-[var(--surface)] border-white/5'
-          : 'bg-white border-[var(--border)]'
-      }`}
+        'bg-[var(--surface)] border-[var(--border)]'}`}
     >
       <div className="mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 max-w-5xl xl:max-w-6xl 2xl:max-w-7xl">
         <div className="flex items-center justify-between gap-2 sm:gap-3">
@@ -191,21 +185,15 @@ function TodoHeader({
             {/* View toggle - hidden in focus mode */}
             {!focusMode && (
               <div
-                className={`flex backdrop-blur-sm rounded-lg p-0.5 border flex-shrink-0 ${
-                  darkMode
-                    ? 'bg-white/8 border-white/10'
-                    : 'bg-[var(--surface-2)] border-[var(--border)]'
-                }`}
+                className={`flex backdrop-blur-sm rounded-[var(--radius-lg)] p-0.5 border flex-shrink-0 ${
+                  'bg-[var(--surface-2)] border-[var(--border)]'}`}
               >
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 ${
                     viewMode === 'list'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                      : darkMode
-                        ? 'text-white/70 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'list'}
                   aria-label="List view"
                 >
@@ -214,13 +202,10 @@ function TodoHeader({
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 ${
                     viewMode === 'kanban'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                      : darkMode
-                        ? 'text-white/70 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'kanban'}
                   aria-label="Board view"
                 >
@@ -241,11 +226,8 @@ function TodoHeader({
                   onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search tasks..."
                   aria-label="Search tasks"
-                  className={`w-full pl-8 pr-7 py-1.5 text-xs rounded-md border transition-colors ${
-                    darkMode
-                      ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-[var(--accent)]/50'
-                      : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:border-[var(--accent)]/50'
-                  } focus:outline-none`}
+                  className={`w-full pl-8 pr-7 py-1.5 text-xs rounded-[var(--radius-md)] border transition-colors ${
+                    'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:border-[var(--accent)]/50'} focus:outline-none`}
                 />
                 {localSearchInput && (
                   <button
@@ -272,15 +254,9 @@ function TodoHeader({
                   ref={notificationButtonRef}
                   onClick={() => setNotificationModalOpen(!notificationModalOpen)}
                   className={`
-                    relative p-1.5 sm:p-2 rounded-lg transition-colors
+                    relative p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
                     ${notificationModalOpen
-                      ? darkMode
-                        ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
-                        : 'bg-[var(--accent-light)] text-[var(--accent)]'
-                      : darkMode
-                        ? 'text-white/60 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                    }
+                      ? 'bg-[var(--accent-light)] text-[var(--accent)]': 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                   `}
                   aria-label={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
                 >
@@ -312,15 +288,9 @@ function TodoHeader({
               <button
                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 className={`
-                  p-1.5 sm:p-2 rounded-lg transition-colors
+                  p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
                   ${showAdvancedFilters
-                    ? darkMode
-                      ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
-                      : 'bg-[var(--accent-light)] text-[var(--accent)]'
-                    : darkMode
-                      ? 'text-white/60 hover:text-white hover:bg-white/10'
-                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                    ? 'bg-[var(--accent-light)] text-[var(--accent)]': 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                 `}
                 aria-label={showAdvancedFilters ? 'Hide filters' : 'Show filters'}
                 aria-pressed={showAdvancedFilters}
@@ -333,11 +303,8 @@ function TodoHeader({
               <button
                 onClick={onResetFilters}
                 className={`
-                  p-1.5 sm:p-2 rounded-lg transition-colors
-                  ${darkMode
-                    ? 'text-white/60 hover:text-white hover:bg-white/10'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
+                  ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                 `}
                 aria-label="Reset all filters"
                 title="Reset Filters"

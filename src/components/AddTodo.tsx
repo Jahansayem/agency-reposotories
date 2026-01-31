@@ -19,7 +19,6 @@ import { useToast } from './ui/Toast';
 interface AddTodoProps {
   onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => void;
   users: string[];
-  darkMode?: boolean;
   currentUserId?: string;
   autoFocus?: boolean;
 }
@@ -90,7 +89,7 @@ declare global {
   }
 }
 
-export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, autoFocus }: AddTodoProps) {
+export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddTodoProps) {
   const toast = useToast();
 
   // Initialize priority and assignedTo from user preferences (lazy initial state)
@@ -622,7 +621,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
         {/* Voice recording indicator */}
         {isRecording && (
           <div className="px-3 pb-2 flex justify-center">
-            <VoiceRecordingIndicator isRecording={isRecording} darkMode={darkMode} />
+            <VoiceRecordingIndicator isRecording={isRecording} />
           </div>
         )}
 
@@ -751,7 +750,7 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
               {suggestedSubtasks.map((subtask, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 text-sm px-4 py-3 rounded-xl border-l-3 transition-all hover:bg-[var(--surface-2)]"
+                  className="flex items-center gap-3 text-sm px-4 py-3 rounded-[var(--radius-xl)] border-l-3 transition-all hover:bg-[var(--surface-2)]"
                   style={{
                     borderLeftColor: `rgba(0, 51, 160, ${0.4 + index * 0.15})`,
                     background: `linear-gradient(90deg, rgba(0, 51, 160, 0.03) 0%, transparent 50%)`
@@ -823,7 +822,6 @@ export default function AddTodo({ onAdd, users, darkMode = true, currentUserId, 
             setDraggedFile(null);
           }}
           users={users}
-          darkMode={darkMode}
           initialFile={draggedFile}
         />
       )}

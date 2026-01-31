@@ -7,7 +7,6 @@ interface AnimatedProgressRingProps {
   progress: number; // 0-100
   size?: number;
   strokeWidth?: number;
-  darkMode?: boolean;
   children?: ReactNode;
   className?: string;
   gradientId?: string;
@@ -17,7 +16,6 @@ export default function AnimatedProgressRing({
   progress,
   size = 120,
   strokeWidth = 8,
-  darkMode = false,
   children,
   className = '',
   gradientId = 'progressGradient',
@@ -37,19 +35,18 @@ export default function AnimatedProgressRing({
         <defs>
           {/* Brand colors: Allstate Blue (#0033A0) to Sky Blue (#72B5E8) */}
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={darkMode ? '#0047CC' : '#0033A0'} />
-            <stop offset="50%" stopColor={darkMode ? '#3B82F6' : '#0066CC'} />
-            <stop offset="100%" stopColor={darkMode ? '#72B5E8' : '#72B5E8'} />
+            <stop offset="0%" stopColor={'#0033A0'} />
+            <stop offset="50%" stopColor={'#0066CC'} />
+            <stop offset="100%" stopColor={'#72B5E8'} />
           </linearGradient>
-          {darkMode && (
-            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          {/* SVG glow filter (applied via dark: class in CSS if needed) */}
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="3" result="coloredBlur" />
               <feMerge>
                 <feMergeNode in="coloredBlur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
-          )}
         </defs>
 
         {/* Background ring */}
@@ -58,7 +55,7 @@ export default function AnimatedProgressRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+          stroke={'rgba(0,0,0,0.05)'}
           strokeWidth={strokeWidth}
         />
 
@@ -79,7 +76,7 @@ export default function AnimatedProgressRing({
             ease: [0.25, 0.46, 0.45, 0.94],
             delay: 0.2,
           }}
-          filter={darkMode ? 'url(#glow)' : undefined}
+          filter="url(#glow)" 
         />
       </svg>
 

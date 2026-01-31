@@ -110,7 +110,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const showClear = clearable && value && !disabled;
 
     const baseClasses = `
-      w-full rounded-xl
+      w-full rounded-[var(--radius-xl)]
       transition-all duration-150 ease-out
       outline-none
       disabled:opacity-50 disabled:cursor-not-allowed
@@ -194,7 +194,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 type="button"
                 onClick={onClear}
                 className={`
-                  p-1 rounded-md
+                  p-1 rounded-[var(--radius-md)]
                   text-[var(--text-muted)] hover:text-[var(--foreground)]
                   hover:bg-[var(--surface-2)]
                   transition-colors
@@ -212,7 +212,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className={`
-                  p-1 rounded-md
+                  p-1 rounded-[var(--radius-md)]
                   text-[var(--text-muted)] hover:text-[var(--foreground)]
                   hover:bg-[var(--surface-2)]
                   transition-colors
@@ -309,7 +309,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     ref
   ) => {
     const baseClasses = `
-      w-full rounded-xl
+      w-full rounded-[var(--radius-xl)]
       px-3 py-2.5 text-sm min-h-[100px]
       transition-all duration-150 ease-out
       outline-none resize-y

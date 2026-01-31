@@ -9,7 +9,6 @@ import CountUp from '@/components/ui/CountUp';
 
 interface WeeklyProgressChartProps {
   todos: Todo[];
-  darkMode?: boolean;
   show: boolean;
   onClose: () => void;
   dailyGoal?: number;
@@ -25,7 +24,6 @@ interface DayData {
 
 export default function WeeklyProgressChart({
   todos,
-  darkMode = true,
   show,
   onClose,
   dailyGoal = 5,
@@ -134,30 +132,26 @@ export default function WeeklyProgressChart({
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${
-          darkMode ? 'bg-[#0A1628]' : 'bg-white'
-        }`}
+        className={`w-full max-w-md rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden ${
+          'bg-[var(--surface)]'}`}
       >
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b ${
-          darkMode ? 'border-white/10' : 'border-slate-200'
-        }`}>
+          'border-slate-200'}`}>
           <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${
-              darkMode ? 'bg-[var(--brand-blue)]/20' : 'bg-[var(--brand-blue)]/10'
-            }`}>
+            <div className={`p-2 rounded-[var(--radius-lg)] ${
+              'bg-[var(--brand-blue)]/10'}`}>
               <TrendingUp className="w-4 h-4 text-[var(--brand-blue)]" />
             </div>
-            <h3 id="weekly-progress-title" className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+            <h3 id="weekly-progress-title" className={`text-lg font-semibold ${'text-slate-800'}`}>
               Weekly Progress
             </h3>
           </div>
           <button
             onClick={onClose}
             aria-label="Close weekly progress chart"
-            className={`p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] focus-visible:ring-offset-2 ${
-              darkMode ? 'hover:bg-white/10 text-white/60 focus-visible:ring-offset-[#0A1628]' : 'hover:bg-slate-100 text-slate-500 focus-visible:ring-offset-white'
-            }`}
+            className={`p-2 rounded-[var(--radius-lg)] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-blue)] focus-visible:ring-offset-2 ${
+              'hover:bg-slate-100 text-slate-500 focus-visible:ring-offset-white'}`}
           >
             <X className="w-5 h-5" />
           </button>
@@ -165,8 +159,7 @@ export default function WeeklyProgressChart({
 
         {/* Stats row */}
         <div className={`grid grid-cols-3 gap-4 p-4 border-b ${
-          darkMode ? 'border-white/10' : 'border-slate-200'
-        }`}>
+          'border-slate-200'}`}>
           <motion.div
             className="text-center"
             initial={{ opacity: 0, y: 10 }}
@@ -176,7 +169,7 @@ export default function WeeklyProgressChart({
             <p className="text-2xl font-bold text-[var(--brand-blue)]">
               <CountUp end={stats.totalCompleted} duration={800} />
             </p>
-            <p className={`text-xs ${darkMode ? 'text-white/50' : 'text-slate-500'}`}>Completed</p>
+            <p className={`text-xs ${'text-slate-500'}`}>Completed</p>
           </motion.div>
           <motion.div
             className="text-center"
@@ -184,10 +177,10 @@ export default function WeeklyProgressChart({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-800'}`}>
+            <p className={`text-2xl font-bold ${'text-slate-800'}`}>
               {stats.avgPerDay}
             </p>
-            <p className={`text-xs ${darkMode ? 'text-white/50' : 'text-slate-500'}`}>Avg/Day</p>
+            <p className={`text-xs ${'text-slate-500'}`}>Avg/Day</p>
           </motion.div>
           <motion.div
             className="text-center"
@@ -199,15 +192,14 @@ export default function WeeklyProgressChart({
               <p className={`text-2xl font-bold ${
                 stats.trend === 'up' ? 'text-emerald-500' :
                 stats.trend === 'down' ? 'text-red-500' :
-                darkMode ? 'text-white' : 'text-slate-800'
-              }`}>
+                'text-slate-800'}`}>
                 <CountUp end={stats.goalRate} duration={800} suffix="%" />
               </p>
               {stats.trend === 'up' && <TrendingUp className="w-4 h-4 text-emerald-500" />}
               {stats.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
               {stats.trend === 'stable' && <Minus className="w-4 h-4 text-slate-400" />}
             </div>
-            <p className={`text-xs ${darkMode ? 'text-white/50' : 'text-slate-500'}`}>Goal Rate</p>
+            <p className={`text-xs ${'text-slate-500'}`}>Goal Rate</p>
           </motion.div>
         </div>
 
@@ -220,11 +212,9 @@ export default function WeeklyProgressChart({
               style={{ bottom: `${goalLinePosition + 56}px` }}
             >
               <div className={`flex-1 border-t-2 border-dashed ${
-                darkMode ? 'border-emerald-500/40' : 'border-emerald-500/30'
-              }`} />
+                'border-emerald-500/30'}`} />
               <span className={`ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                darkMode ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-600'
-              }`}>
+                'bg-emerald-50 text-emerald-600'}`}>
                 <Target className="w-3 h-3 inline mr-1" />
                 Goal: {dailyGoal}
               </span>
@@ -256,17 +246,14 @@ export default function WeeklyProgressChart({
                         initial={{ opacity: 0, y: 5, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                        className={`absolute bottom-full mb-2 px-3 py-2 rounded-lg text-xs whitespace-nowrap z-20 ${
-                          darkMode
-                            ? 'bg-white/10 backdrop-blur-md border border-white/10'
-                            : 'bg-slate-800 text-white'
-                        }`}
+                        className={`absolute bottom-full mb-2 px-3 py-2 rounded-[var(--radius-lg)] text-xs whitespace-nowrap z-20 ${
+                          'bg-slate-800 text-white'}`}
                       >
                         <p className="font-semibold">{day.day}</p>
-                        <p className={darkMode ? 'text-white/70' : 'text-white/70'}>
+                        <p className={'text-white/70'}>
                           {day.completed} completed
                         </p>
-                        <p className={darkMode ? 'text-white/50' : 'text-white/50'}>
+                        <p className={'text-white/50'}>
                           {day.created} created
                         </p>
                         {metGoal && (
@@ -285,8 +272,7 @@ export default function WeeklyProgressChart({
                         ? 'text-[var(--brand-blue)]'
                         : day.completed > 0
                           ? 'text-[var(--brand-blue)]/80'
-                          : darkMode ? 'text-white/30' : 'text-slate-400'
-                    }`}
+                          : 'text-slate-400'}`}
                     animate={{ scale: isHovered ? 1.1 : 1 }}
                   >
                     {day.completed}
@@ -310,10 +296,7 @@ export default function WeeklyProgressChart({
                           : 'bg-gradient-to-t from-[var(--brand-blue)] to-[#0047CC]'
                         : day.completed > 0
                           ? metGoal
-                            ? darkMode ? 'bg-emerald-500/40' : 'bg-emerald-500/30'
-                            : darkMode ? 'bg-[var(--brand-blue)]/60' : 'bg-[var(--brand-blue)]/40'
-                          : darkMode ? 'bg-white/10' : 'bg-slate-200'
-                    }`}
+                            ? 'bg-emerald-500/30': 'bg-[var(--brand-blue)]/40': 'bg-slate-200'}`}
                   />
                 </div>
               );
@@ -332,8 +315,7 @@ export default function WeeklyProgressChart({
                       ? 'text-[var(--brand-blue)]'
                       : isToday
                         ? 'text-[var(--brand-blue)]'
-                        : darkMode ? 'text-white/40' : 'text-slate-500'
-                  }`}>
+                        : 'text-slate-500'}`}>
                     {day.shortDay}
                   </span>
                   {isToday && (
@@ -348,18 +330,16 @@ export default function WeeklyProgressChart({
         </div>
 
         {/* Goal progress */}
-        <div className={`mx-4 mb-2 p-3 rounded-xl ${
-          darkMode ? 'bg-white/5' : 'bg-slate-50'
-        }`}>
+        <div className={`mx-4 mb-2 p-3 rounded-[var(--radius-xl)] ${
+          'bg-slate-50'}`}>
           <div className="flex items-center justify-between mb-2">
-            <span className={`text-xs font-medium ${darkMode ? 'text-white/60' : 'text-slate-600'}`}>
+            <span className={`text-xs font-medium ${'text-slate-600'}`}>
               Days goal met
             </span>
             <span className={`text-xs font-semibold ${
               stats.daysMetGoal >= 4 ? 'text-emerald-500' :
               stats.daysMetGoal >= 2 ? 'text-amber-500' :
-              darkMode ? 'text-white/40' : 'text-slate-400'
-            }`}>
+              'text-slate-400'}`}>
               {stats.daysMetGoal}/5
             </span>
           </div>
@@ -370,8 +350,7 @@ export default function WeeklyProgressChart({
                 className={`flex-1 h-1.5 rounded-full ${
                   i < stats.daysMetGoal
                     ? 'bg-emerald-500'
-                    : darkMode ? 'bg-white/10' : 'bg-slate-200'
-                }`}
+                    : 'bg-slate-200'}`}
               />
             ))}
           </div>
@@ -379,8 +358,7 @@ export default function WeeklyProgressChart({
 
         {/* Footer tip */}
         <div className={`px-4 py-3 text-center text-xs ${
-          darkMode ? 'bg-white/5 text-white/50' : 'bg-slate-50 text-slate-500'
-        }`}>
+          'bg-slate-50 text-slate-500'}`}>
           {stats.trend === 'up' && "Great job! You're completing more tasks than last week."}
           {stats.trend === 'down' && "Keep going! Consistency is key."}
           {stats.trend === 'stable' && "You're maintaining a steady pace!"}

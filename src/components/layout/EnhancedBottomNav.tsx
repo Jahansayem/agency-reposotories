@@ -13,7 +13,6 @@ import {
   CheckCircle,
   List,
 } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAppShell, ActiveView } from './AppShell';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -36,8 +35,6 @@ interface NavTab {
 }
 
 export default function EnhancedBottomNav() {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const {
     activeView,
     setActiveView,
@@ -96,14 +93,7 @@ export default function EnhancedBottomNav() {
 
   return (
     <nav
-      className={`
-        fixed bottom-0 left-0 right-0 z-40 md:hidden
-        pb-safe
-        ${darkMode
-          ? 'bg-[var(--surface)]/95 backdrop-blur-xl border-t border-white/10'
-          : 'bg-white/95 backdrop-blur-xl border-t border-[var(--border)]'
-        }
-      `}
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-safe bg-white/95 backdrop-blur-xl border-t border-[var(--border)]"
       role="navigation"
       aria-label="Main navigation"
     >
@@ -120,19 +110,13 @@ export default function EnhancedBottomNav() {
               <button
                 key={tab.id}
                 onClick={() => handleTabPress(tab.id)}
-                className={`
-                  relative -mt-6 w-14 h-14 rounded-2xl
-                  flex items-center justify-center
-                  bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)]
-                  text-white shadow-lg shadow-[var(--brand-blue)]/30
-                  active:scale-95 transition-transform
-                `}
+                className="relative -mt-6 w-14 h-14 rounded-[var(--radius-2xl)] flex items-center justify-center bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white shadow-lg shadow-[var(--brand-blue)]/30 active:scale-95 transition-transform"
                 aria-label="Create new task"
               >
                 <Plus className="w-6 h-6" strokeWidth={2.5} />
 
                 {/* Subtle glow effect */}
-                <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 rounded-[var(--radius-2xl)] bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />
               </button>
             );
           }
@@ -158,10 +142,7 @@ export default function EnhancedBottomNav() {
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className={`
-                    absolute top-1 w-8 h-1 rounded-full
-                    bg-[var(--accent)]
-                  `}
+                  className="absolute top-1 w-8 h-1 rounded-full bg-[var(--accent)]"
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
@@ -173,23 +154,14 @@ export default function EnhancedBottomNav() {
                     w-6 h-6 transition-colors
                     ${isActive
                       ? 'text-[var(--accent)]'
-                      : darkMode
-                        ? 'text-white/60'
-                        : 'text-[var(--text-muted)]'
-                    }
+                      : 'text-[var(--text-muted)]'}
                   `}
                 />
 
                 {/* Badge */}
                 {tab.badge && tab.badge > 0 && (
                   <span
-                    className={`
-                      absolute -top-1.5 -right-1.5
-                      min-w-[18px] h-[18px] px-1
-                      flex items-center justify-center
-                      rounded-full text-[10px] font-bold
-                      bg-[var(--danger)] text-white
-                    `}
+                    className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
                   >
                     {tab.badge > 99 ? '99+' : tab.badge}
                   </span>
@@ -202,10 +174,7 @@ export default function EnhancedBottomNav() {
                   text-[10px] font-medium mt-1 transition-colors
                   ${isActive
                     ? 'text-[var(--accent)]'
-                    : darkMode
-                      ? 'text-white/40'
-                      : 'text-[var(--text-muted)]'
-                  }
+                    : 'text-[var(--text-muted)]'}
                 `}
               >
                 {tab.label}
@@ -239,9 +208,6 @@ export function QuickFilterPills({
   onFilterChange,
   stats,
 }: QuickFilterPillsProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
-
   const filters = [
     { id: 'all', label: 'All', count: stats.all, icon: List },
     { id: 'due_today', label: 'Today', count: stats.dueToday, icon: Calendar, color: 'var(--warning)' },
@@ -268,8 +234,8 @@ export function QuickFilterPills({
               text-sm font-medium whitespace-nowrap
               transition-all
               ${isActive
-                ? `${darkMode ? 'bg-white/15 text-white' : 'bg-[var(--accent-light)] text-[var(--accent)]'}`
-                : `${darkMode ? 'bg-white/5 text-white/60' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`
+                ? `bg-[var(--accent-light)] text-[var(--accent)]`
+                : `bg-[var(--surface-2)] text-[var(--text-muted)]`
               }
             `}
             style={isActive && filter.color ? { color: filter.color } : undefined}
@@ -282,13 +248,7 @@ export function QuickFilterPills({
                   min-w-[20px] h-5 flex items-center justify-center
                   px-1.5 rounded-full text-xs
                   ${isActive
-                    ? darkMode
-                      ? 'bg-white/20'
-                      : 'bg-[var(--accent)]/15'
-                    : darkMode
-                      ? 'bg-white/10'
-                      : 'bg-[var(--surface-3)]'
-                  }
+                    ? 'bg-[var(--accent)]/15': 'bg-[var(--surface-3)]'}
                 `}
                 style={isActive && filter.color ? {
                   backgroundColor: `color-mix(in srgb, ${filter.color} 15%, transparent)`,

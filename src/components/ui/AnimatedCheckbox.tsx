@@ -116,7 +116,7 @@ export function AnimatedCheckbox({
         flex-shrink-0
         touch-manipulation
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-        focus-visible:rounded-lg
+        focus-visible:rounded-[var(--radius-lg)]
         ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
         ${className}
       `}
@@ -138,7 +138,7 @@ export function AnimatedCheckbox({
         className={`
           ${config.box}
           ${config.border}
-          rounded-lg
+          rounded-[var(--radius-lg)]
           flex items-center justify-center
           transition-colors
           ${
@@ -212,7 +212,7 @@ export function SubtaskCheckbox({
         flex-shrink-0
         touch-manipulation
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-        focus-visible:rounded-lg
+        focus-visible:rounded-[var(--radius-lg)]
         ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}
         ${className}
       `}

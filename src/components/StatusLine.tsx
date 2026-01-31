@@ -31,34 +31,26 @@ export default function StatusLine({
   onFilterOverdue,
 }: StatusLineProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
 
   // Determine the active state for styling
   const isAllActive = quickFilter === 'all' && !showCompleted;
   const isDueTodayActive = quickFilter === 'due_today';
   const isOverdueActive = quickFilter === 'overdue';
 
-  const baseClass = `inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-all cursor-pointer`;
+  const baseClass = `inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-md)] text-xs font-medium transition-all cursor-pointer`;
 
   const getSegmentClass = (isActive: boolean, color: 'accent' | 'warning' | 'danger') => {
     if (isActive) {
-      return `${baseClass} ${
-        darkMode
-          ? `bg-[var(--${color})]/20 text-[var(--${color})]`
-          : `bg-[var(--${color}-light)] text-[var(--${color})]`
-      } ring-1 ring-[var(--${color})]/30`;
+      return `${baseClass} bg-[var(--${color}-light)] text-[var(--${color})] dark:bg-[var(--${color})]/20 ring-1 ring-[var(--${color})]/30`;
     }
     return `${baseClass} ${
-      darkMode
-        ? 'text-white/60 hover:text-white hover:bg-white/10'
-        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-    }`;
+      'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}`;
   };
 
   // All caught up message
   if (stats.active === 0 && !showCompleted) {
     return (
-      <div className={`text-xs ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>
+      <div className={`text-xs ${'text-[var(--text-muted)]'}`}>
         <span className="text-[var(--success)] font-medium">All caught up!</span>
         {stats.completed > 0 && (
           <span> {stats.completed} tasks completed</span>
@@ -70,7 +62,7 @@ export default function StatusLine({
   // Context-aware filter message
   if (highPriorityOnly) {
     return (
-      <div className={`text-xs ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>
+      <div className={`text-xs ${'text-[var(--text-muted)]'}`}>
         Showing <span className="text-[var(--danger)] font-medium">{stats.active} high priority</span> tasks
         {stats.dueToday > 0 && (
           <>
@@ -89,7 +81,7 @@ export default function StatusLine({
   }
 
   return (
-    <div className={`flex items-center gap-1 text-xs flex-wrap ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>
+    <div className={`flex items-center gap-1 text-xs flex-wrap ${'text-[var(--text-muted)]'}`}>
       {/* Active tasks count - clickable to filter to all */}
       <button
         onClick={onFilterAll}
@@ -103,7 +95,7 @@ export default function StatusLine({
       {/* Due today - clickable to filter */}
       {stats.dueToday > 0 && (
         <>
-          <span className={darkMode ? 'text-white/30' : 'text-[var(--text-muted)]'}>•</span>
+          <span className={'text-[var(--text-muted)]'}>•</span>
           <button
             onClick={onFilterDueToday}
             className={getSegmentClass(isDueTodayActive, 'warning')}
@@ -118,7 +110,7 @@ export default function StatusLine({
       {/* Overdue - clickable to filter - PROMINENT when count is high */}
       {stats.overdue > 0 && (
         <>
-          <span className={darkMode ? 'text-white/30' : 'text-[var(--text-muted)]'}>•</span>
+          <span className={'text-[var(--text-muted)]'}>•</span>
           <button
             onClick={onFilterOverdue}
             className={`${getSegmentClass(isOverdueActive, 'danger')} ${

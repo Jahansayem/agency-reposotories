@@ -89,7 +89,7 @@ const ReactionsSummary = memo(function ReactionsSummary({ reactions }: { reactio
   }, {} as Record<TapbackType, string[]>);
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-2xl p-3 min-w-[140px] backdrop-blur-xl">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-2xl p-3 min-w-[140px] backdrop-blur-xl">
       {Object.entries(groupedByReaction).map(([reaction, userNames]) => (
         <div key={reaction} className="flex items-center gap-3 py-1.5">
           <span className="text-lg">{TAPBACK_EMOJIS[reaction as TapbackType]}</span>
@@ -164,7 +164,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           return (
             <span
               key={i}
-              className={`px-1.5 py-0.5 rounded-md font-medium ${
+              className={`px-1.5 py-0.5 rounded-[var(--radius-md)] font-medium ${
                 isMe
                   ? 'bg-[var(--accent)]/30 text-[var(--accent)]'
                   : 'bg-[var(--accent-dark)]/30 text-[var(--accent-dark)] dark:text-[var(--accent)]'
@@ -191,7 +191,7 @@ export const ChatMessageList = memo(function ChatMessageList({
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
           />
-          <span className="text-white/50 text-sm">Loading messages...</span>
+          <span className="text-[var(--chat-text-secondary)] text-sm">Loading messages...</span>
         </div>
       </div>
     );
@@ -202,7 +202,7 @@ export const ChatMessageList = memo(function ChatMessageList({
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-6">
         <motion.div
-          className="w-20 h-20 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center mb-5"
+          className="w-20 h-20 rounded-[var(--radius-2xl)] bg-[var(--chat-surface)] border border-[var(--chat-border)] flex items-center justify-center mb-5"
           animate={{ y: [-4, 4, -4] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         >
@@ -211,7 +211,7 @@ export const ChatMessageList = memo(function ChatMessageList({
         <p className="font-semibold text-white text-lg">
           {searchQuery ? 'No messages found' : 'No messages yet'}
         </p>
-        <p className="text-sm mt-2 text-white/50 max-w-xs">
+        <p className="text-sm mt-2 text-[var(--chat-text-secondary)] max-w-xs">
           {searchQuery
             ? 'Try a different search term'
             : conversation?.type === 'team'
@@ -224,7 +224,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="mt-5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-colors"
+            className="mt-5 px-5 py-2.5 rounded-[var(--radius-xl)] bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-colors"
           >
             <span className="flex items-center gap-2">
               <X className="w-4 h-4" />
@@ -242,7 +242,7 @@ export const ChatMessageList = memo(function ChatMessageList({
       {hasMoreMessages && (
         <div className="flex justify-center py-3">
           {isLoadingMore ? (
-            <div className="flex items-center gap-2 text-white/40 text-xs">
+            <div className="flex items-center gap-2 text-[var(--chat-text-secondary)] text-xs">
               <motion.div
                 className="w-4 h-4 border-2 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full"
                 animate={{ rotate: 360 }}
@@ -253,7 +253,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           ) : (
             <button
               onClick={onLoadMore}
-              className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors px-3 py-1.5 rounded-lg hover:bg-[var(--accent)]/10"
+              className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors px-3 py-1.5 rounded-[var(--radius-lg)] hover:bg-[var(--accent)]/10"
             >
               Load earlier messages
             </button>
@@ -300,7 +300,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                 {/* Avatar */}
                 {!msg.isGrouped ? (
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 shadow-lg ring-1 ring-white/10"
+                    className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 shadow-lg ring-1 ring-white/10"
                     style={{ backgroundColor: userColor }}
                   >
                     {getInitials(msg.created_by)}
@@ -316,11 +316,11 @@ export const ChatMessageList = memo(function ChatMessageList({
                       <span className="font-semibold text-white/80">
                         {isOwn ? 'You' : msg.created_by}
                       </span>
-                      <span className="text-white/30">
+                      <span className="text-[var(--chat-text-muted)]">
                         {formatTime(msg.created_at)}
                       </span>
                       {msg.edited_at && (
-                        <span className="text-white/30 italic">(edited)</span>
+                        <span className="text-[var(--chat-text-muted)] italic">(edited)</span>
                       )}
                       {msg.is_pinned && (
                         <Pin className="w-3 h-3 text-[var(--accent)]" />
@@ -330,7 +330,7 @@ export const ChatMessageList = memo(function ChatMessageList({
 
                   {/* Reply preview */}
                   {msg.reply_to_text && (
-                    <div className={`text-xs px-3 py-1.5 mb-1.5 rounded-lg border-l-2 border-[var(--accent)] bg-white/[0.04] text-white/50 max-w-full truncate`}>
+                    <div className={`text-xs px-3 py-1.5 mb-1.5 rounded-[var(--radius-lg)] border-l-2 border-[var(--accent)] bg-[var(--chat-surface)] text-[var(--chat-text-secondary)] max-w-full truncate`}>
                       <span className="font-medium text-[var(--accent)]">{msg.reply_to_user}: </span>
                       {msg.reply_to_text}
                     </div>
@@ -358,10 +358,10 @@ export const ChatMessageList = memo(function ChatMessageList({
                       return (
                         <motion.div
                           onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
-                          className={`px-4 py-2.5 rounded-2xl break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
+                          className={`px-4 py-2.5 rounded-[var(--radius-2xl)] break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
                             isOwn
                               ? 'bg-[var(--accent)] text-white rounded-br-md shadow-lg shadow-[var(--accent)]/20'
-                              : 'bg-white/[0.08] text-white rounded-bl-md border border-white/[0.06]'
+                              : 'bg-[var(--chat-border)] text-white rounded-bl-md border border-[var(--chat-surface-hover)]'
                           } ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''}`}
                           whileHover={{ scale: 1.01 }}
                         >
@@ -374,10 +374,10 @@ export const ChatMessageList = memo(function ChatMessageList({
                                 e.stopPropagation();
                                 onTaskLinkClick(msg.related_todo_id!);
                               }}
-                              className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                              className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-all ${
                                 isOwn
                                   ? 'bg-white/20 text-white hover:bg-white/30'
-                                  : 'bg-white/[0.1] text-white/80 hover:bg-white/[0.15]'
+                                  : 'bg-[var(--chat-border)] text-white/80 hover:bg-white/[0.15]'
                               }`}
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
@@ -393,7 +393,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                       <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={`absolute top-0 flex gap-0.5 bg-[var(--surface-dark)] border border-white/[0.1] rounded-xl shadow-xl p-1 ${
+                        className={`absolute top-0 flex gap-0.5 bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-[var(--radius-xl)] shadow-xl p-1 ${
                           isOwn ? 'right-full mr-2' : 'left-full ml-2'
                         }`}
                       >
@@ -402,20 +402,20 @@ export const ChatMessageList = memo(function ChatMessageList({
                             e.stopPropagation();
                             onReply(msg);
                           }}
-                          className="p-2 hover:bg-white/[0.08] rounded-lg transition-colors"
+                          className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
                           title="Reply"
                         >
-                          <Reply className="w-3.5 h-3.5 text-white/50" />
+                          <Reply className="w-3.5 h-3.5 text-[var(--chat-text-secondary)]" />
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowMessageMenu(showMessageMenu === msg.id ? null : msg.id);
                           }}
-                          className="p-2 hover:bg-white/[0.08] rounded-lg transition-colors"
+                          className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
                           title="More"
                         >
-                          <MoreHorizontal className="w-3.5 h-3.5 text-white/50" />
+                          <MoreHorizontal className="w-3.5 h-3.5 text-[var(--chat-text-secondary)]" />
                         </button>
                       </motion.div>
                     )}
@@ -427,7 +427,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                           initial={{ opacity: 0, scale: 0.95, y: 5 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: 5 }}
-                          className={`absolute top-full mt-2 z-30 bg-[var(--surface-dark)] border border-white/[0.1] rounded-xl shadow-2xl overflow-hidden min-w-[160px] backdrop-blur-xl ${
+                          className={`absolute top-full mt-2 z-30 bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-[var(--radius-xl)] shadow-2xl overflow-hidden min-w-[160px] backdrop-blur-xl ${
                             isOwn ? 'right-0' : 'left-0'
                           }`}
                         >
@@ -436,7 +436,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                               onReply(msg);
                               setShowMessageMenu(null);
                             }}
-                            className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-white/[0.06] text-white/80 transition-colors"
+                            className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                           >
                             <Reply className="w-4 h-4" /> Reply
                           </button>
@@ -445,7 +445,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                               onPin(msg);
                               setShowMessageMenu(null);
                             }}
-                            className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-white/[0.06] text-white/80 transition-colors"
+                            className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                           >
                             <Pin className="w-4 h-4" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
                           </button>
@@ -455,7 +455,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                                 onCreateTask(msg);
                                 setShowMessageMenu(null);
                               }}
-                              className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-white/[0.06] text-white/80 transition-colors"
+                              className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                             >
                               <Plus className="w-4 h-4" /> Create Task
                             </button>
@@ -467,7 +467,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                                   onEdit(msg);
                                   setShowMessageMenu(null);
                                 }}
-                                className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-white/[0.06] text-white/80 transition-colors"
+                                className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                               >
                                 <Edit3 className="w-4 h-4" /> Edit
                               </button>
@@ -476,7 +476,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                                   onDelete(msg.id);
                                   setShowMessageMenu(null);
                                 }}
-                                className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-white/[0.06] text-red-400 transition-colors"
+                                className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-red-400 transition-colors"
                               >
                                 <Trash2 className="w-4 h-4" /> Delete
                               </button>
@@ -488,7 +488,7 @@ export const ChatMessageList = memo(function ChatMessageList({
 
                     {/* Time on hover for grouped messages */}
                     {msg.isGrouped && isHovered && (
-                      <div className={`absolute top-1/2 -translate-y-1/2 text-[10px] text-white/30 pointer-events-none whitespace-nowrap ${
+                      <div className={`absolute top-1/2 -translate-y-1/2 text-[10px] text-[var(--chat-text-muted)] pointer-events-none whitespace-nowrap ${
                         isOwn ? 'right-full mr-3' : 'left-full ml-3'
                       }`}>
                         {formatTime(msg.created_at)}
@@ -503,7 +503,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.9, y: 8 }}
                           transition={{ duration: 0.15 }}
-                          className={`absolute ${isOwn ? 'right-0' : 'left-0'} bottom-full mb-2 z-20 bg-[var(--surface-dark)] border border-white/[0.1] rounded-2xl shadow-2xl px-2 py-1.5 flex gap-1`}
+                          className={`absolute ${isOwn ? 'right-0' : 'left-0'} bottom-full mb-2 z-20 bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-[var(--radius-2xl)] shadow-2xl px-2 py-1.5 flex gap-1`}
                         >
                           {(Object.keys(TAPBACK_EMOJIS) as TapbackType[]).map((reaction) => {
                             const myReaction = reactions.find(r => r.user === currentUser.name);
@@ -519,10 +519,10 @@ export const ChatMessageList = memo(function ChatMessageList({
                                 }}
                                 aria-label={getReactionAriaLabel(reaction, reactionCount, isSelected)}
                                 aria-pressed={isSelected}
-                                className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 text-xl ${
+                                className={`w-10 h-10 flex items-center justify-center rounded-[var(--radius-xl)] transition-all duration-200 text-xl ${
                                   isSelected
                                     ? 'bg-[var(--accent)]/30 ring-2 ring-[var(--accent)]'
-                                    : 'hover:bg-white/[0.08]'
+                                    : 'hover:bg-[var(--chat-surface-hover)]'
                                 }`}
                                 whileHover={{ scale: 1.15 }}
                                 whileTap={{ scale: 0.9 }}
@@ -542,12 +542,12 @@ export const ChatMessageList = memo(function ChatMessageList({
                         onMouseEnter={() => setShowReactionsSummary(msg.id)}
                         onMouseLeave={() => setShowReactionsSummary(null)}
                       >
-                        <div className="bg-[var(--surface-dark)] border border-white/[0.1] rounded-full px-2 py-1 flex items-center gap-1 shadow-lg cursor-pointer">
+                        <div className="bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-full px-2 py-1 flex items-center gap-1 shadow-lg cursor-pointer">
                           {(Object.entries(reactionCounts) as [TapbackType, number][]).map(([reaction, count]) => (
                             <span key={reaction} className="flex items-center text-sm">
                               {TAPBACK_EMOJIS[reaction]}
                               {count > 1 && (
-                                <span className="text-[10px] ml-0.5 text-white/50 font-medium">
+                                <span className="text-[10px] ml-0.5 text-[var(--chat-text-secondary)] font-medium">
                                   {count}
                                 </span>
                               )}
@@ -573,7 +573,7 @@ export const ChatMessageList = memo(function ChatMessageList({
 
                   {/* Read receipts */}
                   {isOwn && isLastOwnMessage && (
-                    <div className={`flex items-center gap-1.5 mt-1.5 text-[10px] text-white/40 ${reactions.length > 0 ? 'mt-4' : ''}`}>
+                    <div className={`flex items-center gap-1.5 mt-1.5 text-[10px] text-[var(--chat-text-secondary)] ${reactions.length > 0 ? 'mt-4' : ''}`}>
                       {readBy.length === 0 ? (
                         <span className="flex items-center gap-1">
                           <Check className="w-3 h-3" />

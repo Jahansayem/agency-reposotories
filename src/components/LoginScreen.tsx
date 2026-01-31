@@ -344,7 +344,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden relative bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F]">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:z-50">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
         Skip to content
       </a>
 
@@ -437,14 +437,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 {features.map((feature, i) => (
                   <motion.div
                     key={feature.title}
-                    className="group relative flex items-start gap-4 p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden"
+                    className="group relative flex items-start gap-4 p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.6 + i * 0.1 }}
                     whileHover={{ scale: 1.02, borderColor: 'rgba(114,181,232,0.3)' }}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                    <div className="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center text-[var(--brand-sky)] border border-white/10">
+                    <div className="relative flex-shrink-0 w-10 h-10 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center text-[var(--brand-sky)] border border-white/10">
                       <feature.Icon className="w-5 h-5" />
                     </div>
                     <div className="relative">
@@ -463,19 +463,19 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.9 }}
                 >
-                  <div className="text-center p-4 rounded-2xl border border-white/10 bg-white/[0.03]">
+                  <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-white">
                       <AnimatedCounter value={teamStats.totalTasks} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">Total Tasks</p>
                   </div>
-                  <div className="text-center p-4 rounded-2xl border border-white/10 bg-white/[0.03]">
+                  <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-sky-light)] to-[var(--brand-sky)]">
                       <AnimatedCounter value={teamStats.completedThisWeek} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">This Week</p>
                   </div>
-                  <div className="text-center p-4 rounded-2xl border border-white/10 bg-white/[0.03]">
+                  <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-emerald-400">
                       <AnimatedCounter value={teamStats.activeUsers} />
                     </p>
@@ -545,7 +545,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                             placeholder="Search team..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 focus:border-[var(--brand-sky)]/40 transition-all"
+                            className="w-full pl-11 pr-4 py-3 rounded-[var(--radius-xl)] bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 focus:border-[var(--brand-sky)]/40 transition-all"
                           />
                         </div>
                       </motion.div>
@@ -593,7 +593,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                         transition={{ delay: 0.3 }}
                       >
                         <motion.div
-                          className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center border border-white/10"
+                          className="w-20 h-20 mx-auto mb-6 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center border border-white/10"
                           animate={{ y: [-4, 4, -4] }}
                           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                         >
@@ -625,7 +625,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   <div className="relative bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-2xl rounded-[28px] border border-white/10 p-8 shadow-2xl">
                     <motion.button
                       onClick={() => { setScreen('users'); setSearchQuery(''); }}
-                      className="flex items-center gap-2 text-sm text-white/40 hover:text-white mb-8 transition-colors -ml-2 px-3 py-2 rounded-lg hover:bg-white/5"
+                      className="flex items-center gap-2 text-sm text-white/40 hover:text-white mb-8 transition-colors -ml-2 px-3 py-2 rounded-[var(--radius-lg)] hover:bg-white/5"
                       whileHover={{ x: -2 }}
                     >
                       <ChevronLeft className="w-4 h-4" />
@@ -635,7 +635,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <div className="text-center mb-8">
                       <div className="relative inline-block mb-6">
                         <div
-                          className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-2 ring-white/20"
+                          className="w-20 h-20 rounded-[var(--radius-2xl)] flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-2 ring-white/20"
                           style={{ backgroundColor: selectedUser.color }}
                         >
                           {getUserInitials(selectedUser.name)}
@@ -681,7 +681,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                               disabled={lockoutSeconds > 0 || isSubmitting}
                               aria-label={`PIN digit ${index + 1} of 4`}
                               autoComplete="one-time-code"
-                              className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${
+                              className={`w-14 h-16 text-center text-2xl font-bold rounded-[var(--radius-xl)] border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${
                                 lockoutSeconds > 0
                                   ? 'border-red-500/50 bg-red-500/10 text-red-400'
                                   : digit
@@ -697,7 +697,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <AnimatePresence mode="wait">
                       {(error || lockoutSeconds > 0) && (
                         <motion.div
-                          className="flex items-center justify-center gap-2 text-red-400 text-sm bg-red-500/10 py-3 px-4 rounded-xl border border-red-500/20 mb-4"
+                          className="flex items-center justify-center gap-2 text-red-400 text-sm bg-red-500/10 py-3 px-4 rounded-[var(--radius-xl)] border border-red-500/20 mb-4"
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
@@ -745,7 +745,7 @@ function UserCard({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (us
   return (
     <motion.button
       onClick={() => onSelect(user)}
-      className="group w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/[0.08] active:bg-white/10 transition-all text-left border border-transparent hover:border-white/10"
+      className="group w-full flex items-center gap-4 p-3 rounded-[var(--radius-xl)] hover:bg-white/[0.08] active:bg-white/10 transition-all text-left border border-transparent hover:border-white/10"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
@@ -753,11 +753,11 @@ function UserCard({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (us
     >
       <div className="relative flex-shrink-0">
         <motion.div
-          className="absolute inset-0 rounded-xl blur-md opacity-0 group-hover:opacity-50 transition-all duration-300"
+          className="absolute inset-0 rounded-[var(--radius-xl)] blur-md opacity-0 group-hover:opacity-50 transition-all duration-300"
           style={{ backgroundColor: user.color }}
         />
         <div
-          className="relative w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold text-sm shadow-lg ring-1 ring-white/10 group-hover:ring-white/20 transition-all"
+          className="relative w-12 h-12 rounded-[var(--radius-xl)] flex items-center justify-center text-white font-semibold text-sm shadow-lg ring-1 ring-white/10 group-hover:ring-white/20 transition-all"
           style={{ backgroundColor: user.color }}
         >
           {getUserInitials(user.name)}
@@ -774,7 +774,7 @@ function UserCard({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (us
       </div>
 
       <motion.div
-        className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 group-hover:bg-gradient-to-br group-hover:from-[var(--brand-sky-light)] group-hover:to-[var(--brand-sky)] flex items-center justify-center transition-all border border-white/5 group-hover:border-transparent"
+        className="flex-shrink-0 w-8 h-8 rounded-[var(--radius-lg)] bg-white/5 group-hover:bg-gradient-to-br group-hover:from-[var(--brand-sky-light)] group-hover:to-[var(--brand-sky)] flex items-center justify-center transition-all border border-white/5 group-hover:border-transparent"
         whileHover={{ scale: 1.1 }}
       >
         <Lock className="w-3.5 h-3.5 text-white/40 group-hover:text-[#00205B] transition-colors" />

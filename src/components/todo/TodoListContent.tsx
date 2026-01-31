@@ -31,7 +31,6 @@ interface TodoListContentProps {
   useSectionedView: boolean;
   shouldUseSections: boolean;
   sortOption: SortOption;
-  darkMode: boolean;
 
   // Selection
   selectedTodos: Set<string>;
@@ -79,7 +78,6 @@ function TodoListContent({
   useSectionedView,
   shouldUseSections,
   sortOption,
-  darkMode,
   selectedTodos,
   showBulkActions,
   searchQuery,
@@ -144,7 +142,6 @@ function TodoListContent({
     >
       <EmptyState
         variant={getEmptyStateVariant()}
-        darkMode={darkMode}
         searchQuery={searchQuery}
         onAddTask={onAddTask}
         onClearSearch={onClearSearch}
@@ -299,7 +296,6 @@ function TodoListContent({
           <KanbanBoard
             todos={todos}
             users={users}
-            darkMode={darkMode}
             onStatusChange={onStatusChange}
             onDelete={onDelete}
             onAssign={onAssign}

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { Bell, BellOff, Clock, X, Check, ChevronDown } from 'lucide-react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Bell, BellOff, Clock, X, Check } from 'lucide-react';
 import { format, addMinutes, addHours, addDays, startOfDay, setHours, setMinutes } from 'date-fns';
 import type { ReminderPreset, ReminderType } from '@/types/todo';
 
@@ -20,7 +21,8 @@ interface QuickOption {
   getTime: (dueDate?: Date) => Date | null;
 }
 
-const QUICK_OPTIONS: QuickOption[] = [
+// Options relative to the due date (only shown when due date exists)
+const RELATIVE_OPTIONS: QuickOption[] = [
   {
     id: '5_min_before',
     label: '5 min before',
@@ -62,6 +64,30 @@ const QUICK_OPTIONS: QuickOption[] = [
   },
 ];
 
+// Absolute-time options (always available, regardless of due date)
+const ABSOLUTE_OPTIONS: QuickOption[] = [
+  {
+    id: 'at_time',
+    label: 'In 30 minutes',
+    icon: '⏱️',
+    getTime: () => addMinutes(new Date(), 30),
+  },
+  {
+    id: 'at_time',
+    label: 'In 1 hour',
+    icon: '🕐',
+    getTime: () => addHours(new Date(), 1),
+  },
+  {
+    id: 'at_time',
+    label: 'Tomorrow 9 AM',
+    icon: '🌅',
+    getTime: () => setMinutes(setHours(addDays(startOfDay(new Date()), 1), 9), 0),
+  },
+];
+
+const QUICK_OPTIONS: QuickOption[] = RELATIVE_OPTIONS;
+
 export default function ReminderPicker({
   value,
   dueDate,
@@ -73,6 +99,8 @@ export default function ReminderPicker({
   const [showCustom, setShowCustom] = useState(false);
   const [customDate, setCustomDate] = useState('');
   const [customTime, setCustomTime] = useState('09:00');
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
 
   const parsedDueDate = useMemo(() => {
     if (!dueDate) return undefined;
@@ -142,28 +170,65 @@ export default function ReminderPicker({
   // Filter options to only show those that result in future times
   const availableOptions = useMemo(() => {
     const now = new Date();
-    return QUICK_OPTIONS.filter((option) => {
+    // Use relative options when due date exists, absolute options otherwise
+    const options = parsedDueDate ? RELATIVE_OPTIONS : ABSOLUTE_OPTIONS;
+    return options.filter((option) => {
       const time = option.getTime(parsedDueDate);
       return time && time > now;
     });
   }, [parsedDueDate]);
 
+  // Calculate position
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const width = 256; // w-64
+      let left = rect.left;
+      let top = rect.bottom + 8;
+
+      // Adjust if goes off screen
+      if (left + width > window.innerWidth) {
+        left = window.innerWidth - width - 16;
+      }
+      if (top + 300 > window.innerHeight) { // Approximate height
+        top = rect.top - 300 - 8;
+      }
+
+      setDropdownPosition({ top, left });
+    }
+  }, [isOpen]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (buttonRef.current && buttonRef.current.contains(e.target as Node)) return;
+      const dropdown = document.getElementById('reminder-dropdown');
+      if (dropdown && !dropdown.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClick);
+    return () => window.removeEventListener('mousedown', handleClick);
+  }, [isOpen]);
+
   if (compact) {
     // Compact mode: pill button that matches other options
     return (
-      <div className={`relative ${className}`}>
+      <>
         <button
+          ref={buttonRef}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all hover:shadow-sm ${
             parsedValue
-              ? 'border-[var(--warning)]/30 bg-[var(--warning)]/10'
-              : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
+              ? 'border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
+              : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)] text-[var(--text-muted)]'
           }`}
         >
-          <Bell className={`w-3.5 h-3.5 flex-shrink-0 ${parsedValue ? 'text-[var(--warning)]' : 'text-[var(--text-muted)]'}`} />
+          <Bell className={`w-3.5 h-3.5 flex-shrink-0 ${parsedValue ? 'text-amber-500' : 'text-[var(--text-muted)]'}`} />
           {parsedValue ? (
-            <span className="text-xs font-medium truncate max-w-[100px] text-[var(--warning)]">
+            <span className="text-xs font-medium truncate max-w-[100px] text-amber-600 dark:text-amber-400">
               {formatReminderDisplay(parsedValue)}
             </span>
           ) : (
@@ -171,16 +236,12 @@ export default function ReminderPicker({
           )}
         </button>
 
-        {isOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setIsOpen(false)}
-            />
-
-            {/* Dropdown */}
-            <div className="absolute top-full left-0 mt-2 w-64 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)] z-50 overflow-hidden">
+        {isOpen && dropdownPosition && typeof document !== 'undefined' && createPortal(
+          <div
+            id="reminder-dropdown"
+            className="fixed z-[9999] w-64 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)] overflow-hidden"
+            style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+          >
               <div className="p-2 space-y-1">
                 {/* Quick options */}
                 {availableOptions.length > 0 ? (
@@ -199,9 +260,7 @@ export default function ReminderPicker({
                   ))
                 ) : (
                   <p className="px-3 py-2 text-sm text-[var(--text-muted)]">
-                    {parsedDueDate
-                      ? 'All preset options are in the past'
-                      : 'Set a due date to use presets'}
+                    All preset options are in the past
                   </p>
                 )}
 
@@ -263,10 +322,10 @@ export default function ReminderPicker({
                   </>
                 )}
               </div>
-            </div>
-          </>
+          </div>,
+          document.body
         )}
-      </div>
+      </>
     );
   }
 
@@ -286,6 +345,7 @@ export default function ReminderPicker({
             onClick={handleClear}
             className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors"
             title="Remove reminder"
+            aria-label="Remove reminder"
           >
             <X className="w-4 h-4" />
           </button>
@@ -294,9 +354,9 @@ export default function ReminderPicker({
 
       {/* Current reminder display */}
       {parsedValue && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--accent-light)] border border-[var(--accent)]/20">
-          <Bell className="w-4 h-4 text-[var(--accent)]" />
-          <span className="text-sm text-[var(--accent)] font-medium">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30">
+          <Bell className="w-4 h-4 text-amber-500" />
+          <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
             {formatReminderDisplay(parsedValue)}
           </span>
         </div>
@@ -304,7 +364,7 @@ export default function ReminderPicker({
 
       {/* Quick options grid */}
       <div className="grid grid-cols-2 gap-2">
-        {QUICK_OPTIONS.map((option) => {
+        {(parsedDueDate ? RELATIVE_OPTIONS : ABSOLUTE_OPTIONS).map((option) => {
           const time = option.getTime(parsedDueDate);
           const isAvailable = time && time > new Date();
           const isSelected =
@@ -318,7 +378,7 @@ export default function ReminderPicker({
               disabled={!isAvailable}
               className={`flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] border text-sm transition-colors ${
                 isSelected
-                  ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent)]'
+                  ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
                   : isAvailable
                     ? 'border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-2)]'
                     : 'border-[var(--border)] opacity-50 cursor-not-allowed'
@@ -353,6 +413,7 @@ export default function ReminderPicker({
           disabled={!customDate || !customTime}
           className="p-2 rounded-[var(--radius-lg)] bg-[var(--accent)] text-white disabled:opacity-50 disabled:cursor-not-allowed"
           title="Set custom reminder"
+          aria-label="Set custom reminder"
         >
           <Check className="w-4 h-4" />
         </button>
