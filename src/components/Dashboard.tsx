@@ -235,7 +235,7 @@ export default function Dashboard({
         {/* Overdue Alert - Primary CTA when there are overdue tasks */}
         {stats.overdue > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
           >
             <Button
@@ -295,7 +295,7 @@ export default function Dashboard({
             </div>
           ) : (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={false}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
               className="flex flex-col items-center gap-2 py-4 text-center"
@@ -392,7 +392,7 @@ export default function Dashboard({
                 <motion.div
                   key={day.dayName}
                   className="flex-1 flex flex-col items-center gap-1.5"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={false}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
@@ -406,7 +406,7 @@ export default function Dashboard({
 
                   <div className="w-full flex-1 flex flex-col justify-end min-h-[20px]">
                     <motion.div
-                      initial={{ height: 0 }}
+                      initial={false}
                       animate={{ height: `${Math.max(height, 8)}%` }}
                       transition={{ delay: 0.2 + index * 0.05, duration: 0.4 }}
                       className={`w-full rounded-sm ${
