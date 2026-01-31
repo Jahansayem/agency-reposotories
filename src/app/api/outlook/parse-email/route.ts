@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-// Verify API key middleware
-function verifyApiKey(request: NextRequest): boolean {
-  const apiKey = request.headers.get('X-API-Key');
-  return apiKey === process.env.OUTLOOK_ADDON_API_KEY;
+function getAnthropicClient(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY is not configured');
+  }
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
 export async function POST(request: NextRequest) {
-  // Verify API key
-  if (!verifyApiKey(request)) {
+  // Verify API key (constant-time comparison)
+  if (!verifyOutlookApiKey(request)) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }
@@ -58,6 +56,7 @@ Rules:
 
 Respond with ONLY the JSON object, no other text.`;
 
+    const anthropic = getAnthropicClient();
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
@@ -94,23 +93,15 @@ Respond with ONLY the JSON object, no other text.`;
       draft: validatedDraft,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error parsing email', error, { component: 'OutlookParseEmailAPI', details: errorMessage });
+    logger.error('Error parsing email', error, { component: 'OutlookParseEmailAPI' });
     return NextResponse.json(
-      { success: false, error: 'Failed to parse email', details: errorMessage },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
-    },
-  });
+// Handle CORS preflight - only allow specific Outlook origins
+export async function OPTIONS(request: NextRequest) {
+  return createOutlookCorsPreflightResponse(request, 'POST, OPTIONS');
 }

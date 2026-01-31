@@ -107,6 +107,14 @@ const SEVERITY_COLORS: Record<AlertSeverity, string> = {
 // ============================================================================
 // Event Storage (In-Memory with TTL)
 // ============================================================================
+//
+// LIMITATION: Events are stored in-memory and will be lost on server restart.
+// In a multi-instance deployment, each instance has its own isolated store,
+// which means threshold checks may undercount events.
+// TODO: Migrate to Redis (Upstash) for persistent, shared event storage
+// across instances. The project already has Upstash configured for other
+// features (see serverLockout.ts).
+// ============================================================================
 
 interface StoredEvent {
   event: SecurityEvent;
@@ -116,6 +124,11 @@ interface StoredEvent {
 // In-memory event store for threshold checking
 // In production, this should use Redis for multi-instance support
 const eventStore: Map<string, StoredEvent[]> = new Map();
+
+// Maximum number of events to keep per key to prevent memory leaks
+const MAX_EVENTS_PER_KEY = 1000;
+// Maximum total keys in the store to prevent unbounded growth
+const MAX_STORE_KEYS = 500;
 
 function getEventKey(type: SecurityEventType, identifier?: string): string {
   return identifier ? `${type}:${identifier}` : type;
@@ -133,9 +146,26 @@ function storeEvent(event: SecurityEvent, identifier?: string): void {
 
   // Clean expired events
   const now = Date.now();
-  const active = stored.filter(e => e.expiresAt > now);
+  let active = stored.filter(e => e.expiresAt > now);
+
+  // Cap per-key size to prevent memory leaks from high-volume event types
+  if (active.length > MAX_EVENTS_PER_KEY) {
+    active = active.slice(active.length - MAX_EVENTS_PER_KEY);
+  }
 
   eventStore.set(key, active);
+
+  // Cap total keys to prevent unbounded memory growth from unique identifiers
+  if (eventStore.size > MAX_STORE_KEYS) {
+    // Remove oldest keys (first entries in Map iteration order)
+    const keysToRemove = eventStore.size - MAX_STORE_KEYS;
+    let removed = 0;
+    for (const existingKey of eventStore.keys()) {
+      if (removed >= keysToRemove) break;
+      eventStore.delete(existingKey);
+      removed++;
+    }
+  }
 }
 
 function countRecentEvents(

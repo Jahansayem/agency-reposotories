@@ -125,6 +125,20 @@ export default function AppShell({
   const [showWeeklyChart, setShowWeeklyChart] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
+  // Timer refs for cleanup on unmount
+  const newTaskTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taskLinkScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taskLinkHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (newTaskTimerRef.current) clearTimeout(newTaskTimerRef.current);
+      if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+      if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    };
+  }, []);
+
   // Handle responsive sidebar
   useEffect(() => {
     const handleResize = () => {
@@ -204,7 +218,8 @@ export default function AppShell({
   const triggerNewTask = useCallback(() => {
     setActiveView('tasks');
     // Small delay to ensure view is switched before triggering callback
-    setTimeout(() => {
+    if (newTaskTimerRef.current) clearTimeout(newTaskTimerRef.current);
+    newTaskTimerRef.current = setTimeout(() => {
       if (newTaskCallback) {
         newTaskCallback();
       }
@@ -216,14 +231,16 @@ export default function AppShell({
     // Navigate to tasks view
     setActiveView('tasks');
     // Small delay to ensure view switches, then scroll to task
-    setTimeout(() => {
+    if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+    if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    taskLinkScrollTimerRef.current = setTimeout(() => {
       const taskElement = document.getElementById(`todo-${taskId}`);
       if (taskElement) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Add animated highlight class
         taskElement.classList.add('notification-highlight');
         // Remove the class after animation completes
-        setTimeout(() => {
+        taskLinkHighlightTimerRef.current = setTimeout(() => {
           taskElement.classList.remove('notification-highlight');
         }, 3000);
       }

@@ -5,14 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, ChevronLeft, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import {
-  verifyPin,
   isValidPin,
   getUserInitials,
-  isLockedOut,
-  incrementLockout,
-  clearLockout,
   setStoredSession,
-  getLockoutState,
 } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
 import { OAuthLoginButtons } from './OAuthLoginButtons';
@@ -118,7 +113,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
   const [pin, setPin] = useState(['', '', '', '']);
   const [error, setError] = useState('');
-  const [attemptsRemaining, setAttemptsRemaining] = useState(3);
+  const [attemptsRemaining, setAttemptsRemaining] = useState(5);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -210,26 +205,28 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Countdown timer for server-side lockout
   useEffect(() => {
-    if (!selectedUser) return;
-    const checkLockout = () => {
-      const { locked, remainingSeconds } = isLockedOut(selectedUser.id);
-      setLockoutSeconds(locked ? remainingSeconds : 0);
-      const state = getLockoutState(selectedUser.id);
-      setAttemptsRemaining(Math.max(0, 3 - state.attempts));
-    };
-    checkLockout();
-    const interval = setInterval(checkLockout, 1000);
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
     return () => clearInterval(interval);
-  }, [selectedUser]);
+  }, [lockoutSeconds]);
 
   const handleUserSelect = (user: AuthUser) => {
     setSelectedUser(user);
     setScreen('pin');
     setPin(['', '', '', '']);
     setError('');
-    const state = getLockoutState(user.id);
-    setAttemptsRemaining(Math.max(0, 3 - state.attempts));
+    setAttemptsRemaining(5);
+    setLockoutSeconds(0);
     setTimeout(() => pinRefs.current[0]?.focus(), 100);
   };
 
@@ -273,36 +270,28 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     setError('');
 
     try {
-      const { data } = await supabase
-        .from('users')
-        .select('pin_hash')
-        .eq('id', selectedUser.id)
-        .single();
-
-      if (!data) {
-        setError('User not found');
-        setIsSubmitting(false);
-        return;
-      }
-
-      const isValid = await verifyPin(pinString, data.pin_hash);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUser.id, pin: pinString }),
+      });
+      const result = await response.json();
+      const isValid = response.ok && result.success;
 
       if (isValid) {
-        clearLockout(selectedUser.id);
-        await supabase
-          .from('users')
-          .update({ last_login: new Date().toISOString() })
-          .eq('id', selectedUser.id);
+        // Store session in localStorage for client-side state (components use this to know who is logged in)
+        // The HttpOnly cookie set by the server handles actual authentication
         setStoredSession(selectedUser);
         onLogin(selectedUser);
       } else {
-        const lockout = incrementLockout(selectedUser.id);
-        const remaining = Math.max(0, 3 - lockout.attempts);
-        setAttemptsRemaining(remaining);
-        if (lockout.lockedUntil) {
+        if (result.locked || response.status === 429) {
+          setLockoutSeconds(result.remainingSeconds || 300);
           setError('Too many attempts. Please wait.');
-        } else {
+        } else if (result.attemptsRemaining !== undefined) {
+          setAttemptsRemaining(result.attemptsRemaining);
           setError('Incorrect PIN');
+        } else {
+          setError(result.error || 'Incorrect PIN');
         }
         setPin(['', '', '', '']);
         pinRefs.current[0]?.focus();
@@ -648,7 +637,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                         Enter your 4-digit PIN
                       </p>
 
-                      {lockoutSeconds === 0 && attemptsRemaining < 3 && (
+                      {lockoutSeconds === 0 && attemptsRemaining < 5 && (
                         <motion.div
                           className="mt-4 inline-flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20"
                           initial={{ opacity: 0, scale: 0.9 }}

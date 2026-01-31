@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 
 // Create Supabase client lazily to avoid build-time initialization
 function getSupabase() {
@@ -13,29 +14,12 @@ function getSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// Helper to extract user name from request
-function extractUserName(request: NextRequest): string | null {
-  return request.headers.get('X-User-Name');
-}
-
-// Validate user name is present
-function validateUserName(userName: string | null): NextResponse | null {
-  if (!userName) {
-    return NextResponse.json(
-      { success: false, error: 'X-User-Name header required' },
-      { status: 401 }
-    );
-  }
-  return null;
-}
-
 /**
  * POST /api/push-subscribe
  * Store a web push subscription for a user
  */
 export async function POST(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
+  const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
   try {
@@ -99,8 +83,7 @@ export async function POST(request: NextRequest) {
  * Remove a web push subscription for a user
  */
 export async function DELETE(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
+  const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
   try {
@@ -165,8 +148,7 @@ export async function DELETE(request: NextRequest) {
  * Check if user has an active web push subscription
  */
 export async function GET(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
+  const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);

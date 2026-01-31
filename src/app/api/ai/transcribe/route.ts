@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 
 // Audio file transcription endpoint using OpenAI Whisper + Claude for task parsing
 // Supports three modes:
@@ -30,6 +31,9 @@ const SUPPORTED_MIME_TYPES = [
 type ProcessingMode = 'transcribe' | 'tasks' | 'subtasks';
 
 export async function POST(request: NextRequest) {
+  const { userName, error: authError } = await extractAndValidateUserName(request);
+  if (authError) return authError;
+
   try {
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File | null;
@@ -124,8 +128,8 @@ export async function POST(request: NextRequest) {
       logger.error('Whisper API error', undefined, { component: 'TranscribeAPI', status: whisperResponse.status, errorData });
       return NextResponse.json({
         success: false,
-        error: errorData?.error?.message || 'Failed to transcribe audio',
-      }, { status: whisperResponse.status });
+        error: 'Failed to transcribe audio',
+      }, { status: 500 });
     }
 
     const transcription = await whisperResponse.text();

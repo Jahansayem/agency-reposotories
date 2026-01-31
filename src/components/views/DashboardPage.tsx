@@ -90,7 +90,7 @@ export default function DashboardPage({
   }, [todos]);
 
   return (
-    <div className={`min-h-full ${'bg-slate-50'}`}>
+    <div className={`min-h-full bg-[var(--background)]`}>
       {/* Header */}
       <div className="relative overflow-hidden">
         <div

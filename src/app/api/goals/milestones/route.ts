@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -37,10 +38,12 @@ async function verifyOwnerAccess(userName: string | null): Promise<boolean> {
 }
 
 // GET - Fetch milestones for a goal
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
-    const userName = searchParams.get('userName');
     const goalId = searchParams.get('goalId');
 
     if (!(await verifyOwnerAccess(userName))) {
@@ -68,10 +71,13 @@ export async function GET(request: Request) {
 }
 
 // POST - Create a new milestone
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const body = await request.json();
-    const { goal_id, title, target_date, userName } = body;
+    const { goal_id, title, target_date } = body;
 
     if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -116,10 +122,13 @@ export async function POST(request: Request) {
 }
 
 // PUT - Update a milestone
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const body = await request.json();
-    const { id, title, completed, target_date, display_order, userName } = body;
+    const { id, title, completed, target_date, display_order } = body;
 
     if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -157,11 +166,13 @@ export async function PUT(request: Request) {
 }
 
 // DELETE - Delete a milestone
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userName = searchParams.get('userName');
 
     if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });

@@ -16,9 +16,22 @@ import type {
 } from '@/types/agency';
 import { isFeatureEnabled } from './featureFlags';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
+}
+
+if (!supabaseServiceKey) {
+  logger.warn('SUPABASE_SERVICE_ROLE_KEY is not configured - agency auth will use anon key with reduced privileges', {
+    component: 'AgencyAuth',
+  });
+}
+
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  supabaseUrl,
+  supabaseServiceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 // ============================================

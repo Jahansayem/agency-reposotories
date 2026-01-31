@@ -125,11 +125,13 @@ export async function withRateLimit(
   request: NextRequest,
   limiter: Ratelimit | null
 ): Promise<RateLimitResult> {
-  // Get identifier (prefer user ID, fallback to IP)
-  const userId = request.headers.get('x-user-id');
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  // SECURITY: Use IP-based keying only. Do NOT trust x-user-id header
+  // as it can be spoofed by an attacker to bypass per-user rate limits
+  // or to exhaust another user's rate limit quota.
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
 
-  const identifier = userId || ip;
+  const identifier = ip;
 
   return await checkRateLimit(identifier, limiter);
 }

@@ -51,15 +51,29 @@ export function useChatMessages({
   const messagesRef = useRef<ChatMessage[]>(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Fetch initial messages
+  // Fetch initial messages filtered by current conversation
   const fetchMessages = useCallback(async () => {
-    if (!isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured() || !conversation) return;
 
     setLoading(true);
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('messages')
-      .select('*')
+      .select('*');
+
+    // Filter by conversation type to avoid fetching all messages from the database
+    if (conversation.type === 'team') {
+      // Team chat: messages with no recipient (not DMs)
+      query = query.is('recipient', null);
+    } else {
+      // DM conversation: messages between current user and the other user
+      const otherUser = conversation.userName;
+      query = query.or(
+        `and(created_by.eq.${currentUser.name},recipient.eq.${otherUser}),and(created_by.eq.${otherUser},recipient.eq.${currentUser.name})`
+      );
+    }
+
+    const { data, error } = await query
       .order('created_at', { ascending: false })
       .limit(MESSAGES_PER_PAGE);
 
@@ -71,19 +85,31 @@ export function useChatMessages({
       setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
     }
     setLoading(false);
-  }, []);
+  }, [conversation, currentUser.name]);
 
-  // Load more (older) messages
+  // Load more (older) messages filtered by current conversation
   const loadMoreMessages = useCallback(async () => {
-    if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || messages.length === 0) return;
+    if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || messages.length === 0 || !conversation) return;
 
     setIsLoadingMore(true);
     const oldestMessage = messages[0];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('messages')
       .select('*')
-      .lt('created_at', oldestMessage.created_at)
+      .lt('created_at', oldestMessage.created_at);
+
+    // Filter by conversation type to avoid fetching all messages from the database
+    if (conversation.type === 'team') {
+      query = query.is('recipient', null);
+    } else {
+      const otherUser = conversation.userName;
+      query = query.or(
+        `and(created_by.eq.${currentUser.name},recipient.eq.${otherUser}),and(created_by.eq.${otherUser},recipient.eq.${currentUser.name})`
+      );
+    }
+
+    const { data, error } = await query
       .order('created_at', { ascending: false })
       .limit(MESSAGES_PER_PAGE);
 
@@ -97,7 +123,7 @@ export function useChatMessages({
       setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
     }
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMoreMessages, messages]);
+  }, [isLoadingMore, hasMoreMessages, messages, conversation, currentUser.name]);
 
   // Filter messages for current conversation
   const filteredMessages = useMemo(() => {
@@ -304,23 +330,22 @@ export function useChatMessages({
     }
   }, [currentUser.name]);
 
-  // Mark messages as read
+  // Mark messages as read (batched)
   const markMessagesAsRead = useCallback(async (messageIds: string[]) => {
     if (messageIds.length === 0) return;
 
-    // Capture original read_by state for fallback
+    // Filter to only unread messages not created by current user
     const originalMessages = messagesRef.current;
-    const originalReadByMap = new Map<string, string[]>();
-    messageIds.forEach(id => {
+    const unreadIds = messageIds.filter(id => {
       const msg = originalMessages.find(m => m.id === id);
-      if (msg) {
-        originalReadByMap.set(id, msg.read_by || []);
-      }
+      return msg && msg.created_by !== currentUser.name && !(msg.read_by || []).includes(currentUser.name);
     });
+
+    if (unreadIds.length === 0) return;
 
     // Optimistic update
     setMessages(prev => prev.map(m => {
-      if (messageIds.includes(m.id) && m.created_by !== currentUser.name) {
+      if (unreadIds.includes(m.id)) {
         const readBy = m.read_by || [];
         if (!readBy.includes(currentUser.name)) {
           return { ...m, read_by: [...readBy, currentUser.name] };
@@ -329,27 +354,37 @@ export function useChatMessages({
       return m;
     }));
 
-    // Update in database
+    // Batch update in database using RPC first, then fallback
     try {
-      const updatePromises = messageIds.map(async (messageId) => {
-        const { error } = await supabase.rpc('mark_message_read', {
-          p_message_id: messageId,
-          p_user_name: currentUser.name
-        });
-
-        if (error) {
-          // Fallback to regular update
-          const originalReadBy = originalReadByMap.get(messageId) || [];
-          if (!originalReadBy.includes(currentUser.name)) {
-            await supabase
-              .from('messages')
-              .update({ read_by: [...originalReadBy, currentUser.name] })
-              .eq('id', messageId);
-          }
-        }
+      // Try RPC for each message (most reliable for array_append)
+      const { error: rpcError } = await supabase.rpc('mark_message_read', {
+        p_message_id: unreadIds[0],
+        p_user_name: currentUser.name
       });
 
-      await Promise.all(updatePromises);
+      if (rpcError) {
+        // RPC not available - use batched fallback for all messages at once
+        // For messages that need read_by updated, we batch by their current read_by values
+        for (const id of unreadIds) {
+          const msg = originalMessages.find(m => m.id === id);
+          const currentReadBy = msg?.read_by || [];
+          await supabase
+            .from('messages')
+            .update({ read_by: [...currentReadBy, currentUser.name] })
+            .eq('id', id);
+        }
+      } else if (unreadIds.length > 1) {
+        // RPC works - use it for remaining messages
+        const remainingIds = unreadIds.slice(1);
+        await Promise.all(
+          remainingIds.map(messageId =>
+            supabase.rpc('mark_message_read', {
+              p_message_id: messageId,
+              p_user_name: currentUser.name
+            })
+          )
+        );
+      }
     } catch (err) {
       logger.error('Error in markMessagesAsRead', err, { component: 'useChatMessages' });
     }

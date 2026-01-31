@@ -41,6 +41,9 @@ vi.mock('framer-motion', () => ({
 const createMockUser = (name: string): AuthUser => ({
   id: `user-${name.toLowerCase().replace(' ', '-')}`,
   name,
+  color: '#0033A0',
+  role: 'member',
+  created_at: new Date().toISOString(),
   email: `${name.toLowerCase().replace(' ', '.')}@example.com`,
 });
 

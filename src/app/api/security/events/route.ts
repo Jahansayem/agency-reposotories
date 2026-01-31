@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const hours = parseInt(searchParams.get('hours') || '24', 10);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 500);
 
     // Get in-memory event summary
     const eventSummary = securityMonitor.getRecentEventsSummary();
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .limit(100);
+      .limit(limit);
 
     if (auditError) {
       logger.error('Failed to fetch audit logs', auditError, {
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
       .select('*')
       .gte('created_at', since)
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(limit);
 
     if (authError) {
       logger.error('Failed to fetch auth failure logs', authError, {

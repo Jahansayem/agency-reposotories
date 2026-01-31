@@ -104,8 +104,13 @@ export default function TaskDetailPanel({
   const handleSaveText = useCallback(async () => {
     if (editedText.trim() && editedText !== task.text) {
       setSaving(true);
-      await onUpdate(task.id, { text: editedText.trim() });
-      setSaving(false);
+      try {
+        await onUpdate(task.id, { text: editedText.trim() });
+      } catch (error) {
+        logger.error('Failed to save task text', error, { component: 'TaskDetailPanel' });
+      } finally {
+        setSaving(false);
+      }
     }
     setIsEditingText(false);
   }, [task.id, task.text, editedText, onUpdate]);
@@ -113,26 +118,47 @@ export default function TaskDetailPanel({
   const handleSaveNotes = useCallback(async () => {
     if (editedNotes !== (task.notes || '')) {
       setSaving(true);
-      await onUpdate(task.id, { notes: editedNotes });
-      setSaving(false);
+      try {
+        await onUpdate(task.id, { notes: editedNotes });
+      } catch (error) {
+        logger.error('Failed to save task notes', error, { component: 'TaskDetailPanel' });
+      } finally {
+        setSaving(false);
+      }
     }
     setIsEditingNotes(false);
   }, [task.id, task.notes, editedNotes, onUpdate]);
 
   const handleToggleComplete = useCallback(async () => {
-    await onUpdate(task.id, { completed: !task.completed });
+    try {
+      await onUpdate(task.id, { completed: !task.completed });
+    } catch (error) {
+      logger.error('Failed to toggle task completion', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.completed, onUpdate]);
 
   const handlePriorityChange = useCallback(async (priority: TodoPriority) => {
-    await onUpdate(task.id, { priority });
+    try {
+      await onUpdate(task.id, { priority });
+    } catch (error) {
+      logger.error('Failed to update task priority', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, onUpdate]);
 
   const handleStatusChange = useCallback(async (status: TodoStatus) => {
-    await onUpdate(task.id, { status });
+    try {
+      await onUpdate(task.id, { status });
+    } catch (error) {
+      logger.error('Failed to update task status', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, onUpdate]);
 
   const handleAssigneeChange = useCallback(async (assignedTo: string | null) => {
-    await onUpdate(task.id, { assigned_to: assignedTo || undefined });
+    try {
+      await onUpdate(task.id, { assigned_to: assignedTo || undefined });
+    } catch (error) {
+      logger.error('Failed to update task assignee', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, onUpdate]);
 
   const handleAddSubtask = useCallback(async () => {
@@ -145,22 +171,34 @@ export default function TaskDetailPanel({
       priority: 'medium',
     };
 
-    await onUpdate(task.id, {
-      subtasks: [...(task.subtasks || []), newSubtaskItem],
-    });
-    setNewSubtask('');
+    try {
+      await onUpdate(task.id, {
+        subtasks: [...(task.subtasks || []), newSubtaskItem],
+      });
+      setNewSubtask('');
+    } catch (error) {
+      logger.error('Failed to add subtask', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.subtasks, newSubtask, onUpdate]);
 
   const handleToggleSubtask = useCallback(async (subtaskId: string) => {
     const updatedSubtasks = task.subtasks?.map(s =>
       s.id === subtaskId ? { ...s, completed: !s.completed } : s
     );
-    await onUpdate(task.id, { subtasks: updatedSubtasks });
+    try {
+      await onUpdate(task.id, { subtasks: updatedSubtasks });
+    } catch (error) {
+      logger.error('Failed to toggle subtask', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.subtasks, onUpdate]);
 
   const handleDeleteSubtask = useCallback(async (subtaskId: string) => {
     const updatedSubtasks = task.subtasks?.filter(s => s.id !== subtaskId);
-    await onUpdate(task.id, { subtasks: updatedSubtasks });
+    try {
+      await onUpdate(task.id, { subtasks: updatedSubtasks });
+    } catch (error) {
+      logger.error('Failed to delete subtask', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.subtasks, onUpdate]);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -964,7 +1002,10 @@ export default function TaskDetailPanel({
         `}
       >
         <button
-          onClick={() => onDelete(task.id)}
+          onClick={() => {
+            if (!window.confirm('Are you sure you want to delete this task?')) return;
+            onDelete(task.id);
+          }}
           className={`
             flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-sm font-medium
             transition-colors

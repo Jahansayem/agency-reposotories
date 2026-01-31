@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSessionToken, hashSessionToken } from './sessionValidator';
+import { logger } from './logger';
 
 const SESSION_COOKIE_NAME = 'session_token';
 const SESSION_MAX_AGE = 8 * 60 * 60; // 8 hours in seconds
@@ -111,7 +112,7 @@ export async function createSessionWithCookie(
 
     return { token, tokenHash, expiresAt };
   } catch (error) {
-    console.error('Failed to create session with cookie:', error);
+    logger.error('Failed to create session with cookie:', error, { component: 'SessionCookies' });
     return null;
   }
 }

@@ -16,6 +16,7 @@ import {
   CHAT_LIMITS,
   truncateText,
 } from '@/lib/chatUtils';
+import { fetchWithCsrf } from '@/lib/csrf';
 import {
   ChatMessageList,
   ChatInputBar,
@@ -467,7 +468,7 @@ export default function ChatPanel({
       }
 
       if (recipientsToNotify.length > 0) {
-        fetch('/api/push-send', {
+        fetchWithCsrf('/api/push-send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

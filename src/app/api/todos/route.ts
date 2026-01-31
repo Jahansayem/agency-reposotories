@@ -16,6 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
 import { validateSession } from '@/lib/sessionValidator';
 import { encryptTodoPII, decryptTodoPII } from '@/lib/fieldEncryption';
+import { verifyTodoAccess } from '@/lib/apiAuth';
 
 // Use service role key for server-side operations
 const supabase = createClient(
@@ -289,12 +290,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get todo text for activity log before deletion
-    const { data: todo } = await supabase
-      .from('todos')
-      .select('text')
-      .eq('id', id)
-      .single();
+    // Verify the user has access to this todo (creator, assigned, or updater)
+    const { todo, error: accessError } = await verifyTodoAccess(id, session.userName);
+    if (accessError) return accessError;
 
     const { error } = await supabase
       .from('todos')
@@ -309,7 +307,7 @@ export async function DELETE(request: NextRequest) {
     await supabase.from('activity_log').insert({
       action: 'task_deleted',
       todo_id: id,
-      todo_text: todo?.text?.substring(0, 100),
+      todo_text: todo.text?.substring(0, 100),
       user_name: session.userName,
     });
 

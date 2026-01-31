@@ -22,6 +22,9 @@ let anthropicClient: Anthropic | null = null;
 export function getAnthropicClient(): Anthropic | null {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
+    logger.warn('ANTHROPIC_API_KEY is not configured - AI features will be unavailable', {
+      component: 'AIHelper',
+    });
     return null;
   }
 

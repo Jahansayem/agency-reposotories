@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { extractUserName, validateUserName, verifyTodoAccess } from '@/lib/apiAuth';
+import { extractAndValidateUserName, verifyTodoAccess } from '@/lib/apiAuth';
 import type { TaskReminder, ReminderType } from '@/types/todo';
 
 // Create Supabase client lazily to avoid build-time errors
@@ -34,8 +34,7 @@ function getSupabaseClient() {
  * - status: Filter by status ('pending', 'sent', 'failed', 'cancelled')
  */
 export async function GET(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
+  const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
   const { searchParams } = new URL(request.url);
@@ -96,8 +95,7 @@ export async function GET(request: NextRequest) {
  * - userId?: UUID of user to remind (default: assigned user)
  */
 export async function POST(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
+  const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
   const supabase = getSupabaseClient();
@@ -224,8 +222,7 @@ export async function POST(request: NextRequest) {
  * - id: UUID of the reminder to delete
  */
 export async function DELETE(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
+  const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
   const supabase = getSupabaseClient();
@@ -296,8 +293,7 @@ export async function DELETE(request: NextRequest) {
  * - message?: Updated message
  */
 export async function PATCH(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
+  const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
   const supabase = getSupabaseClient();

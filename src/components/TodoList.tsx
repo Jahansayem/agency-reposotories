@@ -867,8 +867,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
-  const toggleTodo = async (id: string, completed: boolean) => {
-    const todoItem = todos.find(t => t.id === id);
+  const toggleTodo = useCallback(async (id: string, completed: boolean) => {
+    const currentTodos = useTodoStore.getState().todos;
+    const todoItem = currentTodos.find(t => t.id === id);
     const updated_at = new Date().toISOString();
     // When completing a task, also set status to 'done'; when uncompleting, set to 'todo'
     const newStatus: TodoStatus = completed ? 'done' : 'todo';
@@ -879,7 +880,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     if (completed && todoItem) {
       // Calculate streak and get next tasks for enhanced celebration
       const streakCount = calculateCompletionStreak(activityLog, userName) + 1;
-      const nextTasks = getNextSuggestedTasks(todos, userName, id);
+      const nextTasks = getNextSuggestedTasks(currentTodos, userName, id);
       const encouragementMessage = getEncouragementMessage(streakCount);
 
       const updatedTodo = { ...todoItem, completed: true, updated_at };
@@ -928,7 +929,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         todoText: todoItem.text,
       });
     }
-  };
+  }, [userName, activityLog, updateTodoInStore, triggerEnhancedCelebration, triggerCelebration, createNextRecurrence]);
 
   const deleteTodo = async (id: string) => {
     const todoToDelete = todos.find((t) => t.id === id);
@@ -969,8 +970,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     );
   };
 
-  const assignTodo = async (id: string, assignedTo: string | null) => {
-    const oldTodo = todos.find((t) => t.id === id);
+  const assignTodo = useCallback(async (id: string, assignedTo: string | null) => {
+    const oldTodo = useTodoStore.getState().todos.find((t) => t.id === id);
 
     // Optimistic update using store action
     updateTodoInStore(id, { assigned_to: assignedTo || undefined });
@@ -1023,7 +1024,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         }
       }
     }
-  };
+  }, [userName, updateTodoInStore]);
 
   const setDueDate = async (id: string, dueDate: string | null) => {
     const oldTodo = todos.find((t) => t.id === id);
@@ -1164,8 +1165,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
-  const setPriority = async (id: string, priority: TodoPriority) => {
-    const oldTodo = todos.find((t) => t.id === id);
+  const setPriority = useCallback(async (id: string, priority: TodoPriority) => {
+    const oldTodo = useTodoStore.getState().todos.find((t) => t.id === id);
 
     // Optimistic update using store action
     updateTodoInStore(id, { priority });
@@ -1190,7 +1191,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         details: { from: oldTodo.priority, to: priority },
       });
     }
-  };
+  }, [userName, updateTodoInStore]);
 
   const updateNotes = async (id: string, notes: string) => {
     const oldTodo = todos.find((t) => t.id === id);

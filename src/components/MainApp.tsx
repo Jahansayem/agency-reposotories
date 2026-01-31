@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
@@ -137,20 +137,34 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     setInitialFilter(null);
   }, []);
 
+  // Timer refs for cleanup on unmount
+  const taskLinkScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taskLinkHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+      if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    };
+  }, []);
+
   // Handle task link click from chat/dashboard/notifications (navigate to tasks view and open task)
   const handleTaskLinkClick = useCallback((taskId: string) => {
     setActiveView('tasks');
     // Set the selected task ID to trigger auto-expand in TodoItem
     setSelectedTaskId(taskId);
     // Small delay to allow view switch, then scroll to task
-    setTimeout(() => {
+    if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+    if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    taskLinkScrollTimerRef.current = setTimeout(() => {
       const taskElement = document.getElementById(`todo-${taskId}`);
       if (taskElement) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Add animated highlight class
         taskElement.classList.add('notification-highlight');
         // Remove the class after animation completes
-        setTimeout(() => {
+        taskLinkHighlightTimerRef.current = setTimeout(() => {
           taskElement.classList.remove('notification-highlight');
         }, 3000);
       }

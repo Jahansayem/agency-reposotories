@@ -11,7 +11,7 @@
  * - Rotate annually or after potential compromise
  */
 
-import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, hkdfSync } from 'crypto';
 import { logger } from './logger';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -30,13 +30,32 @@ interface EncryptionResult {
 
 /**
  * Get encryption key from environment
- * Returns null if not configured (encryption disabled)
+ * In production, throws if not configured. In development, warns loudly.
  */
 function getEncryptionKey(): Buffer | null {
   const keyHex = process.env.FIELD_ENCRYPTION_KEY;
 
   if (!keyHex) {
-    // Encryption not configured - this is acceptable for development
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'FIELD_ENCRYPTION_KEY is not set. Refusing to store PII in plaintext in production. ' +
+        'Generate a key with: openssl rand -hex 32'
+      );
+    }
+    // Development: allow plaintext fallback but warn loudly
+    logger.error(
+      'FIELD_ENCRYPTION_KEY is not set - PII data will be stored in PLAINTEXT. ' +
+        'This is a security risk. Generate a key with: openssl rand -hex 32',
+      new Error('Missing encryption key'),
+      {
+        component: 'fieldEncryption',
+        action: 'getKey',
+      }
+    );
+    console.error(
+      '\n⚠️  WARNING: FIELD_ENCRYPTION_KEY is not set! PII will be stored in PLAINTEXT.\n' +
+      '   Generate a key with: openssl rand -hex 32\n'
+    );
     return null;
   }
 
@@ -60,15 +79,14 @@ function getEncryptionKey(): Buffer | null {
 }
 
 /**
- * Derive a field-specific key using HKDF-like approach
+ * Derive a field-specific key using HKDF (RFC 5869)
  * This ensures different fields have different effective keys
  */
 function deriveFieldKey(masterKey: Buffer, fieldName: string): Buffer {
   const info = `field:${fieldName}`;
-  return createHash('sha256')
-    .update(masterKey)
-    .update(info)
-    .digest();
+  return Buffer.from(
+    hkdfSync('sha256', masterKey, '', info, KEY_LENGTH)
+  );
 }
 
 /**
@@ -290,7 +308,8 @@ export function decryptMessagePII<T extends { text?: string | null }>(
 
 /**
  * Re-encrypt all data with a new key (for key rotation)
- * This is a helper that should be called from a migration script
+ * This is a helper that should be called from a migration script.
+ * Decrypts with the current FIELD_ENCRYPTION_KEY and re-encrypts with newKey.
  */
 export async function reEncryptField(
   oldValue: string | null,
@@ -306,8 +325,30 @@ export async function reEncryptField(
     throw new Error(`Failed to decrypt field ${fieldName} for re-encryption`);
   }
 
-  // Then encrypt with new key
-  // Note: This would require passing the new key explicitly
-  // For actual key rotation, use a dedicated migration script
-  return decrypted;
+  // If the value was not encrypted (plaintext), just encrypt it with the new key
+  // If it was encrypted, we now have the plaintext -- encrypt with the new key
+
+  if (newKey.length !== KEY_LENGTH) {
+    throw new Error(`New key must be ${KEY_LENGTH} bytes, got ${newKey.length}`);
+  }
+
+  try {
+    const fieldKey = deriveFieldKey(newKey, fieldName);
+    const iv = randomBytes(IV_LENGTH);
+    const cipher = createCipheriv(ALGORITHM, fieldKey, iv, { authTagLength: AUTH_TAG_LENGTH });
+
+    const encrypted = Buffer.concat([
+      cipher.update(decrypted!, 'utf8'),
+      cipher.final()
+    ]);
+
+    const authTag = cipher.getAuthTag();
+
+    return ENCRYPTED_PREFIX +
+      iv.toString('base64') + ':' +
+      authTag.toString('base64') + ':' +
+      encrypted.toString('base64');
+  } catch (error) {
+    throw new Error(`Failed to re-encrypt field ${fieldName}: ${(error as Error).message}`);
+  }
 }

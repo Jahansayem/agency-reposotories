@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 
 // Configure web-push with VAPID keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -152,6 +153,9 @@ async function sendToSubscription(
  * Send web push notifications to specified users.
  */
 export async function POST(request: NextRequest) {
+  const { userName, error: authError } = await extractAndValidateUserName(request);
+  if (authError) return authError;
+
   // Validate VAPID configuration
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
     return NextResponse.json(

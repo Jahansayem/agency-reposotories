@@ -9,8 +9,7 @@ import {
 } from '@/types/todo';
 import { logger } from '@/lib/logger';
 import {
-  extractUserName,
-  validateUserName,
+  extractAndValidateUserName,
   verifyTodoAccess,
   extractTodoIdFromPath
 } from '@/lib/apiAuth';
@@ -69,9 +68,7 @@ async function ensureBucketExists() {
 export async function POST(request: NextRequest) {
   try {
     // SECURITY: Validate session instead of trusting form data
-    // Extract userName from session validation (header or cookie)
-    const sessionUserName = extractUserName(request);
-    const authError = validateUserName(sessionUserName);
+    const { userName, error: authError } = await extractAndValidateUserName(request);
     if (authError) {
       logger.security('Attachment upload auth failure', {
         endpoint: '/api/attachments',
@@ -83,9 +80,6 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const todoId = formData.get('todoId') as string | null;
-    // Use validated session userName, not form data (which can be spoofed)
-    // validateUserName already verified userName is not null
-    const userName = sessionUserName!;
 
     if (!file) {
       return NextResponse.json(
@@ -192,7 +186,7 @@ export async function POST(request: NextRequest) {
       file_size: file.size,
       storage_path: storagePath,
       mime_type: mimeType,
-      uploaded_by: userName,
+      uploaded_by: userName!,
       uploaded_at: new Date().toISOString(),
     };
 
@@ -277,7 +271,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error handling attachment upload', error, { component: 'AttachmentsAPI' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -298,8 +292,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Extract and validate userName for authorization
-    const userName = extractUserName(request);
-    const authError = validateUserName(userName);
+    const { userName, error: authError } = await extractAndValidateUserName(request);
     if (authError) {
       return authError;
     }
@@ -349,7 +342,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     logger.error('Error handling attachment deletion', error, { component: 'AttachmentsAPI' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -369,8 +362,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Extract and validate userName for authorization
-    const userName = extractUserName(request);
-    const authError = validateUserName(userName);
+    const { userName, error: authError } = await extractAndValidateUserName(request);
     if (authError) {
       return authError;
     }
@@ -410,7 +402,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error('Error handling download request', error, { component: 'AttachmentsAPI' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }

@@ -7,6 +7,8 @@
  * Uses VAPID protocol for authentication with push services.
  */
 
+import { fetchWithCsrf } from '@/lib/csrf';
+
 // Get VAPID public key from environment
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 
@@ -168,7 +170,7 @@ export async function saveSubscriptionToServer(
   userName: string
 ): Promise<boolean> {
   try {
-    const response = await fetch('/api/push-subscribe', {
+    const response = await fetchWithCsrf('/api/push-subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -197,7 +199,7 @@ export async function removeSubscriptionFromServer(
   userName: string
 ): Promise<boolean> {
   try {
-    const response = await fetch('/api/push-subscribe', {
+    const response = await fetchWithCsrf('/api/push-subscribe', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

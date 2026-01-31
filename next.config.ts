@@ -1,15 +1,8 @@
 import type { NextConfig } from "next";
 
-// Allowed origins for Outlook add-in CORS
-const OUTLOOK_ALLOWED_ORIGINS = [
-  "https://outlook.office.com",
-  "https://outlook.office365.com",
-  "https://outlook.live.com",
-  "https://outlook-sdf.office.com",
-  "https://outlook-sdf.office365.com",
-  // Add production domain for same-origin requests
-  process.env.NEXT_PUBLIC_APP_URL || "https://shared-todo-list-production.up.railway.app",
-].filter(Boolean).join(", ");
+// NOTE: Outlook CORS origins are now managed dynamically in middleware.ts
+// and src/lib/outlookAuth.ts to avoid the comma-separated origin issue.
+// See Issue #38: Access-Control-Allow-Origin must be a single origin, not a list.
 
 // Content Security Policy
 // Note: Next.js requires 'unsafe-inline' for styles due to how Tailwind/CSS-in-JS works
@@ -54,7 +47,7 @@ const cspString = Object.entries(cspDirectives)
   .join("; ");
 
 const nextConfig: NextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: true,
   output: "standalone",
   turbopack: {
     root: ".",
@@ -97,23 +90,24 @@ const nextConfig: NextConfig = {
       },
       {
         // Allow Office.js to load Outlook add-in files
-        // Must be accessible for Office Add-in manifest loading
+        // NOTE: Access-Control-Allow-Origin is set dynamically in middleware.ts
+        // to return only the single matching origin (not a comma-separated list).
         source: "/outlook/:path*",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: OUTLOOK_ALLOWED_ORIGINS },
           { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "Content-Type" },
-          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Vary", value: "Origin" },
         ],
       },
       {
         // CORS headers for Outlook API endpoints - restricted to Office domains
+        // NOTE: Access-Control-Allow-Origin is set dynamically in middleware.ts
+        // to return only the single matching origin (not a comma-separated list).
         source: "/api/outlook/:path*",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: OUTLOOK_ALLOWED_ORIGINS },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "Content-Type, X-API-Key, X-CSRF-Token" },
-          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Vary", value: "Origin" },
         ],
       },
     ];

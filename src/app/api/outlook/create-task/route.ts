@@ -4,33 +4,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
 import { TodoPriority } from '@/types/todo';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
+import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
 // Create Supabase client for server-side operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
-
-// Verify API key middleware with constant-time comparison
-function verifyApiKey(request: NextRequest): boolean {
-  const apiKey = request.headers.get('X-API-Key');
-  const expectedKey = process.env.OUTLOOK_ADDON_API_KEY;
-
-  if (!apiKey || !expectedKey) {
-    return false;
-  }
-
-  // Constant-time comparison to prevent timing attacks
-  if (apiKey.length !== expectedKey.length) {
-    return false;
-  }
-
-  let result = 0;
-  for (let i = 0; i < apiKey.length; i++) {
-    result |= apiKey.charCodeAt(i) ^ expectedKey.charCodeAt(i);
-  }
-  return result === 0;
-}
 
 // Validate that createdBy is a valid user in the system
 async function validateCreator(createdBy: string): Promise<{ valid: boolean; userId?: string }> {
@@ -52,8 +32,8 @@ async function validateCreator(createdBy: string): Promise<{ valid: boolean; use
 }
 
 export async function POST(request: NextRequest) {
-  // Verify API key
-  if (!verifyApiKey(request)) {
+  // Verify API key (constant-time comparison)
+  if (!verifyOutlookApiKey(request)) {
     logger.security('Outlook API key validation failed', {
       endpoint: '/api/outlook/create-task',
       ip: request.headers.get('x-forwarded-for') || 'unknown',
@@ -156,14 +136,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
-    },
-  });
+// Handle CORS preflight - only allow specific Outlook origins
+export async function OPTIONS(request: NextRequest) {
+  return createOutlookCorsPreflightResponse(request, 'POST, OPTIONS');
 }

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -42,10 +43,12 @@ async function verifyOwnerAccess(userName: string | null): Promise<boolean> {
 }
 
 // GET - Fetch all strategic goals with categories and milestones
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
-    const userName = searchParams.get('userName');
     const categoryId = searchParams.get('categoryId');
 
     if (!(await verifyOwnerAccess(userName))) {
@@ -77,8 +80,11 @@ export async function GET(request: Request) {
 }
 
 // POST - Create a new strategic goal
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const {
       title,
@@ -89,8 +95,9 @@ export async function POST(request: Request) {
       target_date,
       target_value,
       notes,
-      created_by
     } = body;
+
+    const created_by = userName;
 
     if (!(await verifyOwnerAccess(created_by))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -141,8 +148,11 @@ export async function POST(request: Request) {
 }
 
 // PUT - Update a strategic goal
-export async function PUT(request: Request) {
+export async function PUT(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const body = await request.json();
     const {
       id,
@@ -157,8 +167,9 @@ export async function PUT(request: Request) {
       progress_percent,
       notes,
       display_order,
-      updated_by
     } = body;
+
+    const updated_by = userName;
 
     if (!(await verifyOwnerAccess(updated_by))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -205,11 +216,13 @@ export async function PUT(request: Request) {
 }
 
 // DELETE - Delete a strategic goal
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userName = searchParams.get('userName');
 
     if (!(await verifyOwnerAccess(userName))) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });

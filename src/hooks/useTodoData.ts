@@ -37,9 +37,6 @@ export function useTodoData(currentUser: AuthUser) {
     setHasMoreTodos,
     setLoadingMore,
     appendTodos,
-    todos,
-    hasMoreTodos,
-    loadingMore,
   } = useTodoStore();
 
   const userName = currentUser.name;
@@ -266,8 +263,8 @@ export function useTodoData(currentUser: AuthUser) {
 
   // Update an existing todo
   const updateTodo = useCallback(async (id: string, updates: Partial<Todo>) => {
-    // Get current todo for rollback
-    const currentTodo = todos.find((t) => t.id === id);
+    // Get current todo for rollback using store.getState() to avoid stale closure
+    const currentTodo = useTodoStore.getState().todos.find((t) => t.id === id);
     if (!currentTodo) return false;
 
     // Optimistic update
@@ -327,12 +324,12 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return true;
-  }, [todos, userName, updateTodoInStore]);
+  }, [userName, updateTodoInStore]);
 
   // Delete a todo
   const deleteTodo = useCallback(async (id: string) => {
-    // Get current todo for rollback
-    const currentTodo = todos.find((t) => t.id === id);
+    // Get current todo for rollback using store.getState() to avoid stale closure
+    const currentTodo = useTodoStore.getState().todos.find((t) => t.id === id);
     if (!currentTodo) return false;
 
     // Optimistic delete
@@ -356,11 +353,12 @@ export function useTodoData(currentUser: AuthUser) {
     });
 
     return true;
-  }, [todos, userName, deleteTodoFromStore, addTodoToStore]);
+  }, [userName, deleteTodoFromStore, addTodoToStore]);
 
   // Toggle todo completion
   const toggleComplete = useCallback(async (id: string) => {
-    const todo = todos.find((t) => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const todo = useTodoStore.getState().todos.find((t) => t.id === id);
     if (!todo) return false;
 
     const newCompleted = !todo.completed;
@@ -381,7 +379,7 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return success;
-  }, [todos, userName, updateTodo]);
+  }, [userName, updateTodo]);
 
   // Refresh data
   const refresh = useCallback(async () => {
@@ -394,18 +392,20 @@ export function useTodoData(currentUser: AuthUser) {
    * Fetches the next page of todos and appends them to the existing list
    */
   const loadMoreTodos = useCallback(async () => {
-    if (!hasMoreTodos || loadingMore) return;
-    
+    // Use store.getState() to get current values to avoid stale closure
+    const state = useTodoStore.getState();
+    if (!state.hasMoreTodos || state.loadingMore) return;
+
     setLoadingMore(true);
-    
+
     try {
-      const currentCount = todos.length;
+      const currentCount = state.todos.length;
       const { data, error } = await supabase
         .from('todos')
         .select('*')
         .order('created_at', { ascending: false })
         .range(currentCount, currentCount + TODOS_PER_PAGE - 1);
-      
+
       if (error) {
         logger.error('Error loading more todos', error, { component: 'useTodoData' });
       } else if (data) {
@@ -416,7 +416,7 @@ export function useTodoData(currentUser: AuthUser) {
     } finally {
       setLoadingMore(false);
     }
-  }, [hasMoreTodos, loadingMore, todos.length, setLoadingMore, appendTodos, setHasMoreTodos]);
+  }, [setLoadingMore, appendTodos, setHasMoreTodos]);
 
   return {
     createTodo,

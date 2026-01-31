@@ -12,7 +12,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { Todo, TodoStatus, TodoPriority, QuickFilter, SortOption, ViewMode } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, QuickFilter, SortOption, ViewMode, isFollowUpOverdue } from '@/types/todo';
 
 /**
  * Cached midnight timestamp for date calculations.
@@ -568,6 +568,12 @@ export const selectFilteredTodos = (
       break;
     case 'overdue':
       filtered = filtered.filter((t) => isOverdue(t.due_date, t.completed));
+      break;
+    case 'waiting':
+      filtered = filtered.filter((t) => t.waiting_for_response === true);
+      break;
+    case 'needs_followup':
+      filtered = filtered.filter((t) => isFollowUpOverdue(t));
       break;
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
 // Create Supabase client for server-side operations
 const supabase = createClient(
@@ -8,15 +9,9 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Verify API key middleware
-function verifyApiKey(request: NextRequest): boolean {
-  const apiKey = request.headers.get('X-API-Key');
-  return apiKey === process.env.OUTLOOK_ADDON_API_KEY;
-}
-
 export async function GET(request: NextRequest) {
-  // Verify API key
-  if (!verifyApiKey(request)) {
+  // Verify API key (constant-time comparison)
+  if (!verifyOutlookApiKey(request)) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }
@@ -73,14 +68,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
-    },
-  });
+// Handle CORS preflight - only allow specific Outlook origins
+export async function OPTIONS(request: NextRequest) {
+  return createOutlookCorsPreflightResponse(request, 'GET, OPTIONS');
 }

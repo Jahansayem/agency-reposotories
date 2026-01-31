@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 import type { WaitingContactType } from '@/types/todo';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -35,13 +36,8 @@ interface ClearWaitingRequest {
  */
 export async function POST(request: NextRequest) {
   try {
-    const userName = request.headers.get('X-User-Name');
-    if (!userName) {
-      return NextResponse.json(
-        { success: false, error: 'User name required' },
-        { status: 401 }
-      );
-    }
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
 
     const body = await request.json() as MarkWaitingRequest;
     const { todoId, contactType, followUpAfterHours = 48 } = body;
@@ -126,13 +122,8 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const userName = request.headers.get('X-User-Name');
-    if (!userName) {
-      return NextResponse.json(
-        { success: false, error: 'User name required' },
-        { status: 401 }
-      );
-    }
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
 
     const body = await request.json() as ClearWaitingRequest;
     const { todoId } = body;

@@ -52,8 +52,10 @@ function getAttemptsKey(identifier: string): string {
  */
 export async function checkLockout(identifier: string): Promise<LockoutStatus> {
   if (!redis) {
-    // If Redis is not configured, fall back to allowing (but log warning)
-    logger.warn('Redis not configured for lockout - allowing request', {
+    // Redis not configured - this is expected only in development.
+    // In production, Redis MUST be configured for lockout to function.
+    logger.warn('SECURITY: Redis not configured for lockout - lockout protection is DISABLED. ' +
+      'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables to enable.', {
       component: 'ServerLockout',
       identifier,
     });
@@ -91,15 +93,16 @@ export async function checkLockout(identifier: string): Promise<LockoutStatus> {
       maxAttempts: MAX_ATTEMPTS,
     };
   } catch (error) {
-    logger.error('Failed to check lockout status', error, {
+    // SECURITY: Fail closed - assume locked when Redis errors occur during a check.
+    // This prevents bypass of lockout by making Redis unavailable.
+    logger.error('Failed to check lockout status - failing closed (assuming locked)', error, {
       component: 'ServerLockout',
       identifier,
     });
-    // On error, allow the request but log it
     return {
-      isLocked: false,
-      remainingSeconds: 0,
-      attempts: 0,
+      isLocked: true,
+      remainingSeconds: 60,
+      attempts: MAX_ATTEMPTS,
       maxAttempts: MAX_ATTEMPTS,
     };
   }
@@ -113,7 +116,8 @@ export async function recordFailedAttempt(
   metadata?: { ip?: string; userAgent?: string; userName?: string }
 ): Promise<LockoutStatus> {
   if (!redis) {
-    logger.warn('Redis not configured for lockout tracking', {
+    logger.warn('SECURITY: Redis not configured for lockout tracking - lockout protection is DISABLED. ' +
+      'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables to enable.', {
       component: 'ServerLockout',
       identifier,
     });
@@ -129,13 +133,17 @@ export async function recordFailedAttempt(
     const lockoutKey = getLockoutKey(identifier);
     const attemptsKey = getAttemptsKey(identifier);
 
-    // Increment attempt counter
-    const attempts = await redis.incr(attemptsKey);
-
-    // Set expiry on attempts key if this is the first attempt
-    if (attempts === 1) {
-      await redis.expire(attemptsKey, ATTEMPT_WINDOW_SECONDS);
-    }
+    // Atomic increment with expire using Lua script
+    // This prevents a race condition where INCR succeeds but EXPIRE fails,
+    // which would leave an attempt counter that never expires.
+    const luaScript = `
+      local current = redis.call('INCR', KEYS[1])
+      if current == 1 then
+        redis.call('EXPIRE', KEYS[1], ARGV[1])
+      end
+      return current
+    `;
+    const attempts = await redis.eval(luaScript, [attemptsKey], [ATTEMPT_WINDOW_SECONDS]) as number;
 
     // Log the failed attempt and notify security monitor
     logger.security('Failed login attempt', {
@@ -186,14 +194,16 @@ export async function recordFailedAttempt(
       maxAttempts: MAX_ATTEMPTS,
     };
   } catch (error) {
-    logger.error('Failed to record login attempt', error, {
+    // SECURITY: Fail closed - assume locked when Redis errors occur.
+    // This prevents bypass of lockout tracking by making Redis unavailable.
+    logger.error('Failed to record login attempt - failing closed (assuming locked)', error, {
       component: 'ServerLockout',
       identifier,
     });
     return {
-      isLocked: false,
-      remainingSeconds: 0,
-      attempts: 1,
+      isLocked: true,
+      remainingSeconds: 60,
+      attempts: MAX_ATTEMPTS,
       maxAttempts: MAX_ATTEMPTS,
     };
   }

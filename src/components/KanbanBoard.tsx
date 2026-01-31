@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/lib/logger';
 import {
@@ -132,6 +132,15 @@ function TaskDetailModal({
   const [isUploading, setIsUploading] = useState(false);
   const [showContentImporter, setShowContentImporter] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const blobUrlsRef = useRef<string[]>([]);
+
+  // Revoke blob URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      blobUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      blobUrlsRef.current = [];
+    };
+  }, []);
 
   const handleSnooze = (days: number) => {
     onSetDueDate(todo.id, getSnoozeDate(days));
@@ -216,6 +225,7 @@ function TaskDetailModal({
 
         // Create a temporary URL for the file (in real app, would upload to storage)
         const url = URL.createObjectURL(file);
+        blobUrlsRef.current.push(url);
 
         newAttachments.push({
           id: `attachment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -241,6 +251,12 @@ function TaskDetailModal({
 
   const handleRemoveAttachment = (attachmentId: string) => {
     if (!onUpdateAttachments) return;
+    // Revoke blob URL if it was created locally
+    const removedAttachment = (todo.attachments || []).find(a => a.id === attachmentId);
+    if (removedAttachment?.storage_path?.startsWith('blob:')) {
+      URL.revokeObjectURL(removedAttachment.storage_path);
+      blobUrlsRef.current = blobUrlsRef.current.filter(url => url !== removedAttachment.storage_path);
+    }
     const updated = (todo.attachments || []).filter(a => a.id !== attachmentId);
     onUpdateAttachments(todo.id, updated);
   };
@@ -759,8 +775,14 @@ export default function KanbanBoard({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState(false);
-  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+  const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
   const [dragAnnouncement, setDragAnnouncement] = useState<string>('');
+
+  // Derive selectedTodo from todos prop to avoid stale reference when todos update via real-time sync
+  const selectedTodo = useMemo(
+    () => selectedTodoId ? todos.find(t => t.id === selectedTodoId) || null : null,
+    [selectedTodoId, todos]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -912,7 +934,7 @@ export default function KanbanBoard({
               onAssign={onAssign}
               onSetDueDate={onSetDueDate}
               onSetPriority={onSetPriority}
-              onCardClick={onOpenDetail ? (todo: Todo) => onOpenDetail(todo.id) : setSelectedTodo}
+              onCardClick={onOpenDetail ? (todo: Todo) => onOpenDetail(todo.id) : (todo: Todo) => setSelectedTodoId(todo.id)}
               showBulkActions={showBulkActions}
               selectedTodos={selectedTodos}
               onSelectTodo={onSelectTodo}
@@ -934,7 +956,7 @@ export default function KanbanBoard({
           <TaskDetailModal
             todo={selectedTodo}
             users={users}
-            onClose={() => setSelectedTodo(null)}
+            onClose={() => setSelectedTodoId(null)}
             onDelete={onDelete}
             onAssign={onAssign}
             onSetDueDate={onSetDueDate}

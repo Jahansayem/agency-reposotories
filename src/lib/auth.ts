@@ -1,16 +1,8 @@
 // Auth utilities for PIN-based authentication
 
-export interface AuthUser {
-  id: string;
-  name: string;
-  color: string;
-  role?: 'owner' | 'admin' | 'member';
-  created_at?: string;
-  last_login?: string;
-  streak_count?: number;
-  streak_last_date?: string;
-  welcome_shown_at?: string;
-}
+// Re-export AuthUser from the canonical location to avoid duplicate definitions
+import type { AuthUser } from '@/types/todo';
+export type { AuthUser } from '@/types/todo';
 
 export interface StoredSession {
   userId: string;
@@ -39,10 +31,22 @@ export async function verifyPin(pin: string, hash: string): Promise<boolean> {
 // Session management
 export function getStoredSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
-  const session = localStorage.getItem(SESSION_KEY);
-  if (!session) return null;
+  const raw = localStorage.getItem(SESSION_KEY);
+  if (!raw) return null;
   try {
-    return JSON.parse(session);
+    const session: StoredSession = JSON.parse(raw);
+
+    // Check 8-hour expiry
+    if (session.loginAt) {
+      const loginTime = new Date(session.loginAt).getTime();
+      const eightHours = 8 * 60 * 60 * 1000;
+      if (Date.now() - loginTime > eightHours) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+    }
+
+    return session;
   } catch {
     return null;
   }

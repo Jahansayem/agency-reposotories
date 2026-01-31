@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 
 /**
  * Get today's date in Pacific Time (YYYY-MM-DD format).
@@ -91,24 +92,9 @@ function getSupabaseClient() {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get user name from header
-    const userName = request.headers.get('X-User-Name');
-
-    if (!userName) {
-      return NextResponse.json(
-        { success: false, error: 'X-User-Name header is required' },
-        { status: 400 }
-      );
-    }
-
-    // Sanitize user name
-    const sanitizedUserName = userName.trim();
-    if (sanitizedUserName.length === 0 || sanitizedUserName.length > 100) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user name' },
-        { status: 400 }
-      );
-    }
+    // Validate session and extract user name
+    const { userName: sanitizedUserName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
 
     const { searchParams } = new URL(request.url);
     const markRead = searchParams.get('markRead') !== 'false';

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { extractUserName, validateUserName } from '@/lib/apiAuth';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const userName = searchParams.get('userName');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 500);
     const todoId = searchParams.get('todoId');
 
     if (!userName) {
@@ -46,11 +46,8 @@ export async function GET(request: Request) {
 export async function POST(request: NextRequest) {
   try {
     // Extract and validate userName from request
-    const authUserName = extractUserName(request);
-    const authError = validateUserName(authUserName);
-    if (authError) {
-      return authError;
-    }
+    const { userName: authUserName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
 
     const body = await request.json();
     const { action, todo_id, todo_text, user_name, details } = body;

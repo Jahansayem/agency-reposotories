@@ -510,7 +510,7 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         const error = err as Error;
         logger.error('Error generating digest for user', error, { component: 'DigestGenerate' });
-        results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: error.message });
+        results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: 'Internal error during generation' });
       }
     }
 
@@ -544,7 +544,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error in digest generation', error, { component: 'DigestGenerate' });
 
     return NextResponse.json(
