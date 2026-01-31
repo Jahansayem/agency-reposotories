@@ -253,7 +253,7 @@ export function TaskCompletionSummary({
           </div>
 
           {/* Content */}
-          <div className="px-6 py-4 overflow-y-auto max-h-[50vh]">
+          <div className="px-6 py-4 overflow-y-auto max-h-[60vh]">
             {/* Quick Stats */}
             <div className="flex gap-4 mb-4">
               {subtasksTotal > 0 && (
@@ -362,10 +362,10 @@ export function TaskCompletionSummary({
 
                 {subtasksTotal > 0 && (
                   <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
-                      SUBTASKS
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">
+                      Subtasks
                     </p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {todo.subtasks?.map((subtask) => (
                         <li
                           key={subtask.id}
@@ -395,8 +395,8 @@ export function TaskCompletionSummary({
 
                 {todo.notes && (
                   <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                      NOTES
+                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-1">
+                      Notes
                     </p>
                     <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                       {todo.notes}
@@ -413,7 +413,7 @@ export function TaskCompletionSummary({
                 id="summary-panel"
                 role="tabpanel"
                 aria-labelledby="raw-tab"
-                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-5 text-sm font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap overflow-x-auto leading-relaxed"
+                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-5 text-sm font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto leading-relaxed"
               >
                 {summaryText}
               </pre>

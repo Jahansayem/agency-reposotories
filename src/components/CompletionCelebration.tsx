@@ -63,7 +63,7 @@ export function CompletionCelebration({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-          className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl max-w-md w-full overflow-hidden"
+          className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl max-w-lg w-full overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header with checkmark */}
@@ -103,7 +103,7 @@ export function CompletionCelebration({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="text-gray-500 dark:text-gray-400 line-through"
+                className="text-gray-600 dark:text-gray-300 line-through text-base"
               >
                 {completedTask.text}
               </motion.p>
