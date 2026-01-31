@@ -14,9 +14,13 @@ CREATE INDEX IF NOT EXISTS idx_todos_waiting ON todos (waiting_for_response) WHE
 -- Create index for finding tasks that need follow-up
 CREATE INDEX IF NOT EXISTS idx_todos_waiting_since ON todos (waiting_since) WHERE waiting_for_response = TRUE;
 
--- Add constraint for contact type
-ALTER TABLE todos ADD CONSTRAINT chk_waiting_contact_type
-  CHECK (waiting_contact_type IS NULL OR waiting_contact_type IN ('call', 'email', 'other'));
+-- Add constraint for contact type (idempotent)
+DO $$ BEGIN
+    ALTER TABLE todos ADD CONSTRAINT chk_waiting_contact_type
+      CHECK (waiting_contact_type IS NULL OR waiting_contact_type IN ('call', 'email', 'other'));
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Add new activity actions
 -- Note: activity_log.action is TEXT, so no schema change needed

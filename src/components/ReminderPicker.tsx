@@ -67,19 +67,19 @@ const RELATIVE_OPTIONS: QuickOption[] = [
 // Absolute-time options (always available, regardless of due date)
 const ABSOLUTE_OPTIONS: QuickOption[] = [
   {
-    id: 'at_time',
+    id: 'at_time' as ReminderPreset,
     label: 'In 30 minutes',
     icon: '⏱️',
     getTime: () => addMinutes(new Date(), 30),
   },
   {
-    id: 'at_time',
+    id: '1_hour_before',
     label: 'In 1 hour',
     icon: '🕐',
     getTime: () => addHours(new Date(), 1),
   },
   {
-    id: 'at_time',
+    id: 'morning_of',
     label: 'Tomorrow 9 AM',
     icon: '🌅',
     getTime: () => setMinutes(setHours(addDays(startOfDay(new Date()), 1), 9), 0),
@@ -170,9 +170,16 @@ export default function ReminderPicker({
   // Filter options to only show those that result in future times
   const availableOptions = useMemo(() => {
     const now = new Date();
-    // Use relative options when due date exists, absolute options otherwise
-    const options = parsedDueDate ? RELATIVE_OPTIONS : ABSOLUTE_OPTIONS;
-    return options.filter((option) => {
+    // Use relative options when due date exists and is in the future
+    if (parsedDueDate && parsedDueDate > now) {
+      const relativeOpts = RELATIVE_OPTIONS.filter((option) => {
+        const time = option.getTime(parsedDueDate);
+        return time && time > now;
+      });
+      if (relativeOpts.length > 0) return relativeOpts;
+    }
+    // Fall back to absolute options (due date missing or in the past)
+    return ABSOLUTE_OPTIONS.filter((option) => {
       const time = option.getTime(parsedDueDate);
       return time && time > now;
     });
@@ -241,6 +248,7 @@ export default function ReminderPicker({
             id="reminder-dropdown"
             className="fixed z-[9999] w-64 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)] overflow-hidden"
             style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+            onMouseDown={(e) => e.stopPropagation()}
           >
               <div className="p-2 space-y-1">
                 {/* Quick options */}
@@ -364,7 +372,7 @@ export default function ReminderPicker({
 
       {/* Quick options grid */}
       <div className="grid grid-cols-2 gap-2">
-        {(parsedDueDate ? RELATIVE_OPTIONS : ABSOLUTE_OPTIONS).map((option) => {
+        {(parsedDueDate && parsedDueDate > new Date() ? RELATIVE_OPTIONS : ABSOLUTE_OPTIONS).map((option) => {
           const time = option.getTime(parsedDueDate);
           const isAvailable = time && time > new Date();
           const isSelected =

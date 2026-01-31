@@ -12,9 +12,9 @@ import { logger } from '@/lib/logger';
 /**
  * Get today's date in Pacific Time (YYYY-MM-DD format).
  */
-function getTodayInPacific(): string {
-  const now = new Date();
-  return now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+function getTodayDate(): string {
+  // digest_date is a generated column using CURRENT_DATE which returns the DB server date (UTC)
+  return new Date().toISOString().split('T')[0];
 }
 
 /**
@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the most recent digest for this user from today (Pacific Time)
-    const todayPT = getTodayInPacific();
+    // Get the most recent digest for this user from today (UTC, matching DB's CURRENT_DATE)
+    const todayPT = getTodayDate();
 
     const { data: digest, error: digestError } = await supabase
       .from('daily_digests')

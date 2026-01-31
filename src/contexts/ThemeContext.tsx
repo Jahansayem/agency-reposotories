@@ -16,24 +16,17 @@ const THEME_KEY = 'bealer-theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
-  const [mounted, setMounted] = useState(false);
 
-  // Load theme from localStorage on mount - this is the correct pattern for initialization
+  // Load theme from localStorage on mount
   useEffect(() => {
-    setMounted(true);
     const savedTheme = localStorage.getItem(THEME_KEY) as Theme | null;
     if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
       setThemeState(savedTheme);
-    } else {
-      // Default to dark mode for new users
-      setThemeState('dark');
     }
   }, []);
 
-  // Apply theme class to document
+  // Apply theme class to document and save to localStorage
   useEffect(() => {
-    if (!mounted) return;
-
     const root = document.documentElement;
     if (theme === 'dark') {
       root.classList.add('dark');
@@ -43,7 +36,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.add('light');
     }
     localStorage.setItem(THEME_KEY, theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
   const toggleTheme = () => {
     setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -53,11 +46,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme);
   };
 
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return null;
-  }
-
+  // Always render children immediately - no conditional rendering
+  // This prevents blank page in WebKit while still defaulting to dark theme
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
