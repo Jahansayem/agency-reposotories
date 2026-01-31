@@ -121,7 +121,8 @@ test.describe('Edge Compatibility', () => {
         const optionalChaining = obj?.a?.b;
 
         // Test nullish coalescing
-        const nullishTest = null ?? 'works';
+        const maybeNull: string | null = null;
+        const nullishTest = maybeNull ?? 'works';
 
         // Test array methods
         const arrayTest = [1, 2, 3].map(x => x * 2);
