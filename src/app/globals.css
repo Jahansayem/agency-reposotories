@@ -67,11 +67,11 @@
   --danger-light: rgba(220, 38, 38, 0.08);
 
   /* ─── Effects ─── */
-  --shadow-color: 215 28% 17%;
-  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.05);
-  --shadow-md: 0 4px 12px hsl(var(--shadow-color) / 0.08), 0 1px 3px hsl(var(--shadow-color) / 0.05);
-  --shadow-lg: 0 12px 32px hsl(var(--shadow-color) / 0.12), 0 4px 12px hsl(var(--shadow-color) / 0.08);
-  --shadow-xl: 0 24px 48px hsl(var(--shadow-color) / 0.15), 0 12px 24px hsl(var(--shadow-color) / 0.1);
+  --shadow-color: 31, 41, 55;
+  --shadow-sm: 0 1px 2px rgba(var(--shadow-color), 0.05);
+  --shadow-md: 0 4px 12px rgba(var(--shadow-color), 0.08), 0 1px 3px rgba(var(--shadow-color), 0.05);
+  --shadow-lg: 0 12px 32px rgba(var(--shadow-color), 0.12), 0 4px 12px rgba(var(--shadow-color), 0.08);
+  --shadow-xl: 0 24px 48px rgba(var(--shadow-color), 0.15), 0 12px 24px rgba(var(--shadow-color), 0.1);
   --shadow-blue: 0 8px 24px rgba(0, 51, 160, 0.2);
   --shadow-sky: 0 8px 24px rgba(114, 181, 232, 0.25);
 
@@ -150,7 +150,7 @@
   --danger: #F87171;
   --danger-light: rgba(248, 113, 113, 0.15);
 
-  --shadow-color: 215 50% 8%;
+  --shadow-color: 10, 15, 31;
   --gradient-hero: linear-gradient(160deg, #0A1628 0%, #162236 40%, #1E2D47 100%);
   --gradient-subtle: linear-gradient(180deg, rgba(114, 181, 232, 0.03) 0%, rgba(114, 181, 232, 0.08) 100%);
 }
@@ -201,7 +201,7 @@
     --danger: #F87171;
     --danger-light: rgba(248, 113, 113, 0.15);
 
-    --shadow-color: 215 50% 8%;
+    --shadow-color: 10, 15, 31;
     --gradient-hero: linear-gradient(160deg, #0A1628 0%, #162236 40%, #1E2D47 100%);
     --gradient-subtle: linear-gradient(180deg, rgba(114, 181, 232, 0.03) 0%, rgba(114, 181, 232, 0.08) 100%);
   }
@@ -1146,13 +1146,7 @@ input[type="radio"]:focus-visible {
 }
 
 .task-card-overdue:hover {
-  background: var(--danger-light);
-}
-
-@supports (background: color-mix(in srgb, black 50%, white)) {
-  .task-card-overdue:hover {
-    background: color-mix(in srgb, var(--danger-light) 80%, var(--surface-2) 20%);
-  }
+  background: rgba(220, 38, 38, 0.12);
 }
 
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AuthUser } from '@/types/todo';
 
 // Types based on the API response
@@ -46,7 +46,7 @@ interface UseDailyDigestReturn {
   loading: boolean;
   generating: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<boolean>;
   generateNow: () => Promise<void>;
   lastFetched: Date | null;
   isNew: boolean;
@@ -83,9 +83,10 @@ export function useDailyDigest({
   const [digestType, setDigestType] = useState<'morning' | 'afternoon' | null>(null);
   const [nextScheduled, setNextScheduled] = useState<Date | null>(null);
   const [hasDigest, setHasDigest] = useState(false);
+  const autoGenerateAttempted = useRef(false);
 
-  const fetchDigest = useCallback(async () => {
-    if (!currentUser?.name || !enabled) return;
+  const fetchDigest = useCallback(async (): Promise<boolean> => {
+    if (!currentUser?.name || !enabled) return false;
 
     setLoading(true);
     setError(null);
@@ -126,10 +127,12 @@ export function useDailyDigest({
       }
 
       setLastFetched(new Date());
+      return !!data.hasDigest;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
       setError(errorMessage);
       console.error('Error fetching daily digest:', err);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -184,12 +187,17 @@ export function useDailyDigest({
     }
   }, [currentUser?.name, enabled]);
 
-  // Auto-fetch on mount if enabled
+  // Auto-fetch on mount if enabled, and auto-generate if no stored digest exists
   useEffect(() => {
-    if (autoFetch && enabled && !digest && !loading && !lastFetched) {
-      fetchDigest();
+    if (autoFetch && enabled && !digest && !loading && !generating && !lastFetched) {
+      fetchDigest().then((found) => {
+        if (!found && !autoGenerateAttempted.current) {
+          autoGenerateAttempted.current = true;
+          generateNow();
+        }
+      });
     }
-  }, [autoFetch, enabled, digest, loading, lastFetched, fetchDigest]);
+  }, [autoFetch, enabled, digest, loading, generating, lastFetched, fetchDigest, generateNow]);
 
   return {
     digest,

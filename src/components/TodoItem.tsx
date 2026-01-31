@@ -936,6 +936,8 @@ function TodoItemComponent({
                     setSavedField('assignee');
                     setTimeout(() => setSavedField(null), 1500);
                   }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   disabled={savingAssignee}
                   className={`text-xs px-2 py-1 pr-5 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none min-w-[90px] transition-all ${
                     savingAssignee
@@ -1374,6 +1376,8 @@ function TodoItemComponent({
                 <select
                   value={todo.assigned_to || ''}
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
                 >
                   <option value="">Unassigned</option>

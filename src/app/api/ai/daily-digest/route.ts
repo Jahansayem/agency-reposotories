@@ -377,6 +377,43 @@ async function handleDailyDigest(request: NextRequest) {
     generatedAt: new Date().toISOString(),
   };
 
+  // Store the generated digest in the daily_digests table so it persists across page loads
+  const hour = new Date().getHours();
+  const digestType = hour < 12 ? 'morning' : 'afternoon';
+  // Get today's date in Pacific Time to match the digest_date column default
+  const todayPT = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+
+  try {
+    const { error: upsertError } = await supabase
+      .from('daily_digests')
+      .upsert(
+        {
+          user_id: userRecord.id,
+          user_name: sanitizedUserName,
+          digest_type: digestType,
+          digest_date: todayPT,
+          digest_data: response,
+          generated_at: new Date().toISOString(),
+          read_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,digest_type,digest_date' }
+      );
+
+    if (upsertError) {
+      // Log but don't fail the request - the user still gets their digest
+      logger.error('Failed to store on-demand digest', upsertError, {
+        component: 'DailyDigestAPI',
+        errorCode: upsertError.code,
+        errorMessage: upsertError.message,
+        errorDetails: upsertError.details,
+      });
+    }
+  } catch (storeErr) {
+    logger.error('Error storing on-demand digest', storeErr, {
+      component: 'DailyDigestAPI',
+    });
+  }
+
   // Log performance - SEC-03 compliant: no PII (userName) in logs
   const duration = Date.now() - startTime;
   logger.performance('DailyDigest generation', duration, {

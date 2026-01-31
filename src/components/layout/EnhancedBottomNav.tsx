@@ -251,7 +251,7 @@ export function QuickFilterPills({
                     ? 'bg-[var(--accent)]/15': 'bg-[var(--surface-3)]'}
                 `}
                 style={isActive && filter.color ? {
-                  backgroundColor: `color-mix(in srgb, ${filter.color} 15%, transparent)`,
+                  backgroundColor: `${filter.color}26`,
                 } : undefined}
               >
                 {filter.count > 99 ? '99+' : filter.count}
