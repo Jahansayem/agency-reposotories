@@ -68,59 +68,51 @@ export function clearStoredSession(): void {
   localStorage.removeItem('userName');
 }
 
-// Lockout management for rate limiting
+// ============================================================================
+// CLIENT-SIDE LOCKOUT REMOVED (Security Fix P0 #4)
+// ============================================================================
+// Lockout is now handled entirely server-side via serverLockout.ts (Redis)
+// These functions are kept as stubs to maintain API compatibility
+// but no longer perform client-side lockout logic
+// ============================================================================
+
 interface LockoutState {
   attempts: number;
   lockedUntil?: string;
 }
 
-export function getLockoutState(userId: string): LockoutState {
-  if (typeof window === 'undefined') return { attempts: 0 };
-  const key = `${LOCKOUT_KEY}_${userId}`;
-  const state = localStorage.getItem(key);
-  if (!state) return { attempts: 0 };
-  try {
-    return JSON.parse(state);
-  } catch {
-    return { attempts: 0 };
-  }
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * Returns empty state for backward compatibility.
+ */
+export function getLockoutState(_userId: string): LockoutState {
+  return { attempts: 0 };
 }
 
-export function incrementLockout(userId: string): LockoutState {
-  const state = getLockoutState(userId);
-  state.attempts++;
-
-  if (state.attempts >= 3) {
-    // Lock for 30 seconds
-    const lockUntil = new Date();
-    lockUntil.setSeconds(lockUntil.getSeconds() + 30);
-    state.lockedUntil = lockUntil.toISOString();
-  }
-
-  const key = `${LOCKOUT_KEY}_${userId}`;
-  localStorage.setItem(key, JSON.stringify(state));
-  return state;
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * Returns empty state for backward compatibility.
+ */
+export function incrementLockout(_userId: string): LockoutState {
+  // No-op: server handles lockout via API endpoint
+  return { attempts: 0 };
 }
 
-export function clearLockout(userId: string): void {
-  const key = `${LOCKOUT_KEY}_${userId}`;
-  localStorage.removeItem(key);
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * No-op for backward compatibility.
+ */
+export function clearLockout(_userId: string): void {
+  // No-op: server handles lockout clearance
 }
 
-export function isLockedOut(userId: string): { locked: boolean; remainingSeconds: number } {
-  const state = getLockoutState(userId);
-  if (!state.lockedUntil) return { locked: false, remainingSeconds: 0 };
-
-  const lockUntil = new Date(state.lockedUntil);
-  const now = new Date();
-
-  if (now >= lockUntil) {
-    clearLockout(userId);
-    return { locked: false, remainingSeconds: 0 };
-  }
-
-  const remainingSeconds = Math.ceil((lockUntil.getTime() - now.getTime()) / 1000);
-  return { locked: true, remainingSeconds };
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * Always returns unlocked for backward compatibility.
+ */
+export function isLockedOut(_userId: string): { locked: false; remainingSeconds: 0 } {
+  // Server-side lockout is checked via API response
+  return { locked: false, remainingSeconds: 0 };
 }
 
 // Generate a random color for new users

@@ -232,7 +232,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     setError('');
     setAttemptsRemaining(5);
     setLockoutSeconds(0);
-    setTimeout(() => pinRefs.current[0]?.focus(), 100);
+    setTimeout(() => pinRefs.current[0]?.focus(), 550);
   };
 
   const handlePinChange = (

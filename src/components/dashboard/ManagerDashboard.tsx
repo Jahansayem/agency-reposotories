@@ -284,9 +284,9 @@ export default function ManagerDashboard({
       )}
 
       {/* Main Grid */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-5">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-4 xl:grid-cols-5">
         {/* Left Column - Team Health */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 xl:col-span-3 space-y-6">
 
           {/* Team Health Overview */}
           <Card>
@@ -516,7 +516,7 @@ export default function ManagerDashboard({
         </div>
 
         {/* Right Column - My Tasks */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-1 xl:col-span-2 space-y-6">
 
           {/* My Tasks Section */}
           <Card>

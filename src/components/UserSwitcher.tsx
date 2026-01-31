@@ -4,12 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, LogOut, Lock, AlertCircle, X } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import {
-  verifyPin,
   isValidPin,
   getUserInitials,
-  isLockedOut,
-  incrementLockout,
-  clearLockout,
   clearStoredSession,
 } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
@@ -57,16 +53,14 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Lockout countdown timer - only runs when lockoutSeconds > 0 (set from server response)
   useEffect(() => {
-    if (!selectedUser) return;
-    const checkLockout = () => {
-      const { locked, remainingSeconds } = isLockedOut(selectedUser.id);
-      setLockoutSeconds(locked ? remainingSeconds : 0);
-    };
-    checkLockout();
-    const interval = setInterval(checkLockout, 1000);
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds(prev => Math.max(0, prev - 1));
+    }, 1000);
     return () => clearInterval(interval);
-  }, [selectedUser]);
+  }, [lockoutSeconds]);
 
   const handleLogout = () => {
     clearStoredSession();
@@ -115,34 +109,33 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
     setError('');
 
     try {
-      const { data } = await supabase
-        .from('users')
-        .select('pin_hash')
-        .eq('id', selectedUser.id)
-        .single();
+      // Use server-side login endpoint (handles lockout via Redis)
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          pin: pinString,
+        }),
+      });
 
-      if (!data) {
-        setError('User not found');
-        setIsSubmitting(false);
-        return;
-      }
+      const result = await response.json();
 
-      const isValid = await verifyPin(pinString, data.pin_hash);
-
-      if (isValid) {
-        clearLockout(selectedUser.id);
-        await supabase
-          .from('users')
-          .update({ last_login: new Date().toISOString() })
-          .eq('id', selectedUser.id);
+      if (response.ok && result.success) {
+        // Login successful
         onUserChange(selectedUser);
         setModalState('closed');
       } else {
-        const lockout = incrementLockout(selectedUser.id);
-        if (lockout.lockedUntil) {
+        // Login failed
+        if (result.locked || response.status === 429) {
+          // Server-side lockout triggered
+          setLockoutSeconds(result.remainingSeconds || 300);
           setError('Too many attempts. Please wait.');
+        } else if (result.attemptsRemaining !== undefined) {
+          // Show remaining attempts
+          setError(`Incorrect PIN. ${result.attemptsRemaining} attempts left.`);
         } else {
-          setError(`Incorrect PIN. ${3 - lockout.attempts} attempts left.`);
+          setError(result.error || 'Invalid credentials');
         }
         setPin(['', '', '', '']);
         pinInputRefs.current[0]?.focus();
@@ -174,7 +167,8 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
       <div ref={dropdownRef} className="relative">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
+          aria-label={`Account menu for ${currentUser.name}`}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] touch-manipulation group"
         >
           <div
             className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-white text-sm font-semibold shadow-md"
@@ -182,6 +176,9 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
           >
             {getUserInitials(currentUser.name)}
           </div>
+          <span className="hidden sm:inline text-white/90 text-sm font-medium group-hover:text-white transition-colors">
+            {currentUser.name}
+          </span>
           <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
 

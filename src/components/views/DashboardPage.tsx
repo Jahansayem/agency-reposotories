@@ -59,6 +59,14 @@ export default function DashboardPage({
     todayEnd.setHours(23, 59, 59, 999);
 
     const activeTodos = todos.filter(t => !t.completed);
+    const completedTodos = todos.filter(t => t.completed);
+
+    // Count tasks completed today (based on updated_at timestamp)
+    const completedToday = completedTodos.filter(t => {
+      if (!t.updated_at) return false;
+      const updatedDate = new Date(t.updated_at);
+      return updatedDate >= today && updatedDate <= todayEnd;
+    }).length;
 
     const overdue = activeTodos.filter(t => {
       if (!t.due_date) return false;
@@ -83,6 +91,7 @@ export default function DashboardPage({
 
     return {
       totalActive: activeTodos.length,
+      completedToday,
       overdue: overdue.length,
       dueToday: dueToday.length,
       upcoming: upcoming.length,
@@ -155,13 +164,23 @@ export default function DashboardPage({
               </p>
             </button>
 
-            {/* Due This Week - Informational */}
-            <div className="p-4 rounded-[var(--radius-xl)] text-left bg-white/8 border border-white/10 min-h-[92px]" role="status" aria-label={`${stats.upcoming} tasks due this week`}>
-              <p className="text-3xl font-bold text-white tabular-nums">
-                {stats.upcoming}
+            {/* Completed Today - Progress Indicator */}
+            <div
+              className={`p-4 rounded-[var(--radius-xl)] text-left min-h-[92px] ${
+                stats.completedToday > 0
+                  ? 'bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/30'
+                  : 'bg-white/8 border border-white/10'
+              }`}
+              role="status"
+              aria-label={`${stats.completedToday} tasks completed today`}
+            >
+              <p className={`text-3xl font-bold tabular-nums ${
+                stats.completedToday > 0 ? 'text-emerald-400' : 'text-white'
+              }`}>
+                {stats.completedToday}
               </p>
               <p className="text-white/80 text-xs mt-1 font-medium tracking-wide uppercase">
-                This Week
+                Done Today
               </p>
             </div>
           </div>
