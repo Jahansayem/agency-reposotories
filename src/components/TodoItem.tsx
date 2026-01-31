@@ -900,18 +900,22 @@ function TodoItemComponent({
               </>
             )}
           </div>
+        </button>
 
           {/* Quick inline actions - visible on hover for incomplete tasks (hide when menu is open) */}
           {!todo.completed && !showActionsMenu && (
             <div
-              className="hidden sm:flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="hidden sm:flex items-center gap-2 mt-2 pl-0 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               {/* Due date with loading/success feedback */}
               <div className="relative inline-flex items-center">
                 <input
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   onChange={async (e) => {
                     setSavingDate(true);
                     await onSetDueDate(todo.id, e.target.value || null);
@@ -987,6 +991,8 @@ function TodoItemComponent({
                     if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
                     savedFieldTimerRef.current = setTimeout(() => setSavedField(null), 1500);
                   }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                   disabled={savingPriority}
                   className={`text-xs px-2 py-1 pr-5 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none transition-all ${
                     savingPriority
@@ -1011,7 +1017,6 @@ function TodoItemComponent({
               </div>
             </div>
           )}
-        </button>
 
         {/* Action buttons - expand and three-dot menu */}
         <div className="flex items-center gap-1">

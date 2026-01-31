@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { X, MoreHorizontal, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { TodoPriority } from '@/types/todo';
@@ -34,11 +34,6 @@ export default function TaskDetailHeader({
   todoText,
 }: TaskDetailHeaderProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [localTitle, setLocalTitle] = useState(title);
-
-  useEffect(() => {
-    setLocalTitle(title);
-  }, [title]);
 
   useEffect(() => {
     if (editingTitle && textareaRef.current) {
@@ -50,8 +45,7 @@ export default function TaskDetailHeader({
     }
   }, [editingTitle]);
 
-  const handleLocalChange = useCallback((value: string) => {
-    setLocalTitle(value);
+  const handleChange = useCallback((value: string) => {
     onTitleChange(value);
     // Auto-resize textarea
     if (textareaRef.current) {
@@ -65,7 +59,6 @@ export default function TaskDetailHeader({
       e.preventDefault();
       onSaveTitle();
     } else if (e.key === 'Escape') {
-      setLocalTitle(todoText);
       onCancelEditTitle(todoText);
     }
   }, [onSaveTitle, todoText, onCancelEditTitle]);
@@ -126,8 +119,8 @@ export default function TaskDetailHeader({
           <div className="space-y-2.5">
             <textarea
               ref={textareaRef}
-              value={localTitle}
-              onChange={(e) => handleLocalChange(e.target.value)}
+              value={title}
+              onChange={(e) => handleChange(e.target.value)}
               onKeyDown={handleKeyDown}
               className="w-full resize-none rounded-lg border-2 px-3 py-2.5 text-lg font-semibold leading-snug bg-[var(--surface)] text-[var(--foreground)] border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 focus:ring-offset-[var(--surface)] placeholder:text-[var(--text-muted)]"
               rows={1}
@@ -144,10 +137,7 @@ export default function TaskDetailHeader({
                 Save
               </button>
               <button
-                onClick={() => {
-                  setLocalTitle(todoText);
-                  onCancelEditTitle(todoText);
-                }}
+                onClick={() => onCancelEditTitle(todoText)}
                 className="inline-flex items-center rounded-lg px-3.5 py-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
                 aria-label="Cancel"
               >
