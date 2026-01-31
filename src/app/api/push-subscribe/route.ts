@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { logger } from '@/lib/logger';
 
 // Create Supabase client lazily to avoid build-time initialization
 function getSupabase() {
@@ -24,14 +25,30 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { subscription, userId } = body;
+    const { subscription } = body;
 
-    if (!subscription || !userId) {
+    if (!subscription) {
       return NextResponse.json(
-        { success: false, error: 'Missing subscription or userId' },
+        { success: false, error: 'Missing subscription' },
         { status: 400 }
       );
     }
+
+    // Look up the authenticated user's ID from the database instead of trusting body
+    const { data: userRecord, error: userLookupError } = await getSupabase()
+      .from('users')
+      .select('id')
+      .eq('name', userName)
+      .single();
+
+    if (userLookupError || !userRecord) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = userRecord.id;
 
     // Validate subscription has required fields
     if (!subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
@@ -61,7 +78,7 @@ export async function POST(request: NextRequest) {
       );
 
     if (error) {
-      console.error('Error storing push subscription:', error);
+      logger.error('Error storing push subscription', error, { component: 'push-subscribe' });
       return NextResponse.json(
         { success: false, error: 'Failed to store subscription' },
         { status: 500 }
@@ -70,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in POST /api/push-subscribe:', error);
+    logger.error('Error in POST /api/push-subscribe', error, { component: 'push-subscribe' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -88,14 +105,23 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { subscription, userId } = body;
+    const { subscription } = body;
 
-    if (!userId) {
+    // Look up the authenticated user's ID from the database instead of trusting body
+    const { data: userRecord, error: userLookupError } = await getSupabase()
+      .from('users')
+      .select('id')
+      .eq('name', userName)
+      .single();
+
+    if (userLookupError || !userRecord) {
       return NextResponse.json(
-        { success: false, error: 'Missing userId' },
-        { status: 400 }
+        { success: false, error: 'User not found' },
+        { status: 404 }
       );
     }
+
+    const userId = userRecord.id;
 
     // If subscription provided, delete that specific one
     // Otherwise, delete all web subscriptions for user
@@ -110,7 +136,7 @@ export async function DELETE(request: NextRequest) {
         .eq('platform', 'web');
 
       if (error) {
-        console.error('Error removing push subscription:', error);
+        logger.error('Error removing push subscription', error, { component: 'push-subscribe' });
         return NextResponse.json(
           { success: false, error: 'Failed to remove subscription' },
           { status: 500 }
@@ -125,7 +151,7 @@ export async function DELETE(request: NextRequest) {
         .eq('platform', 'web');
 
       if (error) {
-        console.error('Error removing push subscriptions:', error);
+        logger.error('Error removing push subscriptions', error, { component: 'push-subscribe' });
         return NextResponse.json(
           { success: false, error: 'Failed to remove subscriptions' },
           { status: 500 }
@@ -135,7 +161,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in DELETE /api/push-subscribe:', error);
+    logger.error('Error in DELETE /api/push-subscribe', error, { component: 'push-subscribe' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -151,17 +177,22 @@ export async function GET(request: NextRequest) {
   const { userName, error: authError } = await extractAndValidateUserName(request);
   if (authError) return authError;
 
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-
-  if (!userId) {
-    return NextResponse.json(
-      { success: false, error: 'Missing userId parameter' },
-      { status: 400 }
-    );
-  }
-
   try {
+    // Look up the authenticated user's ID from the database instead of trusting query params
+    const { data: userRecord, error: userLookupError } = await getSupabase()
+      .from('users')
+      .select('id')
+      .eq('name', userName)
+      .single();
+
+    if (userLookupError || !userRecord) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = userRecord.id;
     const { data, error } = await getSupabase()
       .from('device_tokens')
       .select('id, platform, updated_at')
@@ -172,7 +203,7 @@ export async function GET(request: NextRequest) {
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows returned, which is fine
-      console.error('Error checking subscription:', error);
+      logger.error('Error checking subscription', error, { component: 'push-subscribe' });
       return NextResponse.json(
         { success: false, error: 'Failed to check subscription' },
         { status: 500 }
@@ -185,7 +216,7 @@ export async function GET(request: NextRequest) {
       lastUpdated: data?.updated_at || null,
     });
   } catch (error) {
-    console.error('Error in GET /api/push-subscribe:', error);
+    logger.error('Error in GET /api/push-subscribe', error, { component: 'push-subscribe' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

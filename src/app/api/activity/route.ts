@@ -8,8 +8,11 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // GET - Fetch activity log (accessible to all authenticated users)
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    const { userName: authUserName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
     const { searchParams } = new URL(request.url);
     const userName = searchParams.get('userName');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 500);

@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/patterns/analyze
@@ -8,8 +10,10 @@ import Anthropic from '@anthropic-ai/sdk';
  * Analyzes completed tasks from the last 90 days to identify patterns
  * and update the task_patterns table for smart suggestions.
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -41,7 +45,7 @@ export async function POST() {
       .limit(500);
 
     if (fetchError) {
-      console.error('Failed to fetch completed tasks:', fetchError);
+      logger.error('Failed to fetch completed tasks', fetchError, { component: 'patterns/analyze' });
       return NextResponse.json(
         { error: 'Failed to fetch tasks' },
         { status: 500 }
@@ -123,7 +127,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
         throw new Error('No JSON found in response');
       }
     } catch {
-      console.error('Failed to parse AI response:', responseText);
+      logger.error('Failed to parse AI response', responseText, { component: 'patterns/analyze' });
       return NextResponse.json(
         { error: 'Failed to parse AI analysis' },
         { status: 500 }
@@ -152,7 +156,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
       if (!upsertError) {
         upsertedCount++;
       } else {
-        console.error('Failed to upsert pattern:', upsertError);
+        logger.error('Failed to upsert pattern', upsertError, { component: 'patterns/analyze' });
       }
     }
 
@@ -163,7 +167,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
       tasksAnalyzed: completedTasks.length,
     });
   } catch (error) {
-    console.error('Pattern analysis error:', error);
+    logger.error('Pattern analysis error', error, { component: 'patterns/analyze' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

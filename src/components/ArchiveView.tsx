@@ -407,35 +407,55 @@ export default function ArchiveView({
           </div>
         </div>
 
-        {/* Stats Bar */}
+        {/* Summary Stats Cards */}
         {showStats && (
-          <div className="px-6 py-3 border-t border-[var(--border)] bg-[var(--surface-2)]">
-            <div className="flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-muted)]">This week:</span>
-                <span className="font-medium text-[var(--foreground)]">{stats.thisWeek}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[var(--text-muted)]" />
-                <span className="text-[var(--text-muted)]">This month:</span>
-                <span className="font-medium text-[var(--foreground)]">{stats.thisMonth}</span>
-              </div>
-              {stats.topCompleters.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-[var(--text-muted)]" />
-                  <span className="text-[var(--text-muted)]">Top:</span>
-                  <span className="font-medium text-[var(--foreground)]">
-                    {stats.topCompleters[0][0]} ({stats.topCompleters[0][1]})
-                  </span>
-                </div>
-              )}
+          <div className="px-6 py-4 border-t border-[var(--border)] bg-[var(--surface)]">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-[var(--foreground)] uppercase tracking-wide">Summary</h3>
               <button
                 onClick={() => setShowStats(false)}
-                className="ml-auto text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                className="text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                aria-label="Hide stats"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {/* This Week */}
+              <div className="px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 className="w-4 h-4 text-[var(--success)]" />
+                  <span className="text-xs text-[var(--text-muted)] font-medium">This Week</span>
+                </div>
+                <div className="text-2xl font-bold text-[var(--foreground)]">{stats.thisWeek}</div>
+              </div>
+
+              {/* This Month */}
+              <div className="px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="w-4 h-4 text-[var(--accent)]" />
+                  <span className="text-xs text-[var(--text-muted)] font-medium">This Month</span>
+                </div>
+                <div className="text-2xl font-bold text-[var(--foreground)]">{stats.thisMonth}</div>
+              </div>
+
+              {/* Top Completer */}
+              <div className="px-4 py-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="w-4 h-4 text-[var(--brand-sky)]" />
+                  <span className="text-xs text-[var(--text-muted)] font-medium">Top Completer</span>
+                </div>
+                <div className="text-lg font-bold text-[var(--foreground)] truncate">
+                  {stats.topCompleters.length > 0 ? (
+                    <span>
+                      {stats.topCompleters[0][0]}
+                      <span className="text-sm text-[var(--text-muted)] ml-1">({stats.topCompleters[0][1]})</span>
+                    </span>
+                  ) : (
+                    <span className="text-sm text-[var(--text-muted)]">N/A</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

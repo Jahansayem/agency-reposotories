@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHash } from 'crypto';
+import { createHmac } from 'crypto';
 
 /**
  * CSRF Token Endpoint
@@ -14,14 +14,14 @@ import { createHash } from 'crypto';
  */
 
 /**
- * Compute CSRF signature using HMAC-like construction
+ * Compute CSRF signature using HMAC-SHA256
+ *
+ * Must match the middleware's computeCsrfSignature which uses
+ * crypto.subtle HMAC-SHA256 with the secret as key and nonce as data,
+ * then takes the first 32 hex characters.
  */
 function computeSignature(secret: string, nonce: string): string {
-  // Use SHA-256 for the signature
-  const combined = `${secret}:${nonce}`;
-  const hash = createHash('sha256').update(combined).digest('hex');
-  // Return first 16 characters for a shorter signature
-  return hash.substring(0, 16);
+  return createHmac('sha256', secret).update(nonce).digest('hex').slice(0, 32);
 }
 
 /**

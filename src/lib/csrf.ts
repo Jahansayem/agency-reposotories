@@ -11,8 +11,6 @@
  * This ensures that even if an attacker can execute XSS, they cannot construct
  * a valid CSRF token because they cannot read the HttpOnly secret.
  *
- * Backward compatibility:
- * - Still supports the old csrf_token cookie pattern during migration
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -20,7 +18,6 @@ import { randomBytes, createHash } from 'crypto';
 
 const CSRF_SECRET_COOKIE = 'csrf_secret';  // HttpOnly
 const CSRF_NONCE_COOKIE = 'csrf_nonce';    // Readable by JS
-const CSRF_LEGACY_COOKIE = 'csrf_token';   // Backward compat (non-HttpOnly)
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 const CSRF_TOKEN_LENGTH = 32;
 
@@ -41,55 +38,43 @@ function hashToken(token: string): string {
 /**
  * Validate CSRF token from request
  *
- * Supports both the new HttpOnly pattern and legacy pattern.
- * Uses constant-time comparison to prevent timing attacks.
+ * Uses the HttpOnly cookie pattern with constant-time comparison to prevent timing attacks.
  */
 export function validateCsrfToken(request: NextRequest): boolean {
-  // Get the secret from HttpOnly cookie (new pattern)
+  // Get the secret from HttpOnly cookie
   const secretCookie = request.cookies.get(CSRF_SECRET_COOKIE)?.value;
-  // Get the legacy token (backward compatibility)
-  const legacyToken = request.cookies.get(CSRF_LEGACY_COOKIE)?.value;
   // Get token from header
   const headerToken = request.headers.get(CSRF_HEADER_NAME);
 
-  if (!headerToken) {
+  if (!headerToken || !secretCookie) {
     return false;
   }
 
-  // Try new HttpOnly pattern first
-  if (secretCookie) {
-    const nonceCookie = request.cookies.get(CSRF_NONCE_COOKIE)?.value;
-    if (nonceCookie) {
-      // Validate the nonce:signature format
-      const parts = headerToken.split(':');
-      if (parts.length === 2) {
-        const [nonce, signature] = parts;
-        if (nonce === nonceCookie) {
-          // Compute expected signature
-          const expectedHash = createHash('sha256')
-            .update(`${secretCookie}:${nonce}`)
-            .digest('hex')
-            .substring(0, 16);
-          // Constant-time comparison
-          const providedHash = hashToken(signature);
-          const expectedHashHashed = hashToken(expectedHash);
-          if (providedHash === expectedHashHashed) {
-            return true;
-          }
-        }
-      }
-    }
+  const nonceCookie = request.cookies.get(CSRF_NONCE_COOKIE)?.value;
+  if (!nonceCookie) {
+    return false;
   }
 
-  // Fall back to legacy pattern (backward compatibility)
-  if (legacyToken && headerToken === legacyToken) {
-    // Use constant-time comparison
-    const cookieHash = hashToken(legacyToken);
-    const headerHash = hashToken(headerToken);
-    return cookieHash === headerHash;
+  // Validate the nonce:signature format
+  const parts = headerToken.split(':');
+  if (parts.length !== 2) {
+    return false;
   }
 
-  return false;
+  const [nonce, signature] = parts;
+  if (nonce !== nonceCookie) {
+    return false;
+  }
+
+  // Compute expected signature
+  const expectedHash = createHash('sha256')
+    .update(`${secretCookie}:${nonce}`)
+    .digest('hex')
+    .substring(0, 16);
+  // Constant-time comparison
+  const providedHash = hashToken(signature);
+  const expectedHashHashed = hashToken(expectedHash);
+  return providedHash === expectedHashHashed;
 }
 
 /**
@@ -98,7 +83,6 @@ export function validateCsrfToken(request: NextRequest): boolean {
  * Sets up the secure CSRF protection with:
  * - HttpOnly secret cookie (cannot be stolen via XSS)
  * - Public nonce cookie (JS reads this to build header token)
- * - Legacy token cookie (backward compatibility)
  */
 export function setCsrfCookies(
   response: NextResponse,
@@ -126,49 +110,16 @@ export function setCsrfCookies(
     maxAge: 60 * 60 * 24, // 24 hours
   });
 
-  // Legacy token for backward compatibility
-  response.cookies.set(CSRF_LEGACY_COOKIE, csrfSecret, {
-    httpOnly: false,  // Backward compat - will be removed after migration
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-    maxAge: 60 * 60 * 24, // 24 hours
-  });
-
   return { secret: csrfSecret, nonce: csrfNonce };
-}
-
-/**
- * Set CSRF token cookie on response (DEPRECATED - use setCsrfCookies)
- * @deprecated Use setCsrfCookies for the new secure HttpOnly pattern
- */
-export function setCsrfCookie(response: NextResponse, token?: string): string {
-  const csrfToken = token || generateCsrfToken();
-
-  response.cookies.set(CSRF_LEGACY_COOKIE, csrfToken, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    path: '/',
-    maxAge: 60 * 60 * 24, // 24 hours
-  });
-
-  return csrfToken;
 }
 
 /**
  * Get or create CSRF token from request
  */
 export function getOrCreateCsrfToken(request: NextRequest): string {
-  // Try HttpOnly secret first (new pattern)
   const existingSecret = request.cookies.get(CSRF_SECRET_COOKIE)?.value;
   if (existingSecret) {
     return existingSecret;
-  }
-  // Fall back to legacy token
-  const existingToken = request.cookies.get(CSRF_LEGACY_COOKIE)?.value;
-  if (existingToken) {
-    return existingToken;
   }
   return generateCsrfToken();
 }
@@ -266,24 +217,18 @@ function getCookieValue(name: string): string | null {
  * Client-side helper to build CSRF token for header
  *
  * Returns the token that should be set in the X-CSRF-Token header.
- * Supports both the new HttpOnly pattern and legacy pattern.
  */
 export function getClientCsrfToken(): string | null {
   if (typeof document === 'undefined') {
     return null;
   }
 
-  // Try the new pattern first: nonce + computed signature
+  // The new pattern requires the server-provided signature via /api/csrf
+  // The client should call fetchCsrfToken() first, then use buildCsrfTokenWithSignature()
   const nonce = getCookieValue(CSRF_NONCE_COOKIE);
   if (nonce) {
-    // For the new pattern, we need the signature from the server
-    // Until that's implemented, fall back to legacy
-  }
-
-  // Fall back to legacy token (backward compatibility)
-  const legacyToken = getCookieValue(CSRF_LEGACY_COOKIE);
-  if (legacyToken) {
-    return legacyToken;
+    // Nonce is available but signature must be fetched from server
+    // Return null to signal the caller should use buildCsrfTokenWithSignature instead
   }
 
   return null;

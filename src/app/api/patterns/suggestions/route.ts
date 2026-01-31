@@ -1,13 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/patterns/suggestions
  *
  * Returns task patterns grouped by category for quick task buttons.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -28,7 +32,7 @@ export async function GET() {
       .limit(20);
 
     if (error) {
-      console.error('Failed to fetch patterns:', error);
+      logger.error('Failed to fetch patterns', error, { component: 'patterns/suggestions' });
       return NextResponse.json({
         patterns: {},
         total: 0,
@@ -53,7 +57,7 @@ export async function GET() {
       total: patterns?.length || 0,
     });
   } catch (error) {
-    console.error('Pattern suggestions error:', error);
+    logger.error('Pattern suggestions error', error, { component: 'patterns/suggestions' });
     return NextResponse.json({
       patterns: {},
       total: 0,

@@ -97,23 +97,15 @@ export function KanbanColumn({
       layout
       className="flex flex-col bg-[var(--surface)] rounded-[var(--radius-xl)] sm:rounded-[var(--radius-2xl)] shadow-[var(--shadow-sm)] border-2 border-[var(--border-subtle)] overflow-hidden"
     >
-      {/* Column header */}
+      {/* Column header - format: Title (count) */}
       <div
-        className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b-2"
+        className="flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 border-b-2"
         style={{ backgroundColor: column.bgColor, borderColor: column.color + '30' }}
       >
-        <div className="flex items-center gap-2">
-          <column.Icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: column.color }} />
-          <h3 className="font-semibold text-sm sm:text-base text-[var(--foreground)]">
-            {column.title}
-          </h3>
-        </div>
-        <span
-          className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-[var(--radius-lg)] text-xs sm:text-sm font-bold"
-          style={{ backgroundColor: column.color, color: 'white' }}
-        >
-          {columnTodos.length}
-        </span>
+        <column.Icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: column.color }} />
+        <h3 className="font-semibold text-sm sm:text-base text-[var(--foreground)]">
+          {column.title} <span className="text-[var(--text-muted)]">({columnTodos.length})</span>
+        </h3>
       </div>
 
       {/* Column body */}
@@ -124,9 +116,17 @@ export function KanbanColumn({
         <DroppableColumn id={column.id} color={column.color} isActive={!!activeId} isCurrentOver={overId === column.id}>
           {useSectionedView ? (
             // Sectioned view - group by date
+            // IMPORTANT: Done column never shows "Overdue" sections (contradictory)
             (() => {
               const groupedTodos = groupTodosByDateSection(columnTodos);
-              const sectionOrder: DateSection[] = ['overdue', 'today', 'upcoming', 'no_date'];
+              const isDoneColumn = column.id === 'done';
+
+              // Done column: no overdue sections (tasks are completed)
+              // Other columns: show all sections
+              const sectionOrder: DateSection[] = isDoneColumn
+                ? ['today', 'upcoming', 'no_date']
+                : ['overdue', 'today', 'upcoming', 'no_date'];
+
               const hasAnyTodos = columnTodos.length > 0;
 
               return (
@@ -138,16 +138,7 @@ export function KanbanColumn({
 
                     return (
                       <div key={sectionKey} className="mb-2">
-                        {/* Section header */}
-                        <div
-                          className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md mb-1"
-                          style={{ backgroundColor: config.bgColor, color: config.color }}
-                        >
-                          <config.Icon className="w-3.5 h-3.5" />
-                          <span>{config.label}</span>
-                          <span className="ml-auto opacity-70">({sectionTodos.length})</span>
-                        </div>
-                        {/* Section cards */}
+                        {/* Cards - no section headers (clean layout) */}
                         <AnimatePresence mode="popLayout">
                           {sectionTodos.map((todo) => (
                             <SortableCard

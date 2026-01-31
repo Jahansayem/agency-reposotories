@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processAllDueReminders, getDueReminders } from '@/lib/reminderService';
 import { sendWebPushNotifications } from '@/lib/webPushServer';
+import { logger } from '@/lib/logger';
 
 // Use the same API key as Outlook add-in for simplicity
 const API_KEY = process.env.OUTLOOK_ADDON_API_KEY;
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (webPushError) {
-      console.error('Web push fallback error:', webPushError);
+      logger.error('Web push fallback error', webPushError, { component: 'reminders/process' });
       // Don't fail the whole request if web push fails
     }
 
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error) {
-    console.error('Error processing reminders:', error);
+    logger.error('Error processing reminders', error, { component: 'reminders/process' });
     return NextResponse.json(
       { success: false, error: 'Failed to process reminders' },
       { status: 500 }
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error checking reminder status:', error);
+    logger.error('Error checking reminder status', error, { component: 'reminders/process' });
     return NextResponse.json(
       { success: false, error: 'Failed to check reminder status' },
       { status: 500 }

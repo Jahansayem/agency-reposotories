@@ -89,10 +89,11 @@ export function useChatMessages({
 
   // Load more (older) messages filtered by current conversation
   const loadMoreMessages = useCallback(async () => {
-    if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || messages.length === 0 || !conversation) return;
+    const currentMessages = messagesRef.current;
+    if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || currentMessages.length === 0 || !conversation) return;
 
     setIsLoadingMore(true);
-    const oldestMessage = messages[0];
+    const oldestMessage = currentMessages[0];
 
     let query = supabase
       .from('messages')
@@ -123,7 +124,7 @@ export function useChatMessages({
       setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
     }
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMoreMessages, messages, conversation, currentUser.name]);
+  }, [isLoadingMore, hasMoreMessages, conversation, currentUser.name]);
 
   // Filter messages for current conversation
   const filteredMessages = useMemo(() => {

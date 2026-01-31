@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createHash } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 import { createSession } from '@/lib/sessionValidator';
 import { checkLockout, recordFailedAttempt, clearLockout, getLockoutIdentifier } from '@/lib/serverLockout';
 import { setSessionCookie } from '@/lib/sessionCookies';
 import { logger } from '@/lib/logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseServiceRoleKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for the login endpoint');
+}
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 /**
  * Hash PIN using SHA-256 (server-side, matching existing client-side hash format)
@@ -78,9 +81,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify PIN server-side
+    // Verify PIN server-side using constant-time comparison
     const pinHash = hashPin(pin);
-    if (pinHash !== user.pin_hash) {
+    const storedHash = user.pin_hash;
+    const isValid = storedHash.length === pinHash.length &&
+      timingSafeEqual(Buffer.from(storedHash), Buffer.from(pinHash));
+    if (!isValid) {
       const status = await recordFailedAttempt(lockoutId, {
         ip,
         userAgent,

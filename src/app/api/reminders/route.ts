@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { extractAndValidateUserName, verifyTodoAccess } from '@/lib/apiAuth';
 import type { TaskReminder, ReminderType } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 // Create Supabase client lazily to avoid build-time errors
 function getSupabaseClient() {
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching reminders:', error);
+    logger.error('Error fetching reminders', error, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch reminders' },
       { status: 500 }
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('Error creating reminder:', insertError);
+      logger.error('Error creating reminder', insertError, { component: 'reminders' });
       return NextResponse.json(
         { success: false, error: 'Failed to create reminder' },
         { status: 500 }
@@ -206,7 +207,7 @@ export async function POST(request: NextRequest) {
       reminder: reminder as TaskReminder,
     });
   } catch (error) {
-    console.error('Error in POST /api/reminders:', error);
+    logger.error('Error in POST /api/reminders', error, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
@@ -272,7 +273,7 @@ export async function DELETE(request: NextRequest) {
     .eq('id', reminderId);
 
   if (deleteError) {
-    console.error('Error deleting reminder:', deleteError);
+    logger.error('Error deleting reminder', deleteError, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Failed to delete reminder' },
       { status: 500 }
@@ -389,7 +390,7 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error('Error updating reminder:', updateError);
+      logger.error('Error updating reminder', updateError, { component: 'reminders' });
       return NextResponse.json(
         { success: false, error: 'Failed to update reminder' },
         { status: 500 }
@@ -401,7 +402,7 @@ export async function PATCH(request: NextRequest) {
       reminder: updatedReminder as TaskReminder,
     });
   } catch (error) {
-    console.error('Error in PATCH /api/reminders:', error);
+    logger.error('Error in PATCH /api/reminders', error, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

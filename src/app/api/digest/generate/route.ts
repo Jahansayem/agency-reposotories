@@ -40,7 +40,7 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
     webPushInitialized = true;
   } catch (error) {
-    console.error('Failed to initialize web-push:', error);
+    logger.error('Failed to initialize web-push', error, { component: 'digest/generate' });
   }
 }
 
@@ -483,7 +483,7 @@ export async function POST(request: NextRequest) {
             });
 
           if (insertError) {
-            console.error('Digest storage error details:', JSON.stringify(insertError, null, 2));
+            logger.error('Digest storage error details', insertError, { component: 'digest/generate' });
             logger.error('Failed to store digest', insertError, {
               component: 'DigestGenerate',
               errorCode: insertError.code,

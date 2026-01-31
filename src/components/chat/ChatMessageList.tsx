@@ -7,7 +7,7 @@ import {
   Edit3, Trash2, Pin, Plus, ExternalLink, Sparkles, X
 } from 'lucide-react';
 import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, Todo } from '@/types/todo';
-import { sanitizeHTML, getReactionAriaLabel } from '@/lib/chatUtils';
+import { getReactionAriaLabel } from '@/lib/chatUtils';
 import { TaskAssignmentCard, SystemNotificationType } from './TaskAssignmentCard';
 
 // Tapback emoji mapping
@@ -151,9 +151,11 @@ export const ChatMessageList = memo(function ChatMessageList({
   }, []);
 
   // Render message text with mentions highlighted
+  // NOTE: React automatically escapes text for XSS protection, so we don't need sanitizeHTML here.
+  // Manual HTML escaping causes apostrophes to render as &#x27; instead of '
   const renderMessageText = useCallback((text: string) => {
-    const sanitizedText = sanitizeHTML(text);
-    const parts = sanitizedText.split(/(@\w+)/g);
+    // Split by mention pattern while keeping mentions in the result
+    const parts = text.split(/(@\w+)/g);
     return parts.map((part, i) => {
       if (part.startsWith('@')) {
         const userName = part.slice(1);
@@ -177,6 +179,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           );
         }
       }
+      // React automatically escapes plain text for security
       return part;
     });
   }, [users, currentUser.name]);

@@ -49,18 +49,11 @@ export async function extractAndValidateUserName(
     return { userName: sessionResult.userName };
   }
 
-  // Fallback: If session is valid but userName wasn't returned,
-  // check query params (for backward compatibility with some endpoints)
-  const { searchParams } = new URL(request.url);
-  const queryUserName = searchParams.get('userName');
-  if (queryUserName && queryUserName.trim()) {
-    return { userName: queryUserName.trim() };
-  }
-
+  // Session is valid but userName was not populated - treat as auth error
   return {
     userName: null,
     error: NextResponse.json(
-      { success: false, error: 'Could not determine user identity' },
+      { success: false, error: 'Could not determine user identity from session' },
       { status: 401 }
     ),
   };

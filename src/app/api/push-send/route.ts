@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { logger } from '@/lib/logger';
 
 // Configure web-push with VAPID keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -135,7 +136,7 @@ async function sendToSubscription(
     return { success: true, token: subscriptionJson };
   } catch (error: unknown) {
     const err = error as { statusCode?: number; message?: string };
-    console.error('Web push error:', err);
+    logger.error('Web push error', err, { component: 'push-send' });
 
     // Handle specific errors
     if (err.statusCode === 404 || err.statusCode === 410) {
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
         .in('name', userNames);
 
       if (userError) {
-        console.error('Error looking up users by name:', userError);
+        logger.error('Error looking up users by name', userError, { component: 'push-send' });
       } else if (users && users.length > 0) {
         userIds = users.map(u => u.id);
       }
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
       .eq('platform', 'web');
 
     if (fetchError) {
-      console.error('Error fetching device tokens:', fetchError);
+      logger.error('Error fetching device tokens', fetchError, { component: 'push-send' });
       return NextResponse.json(
         { success: false, error: 'Failed to fetch subscriptions' },
         { status: 500 }
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
         .in('token', unregistered);
 
       if (deleteError) {
-        console.error('Error removing invalid tokens:', deleteError);
+        logger.error('Error removing invalid tokens', deleteError, { component: 'push-send' });
       }
     }
 
@@ -259,7 +260,7 @@ export async function POST(request: NextRequest) {
       unregistered: unregistered.length,
     });
   } catch (error) {
-    console.error('Error in push-send:', error);
+    logger.error('Error in push-send', error, { component: 'push-send' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

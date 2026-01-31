@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/todos/check-waiting
@@ -16,7 +17,12 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    logger.error('CRON_SECRET is not configured. Rejecting request.', undefined, { component: 'check-waiting' });
+    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+  }
+
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -99,7 +105,7 @@ export async function GET(request: Request) {
           .insert(newEntries);
 
         if (logError) {
-          console.error('Error logging overdue activities:', logError);
+          logger.error('Error logging overdue activities', logError, { component: 'check-waiting' });
         }
       }
 
@@ -119,7 +125,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error checking waiting tasks:', error);
+    logger.error('Error checking waiting tasks', error, { component: 'check-waiting' });
     return NextResponse.json(
       { error: 'Failed to check waiting tasks' },
       { status: 500 }

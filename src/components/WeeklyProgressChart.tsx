@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, Minus, X, Target, Sparkles } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, X, Target, Sparkles, AlertCircle } from 'lucide-react';
 import { Todo } from '@/types/todo';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import CountUp from '@/components/ui/CountUp';
@@ -144,7 +144,7 @@ export default function WeeklyProgressChart({
               <TrendingUp className="w-4 h-4 text-[var(--brand-blue)]" />
             </div>
             <h3 id="weekly-progress-title" className={`text-lg font-semibold ${'text-slate-800'}`}>
-              Weekly Progress
+              Weekly Progress • {weekData[0]?.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–{weekData[weekData.length - 1]?.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </h3>
           </div>
           <button
@@ -190,16 +190,20 @@ export default function WeeklyProgressChart({
           >
             <div className="flex items-center justify-center gap-1">
               <p className={`text-2xl font-bold ${
-                stats.trend === 'up' ? 'text-emerald-500' :
-                stats.trend === 'down' ? 'text-red-500' :
-                'text-slate-800'}`}>
+                stats.goalRate >= 80 ? 'text-emerald-500' :
+                stats.goalRate >= 60 ? 'text-[var(--brand-blue)]' :
+                'text-red-500'}`}>
                 <CountUp end={stats.goalRate} duration={800} suffix="%" />
               </p>
-              {stats.trend === 'up' && <TrendingUp className="w-4 h-4 text-emerald-500" />}
-              {stats.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
-              {stats.trend === 'stable' && <Minus className="w-4 h-4 text-slate-400" />}
+              {stats.goalRate >= 80 && <Target className="w-4 h-4 text-emerald-500" />}
+              {stats.goalRate < 60 && <AlertCircle className="w-4 h-4 text-red-500" />}
             </div>
-            <p className={`text-xs ${'text-slate-500'}`}>Goal Rate</p>
+            <p className={`text-xs ${
+              stats.goalRate >= 80 ? 'text-emerald-600' :
+              stats.goalRate >= 60 ? 'text-slate-500' :
+              'text-red-600'}`}>
+              Goal Rate {stats.goalRate >= 80 ? '• On track' : stats.goalRate >= 60 ? '• Fair' : '• Below target'}
+            </p>
           </motion.div>
         </div>
 

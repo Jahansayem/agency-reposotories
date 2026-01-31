@@ -194,6 +194,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Verify the user has access to this todo (creator, assigned, or updater)
+    const { todo, error: accessError } = await verifyTodoAccess(id, session.userName);
+    if (accessError) return accessError;
+
     // Build update object
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),

@@ -23,20 +23,16 @@ function isAuthorized(request: NextRequest): boolean {
     return true;
   }
 
-  // Check for session token in cookie (for logged-in users)
-  const sessionToken = request.cookies.get('session_token')?.value;
-  if (sessionToken) {
-    // Basic check - presence of session token indicates authenticated user
-    // Full validation happens at the middleware level
-    return true;
-  }
-
-  // Check Authorization header
+  // Check Authorization header against a configured admin API key
   const authHeader = request.headers.get('Authorization');
-  if (authHeader?.startsWith('Bearer ') && authHeader.length > 7) {
+  const adminApiKey = process.env.ADMIN_API_KEY || process.env.HEALTH_CHECK_API_KEY || process.env.OUTLOOK_ADDON_API_KEY;
+  if (authHeader?.startsWith('Bearer ') && adminApiKey && authHeader === `Bearer ${adminApiKey}`) {
     return true;
   }
 
+  // Session-based access is NOT allowed for this endpoint.
+  // Health check endpoints should only be accessible via explicit API keys
+  // to prevent authenticated users from viewing server configuration status.
   return false;
 }
 
