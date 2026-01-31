@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Check } from 'lucide-react';
 
 interface CelebrationEffectProps {
@@ -10,12 +10,16 @@ interface CelebrationEffectProps {
 }
 
 export default function CelebrationEffect({ show, onComplete, taskText }: CelebrationEffectProps) {
+  // Use a ref so the timer doesn't reset when onComplete reference changes between renders
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   useEffect(() => {
     if (show) {
-      const timer = setTimeout(onComplete, 1500);
+      const timer = setTimeout(() => onCompleteRef.current(), 1500);
       return () => clearTimeout(timer);
     }
-  }, [show, onComplete]);
+  }, [show]);
 
   if (!show) return null;
 

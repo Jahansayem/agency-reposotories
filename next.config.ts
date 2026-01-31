@@ -43,7 +43,8 @@ const cspDirectives: Record<string, string[]> = {
   "worker-src": ["'self'", "blob:"], // Service workers
   "child-src": ["'self'", "blob:"], // iframes and workers
   "manifest-src": ["'self'"], // Web app manifest
-  "upgrade-insecure-requests": [],
+  // Only enforce HTTPS upgrade in production (dev uses http://localhost)
+  ...(isProduction ? { "upgrade-insecure-requests": [] } : {}),
   // Report CSP violations for monitoring
   "report-uri": ["/api/csp-report"],
 };
