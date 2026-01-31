@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Flame, ChevronRight, Copy, X } from 'lucide-react';
+import { CheckCircle, Flame, ChevronRight, Copy } from 'lucide-react';
 import { CelebrationData, CelebrationIntensity, PRIORITY_CONFIG } from '@/types/todo';
 import { getStreakBadge, getDismissButtonText } from '@/lib/taskSuggestions';
 import { Celebration } from './Celebration';
@@ -27,19 +27,10 @@ export function CompletionCelebration({
   const streakBadge = getStreakBadge(streakCount);
   const dismissText = getDismissButtonText(nextTasks.length);
 
-  // Use a ref to avoid resetting the timer when onDismiss reference changes
-  const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
-
-  // Auto-dismiss confetti after a bit
+  // Auto-dismiss confetti animation after a bit (modal stays open until user acts)
   useEffect(() => {
     const timer = setTimeout(() => setShowConfetti(false), 3000);
-    // Auto-dismiss the entire modal after 2 seconds
-    const dismissTimer = setTimeout(() => onDismissRef.current(), 2000);
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(dismissTimer);
-    };
+    return () => clearTimeout(timer);
   }, []);
 
   const getIntensity = (): CelebrationIntensity => {
@@ -63,7 +54,6 @@ export function CompletionCelebration({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-        onClick={onDismiss}
       >
         {/* Confetti Effect */}
         {showConfetti && <Celebration trigger={true} intensity={getIntensity()} />}
@@ -82,15 +72,6 @@ export function CompletionCelebration({
             <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-emerald-500/20" />
 
             <div className="relative px-6 py-8 text-center">
-              {/* Close button */}
-              <button
-                onClick={onDismiss}
-                aria-label="Dismiss celebration"
-                className="absolute top-4 right-4 p-2 rounded-[var(--radius-lg)] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-
               {/* Checkmark animation */}
               <motion.div
                 initial={{ scale: 0 }}
@@ -205,7 +186,7 @@ export function CompletionCelebration({
               className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-[var(--radius-xl)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
             >
               <Copy className="w-4 h-4" />
-              Copy Summary
+              Copy to eAgent
             </button>
             <button
               onClick={onDismiss}
