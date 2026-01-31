@@ -180,7 +180,7 @@ export function TaskCompletionSummary({
         return (
           <>
             <Copy className="w-4 h-4" aria-hidden="true" />
-            Copy Summary
+            Copy to eAgent
             <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-blue-700/50 rounded">
               {getModifierSymbol()}C
             </kbd>
@@ -205,7 +205,7 @@ export function TaskCompletionSummary({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden"
+          className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
@@ -239,7 +239,7 @@ export function TaskCompletionSummary({
                   id="summary-modal-description"
                   className="text-sm text-gray-500 dark:text-gray-400"
                 >
-                  Copy to paste into your database
+                  Copy to paste into eAgent
                 </p>
               </div>
             </div>
@@ -348,13 +348,13 @@ export function TaskCompletionSummary({
                 id="summary-panel"
                 role="tabpanel"
                 aria-labelledby="preview-tab"
-                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-4 space-y-3"
+                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-5 space-y-4"
               >
-                <div className="font-medium text-gray-900 dark:text-white">
+                <div className="text-base font-medium text-gray-900 dark:text-white">
                   {todo.text}
                 </div>
 
-                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
                   <p>Completed by {completedBy}</p>
                   <p>Priority: <span className="capitalize">{todo.priority}</span></p>
                   {todo.assigned_to && <p>Assigned to: {todo.assigned_to}</p>}
@@ -413,7 +413,7 @@ export function TaskCompletionSummary({
                 id="summary-panel"
                 role="tabpanel"
                 aria-labelledby="raw-tab"
-                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-4 text-xs font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap overflow-x-auto"
+                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-5 text-sm font-mono text-gray-700 dark:text-gray-300 whitespace-pre-wrap overflow-x-auto leading-relaxed"
               >
                 {summaryText}
               </pre>
