@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
 import { AlertCircle, ChevronLeft, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import {
@@ -84,10 +84,14 @@ function Logo3D() {
 }
 
 // Animated stat counter
-function AnimatedCounter({ value, duration = 1.5 }: { value: number; duration?: number }) {
+function AnimatedCounter({ value, duration = 1.5, reduceMotion = false }: { value: number; duration?: number; reduceMotion?: boolean }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
+    if (reduceMotion) {
+      setCount(value);
+      return;
+    }
     let start = 0;
     const end = value;
     const increment = end / (duration * 60);
@@ -101,12 +105,13 @@ function AnimatedCounter({ value, duration = 1.5 }: { value: number; duration?: 
       }
     }, 1000 / 60);
     return () => clearInterval(timer);
-  }, [value, duration]);
+  }, [value, duration, reduceMotion]);
 
   return <span className="tabular-nums">{count}</span>;
 }
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const [screen, setScreen] = useState<Screen>('users');
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -312,57 +317,60 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F] relative overflow-hidden">
-        <AnimatedGrid />
-        <FloatingShapes />
+      <MotionConfig reducedMotion="user">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F] relative overflow-hidden">
+          <AnimatedGrid />
+          <FloatingShapes />
 
-        <motion.div
-          className="relative z-10 flex flex-col items-center gap-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <Logo3D />
-          <div className="w-8 h-8 border-2 border-[var(--brand-sky)]/30 border-t-[var(--brand-sky)] rounded-full animate-spin" />
-          <p className="text-white/50 text-sm font-medium tracking-wider uppercase">
-            Loading workspace...
-          </p>
-        </motion.div>
-      </div>
+          <motion.div
+            className="relative z-10 flex flex-col items-center gap-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <Logo3D />
+            <div className="w-8 h-8 border-2 border-[var(--brand-sky)]/30 border-t-[var(--brand-sky)] rounded-full animate-spin" />
+            <p className="text-white/50 text-sm font-medium tracking-wider uppercase">
+              Loading workspace...
+            </p>
+          </motion.div>
+        </div>
+      </MotionConfig>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden relative bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F]">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
-        Skip to content
-      </a>
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden relative bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F]">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
+          Skip to content
+        </a>
 
-      {/* Background layers */}
-      <AnimatedGrid />
-      <FloatingShapes />
+        {/* Background layers */}
+        <AnimatedGrid />
+        <FloatingShapes />
 
-      {/* Static ambient light effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute -top-1/4 -right-1/4 w-[800px] h-[800px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(114,181,232,0.1) 0%, transparent 60%)' }}
-        />
-        <div
-          className="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(0,51,160,0.15) 0%, transparent 60%)' }}
-        />
-      </div>
+        {/* Static ambient light effects */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div
+            className="absolute -top-1/4 -right-1/4 w-[800px] h-[800px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(114,181,232,0.1) 0%, transparent 60%)' }}
+          />
+          <div
+            className="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(0,51,160,0.15) 0%, transparent 60%)' }}
+          />
+        </div>
 
-      <div className="relative z-10 w-full max-w-6xl">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          {/* Left side - Branding */}
-          <motion.div
-            className="hidden lg:block"
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="max-w-lg">
+        <div className="relative z-10 w-full max-w-6xl">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            {/* Left side - Branding */}
+            <motion.div
+              className="hidden lg:block"
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="max-w-lg">
               {/* Logo and badge */}
               <motion.div
                 className="flex items-center gap-4 mb-8"
@@ -454,38 +462,38 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 >
                   <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-white">
-                      <AnimatedCounter value={teamStats.totalTasks} />
+                      <AnimatedCounter value={teamStats.totalTasks} reduceMotion={prefersReducedMotion} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">Total Tasks</p>
                   </div>
                   <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-sky-light)] to-[var(--brand-sky)]">
-                      <AnimatedCounter value={teamStats.completedThisWeek} />
+                      <AnimatedCounter value={teamStats.completedThisWeek} reduceMotion={prefersReducedMotion} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">This Week</p>
                   </div>
                   <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-emerald-400">
-                      <AnimatedCounter value={teamStats.activeUsers} />
+                      <AnimatedCounter value={teamStats.activeUsers} reduceMotion={prefersReducedMotion} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">Active</p>
                   </div>
                 </motion.div>
               )}
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
 
-          {/* Right side - Login card */}
-          <div id="main-content" className="w-full max-w-md lg:justify-self-end relative">
-            <AnimatePresence mode="wait">
-              {screen === 'users' && (
-                <motion.div
-                  key="users"
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                >
+            {/* Right side - Login card */}
+            <div id="main-content" className="w-full max-w-md lg:justify-self-end relative">
+              <AnimatePresence mode="wait">
+                {screen === 'users' && (
+                  <motion.div
+                    key="users"
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  >
                   {/* Mobile header */}
                   <motion.div
                     className="mb-6 text-center lg:hidden"
@@ -726,6 +734,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         </div>
       </div>
     </div>
+    </MotionConfig>
   );
 }
 

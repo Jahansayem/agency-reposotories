@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
-import { LayoutList, LayoutGrid, Bell, Search, X, Filter, RotateCcw } from 'lucide-react';
+import { LayoutList, LayoutGrid, Bell, Search, X, Filter, RotateCcw, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AuthUser, ViewMode, ActivityLogEntry } from '@/types/todo';
 import UserSwitcher from '../UserSwitcher';
@@ -25,6 +25,7 @@ interface TodoHeaderProps {
   onUserChange: (user: AuthUser | null) => void;
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  onAddTask?: () => void;
   // Search integration
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -42,6 +43,7 @@ function TodoHeader({
   onUserChange,
   viewMode,
   setViewMode,
+  onAddTask,
   searchQuery,
   setSearchQuery,
   showAdvancedFilters,
@@ -248,6 +250,17 @@ function TodoHeader({
           {/* Right side: Notifications, User switcher & Menu - hidden in focus mode */}
           {!focusMode && (
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+              {onAddTask && (
+                <button
+                  onClick={onAddTask}
+                  className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-xs sm:text-sm font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 active:scale-[0.98] transition-all shadow-sm"
+                  aria-label="Add a new task"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">New Task</span>
+                </button>
+              )}
+
               {/* Notification Bell - Top right like Facebook/LinkedIn */}
               <div className="relative">
                 <button

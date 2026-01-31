@@ -56,7 +56,7 @@ export default function CommandPalette({
   currentUser,
 }: CommandPaletteProps) {
   const { theme, toggleTheme } = useTheme();
-  const { setActiveView, openRightPanel } = useAppShell();
+  const { setActiveView, openRightPanel, triggerNewTask } = useAppShell();
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -138,7 +138,7 @@ export default function CommandPalette({
       icon: Plus,
       category: 'actions',
       shortcut: 'N',
-      action: () => { setActiveView('tasks'); onClose(); /* TODO: focus add task input */ },
+      action: () => { triggerNewTask(); onClose(); },
     },
     {
       id: 'action-filter-today',

@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUpDown, AlertTriangle, CheckSquare, ChevronDown,
-  Filter, RotateCcw, Check, FileText, MoreHorizontal, Layers
+  Filter, RotateCcw, Check, FileText, MoreHorizontal, Layers, X
 } from 'lucide-react';
 import { prefersReducedMotion, DURATION } from '@/lib/animations';
 import { QuickFilter, SortOption, TodoStatus } from '@/types/todo';
@@ -131,6 +131,45 @@ function TodoFiltersBar({
     hasAttachmentsFilter !== null,
     dateRangeFilter.start || dateRangeFilter.end
   ].filter(Boolean).length;
+
+  const activeFilterChips = [
+    quickFilter !== 'all' && {
+      label: quickFilter === 'my_tasks' ? 'Mine' : quickFilter === 'due_today' ? 'Due Today' : 'Overdue',
+      onClear: () => setQuickFilter('all'),
+    },
+    highPriorityOnly && {
+      label: 'High Priority',
+      onClear: () => setHighPriorityOnly(false),
+    },
+    showCompleted && {
+      label: 'Completed',
+      onClear: () => setShowCompleted(false),
+    },
+    searchQuery && {
+      label: `Search: "${searchQuery}"`,
+      onClear: () => setSearchQuery(''),
+    },
+    statusFilter !== 'all' && {
+      label: `Status: ${statusFilter.replace('_', ' ')}`,
+      onClear: () => setStatusFilter('all'),
+    },
+    assignedToFilter !== 'all' && {
+      label: `Assigned: ${assignedToFilter === 'unassigned' ? 'Unassigned' : assignedToFilter}`,
+      onClear: () => setAssignedToFilter('all'),
+    },
+    customerFilter !== 'all' && {
+      label: `Customer: ${customerFilter}`,
+      onClear: () => setCustomerFilter('all'),
+    },
+    hasAttachmentsFilter !== null && {
+      label: `Attachments: ${hasAttachmentsFilter ? 'Yes' : 'No'}`,
+      onClear: () => setHasAttachmentsFilter(null),
+    },
+    (dateRangeFilter.start || dateRangeFilter.end) && {
+      label: `Due: ${dateRangeFilter.start || 'Any'} - ${dateRangeFilter.end || 'Any'}`,
+      onClear: () => setDateRangeFilter({ start: '', end: '' }),
+    },
+  ].filter(Boolean) as { label: string; onClear: () => void }[];
 
   const clearAllFilters = () => {
     setQuickFilter('all');
@@ -345,6 +384,24 @@ function TodoFiltersBar({
           </button>
         )}
       </div>
+
+      {activeFilterChips.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-[var(--text-light)]">Active filters</span>
+          {activeFilterChips.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              onClick={chip.onClear}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors"
+              aria-label={`Clear filter ${chip.label}`}
+            >
+              <span>{chip.label}</span>
+              <X className="w-3 h-3 text-[var(--text-muted)]" />
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Selection mode hint */}
       {showBulkActions && (

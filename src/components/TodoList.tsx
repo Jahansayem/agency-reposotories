@@ -1627,6 +1627,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           onUserChange={onUserChange}
           viewMode={viewMode}
           setViewMode={setViewMode}
+          onAddTask={() => setShowAddTaskModal(true)}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           showAdvancedFilters={showAdvancedFilters}
@@ -1686,19 +1687,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             />
           </div>
         )}
-
-        {/* Add Task Button - opens modal */}
-        <div className="mb-4">
-          <button
-            onClick={() => setShowAddTaskModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-lg)] font-medium text-sm bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 active:scale-[0.98] transition-all duration-150 shadow-sm hover:shadow"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Task
-          </button>
-        </div>
 
         {/* Compact Filter Bar - hidden in focus mode */}
         {!focusMode && (

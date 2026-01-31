@@ -98,6 +98,26 @@ Each variant has gradient backgrounds, icon badges with glow, and action buttons
 **Change:** Add "?" shortcut to show keyboard shortcuts modal
 **Status:** "?" hint shown in AppMenu next to Keyboard Shortcuts option
 
+### 13. Web Create CTA Unification ✅ COMPLETED
+**Location:** `src/components/todo/TodoHeader.tsx`, `src/components/TodoList.tsx`, `src/components/layout/CommandPalette.tsx`, `src/components/layout/EnhancedBottomNav.tsx`
+**Issue:** Task creation entry points were inconsistent across web and keyboard flows
+**Change:** Primary New Task button moved into sticky header; command palette and mobile FAB wired to the same create trigger
+
+### 14. Active Filter Chips ✅ COMPLETED
+**Location:** `src/components/todo/TodoFiltersBar.tsx`
+**Issue:** Hard to see which filters are active once set
+**Change:** Added active filter chips with one-click clearing
+
+### 15. Reduced Motion Support ✅ COMPLETED
+**Location:** `src/components/LoginScreen.tsx`, `src/components/EmptyState.tsx`
+**Issue:** Long-running animations ignored prefers-reduced-motion
+**Change:** Respect reduced-motion for key login and empty-state animations
+
+### 16. Bottom Nav Theming ✅ COMPLETED
+**Location:** `src/components/layout/EnhancedBottomNav.tsx`
+**Issue:** Bottom nav used hard-coded light background, clashing in dark mode
+**Change:** Switched to theme surface tokens
+
 ---
 
 ## Implementation Status
@@ -114,6 +134,10 @@ Each variant has gradient backgrounds, icon badges with glow, and action buttons
 - [x] LOW-10: Theme toggle redundancy (no issue found)
 - [x] LOW-11: Empty states (already had rich illustrations)
 - [x] LOW-12: Keyboard shortcuts modal (hint visible in menu)
+- [x] MEDIUM-13: Web create CTA unification
+- [x] MEDIUM-14: Active filter chips
+- [x] MEDIUM-15: Reduced motion support
+- [x] MEDIUM-16: Bottom nav theming
 
 **All items complete!**
 
@@ -151,3 +175,12 @@ Each variant has gradient backgrounds, icon badges with glow, and action buttons
    - Notes badge: icon-only on mobile (`<span className="hidden sm:inline">`)
    - Voicemail badge: icon-only on mobile
    - Separator between metadata groups: `hidden sm:block`
+
+### Session 3 - Web UX Polish
+7. **`src/components/todo/TodoHeader.tsx`** - Added primary New Task CTA in header
+8. **`src/components/TodoList.tsx`** - Removed redundant Add Task row
+9. **`src/components/layout/CommandPalette.tsx`** - Create task action now triggers unified add flow
+10. **`src/components/layout/EnhancedBottomNav.tsx`** - Add button wired to unified trigger; theme surface background
+11. **`src/components/todo/TodoFiltersBar.tsx`** - Active filter chips with per-filter clearing
+12. **`src/components/LoginScreen.tsx`** - Reduced-motion handling for animated counters
+13. **`src/components/EmptyState.tsx`** - Reduced-motion handling for empty-state illustrations
