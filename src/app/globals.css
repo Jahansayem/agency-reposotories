@@ -324,6 +324,58 @@ input[type="radio"]:focus-visible {
   top: 1rem;
 }
 
+/* ─── Disabled Button States (WCAG AA Compliant) ─── */
+/* Improve disabled button contrast - DO NOT use opacity alone */
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+  /* Use explicit colors instead of opacity for better contrast */
+}
+
+/* Light mode disabled states */
+button:disabled {
+  color: #6B7280 !important; /* 4.5:1 on light backgrounds */
+  background-color: #E5E7EB !important;
+  border-color: #D1D5DB !important;
+  opacity: 1 !important; /* Override Tailwind opacity */
+}
+
+/* Dark mode disabled states */
+:root.dark button:disabled,
+.dark button:disabled {
+  color: #9CA3AF !important; /* 4.5:1 on dark backgrounds */
+  background-color: #374151 !important;
+  border-color: #4B5563 !important;
+  opacity: 1 !important; /* Override Tailwind opacity */
+}
+
+/* Disabled primary buttons (with background) */
+button:disabled.bg-\[var\(--accent\)\],
+button:disabled[class*="bg-gradient"],
+button:disabled[class*="bg-blue"],
+button:disabled[class*="bg-\[#"] {
+  background: #E5E7EB !important;
+  color: #6B7280 !important;
+  box-shadow: none !important;
+}
+
+:root.dark button:disabled.bg-\[var\(--accent\)\],
+.dark button:disabled[class*="bg-gradient"],
+.dark button:disabled[class*="bg-blue"],
+.dark button:disabled[class*="bg-\[#"] {
+  background: #374151 !important;
+  color: #9CA3AF !important;
+  box-shadow: none !important;
+}
+
+/* Ensure hover states don't override disabled */
+button:disabled:hover,
+button:disabled:active {
+  transform: none !important;
+  filter: none !important;
+  brightness: 1 !important;
+}
+
 /* ─── Custom Scrollbar ─── */
 ::-webkit-scrollbar {
   width: 10px;
