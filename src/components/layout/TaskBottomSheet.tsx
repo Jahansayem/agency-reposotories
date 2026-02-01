@@ -109,11 +109,14 @@ export default function TaskBottomSheet({
     };
   }, [isOpen]);
 
-  // Handle keyboard shortcuts
+  // Handle keyboard shortcuts and focus trap
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (!isOpen) return;
 
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Escape to close
       if (e.key === 'Escape') {
         onClose();
@@ -124,9 +127,59 @@ export default function TaskBottomSheet({
         e.preventDefault();
         onClose();
       }
+
+      // Tab focus trap
+      if (e.key === 'Tab') {
+        const focusableElements = sheet.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        const focusableArray = Array.from(focusableElements).filter(
+          (el) => el.offsetParent !== null && !el.hasAttribute('aria-hidden')
+        );
+
+        if (focusableArray.length === 0) {
+          e.preventDefault();
+          return;
+        }
+
+        const firstElement = focusableArray[0];
+        const lastElement = focusableArray[focusableArray.length - 1];
+        const activeElement = document.activeElement as HTMLElement;
+
+        if (e.shiftKey && activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        } else if (!sheet.contains(activeElement)) {
+          // If focus is outside sheet, bring it back
+          e.preventDefault();
+          if (e.shiftKey) {
+            lastElement.focus();
+          } else {
+            firstElement.focus();
+          }
+        }
+      }
     };
+
+    // Prevent mouse clicks outside from stealing focus
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (sheet && !sheet.contains(target)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown, true);
+    };
   }, [isOpen, onClose]);
 
   const handleDragEnd = useCallback(
