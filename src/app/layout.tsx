@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ToastProvider } from "@/components/ui";
+import { AnnouncementProvider } from "@/components/LiveRegion";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -45,9 +46,11 @@ export default function RootLayout({
         className={`${plusJakarta.variable} font-sans antialiased`}
       >
         <ThemeProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <AnnouncementProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </AnnouncementProvider>
         </ThemeProvider>
       </body>
     </html>

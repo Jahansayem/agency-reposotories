@@ -25,6 +25,8 @@ import { AuthUser } from '@/types/todo';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAppShell } from './layout/AppShell';
 import { logActivity } from '@/lib/activityLogger';
+import { useAnnouncement } from './LiveRegion';
+import LiveRegion from './LiveRegion';
 import { findPotentialDuplicates, shouldCheckForDuplicates } from '@/lib/duplicateDetection';
 import { sendTaskAssignmentNotification, sendTaskCompletionNotification, sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { fetchWithCsrf } from '@/lib/csrf';
@@ -80,6 +82,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
   // Get navigation state from AppShell context
   const { activeView, setActiveView } = useAppShell();
+
+  // Screen reader announcements for dynamic content
+  const { announcement, announce } = useAnnouncement();
 
   // NOTE: isWideDesktop removed - no longer using UtilitySidebar or conditional chat layouts
   // const isWideDesktop = useIsDesktopWide(1280);
@@ -472,7 +477,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       // Rollback optimistic update
       deleteTodoFromStore(newTodo.id);
     } else {
-      // Log activity
+      // Log activity and announce to screen readers
       logActivity({
         action: 'task_created',
         userName,
@@ -486,6 +491,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           has_transcription: !!transcription,
         },
       });
+      announce(`New task added: ${newTodo.text}`);
 
       // Send rich task card notification if task is assigned to someone else (Feature 2)
       if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
@@ -777,7 +783,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         updateTodoInStore(id, oldTodo);
       }
     } else if (oldTodo) {
-      // Log activity
+      // Log activity and announce to screen readers
       if (status === 'done' && oldTodo.status !== 'done') {
         logActivity({
           action: 'task_completed',
@@ -785,6 +791,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todoId: id,
           todoText: oldTodo.text,
         });
+        announce(`Task marked as complete: ${oldTodo.text}`);
       } else if (oldTodo.status === 'done' && status !== 'done') {
         logActivity({
           action: 'task_reopened',
@@ -792,6 +799,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todoId: id,
           todoText: oldTodo.text,
         });
+        announce(`Task reopened: ${oldTodo.text}`);
       } else {
         logActivity({
           action: 'status_changed',
@@ -800,6 +808,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todoText: oldTodo.text,
           details: { from: oldTodo.status, to: status },
         });
+        announce(`Task status changed to ${status}: ${oldTodo.text}`);
       }
     }
   };
@@ -955,6 +964,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         todoId: id,
         todoText: todoToDelete.text,
       });
+      announce(`Task deleted: ${todoToDelete.text}`);
     }
   };
 
@@ -1615,6 +1625,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   return (
     <PullToRefresh onRefresh={refreshTodos}>
       <div className="min-h-screen transition-colors bg-[var(--background)]">
+        {/* Screen reader announcements for dynamic content */}
+        <LiveRegion message={announcement} />
+
         {/* Skip link for accessibility */}
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
           Skip to main content
