@@ -4,7 +4,7 @@ import { memo, useCallback, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Check, CheckCheck, Reply, MoreHorizontal,
-  Edit3, Trash2, Pin, Plus, ExternalLink, Sparkles, X
+  Edit3, Trash2, Pin, Plus, ExternalLink, Sparkles, X, Smile
 } from 'lucide-react';
 import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, Todo } from '@/types/todo';
 import { getReactionAriaLabel } from '@/lib/chatUtils';
@@ -128,11 +128,33 @@ export const ChatMessageList = memo(function ChatMessageList({
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showMessageMenu, setShowMessageMenu] = useState<string | null>(null);
   const [showReactionsSummary, setShowReactionsSummary] = useState<string | null>(null);
+  const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const getUserColor = useCallback((userName: string) => {
     const user = users.find(u => u.name === userName);
     return user?.color || 'var(--accent)';
   }, [users]);
+
+  // Long-press handlers for mobile reaction support (P0 Issue #8)
+  const handleTouchStart = useCallback((messageId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      // Trigger haptic feedback if supported
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+      setTapbackMessageId(messageId);
+      setLongPressMessageId(messageId);
+    }, 500); // 500ms long-press threshold
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setLongPressMessageId(null);
+  }, []);
 
   const getInitials = useCallback((name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -400,6 +422,18 @@ export const ChatMessageList = memo(function ChatMessageList({
                           isOwn ? 'right-full mr-2' : 'left-full ml-2'
                         }`}
                       >
+                        {/* React button - NEW for P0 Issue #8 */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id);
+                          }}
+                          className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors group"
+                          title="Add reaction"
+                          aria-label="Add reaction to message"
+                        >
+                          <Smile className="w-3.5 h-3.5 text-[var(--chat-text-secondary)] group-hover:text-yellow-400 transition-colors" />
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

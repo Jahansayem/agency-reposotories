@@ -277,9 +277,19 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     setError('');
 
     try {
+      // Fetch CSRF token first
+      const csrfResponse = await fetch('/api/csrf');
+      if (!csrfResponse.ok) {
+        throw new Error('Failed to get CSRF token');
+      }
+      const { token: csrfToken } = await csrfResponse.json();
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify({ userId: selectedUser.id, pin: pinString }),
       });
       const result = await response.json();
