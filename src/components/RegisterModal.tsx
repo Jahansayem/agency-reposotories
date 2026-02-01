@@ -281,6 +281,8 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Enter your full name"
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'name-error' : undefined}
                   className="w-full px-4 py-3 rounded-[var(--radius-lg)] border-2 border-[var(--border)] bg-[var(--surface-2)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-colors"
                   disabled={isSubmitting}
                   maxLength={50}
@@ -291,7 +293,13 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-[var(--danger)] text-sm bg-[var(--danger-light)] py-2 px-3 rounded-[var(--radius-lg)]">
+                <div
+                  id="name-error"
+                  role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
+                  className="flex items-center gap-2 text-[var(--danger)] text-sm bg-[var(--danger-light)] py-2 px-3 rounded-[var(--radius-lg)]"
+                >
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -335,6 +343,9 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
                     onChange={(e) => handlePinChange(index, e.target.value, pinInputRefs, pin, setPin)}
                     onKeyDown={(e) => handlePinKeyDown(e, index, pinInputRefs, pin)}
                     disabled={isSubmitting}
+                    aria-label={`PIN digit ${index + 1} of 4`}
+                    aria-invalid={error ? 'true' : 'false'}
+                    aria-describedby={error ? 'pin-error' : undefined}
                     className={`w-14 h-16 text-center text-xl font-bold rounded-[var(--radius-xl)] border-2 transition-all focus:outline-none ${
                       digit
                         ? 'border-[var(--primary)] bg-[var(--primary)]/5'
@@ -345,7 +356,13 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
               </div>
 
               {error && (
-                <div className="flex items-center justify-center gap-2 text-[var(--danger)] text-sm bg-[var(--danger-light)] py-2 px-3 rounded-[var(--radius-lg)]">
+                <div
+                  id="pin-error"
+                  role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
+                  className="flex items-center justify-center gap-2 text-[var(--danger)] text-sm bg-[var(--danger-light)] py-2 px-3 rounded-[var(--radius-lg)]"
+                >
                   <AlertCircle className="w-4 h-4" />
                   <span>{error}</span>
                 </div>
@@ -394,6 +411,9 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
                     }
                     onKeyDown={(e) => handlePinKeyDown(e, index, confirmPinInputRefs, confirmPin)}
                     disabled={isSubmitting}
+                    aria-label={`Confirm PIN digit ${index + 1} of 4`}
+                    aria-invalid={error ? 'true' : 'false'}
+                    aria-describedby={error ? 'confirm-pin-error' : undefined}
                     className={`w-14 h-16 text-center text-xl font-bold rounded-[var(--radius-xl)] border-2 transition-all focus:outline-none ${
                       digit
                         ? 'border-[var(--primary)] bg-[var(--primary)]/5'
@@ -404,7 +424,13 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
               </div>
 
               {error && (
-                <div className="flex items-center justify-center gap-2 text-[var(--danger)] text-sm bg-[var(--danger-light)] py-2 px-3 rounded-[var(--radius-lg)]">
+                <div
+                  id="confirm-pin-error"
+                  role="alert"
+                  aria-live="assertive"
+                  aria-atomic="true"
+                  className="flex items-center justify-center gap-2 text-[var(--danger)] text-sm bg-[var(--danger-light)] py-2 px-3 rounded-[var(--radius-lg)]"
+                >
                   <AlertCircle className="w-4 h-4" />
                   <span>{error}</span>
                 </div>

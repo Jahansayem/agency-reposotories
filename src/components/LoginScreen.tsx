@@ -709,6 +709,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                               onKeyDown={(e) => handlePinKeyDown(e, index, pinRefs, pin)}
                               disabled={lockoutSeconds > 0 || isSubmitting}
                               aria-label={`PIN digit ${index + 1} of 4`}
+                              aria-invalid={error ? 'true' : 'false'}
+                              aria-describedby={error ? 'pin-error' : undefined}
                               autoComplete="one-time-code"
                               className={`w-14 h-16 text-center text-2xl font-bold rounded-[var(--radius-xl)] border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${
                                 lockoutSeconds > 0
@@ -726,6 +728,10 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <AnimatePresence mode="wait">
                       {(error || lockoutSeconds > 0) && (
                         <motion.div
+                          id="pin-error"
+                          role="alert"
+                          aria-live="assertive"
+                          aria-atomic="true"
                           className="flex items-center justify-center gap-2 text-red-400 text-sm bg-red-500/10 py-3 px-4 rounded-[var(--radius-xl)] border border-red-500/20 mb-4"
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
