@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { ChatMessage, AuthUser, ChatConversation, PresenceStatus, Todo } from '@/types/todo';
+import { ChatMessage, AuthUser, ChatConversation, PresenceStatus, Todo, ChatAttachment } from '@/types/todo';
 import { v4 as uuidv4 } from 'uuid';
 import { MessageSquare, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -417,8 +417,10 @@ export default function ChatPanel({
   }, [currentUser.name, conversation, getConversationKey]);
 
   // Send message
-  const sendMessage = useCallback(async (text: string, mentions: string[]) => {
-    if (!text.trim() || !conversation) return;
+  const sendMessage = useCallback(async (text: string, mentions: string[], attachments?: ChatAttachment[]) => {
+    // Allow sending if there's text OR attachments
+    if (!text.trim() && (!attachments || attachments.length === 0)) return;
+    if (!conversation) return;
 
     const rateLimitStatus = checkRateLimit(currentUser.id);
     if (rateLimitStatus.isLimited) {
@@ -428,9 +430,9 @@ export default function ChatPanel({
     }
 
     const userNames = users.map(u => u.name);
-    const validation = validateMessage(text, [], userNames);
+    const validation = validateMessage(text || '', [], userNames);
 
-    if (!validation.isValid) {
+    if (text && !validation.isValid) {
       logger.warn('Message validation failed', { errors: validation.errors, component: 'ChatPanel' });
       return;
     }
@@ -439,7 +441,7 @@ export default function ChatPanel({
 
     const message: ChatMessage = {
       id: uuidv4(),
-      text: validation.sanitizedText || text,
+      text: validation.sanitizedText || text || '',
       created_by: currentUser.name,
       created_at: new Date().toISOString(),
       recipient: conversation.type === 'dm' ? conversation.userName : null,
@@ -447,6 +449,7 @@ export default function ChatPanel({
       reply_to_text: replyingTo ? truncateText(sanitizeHTML(replyingTo.text), 100) : null,
       reply_to_user: replyingTo?.created_by || null,
       mentions: mentions.length > 0 ? mentions : undefined,
+      attachments: attachments && attachments.length > 0 ? attachments : undefined,
     };
 
     setMessages((prev) => [...prev, message]);

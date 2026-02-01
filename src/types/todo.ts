@@ -297,6 +297,19 @@ export interface MessageReaction {
   created_at: string;
 }
 
+// Chat attachment types
+export interface ChatAttachment {
+  id: string;
+  file_name: string;
+  file_type: 'image' | 'video' | 'audio' | 'document';
+  file_size: number; // bytes
+  mime_type: string;
+  storage_path: string;
+  thumbnail_path?: string; // For images/videos
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
 // Chat message types
 export interface ChatMessage {
   id: string;
@@ -317,6 +330,7 @@ export interface ChatMessage {
   pinned_at?: string | null; // When it was pinned
   mentions?: string[]; // Array of mentioned usernames
   agency_id?: string; // Multi-tenancy: which agency this message belongs to
+  attachments?: ChatAttachment[]; // Image/file attachments
 }
 
 // User presence status

@@ -6,11 +6,12 @@ import {
   MessageSquare, Check, CheckCheck, Reply, MoreHorizontal,
   Edit3, Trash2, Pin, Plus, ExternalLink, Sparkles, X, Smile
 } from 'lucide-react';
-import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, Todo } from '@/types/todo';
+import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, Todo, ChatAttachment } from '@/types/todo';
 import { getReactionAriaLabel } from '@/lib/chatUtils';
 import { TaskAssignmentCard, SystemNotificationType } from './TaskAssignmentCard';
 import { haptics } from '@/lib/haptics';
 import { SkeletonChatPanel } from '@/components/SkeletonLoader';
+import { ChatImageGallery, ImageLightbox } from '@/components/ChatAttachments';
 
 // Tapback emoji mapping
 const TAPBACK_EMOJIS: Record<TapbackType, string> = {
@@ -131,6 +132,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   const [showMessageMenu, setShowMessageMenu] = useState<string | null>(null);
   const [showReactionsSummary, setShowReactionsSummary] = useState<string | null>(null);
   const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
+  const [lightboxAttachment, setLightboxAttachment] = useState<ChatAttachment | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Swipe-to-reply state (Issue #19)
@@ -442,6 +444,14 @@ export const ChatMessageList = memo(function ChatMessageList({
                           >
                             {renderMessageText(msg.text)}
 
+                            {/* Attachments */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <ChatImageGallery
+                                attachments={msg.attachments}
+                                onImageClick={(attachment) => setLightboxAttachment(attachment)}
+                              />
+                            )}
+
                             {/* Task link button */}
                             {msg.related_todo_id && onTaskLinkClick && !systemMeta && (
                               <button
@@ -681,6 +691,14 @@ export const ChatMessageList = memo(function ChatMessageList({
           </div>
         );
       })}
+
+      {/* Image Lightbox */}
+      {lightboxAttachment && (
+        <ImageLightbox
+          attachment={lightboxAttachment}
+          onClose={() => setLightboxAttachment(null)}
+        />
+      )}
     </>
   );
 });

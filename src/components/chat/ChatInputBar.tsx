@@ -3,8 +3,10 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Smile, AtSign, X, Reply, Edit3 } from 'lucide-react';
-import { ChatMessage, ChatConversation } from '@/types/todo';
+import { ChatMessage, ChatConversation, ChatAttachment } from '@/types/todo';
 import { CHAT_LIMITS } from '@/lib/chatUtils';
+import { AttachmentUploadButton, AttachmentPreview } from '../ChatAttachments';
+import { useChatAttachments } from '@/hooks/useChatAttachments';
 
 // Expanded emoji picker with categories
 const EMOJI_CATEGORIES = {
@@ -63,7 +65,7 @@ interface ChatInputBarProps {
   conversation: ChatConversation | null;
   users: { name: string; color: string }[];
   currentUserName: string;
-  onSend: (text: string, mentions: string[]) => void;
+  onSend: (text: string, mentions: string[], attachments?: ChatAttachment[]) => void;
   onTyping: () => void;
   replyingTo: ChatMessage | null;
   onCancelReply: () => void;
@@ -95,9 +97,13 @@ export const ChatInputBar = memo(function ChatInputBar({
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionCursorPos, setMentionCursorPos] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedAttachment, setUploadedAttachment] = useState<ChatAttachment | null>(null);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+
+  const { uploadAttachment, uploading, progress, error: uploadError, clearError } = useChatAttachments();
 
   // Update edit text when editing message changes
   useEffect(() => {
@@ -162,14 +168,38 @@ export const ChatInputBar = memo(function ChatInputBar({
     inputRef.current?.focus();
   }, []);
 
+  // Handle file selection
+  const handleFileSelected = useCallback(async (file: File) => {
+    setSelectedFile(file);
+    clearError();
+
+    // Upload immediately
+    const attachment = await uploadAttachment(file, currentUserName);
+    if (attachment) {
+      setUploadedAttachment(attachment);
+    }
+  }, [uploadAttachment, currentUserName, clearError]);
+
+  // Remove attachment
+  const handleRemoveAttachment = useCallback(() => {
+    setSelectedFile(null);
+    setUploadedAttachment(null);
+    clearError();
+  }, [clearError]);
+
   const handleSend = useCallback(() => {
     const text = newMessage.trim();
-    if (!text || !conversation) return;
+    // Allow sending if there's text OR an attachment
+    if ((!text && !uploadedAttachment) || !conversation) return;
 
     const mentions = extractMentions(text);
-    onSend(text, mentions);
+    const attachments = uploadedAttachment ? [uploadedAttachment] : undefined;
+
+    onSend(text || '', mentions, attachments);
     setNewMessage('');
-  }, [newMessage, conversation, extractMentions, onSend]);
+    setSelectedFile(null);
+    setUploadedAttachment(null);
+  }, [newMessage, uploadedAttachment, conversation, extractMentions, onSend]);
 
   const handleSaveEditClick = useCallback(() => {
     if (!editText.trim()) return;
@@ -358,6 +388,21 @@ export const ChatInputBar = memo(function ChatInputBar({
           )}
         </AnimatePresence>
 
+        {/* Attachment preview above input */}
+        <AnimatePresence>
+          {selectedFile && (
+            <div className="mb-3">
+              <AttachmentPreview
+                file={selectedFile}
+                uploading={uploading}
+                progress={progress}
+                error={uploadError}
+                onRemove={handleRemoveAttachment}
+              />
+            </div>
+          )}
+        </AnimatePresence>
+
         <div className="flex items-end gap-2">
           <motion.button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -370,6 +415,12 @@ export const ChatInputBar = memo(function ChatInputBar({
           >
             <Smile className="w-5 h-5" />
           </motion.button>
+
+          {/* Attachment upload button */}
+          <AttachmentUploadButton
+            onAttachmentSelected={handleFileSelected}
+            disabled={disabled || uploading || !!selectedFile}
+          />
 
           {/* Mention button */}
           <motion.button
