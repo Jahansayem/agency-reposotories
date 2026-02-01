@@ -24,6 +24,7 @@ import { useAgency } from '@/contexts/AgencyContext';
 import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 import { CreateAgencyModal } from '@/components/CreateAgencyModal';
+import { AgencyMembersModal } from '@/components/AgencyMembersModal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -83,6 +84,7 @@ export default function NavigationSidebar({
 
   // Create agency modal state
   const [showCreateAgencyModal, setShowCreateAgencyModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
 
   const [hovering, setHovering] = useState(false);
 
@@ -146,6 +148,7 @@ export default function NavigationSidebar({
                     size="sm"
                     showRole={false}
                     onCreateAgency={() => setShowCreateAgencyModal(true)}
+                    onManageMembers={() => setShowMembersModal(true)}
                   />
                   <AgencyOnboardingTooltip
                     show={showTooltip && isMultiTenancyEnabled}
@@ -388,6 +391,13 @@ export default function NavigationSidebar({
           setShowCreateAgencyModal(false);
           // Optional: Show success toast notification here
         }}
+        currentUserName={currentUser.name}
+      />
+
+      {/* Members Management Modal */}
+      <AgencyMembersModal
+        isOpen={showMembersModal}
+        onClose={() => setShowMembersModal(false)}
         currentUserName={currentUser.name}
       />
     </motion.aside>

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, ChevronDown, Check, Plus, Shield, Crown, User } from 'lucide-react';
+import { Building2, ChevronDown, Check, Plus, Shield, Crown, User, Users } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
 import type { AgencyRole } from '@/types/agency';
 
@@ -13,6 +13,8 @@ import type { AgencyRole } from '@/types/agency';
 interface AgencySwitcherProps {
   /** Callback when "Create Agency" is clicked */
   onCreateAgency?: () => void;
+  /** Callback when "Manage Members" is clicked */
+  onManageMembers?: () => void;
   /** Size variant */
   size?: 'sm' | 'md' | 'lg';
   /** Show role badge */
@@ -64,6 +66,7 @@ const getRoleColor = (role: AgencyRole) => {
 
 export function AgencySwitcher({
   onCreateAgency,
+  onManageMembers,
   size = 'md',
   showRole = true,
   className = '',
@@ -243,25 +246,48 @@ export function AgencySwitcher({
               )}
             </div>
 
-            {/* Create Agency Button */}
-            {onCreateAgency && (
+            {/* Action Buttons */}
+            {(onManageMembers || onCreateAgency) && (
               <>
                 <div className="border-t border-gray-200 dark:border-gray-700" />
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    onCreateAgency();
-                  }}
-                  className="
-                    w-full flex items-center gap-2 px-3 py-2
-                    text-blue-600 dark:text-blue-400
-                    hover:bg-blue-50 dark:hover:bg-blue-900/20
-                    transition-colors
-                  "
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm font-medium">Create New Agency</span>
-                </button>
+
+                {/* Manage Members Button (owner/admin only) */}
+                {onManageMembers && (currentRole === 'owner' || currentRole === 'admin') && (
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      onManageMembers();
+                    }}
+                    className="
+                      w-full flex items-center gap-2 px-3 py-2
+                      text-purple-600 dark:text-purple-400
+                      hover:bg-purple-50 dark:hover:bg-purple-900/20
+                      transition-colors
+                    "
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="text-sm font-medium">Manage Members</span>
+                  </button>
+                )}
+
+                {/* Create Agency Button (owner only) */}
+                {onCreateAgency && (
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      onCreateAgency();
+                    }}
+                    className="
+                      w-full flex items-center gap-2 px-3 py-2
+                      text-blue-600 dark:text-blue-400
+                      hover:bg-blue-50 dark:hover:bg-blue-900/20
+                      transition-colors
+                    "
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="text-sm font-medium">Create New Agency</span>
+                  </button>
+                )}
               </>
             )}
           </motion.div>
