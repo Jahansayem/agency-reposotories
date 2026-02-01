@@ -6,6 +6,7 @@ import { ToastProvider } from "@/components/ui";
 import { AnnouncementProvider } from "@/components/LiveRegion";
 import { ReactQueryProvider } from "@/lib/queryClient";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -48,6 +49,7 @@ export default function RootLayout({
         className={`${plusJakarta.variable} font-sans antialiased`}
       >
         <ServiceWorkerRegistration />
+        <OfflineIndicator />
         <ReactQueryProvider>
           <ThemeProvider>
             <AnnouncementProvider>

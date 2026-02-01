@@ -23,6 +23,7 @@ import { useAppShell, ActiveView } from './AppShell';
 import { useAgency } from '@/contexts/AgencyContext';
 import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
+import { CreateAgencyModal } from '@/components/CreateAgencyModal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -79,6 +80,9 @@ export default function NavigationSidebar({
 
   // Agency onboarding tooltip
   const { showTooltip, dismissTooltip } = useAgencyOnboarding();
+
+  // Create agency modal state
+  const [showCreateAgencyModal, setShowCreateAgencyModal] = useState(false);
 
   const [hovering, setHovering] = useState(false);
 
@@ -138,7 +142,11 @@ export default function NavigationSidebar({
               {/* Show AgencySwitcher when multi-tenancy is enabled */}
               {isMultiTenancyEnabled ? (
                 <div className="relative flex-1">
-                  <AgencySwitcher size="sm" showRole={false} />
+                  <AgencySwitcher
+                    size="sm"
+                    showRole={false}
+                    onCreateAgency={() => setShowCreateAgencyModal(true)}
+                  />
                   <AgencyOnboardingTooltip
                     show={showTooltip && isMultiTenancyEnabled}
                     onDismiss={dismissTooltip}
@@ -369,6 +377,19 @@ export default function NavigationSidebar({
           )}
         </div>
       </div>
+
+      {/* Create Agency Modal */}
+      <CreateAgencyModal
+        isOpen={showCreateAgencyModal}
+        onClose={() => setShowCreateAgencyModal(false)}
+        onSuccess={(agency) => {
+          // Successfully created agency - the AgencyContext will auto-refresh
+          console.log('Agency created:', agency);
+          setShowCreateAgencyModal(false);
+          // Optional: Show success toast notification here
+        }}
+        currentUserName={currentUser.name}
+      />
     </motion.aside>
   );
 }
