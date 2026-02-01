@@ -26,6 +26,8 @@ export type { UseFocusTrapOptions, UseFocusTrapReturn } from './useFocusTrap';
 export { useEscapeKey } from './useEscapeKey';
 export type { UseEscapeKeyOptions } from './useEscapeKey';
 
+export { useTaskListKeyboardNav } from './useTaskListKeyboardNav';
+
 // Motion & Animation Hooks
 export { useReducedMotion, useMotionConfig } from './useReducedMotion';
 
