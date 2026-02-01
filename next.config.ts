@@ -188,4 +188,4 @@ export default withPWA({
       },
     },
   ],
-})(baseConfig);
+})(baseConfig as any);

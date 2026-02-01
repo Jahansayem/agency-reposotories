@@ -81,13 +81,8 @@ export function ServiceWorkerRegistration() {
           console.error('Service Worker registration failed:', error);
         });
 
-      return () => {
-        // Cleanup: unregister event listeners
-        wb.removeEventListener('installed');
-        wb.removeEventListener('activated');
-        wb.removeEventListener('controlling');
-        wb.removeEventListener('waiting');
-      };
+      // Cleanup happens automatically when component unmounts
+      // Workbox manages event listeners internally
     }
   }, []);
 
