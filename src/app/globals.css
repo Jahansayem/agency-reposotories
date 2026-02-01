@@ -32,8 +32,8 @@
   --border: #CBD5E1;
   --border-hover: #94A3B8;
   --border-subtle: #E2E8F0;
-  --text-muted: #52627A; /* Improved contrast: 5.5:1 ratio on white */
-  --text-light: #94A3B8;
+  --text-muted: #475569; /* WCAG AA: 7.2:1 ratio on white for smaller text */
+  --text-light: #64748B; /* WCAG AA: 4.5:1 ratio on white for body text */
   --text-inverse: #FFFFFF;
 
   /* ─── Accent Colors ─── */
@@ -124,8 +124,8 @@
   --border: #334155;
   --border-hover: #475569;
   --border-subtle: #1E293B;
-  --text-muted: #94A3B8;
-  --text-light: #64748B;
+  --text-muted: #CBD5E1; /* WCAG AA: 9.4:1 ratio on dark background */
+  --text-light: #94A3B8; /* WCAG AA: 6.8:1 ratio on dark background */
   --text-inverse: #0A1628;
 
   --accent: #72B5E8;
