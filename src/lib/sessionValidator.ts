@@ -238,7 +238,13 @@ export async function createSession(
     });
 
     if (error) {
-      logger.error('Failed to create session:', error, { component: 'SessionValidator' });
+      logger.error('Failed to create session:', error, {
+        component: 'SessionValidator',
+        errorCode: error.code,
+        errorMessage: error.message,
+        errorDetails: error.details,
+        errorHint: error.hint
+      });
       return null;
     }
 
