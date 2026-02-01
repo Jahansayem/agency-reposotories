@@ -17,8 +17,7 @@ import {
   forceSyncNow,
   getOfflineStatus,
 } from '@/lib/db/offlineSync';
-import type { Todo } from '@/types/todo';
-import type { Message } from '@/types/message';
+import type { Todo, ChatMessage as Message } from '@/types/todo';
 
 /**
  * useOfflineSupport Hook

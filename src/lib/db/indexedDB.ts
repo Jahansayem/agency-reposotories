@@ -1,7 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { Todo } from '@/types/todo';
-import type { Message } from '@/types/message';
-import type { User } from '@/types/user';
+import type { Todo, ChatMessage as Message, User } from '@/types/todo';
 
 /**
  * IndexedDB Schema for Offline Support

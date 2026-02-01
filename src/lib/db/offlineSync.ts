@@ -14,8 +14,7 @@ import {
   getUnsyncedMessagesFromIDB,
   markMessagesAsSyncedInIDB,
 } from './indexedDB';
-import type { Todo } from '@/types/todo';
-import type { Message } from '@/types/message';
+import type { Todo, ChatMessage as Message } from '@/types/todo';
 
 /**
  * Offline Sync Manager

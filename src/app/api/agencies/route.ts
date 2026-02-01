@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { generateAgencySlug, DEFAULT_PERMISSIONS, SUBSCRIPTION_LIMITS } from '@/types/agency';
 import type { CreateAgencyRequest, Agency } from '@/types/agency';
 
