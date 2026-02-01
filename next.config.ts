@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import withPWA from 'next-pwa';
 
 // NOTE: Outlook CORS origins are now managed dynamically in middleware.ts
 // and src/lib/outlookAuth.ts to avoid the comma-separated origin issue.
@@ -46,7 +47,7 @@ const cspString = Object.entries(cspDirectives)
   .map(([key, values]) => `${key} ${values.join(" ")}`.trim())
   .join("; ");
 
-const nextConfig: NextConfig = {
+const baseConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
   turbopack: {
@@ -127,4 +128,64 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Issue #34: Service Worker Implementation - PWA Configuration
+export default withPWA({
+  dest: 'public',
+  // Disable in development to avoid service worker caching issues
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+  // Runtime caching strategies for network requests
+  runtimeCaching: [
+    {
+      // Cache Supabase API requests with NetworkFirst strategy
+      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'supabase-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    {
+      // Cache static assets with CacheFirst strategy
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'static-image-cache',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        },
+      },
+    },
+    {
+      // Cache font files
+      urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'font-cache',
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        },
+      },
+    },
+    {
+      // Cache API routes with NetworkFirst
+      urlPattern: /^https?:\/\/localhost:3000\/api\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-cache',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 5, // 5 minutes
+        },
+      },
+    },
+  ],
+})(baseConfig);
