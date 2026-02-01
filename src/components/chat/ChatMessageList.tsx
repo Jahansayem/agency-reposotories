@@ -10,6 +10,7 @@ import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, 
 import { getReactionAriaLabel } from '@/lib/chatUtils';
 import { TaskAssignmentCard, SystemNotificationType } from './TaskAssignmentCard';
 import { haptics } from '@/lib/haptics';
+import { SkeletonChatPanel } from '@/components/SkeletonLoader';
 
 // Tapback emoji mapping
 const TAPBACK_EMOJIS: Record<TapbackType, string> = {
@@ -236,18 +237,11 @@ export const ChatMessageList = memo(function ChatMessageList({
     });
   }, [users, currentUser.name]);
 
-  // Loading state
+  // Loading state - Issue #27: Use skeleton loader instead of spinner
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-4">
-          <motion.div
-            className="w-10 h-10 border-3 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          />
-          <span className="text-[var(--chat-text-secondary)] text-sm">Loading messages...</span>
-        </div>
+      <div className="p-4">
+        <SkeletonChatPanel />
       </div>
     );
   }
