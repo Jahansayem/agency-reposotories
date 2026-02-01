@@ -52,3 +52,12 @@ export type { UseFormOptions, UseFormReturn, UseUnsavedChangesOptions } from './
 
 // Error Handling Hooks
 export { useErrorToast } from './useErrorToast';
+
+// React Query Hooks (Sprint 3 Issue #31)
+export {
+  useTodosQuery,
+  useCompleteTodoMutation,
+  useUpdateTodoMutation,
+  useDeleteTodoMutation,
+  useCreateTodoMutation,
+} from './useTodosQuery';

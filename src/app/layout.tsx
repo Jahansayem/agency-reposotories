@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ToastProvider } from "@/components/ui";
 import { AnnouncementProvider } from "@/components/LiveRegion";
+import { ReactQueryProvider } from "@/lib/queryClient";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -45,13 +46,15 @@ export default function RootLayout({
       <body
         className={`${plusJakarta.variable} font-sans antialiased`}
       >
-        <ThemeProvider>
-          <AnnouncementProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </AnnouncementProvider>
-        </ThemeProvider>
+        <ReactQueryProvider>
+          <ThemeProvider>
+            <AnnouncementProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </AnnouncementProvider>
+          </ThemeProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );
