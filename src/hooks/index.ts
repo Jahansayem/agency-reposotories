@@ -49,3 +49,6 @@ export { useChatMessages } from './useChatMessages';
 // Form Hooks
 export { useForm, useUnsavedChanges } from './useForm';
 export type { UseFormOptions, UseFormReturn, UseUnsavedChangesOptions } from './useForm';
+
+// Error Handling Hooks
+export { useErrorToast } from './useErrorToast';

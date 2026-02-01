@@ -9,25 +9,29 @@ import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from './logger';
 
-// Configure web-push with VAPID keys
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
-
-// Initialize web-push if keys are available
+// Lazy initialization for VAPID configuration to avoid issues with
+// env vars not being available at module load time in serverless environments.
 let webPushInitialized = false;
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  try {
-    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-    webPushInitialized = true;
-  } catch (error) {
-    logger.error('Failed to initialize web-push', error, { component: 'webPushServer' });
-  }
-}
+let initAttempted = false;
 
-// Create Supabase client with service role
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function ensureWebPushInitialized(): boolean {
+  if (initAttempted) return webPushInitialized;
+  initAttempted = true;
+
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
+  const privateKey = process.env.VAPID_PRIVATE_KEY || '';
+  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
+
+  if (publicKey && privateKey) {
+    try {
+      webpush.setVapidDetails(subject, publicKey, privateKey);
+      webPushInitialized = true;
+    } catch (error) {
+      logger.error('Failed to initialize web-push', error, { component: 'webPushServer' });
+    }
+  }
+  return webPushInitialized;
+}
 
 interface WebPushPayload {
   title: string;
@@ -46,7 +50,7 @@ interface PushSubscription {
 }
 
 interface NotificationRequest {
-  type: 'task_assigned' | 'task_due_soon' | 'task_overdue' | 'task_completed' | 'generic';
+  type: 'task_assigned' | 'task_due_soon' | 'task_overdue' | 'task_completed' | 'message' | 'generic';
   payload: {
     taskId?: string;
     taskText?: string;
@@ -85,6 +89,11 @@ function buildNotificationPayload(
     case 'task_completed':
       title = 'Task Completed';
       body = `${payload.completedBy || 'Someone'} completed: ${payload.taskText || 'a task'}`;
+      break;
+
+    case 'message':
+      title = 'New Message';
+      body = payload.message || 'You have a new message';
       break;
 
     case 'generic':
@@ -136,10 +145,13 @@ async function sendToSubscription(
 export async function sendWebPushNotifications(
   request: NotificationRequest
 ): Promise<{ success: boolean; sent?: number; failed?: number; error?: string }> {
-  // Check if web push is configured
-  if (!webPushInitialized) {
+  // Check if web push is configured (lazy initialization)
+  if (!ensureWebPushInitialized()) {
     return { success: false, error: 'Web push not configured (missing VAPID keys)' };
   }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return { success: false, error: 'Supabase not configured' };

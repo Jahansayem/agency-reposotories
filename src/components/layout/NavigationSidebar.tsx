@@ -22,6 +22,7 @@ import { AuthUser, isOwner } from '@/types/todo';
 import { useAppShell, ActiveView } from './AppShell';
 import { useAgency } from '@/contexts/AgencyContext';
 import { AgencySwitcher } from '@/components/AgencySwitcher';
+import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -76,12 +77,8 @@ export default function NavigationSidebar({
   // Multi-tenancy context
   const { currentAgency, isMultiTenancyEnabled } = useAgency();
 
-  // DEBUG: Log multi-tenancy state
-  useEffect(() => {
-    console.log('🔍 NavigationSidebar - isMultiTenancyEnabled:', isMultiTenancyEnabled);
-    console.log('🔍 NavigationSidebar - currentAgency:', currentAgency);
-    console.log('🔍 NavigationSidebar - env var:', process.env.NEXT_PUBLIC_ENABLE_MULTI_TENANCY);
-  }, [isMultiTenancyEnabled, currentAgency]);
+  // Agency onboarding tooltip
+  const { showTooltip, dismissTooltip } = useAgencyOnboarding();
 
   const [hovering, setHovering] = useState(false);
 
@@ -140,7 +137,13 @@ export default function NavigationSidebar({
             >
               {/* Show AgencySwitcher when multi-tenancy is enabled */}
               {isMultiTenancyEnabled ? (
-                <AgencySwitcher size="sm" showRole={false} />
+                <div className="relative flex-1">
+                  <AgencySwitcher size="sm" showRole={false} />
+                  <AgencyOnboardingTooltip
+                    show={showTooltip && isMultiTenancyEnabled}
+                    onDismiss={dismissTooltip}
+                  />
+                </div>
               ) : (
                 <>
                   {/* Logo/Brand - fallback when multi-tenancy disabled */}

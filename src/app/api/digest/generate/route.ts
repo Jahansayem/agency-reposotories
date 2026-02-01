@@ -508,7 +508,7 @@ export async function POST(request: NextRequest) {
             .delete()
             .eq('user_id', user.id)
             .eq('digest_type', digestType)
-            .gte('generated_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+            .gte('generated_at', getPacificMidnightUTC(getTodayInPacific()).toISOString());
 
           const { error: insertError } = await supabase
             .from('daily_digests')
@@ -612,21 +612,20 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient();
 
-    // Count today's digests
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Count today's digests (using Pacific time for consistency)
+    const todayPacific = getPacificMidnightUTC(getTodayInPacific());
 
     const { count: morningCount } = await supabase
       .from('daily_digests')
       .select('*', { count: 'exact', head: true })
       .eq('digest_type', 'morning')
-      .gte('generated_at', today.toISOString());
+      .gte('generated_at', todayPacific.toISOString());
 
     const { count: afternoonCount } = await supabase
       .from('daily_digests')
       .select('*', { count: 'exact', head: true })
       .eq('digest_type', 'afternoon')
-      .gte('generated_at', today.toISOString());
+      .gte('generated_at', todayPacific.toISOString());
 
     return NextResponse.json({
       success: true,

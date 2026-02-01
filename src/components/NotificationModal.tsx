@@ -150,7 +150,7 @@ export default function NotificationModal({
     if (!isOpen) return;
 
     const channel = supabase
-      .channel('notification-modal')
+      .channel(`notification-modal-${currentUserName}`)
       .on(
         'postgres_changes',
         {
@@ -168,7 +168,7 @@ export default function NotificationModal({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen]);
+  }, [isOpen, currentUserName]);
 
   // Handle click outside
   useEffect(() => {
@@ -235,8 +235,10 @@ export default function NotificationModal({
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
-    if (isOpen && anchorRef?.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
+    if (!isOpen || !anchorRef?.current) return;
+
+    const updatePosition = () => {
+      const rect = anchorRef.current!.getBoundingClientRect();
       const modalWidth = 380;
       const modalHeight = 520;
       const padding = 16;
@@ -265,7 +267,11 @@ export default function NotificationModal({
       }
 
       setPosition({ top, left });
-    }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
   }, [isOpen, anchorRef]);
 
   return (

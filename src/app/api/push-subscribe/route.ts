@@ -34,8 +34,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create a single Supabase client for this request
+    const supabase = getSupabase();
+
     // Look up the authenticated user's ID from the database instead of trusting body
-    const { data: userRecord, error: userLookupError } = await getSupabase()
+    const { data: userRecord, error: userLookupError } = await supabase
       .from('users')
       .select('id')
       .eq('name', userName)
@@ -64,13 +67,18 @@ export async function POST(request: NextRequest) {
     // Delete existing web tokens for this user, then insert the new one.
     // This is safer than upsert with onConflict since the DB may not have
     // a unique constraint on (user_id, platform).
-    await getSupabase()
+    const { error: deleteError } = await supabase
       .from('device_tokens')
       .delete()
       .eq('user_id', userId)
       .eq('platform', 'web');
 
-    const { error } = await getSupabase()
+    if (deleteError) {
+      logger.error('Error deleting old subscription', deleteError, { component: 'push-subscribe' });
+      // Continue anyway - insert may still work
+    }
+
+    const { error } = await supabase
       .from('device_tokens')
       .insert({
         user_id: userId,
@@ -80,6 +88,11 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
+      // Handle duplicate token gracefully (race condition: two requests inserted simultaneously)
+      if (error.code === '23505') {
+        // Unique constraint violation - subscription already exists, treat as success
+        return NextResponse.json({ success: true });
+      }
       logger.error('Error storing push subscription', error, { component: 'push-subscribe' });
       return NextResponse.json(
         { success: false, error: 'Failed to store subscription' },
@@ -109,8 +122,11 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json();
     const { subscription } = body;
 
+    // Create a single Supabase client for this request
+    const supabase = getSupabase();
+
     // Look up the authenticated user's ID from the database instead of trusting body
-    const { data: userRecord, error: userLookupError } = await getSupabase()
+    const { data: userRecord, error: userLookupError } = await supabase
       .from('users')
       .select('id')
       .eq('name', userName)
@@ -130,7 +146,7 @@ export async function DELETE(request: NextRequest) {
     if (subscription) {
       const subscriptionToken = JSON.stringify(subscription);
 
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from('device_tokens')
         .delete()
         .eq('user_id', userId)
@@ -146,7 +162,7 @@ export async function DELETE(request: NextRequest) {
       }
     } else {
       // Remove all web subscriptions for user
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from('device_tokens')
         .delete()
         .eq('user_id', userId)
@@ -180,8 +196,11 @@ export async function GET(request: NextRequest) {
   if (authError) return authError;
 
   try {
+    // Create a single Supabase client for this request
+    const supabase = getSupabase();
+
     // Look up the authenticated user's ID from the database instead of trusting query params
-    const { data: userRecord, error: userLookupError } = await getSupabase()
+    const { data: userRecord, error: userLookupError } = await supabase
       .from('users')
       .select('id')
       .eq('name', userName)
@@ -195,7 +214,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = userRecord.id;
-    const { data, error } = await getSupabase()
+    const { data, error } = await supabase
       .from('device_tokens')
       .select('id, platform, updated_at')
       .eq('user_id', userId)

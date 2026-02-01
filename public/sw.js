@@ -89,12 +89,12 @@ self.addEventListener('notificationclick', function(event) {
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async function(clientList) {
       // Check if there's already a window open
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          // Navigate existing window to the target
-          client.navigate(targetUrl);
+          // Navigate existing window to the target, then focus
+          await client.navigate(targetUrl);
           return client.focus();
         }
       }
