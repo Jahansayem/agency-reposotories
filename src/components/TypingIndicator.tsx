@@ -50,27 +50,21 @@ interface TypingIndicatorProps {
  * Animated typing dots
  */
 function TypingDots({ color }: { color?: string }) {
-  const dotVariants = {
-    initial: { y: 0 },
-    animate: {
-      y: [-2, 0, -2],
-      transition: {
-        duration: 0.6,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      },
-    },
-  };
-
   return (
     <div className="flex items-center gap-1">
       {[0, 1, 2].map((i) => (
         <motion.div
           key={i}
-          variants={dotVariants}
-          initial="initial"
-          animate="animate"
-          transition={{ delay: i * 0.15 }}
+          initial={{ y: 0 }}
+          animate={{
+            y: [-2, 0, -2],
+          }}
+          transition={{
+            duration: 0.6,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: i * 0.15,
+          }}
           className="w-2 h-2 rounded-full"
           style={{
             backgroundColor: color || '#6B7280',
