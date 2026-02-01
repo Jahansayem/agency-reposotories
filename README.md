@@ -47,6 +47,7 @@ Security hardening has been completed to meet Allstate internal application requ
 
 ### Collaboration & Communication
 - **Team chat** - Real-time messaging with direct messages and team channels
+- **Chat image attachments** - Share screenshots and files with auto-thumbnail generation (Sprint 3)
 - **Message reactions** - Tapback reactions (❤️ 👍 👎 😂 ❗ ❓)
 - **Reply threads** - Nested message conversations
 - **Message pinning** - Pin important messages for easy access
@@ -54,6 +55,8 @@ Security hardening has been completed to meet Allstate internal application requ
 - **Typing indicators** - Real-time typing status
 - **User presence** - Online, away, DND, and offline status
 - **Task discussions** - Link messages to specific tasks
+- **Collaborative editing indicators** - See who's editing tasks in real-time (Sprint 3)
+- **Push notifications** - Browser notifications for task reminders, mentions, assignments (Sprint 3)
 
 ### Archive Browser
 - **Full-page archive view** - Dedicated view for completed tasks (auto-archived after 48 hours)
@@ -71,6 +74,8 @@ Security hardening has been completed to meet Allstate internal application requ
 - **Activity feed** - Complete audit trail of all team actions
 - **Streak tracking** - Daily login streaks with welcome notifications
 - **Team stats** - Real-time task counts by status, priority, and assignee
+- **Performance monitoring** - Real-time FPS, memory, latency, and render metrics (Sprint 3)
+- **Version history** - View and restore previous versions of any task (Sprint 3)
 
 ### Strategic Planning (Owner Only)
 - **Strategic goals** - Long-term planning with 6 predefined categories
@@ -91,6 +96,8 @@ Security hardening has been completed to meet Allstate internal application requ
 - **Pull-to-refresh** - Mobile-optimized refresh gesture
 - **Celebration effects** - Visual feedback on task completion
 - **Empty states** - Contextual guidance when lists are empty
+- **Enhanced animations** - Smooth micro-interactions with GPU acceleration (Sprint 3)
+- **Reduced motion support** - Respects accessibility preferences and battery level (Sprint 3)
 
 ## Tech Stack
 
@@ -128,6 +135,11 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key  # For file storage operations
 ANTHROPIC_API_KEY=your-anthropic-api-key         # For AI features
 OPENAI_API_KEY=your-openai-api-key               # For voice transcription
 OUTLOOK_ADDON_API_KEY=your-secure-random-key     # For Outlook add-in
+
+# Push Notifications (Sprint 3) - Generate with: npx web-push generate-vapid-keys
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=your-vapid-public-key
+VAPID_PRIVATE_KEY=your-vapid-private-key
+VAPID_SUBJECT=mailto:support@bealeragency.com
 ```
 
 ### 3. Set Up Database
@@ -227,6 +239,7 @@ All Outlook API endpoints require the `X-API-Key` header.
 | `/api/goals` | GET/POST | Strategic goals management |
 | `/api/goals/categories` | GET/POST | Goal categories |
 | `/api/goals/milestones` | GET/POST | Goal milestones |
+| `/api/push-notifications/send` | POST | Send push notifications (Sprint 3) |
 
 ## Running Tests
 
@@ -260,19 +273,25 @@ The app is configured for Railway deployment:
 | `ANTHROPIC_API_KEY` | Anthropic API key for Claude | AI features (smart parse, enhancement, email generation) |
 | `OPENAI_API_KEY` | OpenAI API key | Voice transcription (Whisper) |
 | `OUTLOOK_ADDON_API_KEY` | Shared secret for Outlook add-in | Outlook integration |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | VAPID public key for push notifications | Push notifications (Sprint 3) |
+| `VAPID_PRIVATE_KEY` | VAPID private key for push notifications | Push notifications (Sprint 3) |
+| `VAPID_SUBJECT` | Contact email for VAPID | Push notifications (Sprint 3) |
 
 ## Developer Notes (for Claude Code)
 
 This section provides context for AI assistants working on this codebase.
 
-### Current State (January 2026)
+### Current State (February 2026)
 
 - **Production URL**: https://shared-todo-list-production.up.railway.app
 - **Primary Users**: Derrick (Owner/Admin) and Sefra (Team Member)
-- **Database**: Supabase with 9 tables (users, todos, messages, activity_log, task_templates, strategic_goals, goal_categories, goal_milestones, device_tokens)
-- **Storage**: Supabase Storage bucket `todo-attachments` for file uploads
+- **Database**: Supabase with 12 tables (users, todos, messages, activity_log, task_templates, strategic_goals, goal_categories, goal_milestones, device_tokens, todo_versions, push_subscriptions, notification_log)
+- **Storage**: Supabase Storage buckets:
+  - `todo-attachments` for task file uploads
+  - `chat-attachments` for chat image attachments (Sprint 3)
 - **Deployment**: Railway auto-deploys from `main` branch using Docker
 - **Framework**: Next.js 16 with App Router and Turbopack
+- **Latest Sprint**: Sprint 3 Complete (February 2026) - Version History, Chat Attachments, Push Notifications, Performance Monitoring
 
 ### Key Files to Know
 
@@ -295,6 +314,9 @@ This section provides context for AI assistants working on this codebase.
 | `src/lib/supabase.ts` | Supabase client initialization |
 | `src/lib/activityLogger.ts` | Activity logging helper for audit trail |
 | `src/lib/duplicateDetection.ts` | Smart duplicate detection algorithm |
+| `src/lib/animations.ts` | Framer Motion animation variants library |
+| `src/lib/microInteractions.ts` | Micro-interactions (haptics, sounds, effects) - Sprint 3 |
+| `src/lib/animationPerformance.ts` | Performance optimization utilities - Sprint 3 |
 | `src/types/todo.ts` | All TypeScript interfaces and enums |
 | `src/app/api/ai/` | 8 AI endpoints (smart-parse, enhance, transcribe, generate-email, etc.) |
 | `src/app/api/outlook/` | Outlook add-in APIs (parse-email, create-task, users) |
@@ -330,6 +352,7 @@ This section provides context for AI assistants working on this codebase.
 
 **Collaboration**
 - Team chat with direct messages
+- Chat image attachments with thumbnails and lightbox (Sprint 3)
 - Message reactions (6 tapback types)
 - Reply threading
 - Message pinning
@@ -337,12 +360,16 @@ This section provides context for AI assistants working on this codebase.
 - Typing indicators
 - User presence (online/away/DND/offline)
 - Task-linked discussions
+- Real-time editing indicators (Sprint 3)
+- Push notifications for mentions, assignments, reminders (Sprint 3)
 
 **Analytics & Tracking**
 - Activity feed (complete audit trail with 15+ action types)
 - Weekly progress chart (Mon-Fri completion)
 - Team workload stats
 - Login streaks with welcome notifications
+- Performance monitoring dashboard (FPS, memory, latency, render metrics) - Sprint 3
+- Version history with restore capability - Sprint 3
 
 **UX & Polish**
 - PIN-based auth with user switching
@@ -352,6 +379,9 @@ This section provides context for AI assistants working on this codebase.
 - Celebration animations on task completion
 - Empty states with contextual guidance
 - Mobile-optimized responsive design
+- Enhanced micro-interactions (confetti, haptics, sounds) - Sprint 3
+- GPU-accelerated animations with reduced motion support - Sprint 3
+- Performance-optimized frame scheduling - Sprint 3
 
 ### Database Schema
 
@@ -375,7 +405,8 @@ messages (
   id UUID, text TEXT, created_by TEXT, created_at, related_todo_id UUID,
   recipient TEXT, reactions JSONB[], read_by TEXT[], reply_to_id UUID,
   reply_to_text TEXT, reply_to_user TEXT, edited_at, deleted_at,
-  is_pinned BOOLEAN, pinned_by TEXT, pinned_at, mentions TEXT[]
+  is_pinned BOOLEAN, pinned_by TEXT, pinned_at, mentions TEXT[],
+  attachments JSONB[]  -- Sprint 3: Chat image attachments
 )
 
 -- Activity log table
@@ -412,6 +443,28 @@ goal_milestones (
 device_tokens (
   id UUID, user_id UUID, token TEXT, platform TEXT,
   created_at, updated_at
+)
+
+-- Version history table (Sprint 3)
+todo_versions (
+  id UUID, todo_id UUID, version_number INT, text TEXT, completed BOOLEAN,
+  status TEXT, priority TEXT, assigned_to TEXT, due_date TIMESTAMPTZ,
+  notes TEXT, subtasks JSONB[], attachments JSONB[], change_type TEXT,
+  change_summary TEXT, changed_by TEXT, created_at
+)
+
+-- Push subscriptions table (Sprint 3)
+push_subscriptions (
+  id UUID, user_id UUID, endpoint TEXT UNIQUE, p256dh_key TEXT, auth_key TEXT,
+  is_active BOOLEAN, last_used_at TIMESTAMPTZ, created_at, updated_at
+)
+
+-- Notification log table (Sprint 3)
+notification_log (
+  id UUID, user_id UUID, notification_type TEXT, title TEXT, body TEXT,
+  task_id UUID, message_id UUID, status TEXT, sent_at TIMESTAMPTZ,
+  clicked_at TIMESTAMPTZ, dismissed_at TIMESTAMPTZ, error_message TEXT,
+  data JSONB, created_at
 )
 ```
 
