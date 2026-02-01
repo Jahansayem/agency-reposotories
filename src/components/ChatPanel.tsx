@@ -25,6 +25,7 @@ import {
   DockedChatPanel,
 } from './chat';
 import { useChatMessages } from '@/hooks/useChatMessages';
+import ConfirmDialog from './ConfirmDialog';
 
 // Notification sound URL
 const NOTIFICATION_SOUND_URL = '/sounds/notification-chime.wav';
@@ -184,6 +185,7 @@ export default function ChatPanel({
   const [taskFromMessage, setTaskFromMessage] = useState<ChatMessage | null>(null);
   const [rateLimitWarning, setRateLimitWarning] = useState<string | null>(null);
   const [dockedInputValue, setDockedInputValue] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ messageId: string; messageText: string } | null>(null);
 
   // Notification state
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
@@ -513,6 +515,22 @@ export default function ChatPanel({
     setShowCreateTaskModal(false);
     setTaskFromMessage(null);
   }, [taskFromMessage, onCreateTask]);
+
+  // Delete confirmation handlers
+  const handleDeleteMessageRequest = useCallback((messageId: string, messageText: string) => {
+    setDeleteConfirmation({ messageId, messageText });
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteConfirmation) {
+      deleteMessage(deleteConfirmation.messageId);
+      setDeleteConfirmation(null);
+    }
+  }, [deleteConfirmation, deleteMessage]);
+
+  const handleCancelDelete = useCallback(() => {
+    setDeleteConfirmation(null);
+  }, []);
 
   // Track refs for real-time subscription callbacks
   const isOpenRef = useRef(isOpen);
@@ -1017,7 +1035,7 @@ export default function ChatPanel({
                               onReact={addReaction}
                               onReply={setReplyingTo}
                               onEdit={setEditingMessage}
-                              onDelete={deleteMessage}
+                              onDelete={handleDeleteMessageRequest}
                               onPin={togglePin}
                               onCreateTask={onCreateTask ? createTaskFromMessage : undefined}
                               onTaskLinkClick={onTaskLinkClick}
@@ -1125,6 +1143,18 @@ export default function ChatPanel({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirmation !== null}
+        title="Delete Message?"
+        message={`Are you sure you want to delete this message? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </>
   );
 }

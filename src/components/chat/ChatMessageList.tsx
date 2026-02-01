@@ -28,7 +28,7 @@ interface ChatMessageListProps {
   onReact: (messageId: string, reaction: TapbackType) => void;
   onReply: (message: ChatMessage) => void;
   onEdit: (message: ChatMessage) => void;
-  onDelete: (messageId: string) => void;
+  onDelete: (messageId: string, messageText: string) => void;
   onPin: (message: ChatMessage) => void;
   onCreateTask?: (message: ChatMessage) => void;
   onTaskLinkClick?: (todoId: string) => void;
@@ -476,7 +476,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                               </button>
                               <button
                                 onClick={() => {
-                                  onDelete(msg.id);
+                                  onDelete(msg.id, msg.text);
                                   setShowMessageMenu(null);
                                 }}
                                 className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-red-400 transition-colors"
