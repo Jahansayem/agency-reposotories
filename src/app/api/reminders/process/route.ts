@@ -8,11 +8,25 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { processAllDueReminders } from '@/lib/reminderService';
 import { logger } from '@/lib/logger';
 
 // Use the same API key as Outlook add-in for simplicity
 const API_KEY = process.env.OUTLOOK_ADDON_API_KEY;
+
+// Timing-safe API key comparison to prevent timing attacks
+function safeCompareApiKey(provided: string | null, expected: string | undefined): boolean {
+  if (!provided || !expected) return false;
+  try {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * POST /api/reminders/process
@@ -24,7 +38,7 @@ export async function POST(request: NextRequest) {
   // Authenticate with API key
   const apiKey = request.headers.get('X-API-Key');
 
-  if (!API_KEY || apiKey !== API_KEY) {
+  if (!safeCompareApiKey(apiKey, API_KEY)) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }
@@ -58,7 +72,7 @@ export async function GET(request: NextRequest) {
   // Authenticate with API key
   const apiKey = request.headers.get('X-API-Key');
 
-  if (!API_KEY || apiKey !== API_KEY) {
+  if (!safeCompareApiKey(apiKey, API_KEY)) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }

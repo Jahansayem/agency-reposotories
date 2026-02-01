@@ -66,9 +66,6 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       scope: '/',
     });
 
-    // Wait for the service worker to be ready
-    await navigator.serviceWorker.ready;
-
     console.log('Service worker registered successfully');
     return registration;
   } catch (error) {
@@ -86,7 +83,8 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
   }
 
   try {
-    return await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.getRegistration();
+    return registration || null;
   } catch (error) {
     console.error('Failed to get service worker registration:', error);
     return null;

@@ -28,6 +28,7 @@ import { logActivity } from '@/lib/activityLogger';
 import { useAnnouncement } from './LiveRegion';
 import LiveRegion from './LiveRegion';
 import { findPotentialDuplicates, shouldCheckForDuplicates } from '@/lib/duplicateDetection';
+import { ContextualErrorMessages } from '@/lib/errorMessages';
 import { sendTaskAssignmentNotification, sendTaskCompletionNotification, sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { getNextSuggestedTasks, calculateCompletionStreak, getEncouragementMessage } from '@/lib/taskSuggestions';
@@ -1482,7 +1483,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
       if (updateError) {
         logger.error('Error updating merged todo', updateError, { component: 'TodoList' });
-        alert('Failed to merge tasks. Please try again.');
+        const errorMsg = ContextualErrorMessages.taskUpdate(updateError);
+        alert(`${errorMsg.message}. ${errorMsg.action}`);
         setMergingState(false);
         return;
       }
@@ -1495,7 +1497,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
       if (deleteError) {
         logger.error('Error deleting merged todos', deleteError, { component: 'TodoList' });
-        alert('Merge partially failed. Refreshing...');
+        const errorMsg = ContextualErrorMessages.taskDelete(deleteError);
+        alert(`Merge partially failed. ${errorMsg.action} Refreshing...`);
         refreshTodos();
         setMergingState(false);
         return;
@@ -1531,7 +1534,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       closeMergeModal();
     } catch (error) {
       logger.error('Error during merge', error, { component: 'TodoList' });
-      alert('An unexpected error occurred. Please try again.');
+      const errorMsg = ContextualErrorMessages.taskUpdate(error);
+      alert(`${errorMsg.message}. ${errorMsg.action}`);
       refreshTodos();
     } finally {
       setMergingState(false);

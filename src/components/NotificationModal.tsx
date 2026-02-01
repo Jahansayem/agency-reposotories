@@ -88,6 +88,7 @@ export default function NotificationModal({
 }: NotificationModalProps) {
   const { theme } = useTheme();
   const modalRef = useRef<HTMLDivElement>(null);
+  const wasOpenRef = useRef(false);
 
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,14 +134,15 @@ export default function NotificationModal({
     fetchActivities();
   }, [fetchActivities]);
 
-  // Mark all as read when modal closes
+  // Mark all as read when modal transitions from open to closed
   useEffect(() => {
-    if (!isOpen && activities.length > 0) {
+    if (wasOpenRef.current && !isOpen && activities.length > 0) {
       const now = new Date().toISOString();
       localStorage.setItem(LAST_SEEN_KEY, now);
       setLastSeenAt(now);
       onMarkAllRead?.();
     }
+    wasOpenRef.current = isOpen;
   }, [isOpen, activities.length, onMarkAllRead]);
 
   // Subscribe to real-time updates

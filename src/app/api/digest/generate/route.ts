@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
@@ -28,6 +29,22 @@ function getTodayInPacific(): string {
   return pacificDate; // Returns YYYY-MM-DD format
 }
 
+/**
+ * Calculate the UTC equivalent of midnight Pacific time for a given date string (YYYY-MM-DD).
+ * Handles PST/PDT transitions automatically using Intl APIs instead of hardcoding UTC-8.
+ */
+function getPacificMidnightUTC(dateStr: string): Date {
+  const parts = dateStr.split('-').map(Number);
+  // Create a date at midnight on the given date in local time
+  const localDate = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0);
+  // Compare UTC and Pacific representations to compute the actual offset
+  const utcStr = localDate.toLocaleString('en-US', { timeZone: 'UTC' });
+  const pacificStr = localDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
+  const offsetMs = new Date(utcStr).getTime() - new Date(pacificStr).getTime();
+  // Midnight Pacific in UTC = midnight UTC + offset (7h for PDT, 8h for PST)
+  return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]) + offsetMs);
+}
+
 // VAPID configuration
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
@@ -44,10 +61,18 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   }
 }
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Timing-safe API key comparison to prevent timing attacks
+function safeCompareApiKey(provided: string | null, expected: string | undefined): boolean {
+  if (!provided || !expected) return false;
+  try {
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
 
 // Response types (same as in /api/ai/daily-digest)
 export interface DailyDigestTask {
@@ -162,8 +187,7 @@ async function generateDigestForUser(
   const pacificDateStr = getTodayInPacific(); // YYYY-MM-DD in Pacific time
   // Use Pacific date for day boundaries so digest reflects the correct local day
   // Parse as UTC noon to avoid any date-shifting from timezone interpretation
-  const pacificDateParts = pacificDateStr.split('-').map(Number);
-  const todayStart = new Date(Date.UTC(pacificDateParts[0], pacificDateParts[1] - 1, pacificDateParts[2], 8, 0, 0)); // Pacific midnight ~ UTC 8am (PST)
+  const todayStart = getPacificMidnightUTC(pacificDateStr);
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
   const yesterdayStart = new Date(todayStart);
@@ -222,6 +246,11 @@ async function generateDigestForUser(
   const userTodayTasks = todayTasksTyped.filter(
     t => t.assigned_to === userName || t.created_by === userName || !t.assigned_to
   );
+
+  // Initialize Anthropic client lazily (only when needed, avoids module-level crash if key is missing)
+  const anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  });
 
   // Build the AI prompt
   const prompt = `You are generating a personalized ${digestType} briefing for ${userName} at Bealer Agency (an Allstate insurance agency).
@@ -408,7 +437,7 @@ export async function POST(request: NextRequest) {
   // Authenticate with API key
   const apiKey = request.headers.get('X-API-Key');
 
-  if (!API_KEY || apiKey !== API_KEY) {
+  if (!safeCompareApiKey(apiKey, API_KEY)) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }
@@ -573,7 +602,7 @@ export async function GET(request: NextRequest) {
   // Authenticate with API key
   const apiKey = request.headers.get('X-API-Key');
 
-  if (!API_KEY || apiKey !== API_KEY) {
+  if (!safeCompareApiKey(apiKey, API_KEY)) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }

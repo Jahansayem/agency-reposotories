@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -75,6 +75,13 @@ export default function NavigationSidebar({
 
   // Multi-tenancy context
   const { currentAgency, isMultiTenancyEnabled } = useAgency();
+
+  // DEBUG: Log multi-tenancy state
+  useEffect(() => {
+    console.log('🔍 NavigationSidebar - isMultiTenancyEnabled:', isMultiTenancyEnabled);
+    console.log('🔍 NavigationSidebar - currentAgency:', currentAgency);
+    console.log('🔍 NavigationSidebar - env var:', process.env.NEXT_PUBLIC_ENABLE_MULTI_TENANCY);
+  }, [isMultiTenancyEnabled, currentAgency]);
 
   const [hovering, setHovering] = useState(false);
 

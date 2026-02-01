@@ -116,25 +116,16 @@ async function main() {
       fullPage: true
     });
 
-    // 4. Screenshot: Agency switcher (if visible)
-    console.log('📸 Screenshot 3: Looking for agency switcher...');
-    const agencySwitcher = await page.locator('text=Bealer Agency').first();
-    const isVisible = await agencySwitcher.isVisible().catch(() => false);
-
-    if (isVisible) {
-      console.log('✅ Agency switcher is visible');
-      await agencySwitcher.screenshot({
-        path: `${SCREENSHOT_DIR}/03-agency-switcher.png`
+    // 4. Screenshot: Full sidebar including agency switcher area
+    console.log('📸 Screenshot 3: Full sidebar...');
+    const sidebar = await page.locator('aside, nav[aria-label*="navigation"], [role="navigation"]').first();
+    if (await sidebar.isVisible().catch(() => false)) {
+      await sidebar.screenshot({
+        path: `${SCREENSHOT_DIR}/03-full-sidebar.png`
       });
+      console.log('✅ Sidebar screenshot captured');
     } else {
-      console.log('⚠️  Agency switcher not found on page');
-      // Take a screenshot of the header area
-      const header = await page.locator('header, nav, [role="banner"]').first();
-      if (await header.isVisible().catch(() => false)) {
-        await header.screenshot({
-          path: `${SCREENSHOT_DIR}/03-header-area.png`
-        });
-      }
+      console.log('⚠️  Sidebar not found');
     }
 
     // 5. Screenshot: Create a test todo

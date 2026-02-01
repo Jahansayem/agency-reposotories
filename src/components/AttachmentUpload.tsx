@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Upload, X, Loader2, AlertCircle } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE } from '@/types/todo';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { ContextualErrorMessages } from '@/lib/errorMessages';
 
 interface AttachmentUploadProps {
   todoId: string;
@@ -83,7 +84,8 @@ export default function AttachmentUpload({
       onUploadComplete(result.attachment);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload file');
+      const errorMsg = ContextualErrorMessages.attachmentUpload(err);
+      setError(`${errorMsg.message}. ${errorMsg.action}`);
     } finally {
       setUploading(false);
     }

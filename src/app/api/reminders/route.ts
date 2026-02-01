@@ -44,6 +44,35 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status');
 
   const supabase = getSupabaseClient();
+
+  // Look up authenticated user's ID for authorization scoping
+  const { data: userRecord } = await supabase
+    .from('users')
+    .select('id')
+    .eq('name', userName)
+    .single();
+
+  if (!userRecord) {
+    return NextResponse.json(
+      { success: false, error: 'User not found' },
+      { status: 404 }
+    );
+  }
+
+  // If userId is provided, ensure it matches the authenticated user's ID
+  if (userId && userId !== userRecord.id) {
+    return NextResponse.json(
+      { success: false, error: 'Access denied' },
+      { status: 403 }
+    );
+  }
+
+  // If todoId is provided, verify the user has access to that todo
+  if (todoId) {
+    const { todo, error: accessError } = await verifyTodoAccess(todoId, userName!);
+    if (accessError) return accessError;
+  }
+
   let query = supabase
     .from('task_reminders')
     .select(`
@@ -54,7 +83,9 @@ export async function GET(request: NextRequest) {
         priority,
         due_date,
         assigned_to,
-        completed
+        completed,
+        created_by,
+        updated_by
       )
     `)
     .order('reminder_time', { ascending: true });
@@ -65,6 +96,12 @@ export async function GET(request: NextRequest) {
 
   if (userId) {
     query = query.eq('user_id', userId);
+  }
+
+  // If neither todoId nor userId is provided, scope to reminders the user is involved with:
+  // reminders they created, or reminders for todos assigned to / created by them
+  if (!todoId && !userId) {
+    query = query.eq('created_by', userName);
   }
 
   if (status) {
@@ -81,7 +118,48 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ success: true, reminders: data || [] });
+  // Post-filter: if no specific filters were provided, also include reminders
+  // for todos assigned to or created by this user (in addition to reminders they created)
+  let reminders = data || [];
+  if (!todoId && !userId) {
+    // The query already filtered by created_by=userName.
+    // We also need reminders for todos where this user is involved but didn't create the reminder.
+    // Run a second query for those.
+    const { data: involvedReminders } = await supabase
+      .from('task_reminders')
+      .select(`
+        *,
+        todos:todo_id!inner (
+          id,
+          text,
+          priority,
+          due_date,
+          assigned_to,
+          completed,
+          created_by,
+          updated_by
+        )
+      `)
+      .neq('created_by', userName)
+      .or(`assigned_to.eq.${userName},created_by.eq.${userName}`, { referencedTable: 'todos' })
+      .order('reminder_time', { ascending: true });
+
+    if (involvedReminders && involvedReminders.length > 0) {
+      // Merge and deduplicate by id
+      const existingIds = new Set(reminders.map((r: { id: string }) => r.id));
+      for (const r of involvedReminders) {
+        if (!existingIds.has(r.id)) {
+          reminders.push(r);
+        }
+      }
+      // Re-sort by reminder_time
+      reminders.sort((a: { reminder_time: string }, b: { reminder_time: string }) =>
+        new Date(a.reminder_time).getTime() - new Date(b.reminder_time).getTime()
+      );
+    }
+  }
+
+  return NextResponse.json({ success: true, reminders });
 }
 
 /**

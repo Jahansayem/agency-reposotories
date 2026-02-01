@@ -191,24 +191,50 @@ export async function POST(request: NextRequest) {
     }
 
     // Authorization: verify sender identity matches authenticated user
-    // Prevents users from sending notifications impersonating another user
-    if (type === 'task_assigned' && payload.assignedBy && payload.assignedBy !== userName) {
-      return NextResponse.json(
-        { success: false, error: 'Sender identity mismatch' },
-        { status: 403 }
-      );
+    // Prevents users from sending notifications impersonating another user.
+    // Sender fields are REQUIRED for their respective notification types to prevent
+    // bypassing identity checks by omitting the field.
+    if (type === 'task_assigned') {
+      if (!payload.assignedBy) {
+        return NextResponse.json(
+          { success: false, error: 'assignedBy is required for task_assigned notifications' },
+          { status: 400 }
+        );
+      }
+      if (payload.assignedBy !== userName) {
+        return NextResponse.json(
+          { success: false, error: 'Sender identity mismatch' },
+          { status: 403 }
+        );
+      }
     }
-    if (type === 'task_completed' && payload.completedBy && payload.completedBy !== userName) {
-      return NextResponse.json(
-        { success: false, error: 'Sender identity mismatch' },
-        { status: 403 }
-      );
+    if (type === 'task_completed') {
+      if (!payload.completedBy) {
+        return NextResponse.json(
+          { success: false, error: 'completedBy is required for task_completed notifications' },
+          { status: 400 }
+        );
+      }
+      if (payload.completedBy !== userName) {
+        return NextResponse.json(
+          { success: false, error: 'Sender identity mismatch' },
+          { status: 403 }
+        );
+      }
     }
-    if (type === 'message' && payload.senderName && payload.senderName !== userName) {
-      return NextResponse.json(
-        { success: false, error: 'Sender identity mismatch' },
-        { status: 403 }
-      );
+    if (type === 'message') {
+      if (!payload.senderName) {
+        return NextResponse.json(
+          { success: false, error: 'senderName is required for message notifications' },
+          { status: 400 }
+        );
+      }
+      if (payload.senderName !== userName) {
+        return NextResponse.json(
+          { success: false, error: 'Sender identity mismatch' },
+          { status: 403 }
+        );
+      }
     }
 
     // Initialize Supabase client

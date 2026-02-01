@@ -31,21 +31,18 @@ export default function WelcomeBackNotification({
   const [progress, setProgress] = useState(100);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressRef = useRef(progress);
+  const currentUserRef = useRef(currentUser);
+  const onUserUpdateRef = useRef(onUserUpdate);
+  const onCloseRef = useRef(onClose);
 
-  const markWelcomeShown = async () => {
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('users')
-      .update({ welcome_shown_at: now })
-      .eq('id', currentUser.id);
-
-    if (!error) {
-      onUserUpdate({
-        ...currentUser,
-        welcome_shown_at: now,
-      });
-    }
-  };
+  // Keep refs in sync with latest prop/state values
+  useEffect(() => { progressRef.current = progress; }, [progress]);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+    onUserUpdateRef.current = onUserUpdate;
+    onCloseRef.current = onClose;
+  }, [currentUser, onUserUpdate, onClose]);
 
   useEffect(() => {
     if (show) {
@@ -77,12 +74,27 @@ export default function WelcomeBackNotification({
       setHighPriorityTasks(highPriority);
       setProgress(100);
 
-      // Mark welcome as shown in database
+      // Mark welcome as shown in database (using refs to avoid stale closures)
+      const markWelcomeShown = async () => {
+        const now = new Date().toISOString();
+        const user = currentUserRef.current;
+        const { error } = await supabase
+          .from('users')
+          .update({ welcome_shown_at: now })
+          .eq('id', user.id);
+
+        if (!error) {
+          onUserUpdateRef.current({
+            ...user,
+            welcome_shown_at: now,
+          });
+        }
+      };
       markWelcomeShown();
 
       // Auto-dismiss timer
       timerRef.current = setTimeout(() => {
-        onClose();
+        onCloseRef.current();
       }, AUTO_DISMISS_MS);
 
       // Progress bar animation
@@ -116,7 +128,7 @@ export default function WelcomeBackNotification({
   };
 
   const handleMouseLeave = () => {
-    const remaining = (progress / 100) * AUTO_DISMISS_MS;
+    const remaining = (progressRef.current / 100) * AUTO_DISMISS_MS;
     timerRef.current = setTimeout(() => {
       onClose();
     }, remaining);

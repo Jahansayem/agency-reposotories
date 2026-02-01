@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { OAuthLoginButtons } from './OAuthLoginButtons';
 import RegisterModal from './RegisterModal';
+import { ContextualErrorMessages } from '@/lib/errorMessages';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
@@ -280,7 +281,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       // Fetch CSRF token first
       const csrfResponse = await fetch('/api/csrf');
       if (!csrfResponse.ok) {
-        throw new Error('Failed to get CSRF token');
+        const errorMsg = ContextualErrorMessages.login(new Error('CSRF fetch failed'));
+        throw new Error(errorMsg.message);
       }
       const { token: csrfToken } = await csrfResponse.json();
 
@@ -313,8 +315,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         setPin(['', '', '', '']);
         pinRefs.current[0]?.focus();
       }
-    } catch {
-      setError('Something went wrong.');
+    } catch (err) {
+      const errorMsg = ContextualErrorMessages.login(err);
+      setError(`${errorMsg.message}. ${errorMsg.action}`);
     }
 
     setIsSubmitting(false);
