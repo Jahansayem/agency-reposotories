@@ -155,7 +155,6 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
           is_default: m.is_default_agency,
         }));
 
-      console.log('🔍 AgencyContext - Transformed memberships:', memberships);
       setAgencies(memberships);
     } catch (err) {
       console.error('Failed to load agencies:', err);
