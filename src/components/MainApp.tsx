@@ -15,6 +15,7 @@ import { useTodoData } from '@/hooks';
 import { ErrorBoundary } from './ErrorBoundary';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import SyncStatusIndicator from './SyncStatusIndicator';
+import SkipLink from './SkipLink';
 
 // Lazy load DashboardModal for better initial load performance
 const DashboardModal = dynamic(() => import('./DashboardModal'), {
@@ -420,7 +421,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   return (
     <>
-      {activeViewContent}
+      <SkipLink />
+
+      <main id="main-content" tabIndex={-1}>
+        {activeViewContent}
+      </main>
 
       {/* Only render DashboardModal when it needs to be shown - prevents skeleton flash */}
       {showDashboard && (
