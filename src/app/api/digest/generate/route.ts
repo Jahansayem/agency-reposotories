@@ -159,7 +159,11 @@ async function generateDigestForUser(
   digestType: 'morning' | 'afternoon'
 ): Promise<{ digest: DailyDigestResponse; overdueTasks: number; todayTasks: number } | null> {
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const pacificDateStr = getTodayInPacific(); // YYYY-MM-DD in Pacific time
+  // Use Pacific date for day boundaries so digest reflects the correct local day
+  // Parse as UTC noon to avoid any date-shifting from timezone interpretation
+  const pacificDateParts = pacificDateStr.split('-').map(Number);
+  const todayStart = new Date(Date.UTC(pacificDateParts[0], pacificDateParts[1] - 1, pacificDateParts[2], 8, 0, 0)); // Pacific midnight ~ UTC 8am (PST)
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
   const yesterdayStart = new Date(todayStart);
@@ -469,7 +473,14 @@ export async function POST(request: NextRequest) {
         if (result) {
           // Store the digest
           // Note: digest_date uses database default (CURRENT_DATE) due to column constraint
-          // First, delete any existing digest for this user/type/date, then insert
+          // First, delete any existing digest for this user/type/date to prevent duplicates
+          await supabase
+            .from('daily_digests')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('digest_type', digestType)
+            .gte('generated_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
+
           const { error: insertError } = await supabase
             .from('daily_digests')
             .insert({

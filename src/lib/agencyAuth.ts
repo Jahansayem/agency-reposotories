@@ -489,3 +489,38 @@ export function withAgencyOwnerAuth(
 ): (request: NextRequest) => Promise<NextResponse> {
   return withAgencyAuth(handler, { requiredRoles: ['owner'] });
 }
+
+/**
+ * Get agency scope for database queries
+ *
+ * Returns an object with agency_id if multi-tenancy is enabled,
+ * otherwise returns empty object for backward compatibility.
+ *
+ * Usage:
+ * ```typescript
+ * const scope = await getAgencyScope(request);
+ * await supabase.from('todos').select('*').match(scope);
+ * ```
+ */
+export async function getAgencyScope(
+  request: NextRequest
+): Promise<{ agency_id?: string }> {
+  // Check if multi-tenancy is enabled
+  if (!isFeatureEnabled('multi_tenancy')) {
+    return {}; // Return empty object for backward compatibility
+  }
+
+  // Validate session and get agency context
+  const auth = await verifyAgencyAccess(request);
+
+  if (!auth.success || !auth.context) {
+    // If auth fails, return empty object (will fall back to RLS or no filtering)
+    logger.warn('Failed to get agency scope', {
+      component: 'AgencyAuth',
+      error: auth.error,
+    });
+    return {};
+  }
+
+  return { agency_id: auth.context.agencyId };
+}

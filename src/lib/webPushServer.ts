@@ -7,6 +7,7 @@
 
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from './logger';
 
 // Configure web-push with VAPID keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -20,7 +21,7 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
     webPushInitialized = true;
   } catch (error) {
-    console.error('Failed to initialize web-push:', error);
+    logger.error('Failed to initialize web-push', error, { component: 'webPushServer' });
   }
 }
 
@@ -68,22 +69,22 @@ function buildNotificationPayload(
   switch (type) {
     case 'task_assigned':
       title = 'New Task Assigned';
-      body = `${payload.assignedBy} assigned you: ${payload.taskText}`;
+      body = `${payload.assignedBy || 'Someone'} assigned you: ${payload.taskText || 'a task'}`;
       break;
 
     case 'task_due_soon':
       title = 'Task Due Soon';
-      body = `"${payload.taskText}" is due ${payload.timeUntil}`;
+      body = `"${payload.taskText || 'a task'}" is due ${payload.timeUntil || 'soon'}`;
       break;
 
     case 'task_overdue':
       title = 'Overdue Task';
-      body = `"${payload.taskText}" is overdue`;
+      body = `"${payload.taskText || 'a task'}" is overdue`;
       break;
 
     case 'task_completed':
       title = 'Task Completed';
-      body = `${payload.completedBy} completed: ${payload.taskText}`;
+      body = `${payload.completedBy || 'Someone'} completed: ${payload.taskText || 'a task'}`;
       break;
 
     case 'generic':
@@ -117,7 +118,7 @@ async function sendToSubscription(
     return { success: true, token: subscriptionJson };
   } catch (error: unknown) {
     const err = error as { statusCode?: number; message?: string };
-    console.error('Web push error:', err);
+    logger.error('Web push error', err, { component: 'webPushServer' });
 
     // Handle specific errors
     if (err.statusCode === 404 || err.statusCode === 410) {
@@ -162,7 +163,7 @@ export async function sendWebPushNotifications(
       .eq('platform', 'web');
 
     if (fetchError) {
-      console.error('Error fetching device tokens:', fetchError);
+      logger.error('Error fetching device tokens', fetchError, { component: 'webPushServer' });
       return { success: false, error: 'Failed to fetch subscriptions' };
     }
 
@@ -193,7 +194,7 @@ export async function sendWebPushNotifications(
         .in('token', unregistered);
 
       if (deleteError) {
-        console.error('Error removing invalid tokens:', deleteError);
+        logger.error('Error removing invalid tokens', deleteError, { component: 'webPushServer' });
       }
     }
 
@@ -203,7 +204,7 @@ export async function sendWebPushNotifications(
       failed: failed.length,
     };
   } catch (error) {
-    console.error('Error in sendWebPushNotifications:', error);
+    logger.error('Error in sendWebPushNotifications', error, { component: 'webPushServer' });
     return { success: false, error: 'Internal error' };
   }
 }

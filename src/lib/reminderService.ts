@@ -5,10 +5,23 @@
  * Integrates with both push notifications and chat message notifications.
  */
 
-import { supabase } from './supabaseClient';
+import { supabase, createServiceRoleClient } from './supabaseClient';
+import { logger } from './logger';
 import { format, formatDistanceToNow, startOfDay } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import type { TaskReminder, ReminderType, TodoPriority } from '@/types/todo';
+
+/**
+ * Returns the service role client for server-side DB operations,
+ * falling back to the anon client if the service role key is not available.
+ */
+function getServerSupabase() {
+  try {
+    return createServiceRoleClient();
+  } catch {
+    return supabase;
+  }
+}
 
 const SYSTEM_SENDER = 'System';
 
@@ -40,12 +53,12 @@ interface DueReminder {
 export async function getDueReminders(
   windowMinutes: number = 5
 ): Promise<DueReminder[]> {
-  const { data, error } = await supabase.rpc('get_due_reminders', {
+  const { data, error } = await getServerSupabase().rpc('get_due_reminders', {
     check_window_minutes: windowMinutes,
   });
 
   if (error) {
-    console.error('Error fetching due reminders:', error);
+    logger.error('Error fetching due reminders', error, { component: 'reminderService' });
     return [];
   }
 
@@ -140,7 +153,7 @@ export async function sendReminderChatNotification(
   const message = buildReminderMessage(todoText, priority, dueDate, customMessage);
 
   try {
-    const { error } = await supabase.from('messages').insert({
+    const { error } = await getServerSupabase().from('messages').insert({
       id: uuidv4(),
       text: message,
       created_by: SYSTEM_SENDER,
@@ -151,13 +164,13 @@ export async function sendReminderChatNotification(
     });
 
     if (error) {
-      console.error('Failed to send reminder chat notification:', error);
+      logger.error('Failed to send reminder chat notification', error, { component: 'reminderService' });
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err) {
-    console.error('Error sending reminder chat notification:', err);
+    logger.error('Error sending reminder chat notification', err, { component: 'reminderService' });
     return { success: false, error: 'Unknown error occurred' };
   }
 }
@@ -177,7 +190,7 @@ export async function sendReminderPushNotification(
       ? formatDistanceToNow(new Date(dueDate), { addSuffix: false })
       : undefined;
 
-    const { error } = await supabase.functions.invoke(
+    const { error } = await getServerSupabase().functions.invoke(
       'send-push-notification',
       {
         body: {
@@ -193,13 +206,13 @@ export async function sendReminderPushNotification(
     );
 
     if (error) {
-      console.error('Failed to send reminder push notification:', error);
+      logger.error('Failed to send reminder push notification', error, { component: 'reminderService' });
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err) {
-    console.error('Error sending reminder push notification:', err);
+    logger.error('Error sending reminder push notification', err, { component: 'reminderService' });
     return { success: false, error: 'Unknown error occurred' };
   }
 }
@@ -271,13 +284,13 @@ export async function processReminder(
   const combinedError = errorMessages.length > 0 ? errorMessages.join('; ') : undefined;
 
   // Mark reminder as sent or failed
-  const { error } = await supabase.rpc('mark_reminder_sent', {
+  const { error } = await getServerSupabase().rpc('mark_reminder_sent', {
     p_reminder_id: reminder_id,
     p_error_message: overallSuccess ? null : combinedError,
   });
 
   if (error) {
-    console.error('Error marking reminder as sent:', error);
+    logger.error('Error marking reminder as sent', error, { component: 'reminderService' });
     return { success: false, error: 'Failed to update reminder status' };
   }
 
@@ -321,7 +334,7 @@ export async function createSimpleReminder(
   reminderTime: Date,
   createdBy: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.from('task_reminders').insert({
+  const { error } = await getServerSupabase().from('task_reminders').insert({
     todo_id: todoId,
     reminder_time: reminderTime.toISOString(),
     reminder_type: 'both',
@@ -330,7 +343,7 @@ export async function createSimpleReminder(
   });
 
   if (error) {
-    console.error('Error creating simple reminder:', error);
+    logger.error('Error creating simple reminder', error, { component: 'reminderService' });
     return { success: false, error: error.message };
   }
 
@@ -372,12 +385,12 @@ export async function createAutoReminders(
   try {
     // First, cancel any existing auto-created reminders for this task
     // to avoid duplicates when due date is updated
-    await supabase
+    await getServerSupabase()
       .from('task_reminders')
       .delete()
       .eq('todo_id', todoId)
       .eq('status', 'pending')
-      .is('message', null); // Auto-created reminders have no custom message
+      .not('message', 'is', null); // Auto-created reminders have a message set (e.g. "Task due tomorrow")
 
     // Create new reminders
     const remindersToInsert = futureReminders.map(config => ({
@@ -390,18 +403,18 @@ export async function createAutoReminders(
       created_by: createdBy,
     }));
 
-    const { error } = await supabase
+    const { error } = await getServerSupabase()
       .from('task_reminders')
       .insert(remindersToInsert);
 
     if (error) {
-      console.error('Error creating auto reminders:', error);
+      logger.error('Error creating auto reminders', error, { component: 'reminderService' });
       return { success: false, created: 0, error: error.message };
     }
 
     return { success: true, created: futureReminders.length };
   } catch (err) {
-    console.error('Error in createAutoReminders:', err);
+    logger.error('Error in createAutoReminders', err, { component: 'reminderService' });
     return { success: false, created: 0, error: 'Unknown error occurred' };
   }
 }
@@ -431,14 +444,14 @@ export async function updateAutoReminders(
 export async function cancelTaskReminders(
   todoId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
+  const { error } = await getServerSupabase()
     .from('task_reminders')
     .update({ status: 'cancelled' })
     .eq('todo_id', todoId)
     .eq('status', 'pending');
 
   if (error) {
-    console.error('Error cancelling task reminders:', error);
+    logger.error('Error cancelling task reminders', error, { component: 'reminderService' });
     return { success: false, error: error.message };
   }
 
@@ -451,14 +464,14 @@ export async function cancelTaskReminders(
 export async function getUserPendingRemindersCount(
   userId: string
 ): Promise<number> {
-  const { count, error } = await supabase
+  const { count, error } = await getServerSupabase()
     .from('task_reminders')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('status', 'pending');
 
   if (error) {
-    console.error('Error counting user reminders:', error);
+    logger.error('Error counting user reminders', error, { component: 'reminderService' });
     return 0;
   }
 

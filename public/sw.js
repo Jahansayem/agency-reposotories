@@ -6,7 +6,14 @@ const CACHE_NAME = 'bealer-tasks-v1';
 // Handle push notifications
 self.addEventListener('push', function(event) {
   if (!event.data) {
-    console.log('Push event but no data');
+    // Must show a notification even without data to avoid Chrome revoking subscription
+    event.waitUntil(
+      self.registration.showNotification('Task Reminder', {
+        body: 'You have a new notification',
+        icon: '/icon-192.png',
+        badge: '/badge-72.png',
+      })
+    );
     return;
   }
 
@@ -114,6 +121,8 @@ self.addEventListener('activate', function(event) {
           return caches.delete(cacheName);
         })
       );
+    }).then(function() {
+      return clients.claim();
     })
   );
 });

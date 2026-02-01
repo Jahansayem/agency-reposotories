@@ -12,6 +12,7 @@ import ReminderPicker from './ReminderPicker';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 import { WaitingStatusBadge, WaitingBadge } from './WaitingStatusBadge';
 import { sanitizeTranscription } from '@/lib/sanitize';
+import { haptics } from '@/lib/haptics';
 
 // Map priority levels to Badge variants
 const PRIORITY_TO_BADGE_VARIANT: Record<TodoPriority, 'danger' | 'warning' | 'info' | 'default'> = {
@@ -368,10 +369,8 @@ function TodoItemComponent({
     }
 
     longPressTimerRef.current = setTimeout(() => {
-      // Haptic feedback
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
+      // Haptic feedback for long-press activation
+      haptics.heavy();
 
       // Open actions menu
       setShowActionsMenu(true);
@@ -527,6 +526,8 @@ function TodoItemComponent({
   const handleToggle = () => {
     if (!todo.completed) {
       setCelebrating(true);
+      // Haptic feedback for task completion
+      haptics.success();
     }
     onToggle(todo.id, !todo.completed);
   };
@@ -1249,7 +1250,11 @@ function TodoItemComponent({
               <Button
                 variant="danger"
                 size="md"
-                onClick={() => { onDelete(todo.id); setShowDeleteConfirm(false); }}
+                onClick={() => {
+                  haptics.heavy(); // Haptic feedback for destructive action
+                  onDelete(todo.id);
+                  setShowDeleteConfirm(false);
+                }}
                 fullWidth
               >
                 Delete

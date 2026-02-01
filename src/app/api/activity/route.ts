@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { getAgencyScope } from '@/lib/agencyAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -22,10 +23,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'userName is required' }, { status: 400 });
     }
 
-    // Activity feed is now accessible to all users
+    // Get agency scope for multi-tenancy filtering
+    const scope = await getAgencyScope(request);
+
+    // Activity feed is now accessible to all users within their agency
     let query = supabase
       .from('activity_log')
       .select('*')
+      .match(scope)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -68,9 +73,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get agency scope for multi-tenancy
+    const scope = await getAgencyScope(request);
+
     const { data, error } = await supabase
       .from('activity_log')
       .insert({
+        ...scope,
         action,
         todo_id: todo_id || null,
         todo_text: todo_text || null,

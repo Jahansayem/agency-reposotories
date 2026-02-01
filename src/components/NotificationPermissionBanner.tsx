@@ -7,7 +7,6 @@ import {
   isPushSupported,
   getNotificationPermission,
   enablePushNotifications,
-  getCurrentSubscription,
 } from '@/lib/webPushService';
 import type { AuthUser } from '@/types/todo';
 
@@ -23,41 +22,45 @@ export default function NotificationPermissionBanner({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we should show the banner
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
     const checkPermissionStatus = async () => {
-      // Don't show if push not supported
-      if (!isPushSupported()) {
-        return;
-      }
+      if (!isPushSupported()) return;
 
-      // Don't show if permission already decided
       const permission = getNotificationPermission();
-      if (permission !== 'default') {
-        return;
-      }
+      if (permission !== 'default') return;
 
-      // Don't show if user has dismissed the banner recently
       const dismissedAt = localStorage.getItem('notificationBannerDismissed');
       if (dismissedAt) {
         const dismissedDate = new Date(dismissedAt);
         const daysSinceDismissed = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-        // Show again after 7 days
-        if (daysSinceDismissed < 7) {
-          return;
+        if (daysSinceDismissed < 7) return;
+      }
+
+      // Use getRegistration() instead of .ready to avoid hanging
+      // when no service worker has been registered yet
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) return;
         }
+      } catch {
+        // If SW API fails, show banner anyway
       }
 
-      // Check if already subscribed
-      const subscription = await getCurrentSubscription();
-      if (subscription) {
-        return;
+      if (!cancelled) {
+        timerId = setTimeout(() => setVisible(true), 2000);
       }
-
-      // Show the banner after a short delay
-      setTimeout(() => setVisible(true), 2000);
     };
 
     checkPermissionStatus();
+
+    return () => {
+      cancelled = true;
+      if (timerId) clearTimeout(timerId);
+    };
   }, []);
 
   const handleEnable = useCallback(async () => {

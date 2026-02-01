@@ -17,13 +17,25 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
 
 // Initialize web-push if keys are available
+let webPushInitialized = false;
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    webPushInitialized = true;
+  } catch (error) {
+    logger.error('Failed to initialize web-push', error, { component: 'push-send' });
+  }
 }
 
-// Create Supabase client with service role
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Create Supabase client with service role (lazy initialization)
+function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 interface WebPushPayload {
   title: string;
@@ -70,26 +82,26 @@ function buildNotificationPayload(
   switch (type) {
     case 'task_assigned':
       title = 'New Task Assigned';
-      body = `${payload.assignedBy} assigned you: ${payload.taskText}`;
+      body = `${payload.assignedBy || 'Someone'} assigned you: ${payload.taskText || 'a task'}`;
       break;
 
     case 'task_due_soon':
       title = 'Task Due Soon';
-      body = `"${payload.taskText}" is due ${payload.timeUntil}`;
+      body = `"${payload.taskText || 'a task'}" is due ${payload.timeUntil || 'soon'}`;
       break;
 
     case 'task_overdue':
       title = 'Overdue Task';
-      body = `"${payload.taskText}" is overdue`;
+      body = `"${payload.taskText || 'a task'}" is overdue`;
       break;
 
     case 'task_completed':
       title = 'Task Completed';
-      body = `${payload.completedBy} completed: ${payload.taskText}`;
+      body = `${payload.completedBy || 'Someone'} completed: ${payload.taskText || 'a task'}`;
       break;
 
     case 'message':
-      title = payload.isDm ? `Message from ${payload.senderName}` : `${payload.senderName} mentioned you`;
+      title = payload.isDm ? `Message from ${payload.senderName || 'Someone'}` : `${payload.senderName || 'Someone'} mentioned you`;
       body = payload.messageText || 'New message';
       // Truncate long messages
       if (body.length > 100) {
@@ -158,7 +170,7 @@ export async function POST(request: NextRequest) {
   if (authError) return authError;
 
   // Validate VAPID configuration
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  if (!webPushInitialized) {
     return NextResponse.json(
       { success: false, error: 'VAPID keys not configured' },
       { status: 500 }
@@ -178,8 +190,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Authorization: verify sender identity matches authenticated user
+    // Prevents users from sending notifications impersonating another user
+    if (type === 'task_assigned' && payload.assignedBy && payload.assignedBy !== userName) {
+      return NextResponse.json(
+        { success: false, error: 'Sender identity mismatch' },
+        { status: 403 }
+      );
+    }
+    if (type === 'task_completed' && payload.completedBy && payload.completedBy !== userName) {
+      return NextResponse.json(
+        { success: false, error: 'Sender identity mismatch' },
+        { status: 403 }
+      );
+    }
+    if (type === 'message' && payload.senderName && payload.senderName !== userName) {
+      return NextResponse.json(
+        { success: false, error: 'Sender identity mismatch' },
+        { status: 403 }
+      );
+    }
+
     // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = getSupabase();
 
     // If userNames provided but not userIds, look up the user IDs
     if ((!userIds || userIds.length === 0) && userNames && userNames.length > 0) {
@@ -193,6 +226,13 @@ export async function POST(request: NextRequest) {
       } else if (users && users.length > 0) {
         userIds = users.map(u => u.id);
       }
+    }
+
+    if ((!userIds || userIds.length === 0) && userNames && userNames.length > 0) {
+      return NextResponse.json(
+        { success: false, error: 'None of the specified users were found' },
+        { status: 404 }
+      );
     }
 
     if (!userIds || userIds.length === 0) {

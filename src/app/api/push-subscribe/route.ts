@@ -61,21 +61,23 @@ export async function POST(request: NextRequest) {
     // Store the full subscription as JSON string in the token field
     const subscriptionToken = JSON.stringify(subscription);
 
-    // Upsert the device token (update if endpoint already exists for this user)
+    // Delete existing web tokens for this user, then insert the new one.
+    // This is safer than upsert with onConflict since the DB may not have
+    // a unique constraint on (user_id, platform).
+    await getSupabase()
+      .from('device_tokens')
+      .delete()
+      .eq('user_id', userId)
+      .eq('platform', 'web');
+
     const { error } = await getSupabase()
       .from('device_tokens')
-      .upsert(
-        {
-          user_id: userId,
-          token: subscriptionToken,
-          platform: 'web',
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'user_id,platform',
-          ignoreDuplicates: false,
-        }
-      );
+      .insert({
+        user_id: userId,
+        token: subscriptionToken,
+        platform: 'web',
+        updated_at: new Date().toISOString(),
+      });
 
     if (error) {
       logger.error('Error storing push subscription', error, { component: 'push-subscribe' });

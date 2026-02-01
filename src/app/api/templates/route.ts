@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { getAgencyScope } from '@/lib/agencyAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -17,18 +18,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'userName is required' }, { status: 400 });
     }
 
+    // Get agency scope for multi-tenancy filtering
+    const scope = await getAgencyScope(request);
+
     // SECURITY: Use separate parameterized queries instead of string interpolation
     // in .or() filter to prevent Supabase filter injection
     const [ownResult, sharedResult] = await Promise.all([
       supabase
         .from('task_templates')
         .select('*')
-        .eq('created_by', userName)
+        .match({ ...scope, created_by: userName })
         .order('created_at', { ascending: false }),
       supabase
         .from('task_templates')
         .select('*')
-        .eq('is_shared', true)
+        .match({ ...scope, is_shared: true })
         .order('created_at', { ascending: false }),
     ]);
 
@@ -65,9 +69,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'name and created_by are required' }, { status: 400 });
     }
 
+    // Get agency scope for multi-tenancy
+    const scope = await getAgencyScope(request);
+
     const { data, error } = await supabase
       .from('task_templates')
       .insert({
+        ...scope,
         name,
         description: description || null,
         default_priority: default_priority || 'medium',
@@ -83,6 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Log activity
     await supabase.from('activity_log').insert({
+      ...scope,
       action: 'template_created',
       user_name: created_by,
       details: { template_name: name, is_shared },
@@ -113,12 +122,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Only allow deletion by the creator
+    // Get agency scope for multi-tenancy
+    const scope = await getAgencyScope(request);
+
+    // Only allow deletion by the creator within their agency
     const { error } = await supabase
       .from('task_templates')
       .delete()
-      .eq('id', id)
-      .eq('created_by', userName);
+      .match({ ...scope, id, created_by: userName });
 
     if (error) throw error;
 

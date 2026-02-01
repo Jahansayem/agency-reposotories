@@ -9,6 +9,7 @@ import {
 import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, Todo } from '@/types/todo';
 import { getReactionAriaLabel } from '@/lib/chatUtils';
 import { TaskAssignmentCard, SystemNotificationType } from './TaskAssignmentCard';
+import { haptics } from '@/lib/haptics';
 
 // Tapback emoji mapping
 const TAPBACK_EMOJIS: Record<TapbackType, string> = {
@@ -143,10 +144,8 @@ export const ChatMessageList = memo(function ChatMessageList({
   // Long-press handlers for mobile reaction support (P0 Issue #8)
   const handleTouchStart = useCallback((messageId: string) => {
     longPressTimerRef.current = setTimeout(() => {
-      // Trigger haptic feedback if supported
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
+      // Trigger haptic feedback for long-press activation
+      haptics.heavy();
       setTapbackMessageId(messageId);
       setLongPressMessageId(messageId);
     }, 500); // 500ms long-press threshold
@@ -174,10 +173,8 @@ export const ChatMessageList = memo(function ChatMessageList({
       // Trigger reply
       onReply(message);
 
-      // Haptic feedback
-      if ('vibrate' in navigator) {
-        navigator.vibrate([30, 20, 30]); // Pattern for reply action
-      }
+      // Haptic feedback for reply action
+      haptics.reply();
     }
 
     // Reset swipe offset

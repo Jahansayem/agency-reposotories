@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAgency } from '@/contexts/AgencyContext';
 
 interface ActivityFeedProps {
   currentUserName: string;
@@ -84,6 +85,7 @@ const FILTER_OPTIONS: { value: ActivityFilterType; label: string; actions: Activ
 
 export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedProps) {
   const { theme } = useTheme();
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
 
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -262,15 +264,32 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
 
   // Subscribe to real-time updates with notifications
   useEffect(() => {
+    // Build channel name and filter based on multi-tenancy status
+    const channelName = isMultiTenancyEnabled && currentAgencyId
+      ? `activity-${currentAgencyId}`
+      : 'activity-all';
+
+    const subscriptionConfig: {
+      event: 'INSERT';
+      schema: 'public';
+      table: 'activity_log';
+      filter?: string;
+    } = {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'activity_log',
+    };
+
+    // Add agency filter if multi-tenancy is enabled
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const channel = supabase
-      .channel('activity-feed')
+      .channel(channelName)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activity_log',
-        },
+        subscriptionConfig,
         (payload) => {
           const newActivity = payload.new as ActivityLogEntry;
 
@@ -302,7 +321,7 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserName, notificationSettings.enabled, notificationSettings.notifyOwnActions, playNotificationSound, showBrowserNotification]);
+  }, [currentUserName, notificationSettings.enabled, notificationSettings.notifyOwnActions, playNotificationSound, showBrowserNotification, currentAgencyId, isMultiTenancyEnabled]);
 
   // Filter activities based on selected filter type
   const filteredActivities = useMemo(() => {
