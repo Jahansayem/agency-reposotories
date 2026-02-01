@@ -8,10 +8,19 @@ import { logger } from '@/lib/logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseServiceRoleKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for the login endpoint');
+
+// Lazy initialization - only validate at runtime, not build time
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let supabase: any = null;
+function getSupabase() {
+  if (!supabase) {
+    if (!supabaseServiceRoleKey) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for the login endpoint');
+    }
+    supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  }
+  return supabase;
 }
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 /**
  * Hash PIN using SHA-256 (server-side, matching existing client-side hash format)
@@ -66,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch user from database (server-side only - never expose pin_hash to client)
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await getSupabase()
       .from('users')
       .select('id, name, color, pin_hash, role')
       .eq('id', userId)
@@ -113,7 +122,7 @@ export async function POST(request: NextRequest) {
     await clearLockout(lockoutId);
 
     // Update last_login timestamp
-    await supabase
+    await getSupabase()
       .from('users')
       .update({ last_login: new Date().toISOString() })
       .eq('id', userId);
