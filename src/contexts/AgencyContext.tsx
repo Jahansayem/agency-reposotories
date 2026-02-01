@@ -120,8 +120,6 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
       setIsLoading(true);
       setError(null);
 
-      console.log('🔍 AgencyContext - Loading agencies for user ID:', uid);
-
       const { data, error: fetchError } = await supabase
         .from('agency_members')
         .select(`
@@ -138,8 +136,6 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
         `)
         .eq('user_id', uid)
         .eq('status', 'active');
-
-      console.log('🔍 AgencyContext - Raw query result:', { data, error: fetchError });
 
       if (fetchError) {
         throw fetchError;
