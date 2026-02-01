@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import NextImage from 'next/image';
 import {
   FileText, Image, Music, Video, Archive, File,
   Download, Trash2, Loader2, ExternalLink, Eye
@@ -144,18 +145,20 @@ function AttachmentItem({ attachment, todoId, onRemove, canRemove }: AttachmentI
       {/* Issue #26: Show inline thumbnail for images */}
       {isImage && thumbnailUrl ? (
         <div className="group relative rounded-[var(--radius-lg)] overflow-hidden bg-[var(--surface-2)] hover:bg-[var(--surface-3)] transition-colors">
-          {/* Image thumbnail */}
+          {/* Image thumbnail - Issue #30: Optimized with Next.js Image */}
           <button
             onClick={handlePreview}
-            className="w-full aspect-video bg-[var(--surface-2)] overflow-hidden cursor-pointer"
+            className="w-full aspect-video bg-[var(--surface-2)] overflow-hidden cursor-pointer relative"
             aria-label={`Preview ${attachment.file_name}`}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <NextImage
               src={thumbnailUrl}
               alt={attachment.file_name}
-              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover transition-transform group-hover:scale-105"
               loading="lazy"
+              quality={80}
             />
           </button>
 
