@@ -109,15 +109,24 @@ export default function TaskBottomSheet({
     };
   }, [isOpen]);
 
-  // Handle escape key
+  // Handle keyboard shortcuts
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      // Escape to close
+      if (e.key === 'Escape') {
+        onClose();
+      }
+
+      // Cmd/Ctrl+Down to dismiss (macOS/Windows convention)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'ArrowDown') {
+        e.preventDefault();
         onClose();
       }
     };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   const handleDragEnd = useCallback(

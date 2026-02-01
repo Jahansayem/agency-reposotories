@@ -46,6 +46,11 @@ export default function ConfirmDialog({
       if (e.key === 'Escape') {
         onCancel();
       }
+      // Cmd/Ctrl+Enter to confirm (keyboard shortcut)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        onConfirm();
+      }
       // Trap focus within dialog
       if (e.key === 'Tab' && dialogRef.current) {
         const focusableElements = dialogRef.current.querySelectorAll(
@@ -72,7 +77,7 @@ export default function ConfirmDialog({
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [isOpen, onCancel]);
+  }, [isOpen, onCancel, onConfirm]);
 
   const reducedMotion = prefersReducedMotion();
 
