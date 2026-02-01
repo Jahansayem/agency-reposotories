@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { ChatMessage, ChatConversation, AuthUser, TapbackType, MessageReaction } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { useAgency } from '@/contexts/AgencyContext';
 
 interface UseChatMessagesOptions {
   currentUser: AuthUser;
@@ -43,6 +44,8 @@ export function useChatMessages({
   conversation,
   searchQuery,
 }: UseChatMessagesOptions): UseChatMessagesReturn {
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
@@ -60,6 +63,11 @@ export function useChatMessages({
     let query = supabase
       .from('messages')
       .select('*');
+
+    // Add agency filter if multi-tenancy is enabled
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      query = query.eq('agency_id', currentAgencyId);
+    }
 
     // Filter by conversation type to avoid fetching all messages from the database
     if (conversation.type === 'team') {
@@ -85,7 +93,7 @@ export function useChatMessages({
       setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
     }
     setLoading(false);
-  }, [conversation, currentUser.name]);
+  }, [conversation, currentUser.name, isMultiTenancyEnabled, currentAgencyId]);
 
   // Load more (older) messages filtered by current conversation
   const loadMoreMessages = useCallback(async () => {
@@ -99,6 +107,11 @@ export function useChatMessages({
       .from('messages')
       .select('*')
       .lt('created_at', oldestMessage.created_at);
+
+    // Add agency filter if multi-tenancy is enabled
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      query = query.eq('agency_id', currentAgencyId);
+    }
 
     // Filter by conversation type to avoid fetching all messages from the database
     if (conversation.type === 'team') {
@@ -124,7 +137,7 @@ export function useChatMessages({
       setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
     }
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMoreMessages, conversation, currentUser.name]);
+  }, [isLoadingMore, hasMoreMessages, conversation, currentUser.name, isMultiTenancyEnabled, currentAgencyId]);
 
   // Filter messages for current conversation
   const filteredMessages = useMemo(() => {

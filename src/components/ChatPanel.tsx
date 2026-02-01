@@ -26,6 +26,7 @@ import {
 } from './chat';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import ConfirmDialog from './ConfirmDialog';
+import { useAgency } from '@/contexts/AgencyContext';
 
 // Notification sound URL
 const NOTIFICATION_SOUND_URL = '/sounds/notification-chime.wav';
@@ -139,6 +140,9 @@ export default function ChatPanel({
   initialConversation,
   onConversationChange
 }: ChatPanelProps) {
+  // Agency context for multi-tenancy
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+
   // Panel visibility state
   const [isOpen, setIsOpen] = useState(docked);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -708,11 +712,32 @@ export default function ChatPanel({
 
     fetchMessages();
 
+    // Build channel name and filter based on multi-tenancy status
+    const messagesChannelName = isMultiTenancyEnabled && currentAgencyId
+      ? `messages-${currentAgencyId}`
+      : 'messages-all';
+
+    const messagesSubscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'messages';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+    };
+
+    // Add agency filter if multi-tenancy is enabled
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      messagesSubscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const messagesChannel = supabase
-      .channel('messages-channel')
+      .channel(messagesChannelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
+        messagesSubscriptionConfig,
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new as ChatMessage;
@@ -826,7 +851,7 @@ export default function ChatPanel({
       typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
       typingTimeoutsRef.current.clear();
     };
-  }, [fetchMessages, currentUser.name, handleNewMessage, handleMessageUpdate, handleMessageDelete]);
+  }, [fetchMessages, currentUser.name, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentAgencyId, isMultiTenancyEnabled]);
 
   // Auto-scroll on new messages
   useEffect(() => {

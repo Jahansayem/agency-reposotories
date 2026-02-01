@@ -340,12 +340,55 @@ function TodoItemComponent({
   const status = todo.status || 'todo';
   void status; // Used for status-based logic elsewhere
 
+  // Long-press context menu state (Issue #20)
+  const [longPressTriggered, setLongPressTriggered] = useState(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (menuFocusTimerRef.current) clearTimeout(menuFocusTimerRef.current);
       if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     };
+  }, []);
+
+  // Long-press handlers for mobile context menu (Issue #20)
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    // Don't trigger long-press if user is interacting with inputs or buttons
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.tagName === 'BUTTON' ||
+      target.closest('button') ||
+      target.closest('[role="button"]')
+    ) {
+      return;
+    }
+
+    longPressTimerRef.current = setTimeout(() => {
+      // Haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+      }
+
+      // Open actions menu
+      setShowActionsMenu(true);
+      setLongPressTriggered(true);
+    }, 500); // 500ms threshold
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    // Reset long-press state after a delay
+    setTimeout(() => {
+      setLongPressTriggered(false);
+    }, 100);
   }, []);
 
   // Calculate dropdown position when menu opens
@@ -613,7 +656,10 @@ function TodoItemComponent({
     <div
       id={`todo-${todo.id}`}
       role="listitem"
-      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()}`}
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${longPressTriggered ? 'ring-2 ring-[var(--accent)]/50' : ''}`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <div className="flex items-center gap-3 px-4 py-3">

@@ -17,6 +17,7 @@ import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 import { createAutoReminders, updateAutoReminders } from '@/lib/reminderService';
+import { useAgency } from '@/contexts/AgencyContext';
 
 // Number of todos to fetch per page
 const TODOS_PER_PAGE = 200;
@@ -39,6 +40,7 @@ export function useTodoData(currentUser: AuthUser) {
     appendTodos,
   } = useTodoStore();
 
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
   const userName = currentUser.name;
 
   // Fetch todos and users with pagination
@@ -49,10 +51,19 @@ export function useTodoData(currentUser: AuthUser) {
       return;
     }
 
+    // Build query with agency filter if multi-tenancy is enabled
+    let countQuery = supabase.from('todos').select('*', { count: 'exact', head: true });
+    let todosQuery = supabase.from('todos').select('*').order('created_at', { ascending: false }).limit(TODOS_PER_PAGE);
+
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      countQuery = countQuery.eq('agency_id', currentAgencyId);
+      todosQuery = todosQuery.eq('agency_id', currentAgencyId);
+    }
+
     // Fetch count, initial todos (limited), and users in parallel
     const [countResult, todosResult, usersResult] = await Promise.all([
-      supabase.from('todos').select('*', { count: 'exact', head: true }),
-      supabase.from('todos').select('*').order('created_at', { ascending: false }).limit(TODOS_PER_PAGE),
+      countQuery,
+      todosQuery,
       supabase.from('users').select('name, color').order('name'),
     ]);
 
@@ -77,7 +88,7 @@ export function useTodoData(currentUser: AuthUser) {
       setError(null);
     }
     setLoading(false);
-  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos]);
+  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId]);
 
   // Setup real-time subscription
   useEffect(() => {
@@ -100,11 +111,32 @@ export function useTodoData(currentUser: AuthUser) {
 
     init();
 
+    // Build channel name and filter based on multi-tenancy status
+    const channelName = isMultiTenancyEnabled && currentAgencyId
+      ? `todos-${currentAgencyId}`
+      : 'todos-all';
+
+    const subscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'todos';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'todos',
+    };
+
+    // Add agency filter if multi-tenancy is enabled
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const channel = supabase
-      .channel('todos-channel')
+      .channel(channelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'todos' },
+        subscriptionConfig,
         (payload) => {
           if (!isMounted) return;
           if (payload.eventType === 'INSERT') {
@@ -130,7 +162,7 @@ export function useTodoData(currentUser: AuthUser) {
       isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchTodos, currentUser, setShowWelcomeBack, setConnected, setError, setLoading, addTodoToStore, updateTodoInStore, deleteTodoFromStore]);
+  }, [fetchTodos, currentUser, setShowWelcomeBack, setConnected, setError, setLoading, addTodoToStore, updateTodoInStore, deleteTodoFromStore, currentAgencyId, isMultiTenancyEnabled]);
 
   // Create a new todo
   const createTodo = useCallback(async (
@@ -400,11 +432,18 @@ export function useTodoData(currentUser: AuthUser) {
 
     try {
       const currentCount = state.todos.length;
-      const { data, error } = await supabase
+      let query = supabase
         .from('todos')
         .select('*')
         .order('created_at', { ascending: false })
         .range(currentCount, currentCount + TODOS_PER_PAGE - 1);
+
+      // Add agency filter if multi-tenancy is enabled
+      if (isMultiTenancyEnabled && currentAgencyId) {
+        query = query.eq('agency_id', currentAgencyId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         logger.error('Error loading more todos', error, { component: 'useTodoData' });
@@ -416,7 +455,7 @@ export function useTodoData(currentUser: AuthUser) {
     } finally {
       setLoadingMore(false);
     }
-  }, [setLoadingMore, appendTodos, setHasMoreTodos]);
+  }, [setLoadingMore, appendTodos, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId]);
 
   return {
     createTodo,
