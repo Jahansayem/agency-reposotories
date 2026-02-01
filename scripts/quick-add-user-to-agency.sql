@@ -1,6 +1,12 @@
 -- ============================================
--- Quick Add User to Agency
+-- Quick Add User to Agency (psql command-line ONLY)
 -- ============================================
+-- ⚠️  This script uses psql variables and will NOT work in Supabase SQL Editor
+-- ⚠️  For Supabase SQL Editor, use: add-user-to-agency-supabase.sql
+--
+-- Usage with psql:
+--   psql $DATABASE_URL -f scripts/quick-add-user-to-agency.sql
+--
 -- Just replace the user name and agency slug below and run!
 
 -- 🔧 CONFIGURE THESE VALUES:
