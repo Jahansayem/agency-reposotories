@@ -29,9 +29,22 @@ export default function WeeklyProgressChart({
   dailyGoal = 5,
 }: WeeklyProgressChartProps) {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+  const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
 
   // Close on Escape key press
   useEscapeKey(onClose, { enabled: show });
+
+  // Touch handler for mobile (Issue #22: Touch Event Handlers for Charts)
+  const handleBarTouch = (index: number) => {
+    setActiveTooltip(index);
+    setHoveredDay(index);
+
+    // Auto-hide tooltip after 2 seconds
+    setTimeout(() => {
+      setActiveTooltip(null);
+      setHoveredDay(null);
+    }, 2000);
+  };
 
   const weekData = useMemo(() => {
     const today = new Date();
@@ -268,9 +281,9 @@ export default function WeeklyProgressChart({
                   onMouseEnter={() => setHoveredDay(index)}
                   onMouseLeave={() => setHoveredDay(null)}
                 >
-                  {/* Tooltip */}
+                  {/* Tooltip - shows on hover OR touch (Issue #22) */}
                   <AnimatePresence>
-                    {isHovered && (
+                    {(isHovered || activeTooltip === index) && (
                       <motion.div
                         initial={{ opacity: 0, y: 5, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -313,17 +326,18 @@ export default function WeeklyProgressChart({
                     {day.completed}
                   </motion.span>
 
-                  {/* Bar with pattern for colorblind accessibility */}
+                  {/* Bar with pattern for colorblind accessibility + touch support (Issue #22) */}
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{
                       height: barHeight,
-                      scale: isHovered ? 1.05 : 1,
+                      scale: (isHovered || activeTooltip === index) ? 1.05 : 1,
                     }}
                     transition={{
                       height: { delay: index * 0.08, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
                       scale: { duration: 0.15 }
                     }}
+                    onClick={() => handleBarTouch(index)}
                     className={`w-full rounded-t-lg cursor-pointer transition-all relative ${
                       isToday
                         ? metGoal
@@ -339,6 +353,7 @@ export default function WeeklyProgressChart({
                       boxShadow: metGoal
                         ? '0 0 0 1px rgba(16, 185, 129, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3)'
                         : '0 0 0 1px rgba(0, 0, 0, 0.05)',
+                      touchAction: 'manipulation', // Optimize for touch (Issue #22)
                     }}
                     aria-label={`${day.day}: ${day.completed} completed${metGoal ? ' (goal met)' : ''}`}
                     role="img"

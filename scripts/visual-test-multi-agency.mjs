@@ -92,6 +92,23 @@ async function main() {
     // Wait for navigation/login to complete
     await page.waitForTimeout(3000);
 
+    // Close any welcome modals or notifications
+    console.log('🔍 Closing welcome modal and notifications...');
+
+    // Try to close welcome modal (if present)
+    const closeWelcomeButton = page.locator('button:has-text("View Tasks"), [aria-label*="Close"]').first();
+    if (await closeWelcomeButton.isVisible().catch(() => false)) {
+      await closeWelcomeButton.click();
+      await page.waitForTimeout(500);
+    }
+
+    // Try to dismiss notifications (if present)
+    const notNowButton = page.locator('button:has-text("Not now"), button:has-text("Dismiss")').first();
+    if (await notNowButton.isVisible().catch(() => false)) {
+      await notNowButton.click();
+      await page.waitForTimeout(500);
+    }
+
     // 3. Screenshot: Main dashboard after login
     console.log('📸 Screenshot 2: Dashboard (logged in as Derrick)');
     await page.screenshot({

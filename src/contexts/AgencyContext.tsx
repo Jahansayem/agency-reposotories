@@ -69,14 +69,11 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
   const [agencies, setAgencies] = useState<AgencyMembership[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   const isMultiTenancyEnabled = isFeatureEnabled('multi_tenancy');
 
   // Load agencies on mount or when userId changes
   useEffect(() => {
-    setMounted(true);
-
     if (!isMultiTenancyEnabled) {
       setIsLoading(false);
       return;
@@ -95,7 +92,7 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
 
   // Load saved agency selection from localStorage
   useEffect(() => {
-    if (!mounted || !isMultiTenancyEnabled || agencies.length === 0) return;
+    if (!isMultiTenancyEnabled || agencies.length === 0) return;
 
     const savedAgencyId = localStorage.getItem(CURRENT_AGENCY_KEY);
 
@@ -113,7 +110,7 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
     if (defaultAgency) {
       loadAgencyDetails(defaultAgency.agency_id, defaultAgency);
     }
-  }, [mounted, agencies, isMultiTenancyEnabled]);
+  }, [agencies, isMultiTenancyEnabled]);
 
   /**
    * Load all agencies the user belongs to
@@ -289,11 +286,6 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
     isAgencyOwner,
     isAgencyAdmin,
   };
-
-  // Don't render until mounted to prevent hydration issues
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <AgencyContext.Provider value={value}>
