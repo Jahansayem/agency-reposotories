@@ -207,6 +207,31 @@ export default function WeeklyProgressChart({
           </motion.div>
         </div>
 
+        {/* Legend - WCAG 1.4.1: Use of Color (colorblind accessible) */}
+        <div className="px-4 mb-2">
+          <div className="flex items-center justify-center gap-6 text-xs">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded bg-gradient-to-t from-emerald-600 to-emerald-400"
+                style={{
+                  border: '2px solid rgba(255, 255, 255, 0.8)',
+                  boxShadow: '0 0 0 1px rgba(16, 185, 129, 0.5)',
+                }}
+                aria-hidden="true"
+              />
+              <span className="text-slate-600 font-medium">Goal Met</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded-sm bg-gradient-to-t from-[var(--brand-blue)] to-[#0047CC]"
+                style={{ boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.1)' }}
+                aria-hidden="true"
+              />
+              <span className="text-slate-600 font-medium">Below Goal</span>
+            </div>
+          </div>
+        </div>
+
         {/* Chart */}
         <div className="p-4 relative">
           {/* Goal line */}
@@ -252,6 +277,7 @@ export default function WeeklyProgressChart({
                         exit={{ opacity: 0, y: 5, scale: 0.95 }}
                         className={`absolute bottom-full mb-2 px-3 py-2 rounded-[var(--radius-lg)] text-xs whitespace-nowrap z-20 ${
                           'bg-slate-800 text-white'}`}
+                        role="tooltip"
                       >
                         <p className="font-semibold">{day.day}</p>
                         <p className={'text-white/70'}>
@@ -262,27 +288,32 @@ export default function WeeklyProgressChart({
                         </p>
                         {metGoal && (
                           <p className="text-emerald-400 mt-1 flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" /> Goal met!
+                            <Sparkles className="w-3 h-3" /> Goal met! (≥{dailyGoal})
                           </p>
                         )}
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* Count label */}
+                  {/* Count label - Always visible for accessibility */}
                   <motion.span
-                    className={`text-xs font-medium transition-colors ${
+                    className={`text-xs font-bold transition-colors ${
                       isHovered
-                        ? 'text-[var(--brand-blue)]'
+                        ? metGoal
+                          ? 'text-emerald-600'
+                          : 'text-[var(--brand-blue)]'
                         : day.completed > 0
-                          ? 'text-[var(--brand-blue)]/80'
+                          ? metGoal
+                            ? 'text-emerald-700'
+                            : 'text-slate-700'
                           : 'text-slate-400'}`}
-                    animate={{ scale: isHovered ? 1.1 : 1 }}
+                    animate={{ scale: isHovered ? 1.15 : 1 }}
+                    aria-label={`${day.completed} tasks completed on ${day.day}${metGoal ? ' (goal met)' : ''}`}
                   >
                     {day.completed}
                   </motion.span>
 
-                  {/* Bar */}
+                  {/* Bar with pattern for colorblind accessibility */}
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{
@@ -293,14 +324,24 @@ export default function WeeklyProgressChart({
                       height: { delay: index * 0.08, duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] },
                       scale: { duration: 0.15 }
                     }}
-                    className={`w-full rounded-t-lg cursor-pointer transition-colors ${
+                    className={`w-full rounded-t-lg cursor-pointer transition-all relative ${
                       isToday
                         ? metGoal
                           ? 'bg-gradient-to-t from-emerald-600 to-emerald-400'
                           : 'bg-gradient-to-t from-[var(--brand-blue)] to-[#0047CC]'
                         : day.completed > 0
                           ? metGoal
-                            ? 'bg-emerald-500/30': 'bg-[var(--brand-blue)]/40': 'bg-slate-200'}`}
+                            ? 'bg-emerald-500/30'
+                            : 'bg-[var(--brand-blue)]/40'
+                          : 'bg-slate-200'}`}
+                    style={{
+                      border: metGoal ? '2px solid rgba(255, 255, 255, 0.8)' : 'none',
+                      boxShadow: metGoal
+                        ? '0 0 0 1px rgba(16, 185, 129, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3)'
+                        : '0 0 0 1px rgba(0, 0, 0, 0.05)',
+                    }}
+                    aria-label={`${day.day}: ${day.completed} completed${metGoal ? ' (goal met)' : ''}`}
+                    role="img"
                   />
                 </div>
               );
