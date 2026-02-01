@@ -11,6 +11,7 @@ import {
 } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
 import { OAuthLoginButtons } from './OAuthLoginButtons';
+import RegisterModal from './RegisterModal';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
@@ -124,6 +125,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [loading, setLoading] = useState(true);
   const [teamStats, setTeamStats] = useState<{ totalTasks: number; completedThisWeek: number; activeUsers: number } | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const features = [
     {
@@ -601,8 +603,28 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       </motion.div>
                     )}
 
-                    {/* OAuth buttons */}
-                    <div className="p-6 pt-2">
+                    {/* Create Account + OAuth buttons */}
+                    <div className="p-6 pt-2 space-y-3">
+                      {/* Create Account button */}
+                      <button
+                        onClick={() => setShowRegisterModal(true)}
+                        className="w-full py-3 px-4 rounded-[var(--radius-xl)] bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        Create Account
+                      </button>
+
+                      {/* Divider */}
+                      {users.length > 0 && (
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-white/10"></div>
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] px-2 text-white/40">Or</span>
+                          </div>
+                        </div>
+                      )}
+
                       <OAuthLoginButtons />
                     </div>
                   </div>
@@ -733,6 +755,17 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           </div>
         </div>
       </div>
+
+      {/* Registration Modal */}
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSuccess={(user) => {
+          setStoredSession(user);
+          setShowRegisterModal(false);
+          onLogin(user);
+        }}
+      />
     </div>
     </MotionConfig>
   );
