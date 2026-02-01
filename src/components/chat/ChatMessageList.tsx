@@ -131,6 +131,10 @@ export const ChatMessageList = memo(function ChatMessageList({
   const [longPressMessageId, setLongPressMessageId] = useState<string | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Swipe-to-reply state (Issue #19)
+  const [swipeOffsets, setSwipeOffsets] = useState<Map<string, number>>(new Map());
+  const [swipingMessageId, setSwipingMessageId] = useState<string | null>(null);
+
   const getUserColor = useCallback((userName: string) => {
     const user = users.find(u => u.name === userName);
     return user?.color || 'var(--accent)';
@@ -155,6 +159,35 @@ export const ChatMessageList = memo(function ChatMessageList({
     }
     setLongPressMessageId(null);
   }, []);
+
+  // Swipe-to-reply handlers (Issue #19: Mobile Touch Gestures)
+  const handleSwipeDrag = useCallback((messageId: string, offsetX: number) => {
+    setSwipeOffsets(prev => new Map(prev).set(messageId, offsetX));
+    setSwipingMessageId(messageId);
+  }, []);
+
+  const handleSwipeDragEnd = useCallback((messageId: string, message: ChatMessage, info: { offset: { x: number }, velocity: { x: number } }) => {
+    const { offset, velocity } = info;
+
+    // Swipe right threshold: 50px or fast velocity
+    if (offset.x > 50 && velocity.x > 100) {
+      // Trigger reply
+      onReply(message);
+
+      // Haptic feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate([30, 20, 30]); // Pattern for reply action
+      }
+    }
+
+    // Reset swipe offset
+    setSwipeOffsets(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(messageId);
+      return newMap;
+    });
+    setSwipingMessageId(null);
+  }, [onReply]);
 
   const getInitials = useCallback((name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -361,11 +394,12 @@ export const ChatMessageList = memo(function ChatMessageList({
                     </div>
                   )}
 
-                  {/* Message bubble */}
+                  {/* Message bubble with swipe-to-reply (Issue #19) */}
                   <div className="relative">
                     {(() => {
                       const systemMeta = parseSystemMessage(msg);
                       const linkedTodo = msg.related_todo_id && todosMap?.get(msg.related_todo_id);
+                      const currentSwipeOffset = swipeOffsets.get(msg.id) || 0;
 
                       if (systemMeta && linkedTodo && onTaskLinkClick) {
                         return (
@@ -381,38 +415,61 @@ export const ChatMessageList = memo(function ChatMessageList({
                       }
 
                       return (
-                        <motion.div
-                          onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
-                          onTouchStart={() => handleTouchStart(msg.id)}
-                          onTouchEnd={handleTouchEnd}
-                          onTouchCancel={handleTouchEnd}
-                          className={`px-4 py-2.5 rounded-[var(--radius-2xl)] break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
-                            isOwn
-                              ? 'bg-[var(--accent)] text-white rounded-br-md shadow-lg shadow-[var(--accent)]/20'
-                              : 'bg-[var(--chat-border)] text-white rounded-bl-md border border-[var(--chat-surface-hover)]'
-                          } ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''} ${longPressMessageId === msg.id ? 'ring-2 ring-yellow-400/50' : ''}`}
-                          whileHover={{ scale: 1.01 }}
-                        >
-                          {renderMessageText(msg.text)}
-
-                          {/* Task link button */}
-                          {msg.related_todo_id && onTaskLinkClick && !systemMeta && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onTaskLinkClick(msg.related_todo_id!);
+                        <div className="relative">
+                          {/* Reply icon shown during swipe */}
+                          {currentSwipeOffset > 20 && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{
+                                opacity: Math.min(currentSwipeOffset / 50, 1),
+                                scale: Math.min(0.8 + (currentSwipeOffset / 100), 1),
                               }}
-                              className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-all ${
-                                isOwn
-                                  ? 'bg-white/20 text-white hover:bg-white/30'
-                                  : 'bg-[var(--chat-border)] text-white/80 hover:bg-white/[0.15]'
-                              }`}
+                              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-10 pointer-events-none"
                             >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              View Task
-                            </button>
+                              <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center">
+                                <Reply className="w-4 h-4 text-[var(--accent)]" />
+                              </div>
+                            </motion.div>
                           )}
-                        </motion.div>
+
+                          <motion.div
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 100 }}
+                            dragElastic={0.2}
+                            onDrag={(e, info) => handleSwipeDrag(msg.id, info.offset.x)}
+                            onDragEnd={(e, info) => handleSwipeDragEnd(msg.id, msg, info)}
+                            onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
+                            onTouchStart={() => handleTouchStart(msg.id)}
+                            onTouchEnd={handleTouchEnd}
+                            onTouchCancel={handleTouchEnd}
+                            className={`px-4 py-2.5 rounded-[var(--radius-2xl)] break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
+                              isOwn
+                                ? 'bg-[var(--accent)] text-white rounded-br-md shadow-lg shadow-[var(--accent)]/20'
+                                : 'bg-[var(--chat-border)] text-white rounded-bl-md border border-[var(--chat-surface-hover)]'
+                            } ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''} ${longPressMessageId === msg.id ? 'ring-2 ring-yellow-400/50' : ''} ${swipingMessageId === msg.id ? 'shadow-2xl' : ''}`}
+                            whileHover={{ scale: 1.01 }}
+                          >
+                            {renderMessageText(msg.text)}
+
+                            {/* Task link button */}
+                            {msg.related_todo_id && onTaskLinkClick && !systemMeta && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onTaskLinkClick(msg.related_todo_id!);
+                                }}
+                                className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-all ${
+                                  isOwn
+                                    ? 'bg-white/20 text-white hover:bg-white/30'
+                                    : 'bg-[var(--chat-border)] text-white/80 hover:bg-white/[0.15]'
+                                }`}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                View Task
+                              </button>
+                            )}
+                          </motion.div>
+                        </div>
                       );
                     })()}
 
