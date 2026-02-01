@@ -165,17 +165,26 @@ export const supabase = createSupabaseClient();
  *
  * Validates that both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are present
  * before creating the client.
+ *
+ * This function is safe to import at module level (doesn't throw during build).
+ * It only validates and throws when actually called at runtime.
  */
 export function createServiceRoleClient(): SupabaseClient {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl) {
+    logger.error('[SUPABASE] NEXT_PUBLIC_SUPABASE_URL is not configured', null, {
+      component: 'createServiceRoleClient',
+    });
     throw new Error(
       'NEXT_PUBLIC_SUPABASE_URL is not configured. Cannot create service role client.'
     );
   }
 
   if (!serviceRoleKey) {
+    logger.error('[SUPABASE] SUPABASE_SERVICE_ROLE_KEY is not configured', null, {
+      component: 'createServiceRoleClient',
+    });
     throw new Error(
       'SUPABASE_SERVICE_ROLE_KEY is not configured. Cannot create service role client.'
     );
