@@ -1,11 +1,22 @@
 'use client';
 
 import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
 import { AuthUser, Todo } from '@/types/todo';
-import ChatPanel from '../ChatPanel';
 import { useTodoStore } from '@/store/todoStore';
+import { SkeletonChatPanel } from '../SkeletonLoader';
+
+// Lazy load ChatPanel (1185 lines) - only load when ChatView is opened
+const ChatPanel = dynamic(() => import('../ChatPanel'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4">
+      <SkeletonChatPanel />
+    </div>
+  ),
+});
 
 /**
  * ChatView - Dedicated full-page chat experience

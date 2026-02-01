@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import dynamic from 'next/dynamic';
 import { Todo, AuthUser, CelebrationData, Subtask } from '@/types/todo';
 import { DuplicateMatch } from '@/lib/duplicateDetection';
 import CelebrationEffect from '../CelebrationEffect';
@@ -9,11 +10,24 @@ import WelcomeBackNotification from '../WelcomeBackNotification';
 import ConfirmDialog from '../ConfirmDialog';
 import AddTaskModal from '../AddTaskModal';
 import SaveTemplateModal from '../SaveTemplateModal';
-import ArchivedTaskModal from '../ArchivedTaskModal';
-import DuplicateDetectionModal from '../DuplicateDetectionModal';
-import CustomerEmailModal from '../CustomerEmailModal';
 import { CompletionCelebration } from '../CompletionCelebration';
 import { TaskCompletionSummary } from '../TaskCompletionSummary';
+
+// Lazy load heavy modal components (only loaded when opened)
+// ArchivedTaskModal: 372 lines
+const ArchivedTaskModal = dynamic(() => import('../ArchivedTaskModal'), {
+  ssr: false,
+});
+
+// DuplicateDetectionModal: 254 lines
+const DuplicateDetectionModal = dynamic(() => import('../DuplicateDetectionModal'), {
+  ssr: false,
+});
+
+// CustomerEmailModal: 865 lines - largest modal component
+const CustomerEmailModal = dynamic(() => import('../CustomerEmailModal'), {
+  ssr: false,
+});
 
 interface ConfirmDialogState {
   isOpen: boolean;

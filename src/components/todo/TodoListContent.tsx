@@ -1,13 +1,20 @@
 'use client';
 
 import { memo, ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
 import { Todo, SortOption, WaitingContactType, Subtask, Attachment } from '@/types/todo';
 import SortableTodoItem from '../SortableTodoItem';
-import KanbanBoard from '../KanbanBoard';
 import TaskSections from '../TaskSections';
 import EmptyState from '../EmptyState';
+import { SkeletonKanbanBoard } from '../SkeletonLoader';
+
+// Lazy load KanbanBoard (979 lines) - only needed when switching to kanban view
+const KanbanBoard = dynamic(() => import('../KanbanBoard'), {
+  ssr: false,
+  loading: () => <SkeletonKanbanBoard />,
+});
 import {
   DndContext,
   closestCenter,
