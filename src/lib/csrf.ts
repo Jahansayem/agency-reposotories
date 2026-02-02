@@ -366,35 +366,16 @@ export async function fetchWithCsrf(
     headers.set('X-User-Name', userName);
   }
 
-  // Check if this is an authenticated API request and user has no session cookie
-  if (url.startsWith('/api/') && !url.startsWith('/api/auth/') && !url.startsWith('/api/csrf')) {
-    if (userName && !hasSessionCookie()) {
-      // User has localStorage session but no cookie - need to log in again
-      alert('Your session has expired. Please log in again to continue.');
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('todoSession');
-      }
-      window.location.reload();
-      throw new Error('Session expired');
-    }
-  }
-
   const response = await fetch(url, {
     ...options,
     headers,
     credentials: 'same-origin', // Ensure cookies are sent with the request
   });
 
-  // Handle 401 Unauthorized responses
+  // Handle 401 Unauthorized responses - log to console instead of forcing reload
   if (response.status === 401 && url.startsWith('/api/')) {
-    if (userName) {
-      // User thinks they're logged in but server says no - clear session and reload
-      alert('Your session has expired. Please log in again.');
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('todoSession');
-      }
-      window.location.reload();
-    }
+    console.error('[fetchWithCsrf] 401 Unauthorized:', url, { userName });
+    // Don't force reload - let the calling code handle the error
   }
 
   return response;

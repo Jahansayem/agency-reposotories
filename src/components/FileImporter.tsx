@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Subtask, TodoPriority, PRIORITY_CONFIG } from '@/types/todo';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { promptReloginIfNeeded } from '@/lib/sessionCheck';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ParsedSubtask {
@@ -252,6 +253,11 @@ export default function FileImporter({
   // Process the file - different paths for audio vs PDF/image
   const processFile = async () => {
     if (!selectedFile) return;
+
+    // Check if user needs to log in again before processing
+    if (promptReloginIfNeeded()) {
+      return; // Function will handle reload
+    }
 
     // Initialize processing steps
     const steps = getProcessingSteps(fileType);
