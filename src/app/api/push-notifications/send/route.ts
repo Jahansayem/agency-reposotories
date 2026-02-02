@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 
 /**
@@ -23,7 +22,9 @@ import webpush from 'web-push';
  */
 
 // Lazy initialization of Supabase client (only when API is called)
-function getSupabaseClient() {
+async function getSupabaseClient() {
+  const { createClient } = await import('@supabase/supabase-js');
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('Supabase environment variables not configured');
   }
@@ -101,7 +102,8 @@ export async function POST(request: NextRequest) {
     for (const uid of userIds) {
       try {
         // Get user's push subscriptions
-        const { data: subscriptions, error: fetchError } = await getSupabaseClient()
+        const supabase = await getSupabaseClient();
+        const { data: subscriptions, error: fetchError } = await supabase
           .from('push_subscriptions')
           .select('*')
           .eq('user_id', uid)
@@ -163,7 +165,7 @@ export async function POST(request: NextRequest) {
             sentCount++;
 
             // Update last_used_at
-            await getSupabaseClient()
+            await supabase
               .from('push_subscriptions')
               .update({ last_used_at: new Date().toISOString() })
               .eq('id', sub.id);
@@ -174,7 +176,7 @@ export async function POST(request: NextRequest) {
 
             // If subscription is invalid/expired, mark as inactive
             if (error.statusCode === 410 || error.statusCode === 404) {
-              await getSupabaseClient()
+              await supabase
                 .from('push_subscriptions')
                 .update({ is_active: false })
                 .eq('id', sub.id);
@@ -183,7 +185,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Log notification
-        await getSupabaseClient().from('notification_log').insert({
+        await supabase.from('notification_log').insert({
           user_id: uid,
           notification_type: type,
           title,

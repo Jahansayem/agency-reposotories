@@ -97,6 +97,7 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
   const [filterType, setFilterType] = useState<ActivityFilterType>('all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const lastActivityIdRef = useRef<string | null>(null);
+  const activitiesLengthRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape key press
@@ -219,7 +220,7 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
     setError(null);
 
     try {
-      const offset = reset ? 0 : activities.length;
+      const offset = reset ? 0 : activitiesLengthRef.current;
       const limit = reset ? INITIAL_LOAD_LIMIT : LOAD_MORE_LIMIT;
       const response = await fetchWithCsrf(
         `/api/activity?userName=${encodeURIComponent(currentUserName)}&limit=${limit}&offset=${offset}`
@@ -229,8 +230,13 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
 
         if (reset) {
           setActivities(data);
+          activitiesLengthRef.current = data.length;
         } else {
-          setActivities(prev => [...prev, ...data]);
+          setActivities(prev => {
+            const updated = [...prev, ...data];
+            activitiesLengthRef.current = updated.length;
+            return updated;
+          });
         }
 
         // Check if we have more to load
@@ -249,7 +255,7 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [currentUserName, activities.length]);
+  }, [currentUserName]);
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
@@ -307,7 +313,9 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
           setActivities((prev) => {
             const updated = [newActivity, ...prev];
             // Trim to max size to prevent memory issues
-            return updated.slice(0, MAX_ACTIVITIES_IN_MEMORY);
+            const trimmed = updated.slice(0, MAX_ACTIVITIES_IN_MEMORY);
+            activitiesLengthRef.current = trimmed.length;
+            return trimmed;
           });
 
           // Log for debugging
