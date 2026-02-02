@@ -129,6 +129,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   searchQuery = '',
 }: ChatMessageListProps) {
   const canPinMessages = usePermission('can_pin_messages');
+  const canDeleteAnyMessage = usePermission('can_delete_any_message');
 
   const [tapbackMessageId, setTapbackMessageId] = useState<string | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
@@ -564,26 +565,26 @@ export const ChatMessageList = memo(function ChatMessageList({
                             </button>
                           )}
                           {isOwn && (
-                            <>
-                              <button
-                                onClick={() => {
-                                  onEdit(msg);
-                                  setShowMessageMenu(null);
-                                }}
-                                className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
-                              >
-                                <Edit3 className="w-4 h-4" /> Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  onDelete(msg.id, msg.text);
-                                  setShowMessageMenu(null);
-                                }}
-                                className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-red-400 transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" /> Delete
-                              </button>
-                            </>
+                            <button
+                              onClick={() => {
+                                onEdit(msg);
+                                setShowMessageMenu(null);
+                              }}
+                              className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
+                            >
+                              <Edit3 className="w-4 h-4" /> Edit
+                            </button>
+                          )}
+                          {(isOwn || canDeleteAnyMessage) && (
+                            <button
+                              onClick={() => {
+                                onDelete(msg.id, msg.text);
+                                setShowMessageMenu(null);
+                              }}
+                              className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-red-400 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" /> Delete
+                            </button>
                           )}
                         </motion.div>
                       )}

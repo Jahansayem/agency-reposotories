@@ -76,6 +76,9 @@ export default function TaskDetailPanel({
 }: TaskDetailPanelProps) {
   const { theme } = useTheme();
   const canDeleteTasks = usePermission('can_delete_tasks');
+  const canEditAnyTask = usePermission('can_edit_any_task');
+  const canAssignTasks = usePermission('can_assign_tasks');
+  const canUseAiFeatures = usePermission('can_use_ai_features');
 
   // Editing states
   const [isEditingText, setIsEditingText] = useState(false);
@@ -455,19 +458,23 @@ export default function TaskDetailPanel({
               </div>
             ) : (
               <button
-                onClick={() => setIsEditingText(true)}
+                onClick={() => canEditAnyTask && setIsEditingText(true)}
+                disabled={!canEditAnyTask}
                 className={`
                   w-full text-left text-lg font-medium p-2 -m-2 rounded-[var(--radius-lg)]
                   transition-colors group
                   ${task.completed ? 'line-through opacity-60' : ''}
-                  ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
+                  ${canEditAnyTask ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)] cursor-pointer' : 'text-[var(--foreground)] cursor-default'}
                 `}
+                title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
               >
                 {task.text}
-                <Edit3 className={`
-                  inline-block w-4 h-4 ml-2 opacity-0 group-hover:opacity-50
-                  ${'text-[var(--foreground)]'}
-                `} />
+                {canEditAnyTask && (
+                  <Edit3 className={`
+                    inline-block w-4 h-4 ml-2 opacity-0 group-hover:opacity-50
+                    ${'text-[var(--foreground)]'}
+                  `} />
+                )}
               </button>
             )}
           </section>
@@ -484,9 +491,10 @@ export default function TaskDetailPanel({
                 id={`task-status-${task.id}`}
                 value={task.status}
                 onChange={(e) => handleStatusChange(e.target.value as TodoStatus)}
+                disabled={!canEditAnyTask}
                 className={`
                   w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
-                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${canEditAnyTask ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
               >
@@ -506,9 +514,10 @@ export default function TaskDetailPanel({
                 id={`task-priority-${task.id}`}
                 value={task.priority}
                 onChange={(e) => handlePriorityChange(e.target.value as TodoPriority)}
+                disabled={!canEditAnyTask}
                 className={`
                   w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
-                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${canEditAnyTask ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
                 style={{ color: priorityConfig.color }}
@@ -531,9 +540,10 @@ export default function TaskDetailPanel({
                 id={`task-assignee-${task.id}`}
                 value={task.assigned_to || ''}
                 onChange={(e) => handleAssigneeChange(e.target.value || null)}
+                disabled={!canAssignTasks}
                 className={`
                   w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
-                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${canAssignTasks ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
               >
@@ -708,15 +718,20 @@ export default function TaskDetailPanel({
               </div>
             ) : (
               <button
-                onClick={() => setIsEditingNotes(true)}
+                onClick={() => canEditAnyTask && setIsEditingNotes(true)}
+                disabled={!canEditAnyTask}
                 className={`
                   w-full text-left text-sm p-3 rounded-[var(--radius-lg)]
                   transition-colors
-                  ${task.notes
-                    ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)]': 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] italic'}
+                  ${!canEditAnyTask
+                    ? 'text-[var(--text-muted)] cursor-default'
+                    : task.notes
+                      ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)] cursor-pointer'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] italic cursor-pointer'}
                 `}
+                title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
               >
-                {task.notes || 'Click to add notes...'}
+                {task.notes || (canEditAnyTask ? 'Click to add notes...' : 'No notes')}
               </button>
             )}
           </CollapsibleSection>

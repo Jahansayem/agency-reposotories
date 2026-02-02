@@ -304,9 +304,10 @@ function TodoItemComponent({
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Permission check: can delete tasks (or own tasks)
+  // Permission checks
   const canDeleteTasks = usePermission('can_delete_tasks');
-  const canDeleteThisTask = canDeleteTasks || todo.created_by === currentUserName;
+  const canEditAnyTask = usePermission('can_edit_any_task');
+  const canAssignTasks = usePermission('can_assign_tasks');
 
   // Auto-expand when triggered from external navigation (e.g., dashboard task click)
   useEffect(() => {
@@ -1031,9 +1032,9 @@ function TodoItemComponent({
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  disabled={savingAssignee}
+                  disabled={savingAssignee || !canAssignTasks}
                   className={`text-xs px-2 py-1 pr-5 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none min-w-[90px] transition-all ${
-                    savingAssignee
+                    !canAssignTasks ? 'opacity-60 cursor-not-allowed' : savingAssignee
                       ? 'border-[var(--accent)] opacity-70 cursor-wait'
                       : savedField === 'assignee'
                         ? 'border-[var(--success)]'
@@ -1141,7 +1142,7 @@ function TodoItemComponent({
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* Edit */}
-                    {onUpdateText && (
+                    {onUpdateText && canEditAnyTask && (
                       <button
                         ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
                         role="menuitem"
@@ -1223,7 +1224,7 @@ function TodoItemComponent({
                     <div className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />
 
                     {/* Delete - shows confirmation (gated on can_delete_tasks permission or own task) */}
-                    {canDeleteThisTask && (
+                    {canDeleteTasks && (
                       <button
                         ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
                         role="menuitem"
@@ -1479,7 +1480,8 @@ function TodoItemComponent({
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
+                  disabled={!canAssignTasks}
+                  className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${!canAssignTasks ? 'opacity-60 cursor-not-allowed' : ''}`}
                 >
                   <option value="">Unassigned</option>
                   {users.map((user) => (
@@ -1678,15 +1680,17 @@ function TodoItemComponent({
               )}
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                onClick={() => setShowDeleteConfirm(true)}
-                className="text-[var(--danger)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)]"
-              >
-                Delete
-              </Button>
+              {canDeleteTasks && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-[var(--danger)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)]"
+                >
+                  Delete
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"

@@ -30,6 +30,8 @@ function BulkActionBar({
   getDateOffset,
 }: BulkActionBarProps) {
   const canDeleteTasks = usePermission('can_delete_tasks');
+  const canEditAnyTask = usePermission('can_edit_any_task');
+  const canAssignTasks = usePermission('can_assign_tasks');
 
   return (
     <div data-testid="bulk-action-bar" className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
@@ -58,8 +60,12 @@ function BulkActionBar({
               {/* Mark Complete */}
               <button
                 onClick={onBulkComplete}
+                disabled={!canEditAnyTask}
                 data-testid="bulk-complete-button"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] text-white transition-all text-sm font-medium whitespace-nowrap ${
+                  canEditAnyTask ? 'bg-[var(--success)] hover:opacity-90' : 'bg-[var(--success)] opacity-40 cursor-not-allowed'
+                }`}
+                title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
               >
                 <Check className="w-4 h-4" />
                 <span className="hidden sm:inline">Mark Complete</span>
@@ -69,9 +75,13 @@ function BulkActionBar({
               <div className="relative" data-testid="bulk-assign-dropdown">
                 <select
                   onChange={(e) => { if (e.target.value) onBulkAssign(e.target.value); e.target.value = ''; }}
+                  disabled={!canAssignTasks}
                   data-testid="bulk-assign-button"
-                  className="appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                  className={`appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] transition-colors text-sm font-medium border border-[var(--border)] ${
+                    canAssignTasks ? 'hover:bg-[var(--surface-3)] cursor-pointer' : 'opacity-40 cursor-not-allowed'
+                  }`}
                   aria-label="Reassign"
+                  title={!canAssignTasks ? 'You do not have permission to assign tasks' : undefined}
                 >
                   <option value="">Reassign</option>
                   {users.map((user) => (
@@ -88,9 +98,13 @@ function BulkActionBar({
                     if (e.target.value) onBulkReschedule(e.target.value);
                     e.target.value = '';
                   }}
+                  disabled={!canEditAnyTask}
                   data-testid="bulk-reschedule-button"
-                  className="appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
+                  className={`appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] transition-colors text-sm font-medium border border-[var(--border)] ${
+                    canEditAnyTask ? 'hover:bg-[var(--surface-3)] cursor-pointer' : 'opacity-40 cursor-not-allowed'
+                  }`}
                   aria-label="Change Date"
+                  title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
                 >
                   <option value="">Change Date</option>
                   <option value={getDateOffset(0)}>Today</option>
