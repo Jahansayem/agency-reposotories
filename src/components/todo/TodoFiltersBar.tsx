@@ -354,8 +354,8 @@ function TodoFiltersBar({
 
       {/* Active Filter Chips - Shows what's currently filtered */}
       {activeFilterChips.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-[var(--text-muted)]">
+        <div className="mt-3 flex flex-wrap items-center gap-2" role="region" aria-label="Active filters">
+          <span className="text-xs font-medium text-[var(--text-muted)]" id="active-filters-label">
             Active:
           </span>
           {activeFilterChips.map((chip) => (
@@ -363,21 +363,33 @@ function TodoFiltersBar({
               key={chip.label}
               type="button"
               onClick={chip.onClear}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  chip.onClear();
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1"
               aria-label={`Remove filter: ${chip.label}`}
             >
               <span>{chip.label}</span>
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           ))}
           {activeFilterChips.length > 1 && (
             <button
               type="button"
               onClick={clearAllFilters}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors focus:outline-none"
-              aria-label="Clear all filters"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  clearAllFilters();
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1"
+              aria-label="Clear all active filters"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Clear All</span>
             </button>
           )}
@@ -404,17 +416,22 @@ function TodoFiltersBar({
             <div className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
               {/* Header with close button */}
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-[var(--accent)]" />
+                <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2" id="advanced-filters-title">
+                  <Filter className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
                   Advanced Filters
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowAdvancedFilters(false)}
-                  className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors"
-                  aria-label="Close advanced filters"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setShowAdvancedFilters(false);
+                    }
+                  }}
+                  className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  aria-label="Close advanced filters panel"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
 

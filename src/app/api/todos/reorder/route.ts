@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 /**
  * POST /api/todos/reorder
  *
@@ -23,6 +18,12 @@ const supabase = createClient(
  */
 export async function POST(request: NextRequest) {
   try {
+    // Create Supabase client at request time (not module level)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const body = await request.json();
     const { todoId, newOrder, direction, targetTodoId, userName } = body;
 
@@ -52,13 +53,13 @@ export async function POST(request: NextRequest) {
     // Handle different reorder modes
     if (newOrder !== undefined) {
       // Mode 1: Move to specific position
-      updatedTasks = await moveToPosition(todoId, currentTask.display_order, newOrder);
+      updatedTasks = await moveToPosition(supabase, todoId, currentTask.display_order, newOrder);
     } else if (direction) {
       // Mode 2: Move up or down
-      updatedTasks = await moveUpOrDown(todoId, currentTask.display_order, direction);
+      updatedTasks = await moveUpOrDown(supabase, todoId, currentTask.display_order, direction);
     } else if (targetTodoId) {
       // Mode 3: Swap with target task
-      updatedTasks = await swapTasks(todoId, targetTodoId);
+      updatedTasks = await swapTasks(supabase, todoId, targetTodoId);
     } else {
       return NextResponse.json(
         { error: 'Must provide newOrder, direction, or targetTodoId' },
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
  * Move task to a specific position
  */
 async function moveToPosition(
+  supabase: any,
   todoId: string,
   currentOrder: number,
   newOrder: number
@@ -110,14 +112,14 @@ async function moveToPosition(
   if (!allTasks) return [];
 
   // Remove task from current position
-  const task = allTasks.find(t => t.id === todoId);
-  const otherTasks = allTasks.filter(t => t.id !== todoId);
+  const task = allTasks.find((t: any) => t.id === todoId);
+  const otherTasks = allTasks.filter((t: any) => t.id !== todoId);
 
   // Insert task at new position
   otherTasks.splice(newOrder, 0, task!);
 
   // Reassign display_order to all tasks
-  const updates = otherTasks.map((t, index) => ({
+  const updates = otherTasks.map((t: any, index: number) => ({
     id: t.id,
     display_order: index,
   }));
@@ -142,6 +144,7 @@ async function moveToPosition(
  * Move task up or down one position
  */
 async function moveUpOrDown(
+  supabase: any,
   todoId: string,
   currentOrder: number,
   direction: 'up' | 'down'
@@ -191,7 +194,7 @@ async function moveUpOrDown(
 /**
  * Swap two tasks
  */
-async function swapTasks(todoId: string, targetTodoId: string): Promise<any[]> {
+async function swapTasks(supabase: any, todoId: string, targetTodoId: string): Promise<any[]> {
   const { data: tasks } = await supabase
     .from('todos')
     .select('*')

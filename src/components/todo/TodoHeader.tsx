@@ -192,31 +192,33 @@ function TodoHeader({
             {/* View toggle - hidden in focus mode */}
             {!focusMode && (
               <div
+                role="group"
+                aria-label="View mode toggle"
                 className={`flex backdrop-blur-sm rounded-[var(--radius-lg)] p-0.5 border flex-shrink-0 ${
                   'bg-[var(--surface-2)] border-[var(--border)]'}`}
               >
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 ${
                     viewMode === 'list'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'list'}
-                  aria-label="List view"
+                  aria-label="Switch to list view"
                 >
-                  <LayoutList className="w-3.5 h-3.5" />
+                  <LayoutList className="w-3.5 h-3.5" aria-hidden="true" />
                   <span className="hidden sm:inline">List</span>
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 ${
                     viewMode === 'kanban'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'kanban'}
-                  aria-label="Board view"
+                  aria-label="Switch to board view"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
                   <span className="hidden sm:inline">Board</span>
                 </button>
               </div>
@@ -271,19 +273,22 @@ function TodoHeader({
                   onClick={() => setNotificationModalOpen(!notificationModalOpen)}
                   className={`
                     relative p-2.5 rounded-lg transition-colors
-                    focus:outline-none focus:ring-2 focus:ring-[var(--accent)]
+                    focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2
                     ${notificationModalOpen
                       ? 'bg-[var(--accent-light)] text-[var(--accent)]'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                   `}
-                  aria-label={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
+                  aria-label={`View notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
+                  aria-haspopup="dialog"
+                  aria-expanded={notificationModalOpen}
                 >
-                  <Bell className="w-5 h-5" />
+                  <Bell className="w-5 h-5" aria-hidden="true" />
                   {unreadNotifications > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
+                      aria-label={`${unreadNotifications} unread notifications`}
                     >
                       {unreadNotifications > 99 ? '99+' : unreadNotifications}
                     </motion.span>
