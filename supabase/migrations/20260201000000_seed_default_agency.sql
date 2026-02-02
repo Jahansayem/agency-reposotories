@@ -69,9 +69,9 @@ BEGIN
       -- 'admin' -> 'admin'
       -- 'member' or NULL -> 'member'
       CASE
-        WHEN user_record.role = 'owner' THEN 'owner'::agency_role
-        WHEN user_record.role = 'admin' THEN 'admin'::agency_role
-        ELSE 'member'::agency_role
+        WHEN user_record.role = 'owner' THEN 'owner'
+        WHEN user_record.role = 'admin' THEN 'admin'
+        ELSE 'member'
       END,
       'active',
       -- Set permissions based on role

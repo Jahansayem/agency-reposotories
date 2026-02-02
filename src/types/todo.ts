@@ -211,7 +211,7 @@ export interface User {
   last_login?: string;
 }
 
-export type UserRole = 'owner' | 'admin' | 'member';
+export type UserRole = 'owner' | 'manager' | 'staff';
 export type GlobalRole = 'user' | 'super_admin';
 
 // Import agency types for re-export
@@ -498,17 +498,17 @@ export const GOAL_PRIORITY_CONFIG: Record<GoalPriority, { label: string; color: 
   low: { label: 'Low', color: '#6b7280', bgColor: 'rgba(107, 114, 128, 0.1)' },
 };
 
-// Owner username for dashboard access
-// DEPRECATED: Use isOwner(user) or user.role === 'owner' instead
-// Kept for backward compatibility during migration
-export const OWNER_USERNAME = 'Derrick';
+// OWNER_USERNAME deleted in Phase 1E — use isOwner(user) or role-based checks instead
 
 /**
  * Check if a user has owner privileges
  * Supports both single-tenant (legacy) and multi-tenant modes
  *
  * In multi-tenant mode, checks current_agency_role
- * In single-tenant mode, checks role or falls back to name
+ * In single-tenant mode, checks role from database
+ *
+ * NOTE: This function will be deleted entirely in Phase 4.
+ * Use usePermission() or useRoleCheck() hooks instead.
  */
 export function isOwner(user: {
   role?: string;
@@ -523,15 +523,15 @@ export function isOwner(user: {
   // Single-tenant: use role from database
   if (user.role === 'owner') return true;
 
-  // Legacy fallback: check name (will be removed in future)
-  if (user.name === OWNER_USERNAME) return true;
-
   return false;
 }
 
 /**
- * Check if a user has admin privileges (owner or admin)
+ * Check if a user has admin privileges (owner or manager)
  * Supports both single-tenant (legacy) and multi-tenant modes
+ *
+ * NOTE: This function will be deleted entirely in Phase 4.
+ * Use usePermission() or useRoleCheck() hooks instead.
  */
 export function isAdmin(user: {
   role?: string;
@@ -541,13 +541,10 @@ export function isAdmin(user: {
   if (!user) return false;
 
   // Multi-tenant: check agency-specific role
-  if (user.current_agency_role === 'owner' || user.current_agency_role === 'admin') return true;
+  if (user.current_agency_role === 'owner' || user.current_agency_role === 'manager') return true;
 
   // Single-tenant: use role from database
-  if (user.role === 'owner' || user.role === 'admin') return true;
-
-  // Legacy fallback
-  if (user.name === OWNER_USERNAME) return true;
+  if (user.role === 'owner' || user.role === 'manager') return true;
 
   return false;
 }

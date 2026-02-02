@@ -417,6 +417,12 @@ function TodoFiltersBar({
               className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]"
               role="region"
               aria-labelledby="advanced-filters-title"
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setShowAdvancedFilters(false);
+                }
+              }}
             >
               {/* Header with close button */}
               <div className="flex items-center justify-between mb-4">
@@ -429,6 +435,7 @@ function TodoFiltersBar({
                   onClick={() => setShowAdvancedFilters(false)}
                   onKeyDown={(e) => {
                     if (e.key === 'Escape') {
+                      e.preventDefault();
                       setShowAdvancedFilters(false);
                     }
                   }}

@@ -30,16 +30,44 @@ export interface Agency {
 // Agency Membership Types
 // ============================================
 
-export type AgencyRole = 'owner' | 'admin' | 'member';
+export type AgencyRole = 'owner' | 'manager' | 'staff';
 
 export type MemberStatus = 'active' | 'invited' | 'suspended';
 
 export interface AgencyPermissions {
+  // Task Management
   can_create_tasks: boolean;
+  can_edit_any_task: boolean;
   can_delete_tasks: boolean;
+  can_assign_tasks: boolean;
+  can_reorder_tasks: boolean;
+
+  // Strategic Goals
   can_view_strategic_goals: boolean;
+  can_manage_strategic_goals: boolean;
+
+  // Team Management
   can_invite_users: boolean;
+  can_remove_users: boolean;
+  can_change_roles: boolean;
+
+  // Templates & Content
   can_manage_templates: boolean;
+  can_use_ai_features: boolean;
+
+  // Chat & Communication
+  can_pin_messages: boolean;
+  can_delete_any_message: boolean;
+
+  // Reporting & Analytics
+  can_view_activity_feed: boolean;
+  can_view_dashboard: boolean;
+  can_view_archive: boolean;
+
+  // Agency Administration
+  can_manage_agency_settings: boolean;
+  can_view_security_events: boolean;
+  can_manage_billing: boolean;
 }
 
 export interface AgencyMember {
@@ -147,24 +175,69 @@ export interface UpdateMemberRequest {
 export const DEFAULT_PERMISSIONS: Record<AgencyRole, AgencyPermissions> = {
   owner: {
     can_create_tasks: true,
+    can_edit_any_task: true,
     can_delete_tasks: true,
+    can_assign_tasks: true,
+    can_reorder_tasks: true,
     can_view_strategic_goals: true,
+    can_manage_strategic_goals: true,
     can_invite_users: true,
+    can_remove_users: true,
+    can_change_roles: true,
     can_manage_templates: true,
+    can_use_ai_features: true,
+    can_pin_messages: true,
+    can_delete_any_message: true,
+    can_view_activity_feed: true,
+    can_view_dashboard: true,
+    can_view_archive: true,
+    can_manage_agency_settings: true,
+    can_view_security_events: true,
+    can_manage_billing: true,
   },
-  admin: {
+  manager: {
     can_create_tasks: true,
+    can_edit_any_task: true,
     can_delete_tasks: true,
+    can_assign_tasks: true,
+    can_reorder_tasks: true,
     can_view_strategic_goals: true,
+    can_manage_strategic_goals: false,
     can_invite_users: true,
+    can_remove_users: true,
+    can_change_roles: false,
     can_manage_templates: true,
+    can_use_ai_features: true,
+    can_pin_messages: true,
+    can_delete_any_message: true,
+    can_view_activity_feed: true,
+    can_view_dashboard: true,
+    can_view_archive: true,
+    can_manage_agency_settings: false,
+    can_view_security_events: true,
+    can_manage_billing: false,
   },
-  member: {
+  staff: {
     can_create_tasks: true,
+    can_edit_any_task: false,
     can_delete_tasks: false,
+    can_assign_tasks: false,
+    can_reorder_tasks: false,
     can_view_strategic_goals: false,
+    can_manage_strategic_goals: false,
     can_invite_users: false,
+    can_remove_users: false,
+    can_change_roles: false,
     can_manage_templates: false,
+    can_use_ai_features: true,
+    can_pin_messages: false,
+    can_delete_any_message: false,
+    can_view_activity_feed: true,
+    can_view_dashboard: true,
+    can_view_archive: false,
+    can_manage_agency_settings: false,
+    can_view_security_events: false,
+    can_manage_billing: false,
   },
 };
 
@@ -206,7 +279,7 @@ export function isAgencyOwner(membership: AgencyMembership | AgencyMember | null
  */
 export function isAgencyAdmin(membership: AgencyMembership | AgencyMember | null | undefined): boolean {
   if (!membership) return false;
-  return membership.role === 'owner' || membership.role === 'admin';
+  return membership.role === 'owner' || membership.role === 'manager';
 }
 
 /**

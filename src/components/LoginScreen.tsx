@@ -711,6 +711,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                               onChange={(e) => handlePinChange(index, e.target.value, pinRefs, pin, setPin)}
                               onKeyDown={(e) => handlePinKeyDown(e, index, pinRefs, pin)}
                               disabled={lockoutSeconds > 0 || isSubmitting}
+                              data-testid={index === 0 ? 'pin-input' : undefined}
                               aria-label={`PIN digit ${index + 1} of 4`}
                               aria-invalid={error ? 'true' : 'false'}
                               aria-describedby={error ? 'pin-error' : undefined}
@@ -726,6 +727,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                           </div>
                         ))}
                       </div>
+                      <button
+                        type="submit"
+                        data-testid="login-button"
+                        className="sr-only"
+                        tabIndex={-1}
+                      >
+                        Submit PIN
+                      </button>
                     </form>
 
                     <AnimatePresence mode="wait">
@@ -794,6 +803,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 function UserCard({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (user: AuthUser) => void; delay?: number }) {
   return (
     <motion.button
+      data-testid={`user-card-${user.name}`}
       onClick={() => onSelect(user)}
       className="group w-full flex items-center gap-4 p-3 rounded-[var(--radius-xl)] hover:bg-white/[0.08] active:bg-white/10 transition-all text-left border border-transparent hover:border-white/10"
       initial={{ opacity: 0, y: 15 }}

@@ -232,11 +232,9 @@ CREATE OR REPLACE FUNCTION set_request_context(
 )
 RETURNS void AS $$
 BEGIN
-  PERFORM set_config('app.user_id', COALESCE(p_user_id::text, ''), false);
-  PERFORM set_config('app.user_name', COALESCE(p_user_name, ''), false);
-  IF p_agency_id IS NOT NULL THEN
-    PERFORM set_config('app.agency_id', p_agency_id::text, false);
-  END IF;
+  PERFORM set_config('app.user_id', COALESCE(p_user_id::text, ''), true);
+  PERFORM set_config('app.user_name', COALESCE(p_user_name, ''), true);
+  PERFORM set_config('app.agency_id', COALESCE(p_agency_id::text, ''), true);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -683,11 +681,12 @@ BEGIN
     RAISE EXCEPTION 'Invalid or expired invitation';
   END IF;
 
-  -- Create membership
+  -- Create membership (do not demote existing owners/managers)
   INSERT INTO agency_members (agency_id, user_id, role, status)
   VALUES (v_invitation.agency_id, p_user_id, v_invitation.role, 'active')
   ON CONFLICT (agency_id, user_id) DO UPDATE
-  SET status = 'active', role = v_invitation.role;
+  SET status = 'active', role = v_invitation.role
+  WHERE agency_members.status != 'active' OR agency_members.role NOT IN ('owner', 'manager');
 
   -- Mark invitation as accepted
   UPDATE agency_invitations

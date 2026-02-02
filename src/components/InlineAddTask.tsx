@@ -220,6 +220,7 @@ export default function InlineAddTask({
             onChange={(e) => setText(e.target.value)}
             placeholder="Add task... (Type naturally or paste text)"
             disabled={isProcessing || showPreview}
+            data-testid="add-task-input"
             className="flex-1 bg-transparent text-[var(--foreground)] placeholder-[var(--text-muted)] text-base font-medium focus:outline-none disabled:opacity-50"
             aria-label="New task"
           />
