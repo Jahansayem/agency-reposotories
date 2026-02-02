@@ -79,7 +79,7 @@ const getCompletedAtMs = (todo: Todo): number | null => {
 export default function TodoList({ currentUser, onUserChange, onOpenDashboard, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
   const userName = currentUser.name;
   const { theme } = useTheme();
-  const canViewArchive = currentUser.role === 'admin' || ['derrick', 'adrian'].includes(userName.toLowerCase());
+  const canViewArchive = currentUser.role === 'owner' || currentUser.role === 'manager' || ['derrick', 'adrian'].includes(userName.toLowerCase());
 
   // Get navigation state from AppShell context
   const { activeView, setActiveView } = useAppShell();
@@ -416,7 +416,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }, [fetchActivityLog]);
 
   // Check for duplicates and either show modal or create task directly
-  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
+  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => {
     // Check if we should look for duplicates
     const combinedText = `${text} ${transcription || ''}`;
     if (shouldCheckForDuplicates(combinedText)) {
@@ -428,11 +428,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       }
     }
     // No duplicates found, create directly
-    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt);
+    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence);
   };
 
   // Actually create the todo (called after duplicate check or when user confirms)
-  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
+  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => {
     const newTodo: Todo = {
       id: uuidv4(),
       text,
@@ -447,6 +447,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       transcription: transcription,
       reminder_at: reminderAt,
       reminder_sent: false,
+      notes: notes,
+      recurrence: recurrence || undefined,
     };
 
     // Optimistic update using store action
@@ -470,6 +472,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       insertData.reminder_at = newTodo.reminder_at;
       insertData.reminder_sent = false;
     }
+    if (newTodo.notes) insertData.notes = newTodo.notes;
+    if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
 
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 

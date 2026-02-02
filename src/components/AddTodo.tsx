@@ -15,9 +15,10 @@ import { analyzeTaskPattern } from '@/lib/insurancePatterns';
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useToast } from './ui/Toast';
+import { SimpleAccordion } from './ui/Accordion';
 
 interface AddTodoProps {
-  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => void;
+  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => void;
   users: string[];
   currentUserId?: string;
   autoFocus?: boolean;
@@ -112,6 +113,8 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     }
     return '';
   });
+  const [notes, setNotes] = useState('');
+  const [recurrence, setRecurrence] = useState<'daily' | 'weekly' | 'monthly' | ''>('');
   const [showOptions, setShowOptions] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -295,7 +298,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
         }))
       : undefined as unknown as Subtask[];
 
-    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined);
+    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, notes || undefined, recurrence || null);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -347,7 +350,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     taskAssignedTo?: string,
     subtasks?: Subtask[]
   ) => {
-    onAdd(taskText, taskPriority, taskDueDate, taskAssignedTo, subtasks);
+    onAdd(taskText, taskPriority, taskDueDate, taskAssignedTo, subtasks, undefined, undefined, undefined, notes || undefined, recurrence || null);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, taskPriority, taskAssignedTo);
@@ -388,7 +391,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       if (text.trim() && !isProcessing) {
-        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined);
+        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, undefined, undefined, notes || undefined, recurrence || null);
         // Save preferences for next time
         if (currentUserId) {
           updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -721,6 +724,50 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                 compact
               />
             </div>
+
+            {/* Progressive Disclosure: Advanced Options (Phase 1.1) */}
+            <SimpleAccordion
+              trigger="More options"
+              aria-label="Show additional task options"
+              className="mt-4 px-5"
+            >
+              <div className="space-y-4">
+                {/* Notes textarea */}
+                <div>
+                  <label htmlFor="task-notes" className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    id="task-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Additional context or details..."
+                    rows={3}
+                    aria-label="Task notes"
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] resize-none"
+                  />
+                </div>
+
+                {/* Recurrence dropdown */}
+                <div>
+                  <label htmlFor="task-recurrence" className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Repeat
+                  </label>
+                  <select
+                    id="task-recurrence"
+                    value={recurrence}
+                    onChange={(e) => setRecurrence(e.target.value as typeof recurrence)}
+                    aria-label="Task recurrence"
+                    className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] cursor-pointer"
+                  >
+                    <option value="">No repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+              </div>
+            </SimpleAccordion>
           </div>
         )}
 
@@ -817,7 +864,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
             setDraggedFile(null);
           }}
           onCreateTask={(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile) => {
-            onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile);
+            onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, undefined, notes || undefined, recurrence || null);
             setShowFileImporter(false);
             setDraggedFile(null);
           }}

@@ -87,7 +87,9 @@ interface TodoModalsProps {
     subtasks?: Subtask[],
     transcription?: string,
     sourceFile?: File,
-    reminderAt?: string
+    reminderAt?: string,
+    notes?: string,
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null
   ) => void;
 
   // Template
