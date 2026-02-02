@@ -24,6 +24,7 @@ export function usePermission(permission: keyof AgencyPermissions): boolean {
   }
 
   // Single-tenant mode: look up defaults by user role
+  if (!currentUser || !currentUser.role) return false;
   const role = currentUser.role as AgencyRole;
   const defaults = DEFAULT_PERMISSIONS[role];
   if (!defaults) return false;
