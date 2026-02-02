@@ -17,7 +17,7 @@ import OverflowMenu from './OverflowMenu';
 import TaskDetailFooter from './TaskDetailFooter';
 
 export interface TaskDetailModalProps {
-  todo: Todo;
+  todo: Todo | null;
   isOpen: boolean;
   onClose: () => void;
   currentUser: AuthUser;
@@ -63,7 +63,7 @@ export default function TaskDetailModal({
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   const detail = useTaskDetail({
-    todo,
+    todo: todo!,  // Assert non-null since parent guards with conditional render
     currentUser,
     onUpdate,
     onDelete,
@@ -76,6 +76,11 @@ export default function TaskDetailModal({
     onEmailCustomer,
     onUpdateAttachments,
   });
+
+  // Guard against null todo after hooks
+  if (!todo) {
+    return null;
+  }
 
   const handleDelete = useCallback(() => {
     detail.deleteTodo();
