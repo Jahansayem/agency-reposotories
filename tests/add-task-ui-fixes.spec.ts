@@ -14,11 +14,20 @@ test.describe('Add Task Modal UI Fixes', () => {
     // Enter PIN
     await page.fill('[data-testid="pin-input"]', '8008');
 
-    // Click login
-    await page.click('[data-testid="login-button"]');
+    // Click login - use force to bypass animation blocking
+    await page.click('[data-testid="login-button"]', { force: true });
 
-    // Wait for main app to load
-    await page.waitForSelector('text=Add New Task', { timeout: 15000 });
+    // Wait for navigation and main app to load
+    await page.waitForTimeout(2000);
+
+    // Dismiss any welcome modals
+    const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
+    if (await viewTasksBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await viewTasksBtn.click();
+    }
+
+    // Wait for main app - look for add button
+    await expect(page.locator('button').filter({ hasText: /Add/ })).toBeVisible({ timeout: 10000 });
   });
 
   test('AI Features button dropdown is visible and not off-screen', async ({ page }) => {

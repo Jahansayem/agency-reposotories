@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Upload, Mic, Mail, ChevronDown } from 'lucide-react';
 import { prefersReducedMotion } from '@/lib/animations';
@@ -38,6 +39,36 @@ export function AIFeaturesMenu({
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+
+  // Calculate dropdown position when menu opens
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const dropdownWidth = 288; // w-72 = 288px
+      const dropdownHeight = 300; // Approximate height
+
+      let left = rect.left;
+      let top = rect.bottom + 8;
+
+      // Adjust if goes off screen horizontally
+      if (left + dropdownWidth > window.innerWidth) {
+        left = window.innerWidth - dropdownWidth - 16;
+      }
+      if (left < 16) {
+        left = 16;
+      }
+
+      // If dropdown would go below viewport, position it above the button
+      if (top + dropdownHeight > window.innerHeight) {
+        top = rect.top - dropdownHeight - 8;
+      }
+
+      setDropdownPosition({ top, left });
+    } else {
+      setDropdownPosition(null);
+    }
+  }, [isOpen]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -166,9 +197,9 @@ export function AIFeaturesMenu({
         <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Dropdown Menu */}
-      <AnimatePresence>
-        {isOpen && (
+      {/* Dropdown Menu - Portal for proper positioning */}
+      {isOpen && dropdownPosition && typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
           <motion.div
             ref={menuRef}
             initial={prefersReducedMotion() ? false : { opacity: 0, scale: 0.95, y: -10 }}
@@ -176,11 +207,15 @@ export function AIFeaturesMenu({
             exit={prefersReducedMotion() ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15 }}
             className="
-              absolute left-0 top-full mt-2 w-72
+              fixed w-72
               rounded-xl border border-[var(--border)]
               bg-[var(--surface)] shadow-2xl
-              overflow-hidden z-50
+              overflow-hidden z-[9999]
             "
+            style={{
+              top: dropdownPosition.top,
+              left: dropdownPosition.left
+            }}
             role="menu"
             aria-orientation="vertical"
           >
@@ -236,8 +271,9 @@ export function AIFeaturesMenu({
               </p>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
