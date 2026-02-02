@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, isOwner, WaitingContactType, DEFAULT_FOLLOW_UP_HOURS } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, WaitingContactType, DEFAULT_FOLLOW_UP_HOURS } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 import { logger } from '@/lib/logger';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder, hydrateFocusMode } from '@/store/todoStore';
 import { useTodoData, useFilters, useBulkActions, useEscapeKey, useTodoModals } from '@/hooks';
@@ -79,7 +80,8 @@ const getCompletedAtMs = (todo: Todo): number | null => {
 export default function TodoList({ currentUser, onUserChange, onOpenDashboard, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
   const userName = currentUser.name;
   const { theme } = useTheme();
-  const canViewArchive = currentUser.role === 'owner' || currentUser.role === 'manager' || ['derrick', 'adrian'].includes(userName.toLowerCase());
+  const canViewArchive = usePermission('can_view_archive');
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
 
   // Get navigation state from AppShell context
   const { activeView, setActiveView } = useAppShell();
@@ -192,6 +194,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     selectedTodos,
     showBulkActions,
     handleSelectTodo: hookHandleSelectTodo,
+    selectAll, // Phase 2.3: For Cmd+A keyboard shortcut
     clearSelection,
     setShowBulkActions,
     bulkDelete: hookBulkDelete,
@@ -350,9 +353,30 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           setFocusMode(false);
           return;
         }
+        // If bulk selection is active, clear it (Phase 2.3)
+        if (showBulkActions && selectedTodos.size > 0) {
+          e.preventDefault();
+          clearSelection();
+          setShowBulkActions(false);
+          return;
+        }
         clearSelection();
         setSearchQuery('');
         setShowBulkActions(false);
+      }
+
+      // Cmd/Ctrl + A - select all visible todos (Phase 2.3)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+        // Only trigger if not typing in an input field
+        const target = e.target as HTMLElement;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        if (!isInputField && visibleTodos.length > 0) {
+          e.preventDefault();
+          const visibleIds = visibleTodos.map(t => t.id);
+          selectAll(visibleIds);
+          setShowBulkActions(true);
+        }
       }
 
       // Cmd/Ctrl + Shift + F - toggle focus mode
@@ -1976,7 +2000,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       )}
 
       {/* Strategic Dashboard - Owner only */}
-      {showStrategicDashboard && isOwner({ name: userName, role: currentUser?.role }) && (
+      {showStrategicDashboard && canViewStrategicGoals && (
         <StrategicDashboard
           userName={userName}
           onClose={() => { closeStrategicDashboard(); setActiveView('tasks'); }}
