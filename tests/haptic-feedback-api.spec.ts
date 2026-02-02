@@ -242,13 +242,13 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       await page.evaluate(() => {
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = function(pattern: number | number[]): boolean {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           if (typeof pattern === 'number') {
             (window as any).trackLongPressVibration(pattern);
           }
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Simulate long-press (touch and hold for 500ms)
@@ -281,13 +281,13 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       await page.evaluate(() => {
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = function(pattern: number | number[]): boolean {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           if (typeof pattern === 'number') {
             (window as any).trackTaskLongPress(pattern);
           }
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Simulate long-press on task

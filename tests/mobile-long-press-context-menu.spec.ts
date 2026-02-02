@@ -111,12 +111,12 @@ test.describe('Long-Press Context Menus', () => {
         (window as any).__vibrateCallCount = 0;
         (window as any).__vibrateDurations = [];
 
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = (pattern: VibratePattern): boolean => {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           (window as any).__vibrateCallCount++;
           (window as any).__vibrateDurations.push(pattern);
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Perform long-press
@@ -301,11 +301,11 @@ test.describe('Long-Press Context Menus', () => {
       // Mock vibrate
       await page.evaluate(() => {
         (window as any).__vibrateCallCount = 0;
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = (pattern: VibratePattern): boolean => {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           (window as any).__vibrateCallCount++;
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       const message = page.locator('.rounded-\\[var\\(--radius-2xl\\)\\]').first();

@@ -259,12 +259,12 @@ test.describe('Swipe-to-Reply Gesture', () => {
         (window as any).__vibrateCallCount = 0;
         (window as any).__vibratePatterns = [];
 
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = (pattern: VibratePattern): boolean => {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           (window as any).__vibrateCallCount++;
           (window as any).__vibratePatterns.push(pattern);
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Perform swipe that triggers reply

@@ -68,7 +68,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
           document.documentElement;
 
         if (!scrollContainer) {
-          return { fps: 0, droppeframes: 0 };
+          return { fps: 0, droppedFrames: 0 };
         }
 
         // Scroll and measure performance

@@ -50,7 +50,7 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await expect(leftColumn).toBeVisible();
 
       const width = await leftColumn.evaluate(el => el.getBoundingClientRect().width);
-      const viewportWidth = await page.viewportSize().then(vp => vp?.width || 1024);
+      const viewportWidth = page.viewportSize()?.width || 1024;
 
       // Should be roughly 75% of container width (accounting for gaps)
       expect(width).toBeGreaterThan(viewportWidth * 0.6);
@@ -63,7 +63,7 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await expect(rightColumn).toBeVisible();
 
       const width = await rightColumn.evaluate(el => el.getBoundingClientRect().width);
-      const viewportWidth = await page.viewportSize().then(vp => vp?.width || 1024);
+      const viewportWidth = page.viewportSize()?.width || 1024;
 
       // Should be roughly 25% of container width
       expect(width).toBeGreaterThan(viewportWidth * 0.15);

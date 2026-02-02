@@ -34,7 +34,9 @@ test.describe('Touch Event Handlers for Charts', () => {
 
   test.describe('Desktop Hover Behavior (Baseline)', () => {
     test('should show tooltip on hover (desktop)', async ({ page, browserName }) => {
-      test.skip(browserName === 'webkit' && process.env.CI, 'Flaky in CI on WebKit');
+      if (browserName === 'webkit' && process.env.CI) {
+        test.skip();
+      }
 
       // Find chart bars
       const bars = page.locator('.rounded-t-lg.cursor-pointer');
@@ -55,7 +57,9 @@ test.describe('Touch Event Handlers for Charts', () => {
     });
 
     test('should hide tooltip when mouse leaves bar (desktop)', async ({ page, browserName }) => {
-      test.skip(browserName === 'webkit' && process.env.CI, 'Flaky in CI on WebKit');
+      if (browserName === 'webkit' && process.env.CI) {
+        test.skip();
+      }
 
       const bars = page.locator('.rounded-t-lg.cursor-pointer');
 
@@ -75,7 +79,9 @@ test.describe('Touch Event Handlers for Charts', () => {
     });
 
     test('should show different tooltips for different bars (desktop)', async ({ page, browserName }) => {
-      test.skip(browserName === 'webkit' && process.env.CI, 'Flaky in CI on WebKit');
+      if (browserName === 'webkit' && process.env.CI) {
+        test.skip();
+      }
 
       const bars = page.locator('.rounded-t-lg.cursor-pointer');
       const barCount = await bars.count();

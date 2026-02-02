@@ -20,7 +20,7 @@ const TEST_USER = {
 };
 
 // Helper: Login to the app
-async function login(page) {
+async function login(page: any) {
   await page.goto('http://localhost:3000');
 
   // Wait for login screen
@@ -38,7 +38,7 @@ async function login(page) {
 }
 
 // Helper: Create a test task
-async function createTask(page, taskText: string): Promise<string> {
+async function createTask(page: any, taskText: string): Promise<string> {
   await page.fill('[data-testid="add-task-input"]', taskText);
   await page.press('[data-testid="add-task-input"]', 'Enter');
 
@@ -47,7 +47,7 @@ async function createTask(page, taskText: string): Promise<string> {
 
   // Get the task ID from the DOM
   const taskElement = await page.locator(`text=${taskText}`).first();
-  const taskId = await taskElement.evaluate((el) => {
+  const taskId = await taskElement.evaluate((el: any) => {
     const todoItem = el.closest('[id^="todo-"]');
     return todoItem?.id.replace('todo-', '') || '';
   });
@@ -56,7 +56,7 @@ async function createTask(page, taskText: string): Promise<string> {
 }
 
 // Helper: Get task order from the DOM
-async function getTaskOrder(page): Promise<string[]> {
+async function getTaskOrder(page: any): Promise<string[]> {
   const tasks = await page.locator('[id^="todo-"]').all();
   const taskTexts: string[] = [];
 
