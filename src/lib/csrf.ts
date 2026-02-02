@@ -329,6 +329,16 @@ function getSessionUserName(): string | null {
 }
 
 /**
+ * Check if session cookie exists
+ */
+function hasSessionCookie(): boolean {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  return getCookieValue('session_token') !== null;
+}
+
+/**
  * Fetch wrapper that automatically includes CSRF token and auth headers
  *
  * Works with both JSON and FormData requests.
@@ -356,9 +366,36 @@ export async function fetchWithCsrf(
     headers.set('X-User-Name', userName);
   }
 
-  return fetch(url, {
+  // Check if this is an authenticated API request and user has no session cookie
+  if (url.startsWith('/api/') && !url.startsWith('/api/auth/') && !url.startsWith('/api/csrf')) {
+    if (userName && !hasSessionCookie()) {
+      // User has localStorage session but no cookie - need to log in again
+      alert('Your session has expired. Please log in again to continue.');
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('todoSession');
+      }
+      window.location.reload();
+      throw new Error('Session expired');
+    }
+  }
+
+  const response = await fetch(url, {
     ...options,
     headers,
     credentials: 'same-origin', // Ensure cookies are sent with the request
   });
+
+  // Handle 401 Unauthorized responses
+  if (response.status === 401 && url.startsWith('/api/')) {
+    if (userName) {
+      // User thinks they're logged in but server says no - clear session and reload
+      alert('Your session has expired. Please log in again.');
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('todoSession');
+      }
+      window.location.reload();
+    }
+  }
+
+  return response;
 }

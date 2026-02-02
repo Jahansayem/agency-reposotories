@@ -39,19 +39,29 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Wait for automatic login after PIN entry
   await page.waitForTimeout(2000);
 
-  // Close welcome modal if present (click outside, X button, or View Tasks button)
-  const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
-  const closeModalBtn = page.locator('button[aria-label*="close"]').or(page.locator('button svg.lucide-x').locator('..'));
+  // Dismiss any modals that appear after login (welcome modal, dashboard modal, etc.)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
+    const closeModalBtn = page.locator('button[aria-label*="close"]').or(page.locator('button[aria-label*="Close"]'));
+    const dismissBtn = page.locator('button').filter({ hasText: 'Dismiss' });
+    const modalBackdrop = page.locator('[role="dialog"]');
 
-  // Try clicking View Tasks first (most reliable)
-  if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await viewTasksBtn.click();
-    await page.waitForTimeout(500);
-  }
-  // Or try clicking the close button
-  else if (await closeModalBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await closeModalBtn.click();
-    await page.waitForTimeout(500);
+    if (await viewTasksBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await viewTasksBtn.click();
+      await page.waitForTimeout(500);
+    } else if (await dismissBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+      await dismissBtn.click();
+      await page.waitForTimeout(500);
+    } else if (await closeModalBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+      await closeModalBtn.click();
+      await page.waitForTimeout(500);
+    } else if (await modalBackdrop.isVisible({ timeout: 500 }).catch(() => false)) {
+      // Press Escape to close any modal
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
+    } else {
+      break; // No modals found
+    }
   }
 
   // Wait for main app to load
@@ -69,6 +79,17 @@ test.describe('Core Functionality Tests', () => {
 
   test('Add a task successfully', async ({ page }) => {
     await loginAsExistingUser(page, 'Derrick', '8008');
+
+    // Dismiss any remaining overlays (notification modals, dashboard modals)
+    for (let i = 0; i < 5; i++) {
+      const backdrop = page.locator('.fixed.inset-0.z-50');
+      if (await backdrop.isVisible({ timeout: 500 }).catch(() => false)) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(500);
+      } else {
+        break;
+      }
+    }
 
     // Create a unique task name
     const taskName = `Task_${Date.now()}`;
@@ -187,21 +208,25 @@ test.describe('Core Functionality Tests', () => {
   test('Sign out returns to login screen', async ({ page }) => {
     await loginAsExistingUser(page, 'Derrick', '8008');
 
-    // Find and click the user menu button
-    const userBtn = page.locator('button').filter({ hasText: 'Derrick' }).last();
+    // Use the sidebar "Log out" button which is always accessible
+    const sidebarLogout = page.locator('button').filter({ hasText: 'Log out' });
 
-    await userBtn.click();
-    await page.waitForTimeout(500);
+    if (await sidebarLogout.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await sidebarLogout.click();
+    } else {
+      // Fallback: dismiss overlays and use dropdown
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      const userBtn = page.locator('button').filter({ hasText: 'Derrick' }).last();
+      await userBtn.click();
+      await page.waitForTimeout(500);
+      const logoutBtn = page.locator('[role="menuitem"]').filter({ hasText: 'Logout' });
+      await expect(logoutBtn).toBeVisible({ timeout: 5000 });
+      await logoutBtn.click({ force: true });
+    }
 
-    // Look for Logout button in dropdown (UI uses "Logout" not "Sign Out")
-    const logoutBtn = page.locator('button').filter({ hasText: 'Logout' })
-      .or(page.locator('button').filter({ hasText: 'Sign Out' }));
-
-    await expect(logoutBtn).toBeVisible({ timeout: 5000 });
-    await logoutBtn.click();
-
-    // Wait for login screen
-    await expect(page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first()).toBeVisible({ timeout: 15000 });
+    // Wait for login screen - heading is "Welcome back"
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 15000 });
     console.log('✓ Successfully signed out');
   });
 });
