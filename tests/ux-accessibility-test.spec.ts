@@ -122,32 +122,25 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     const closeBtn = page.locator('button[aria-label*="Close advanced filters"]');
     console.log(`Close button has aria-label: ${await closeBtn.count() > 0 ? '✅' : '❌'}`);
 
-    // Test ESC key to close drawer
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
-    const drawerClosed = await drawer.isVisible() === false;
-    console.log(`ESC key closes drawer: ${drawerClosed ? '✅' : '❌'}`);
-
-    // Reopen drawer for more tests
-    await advancedBtn.click();
-    await page.waitForTimeout(500);
-
-    // Check switch roles on toggles
+    // Check switch roles on toggles BEFORE testing ESC key
     const highPrioritySwitch = page.locator('button[role="switch"][aria-label*="high priority"]').first();
     console.log(`High Priority has role="switch": ${await highPrioritySwitch.count() > 0 ? '✅' : '❌'}`);
 
     const completedSwitch = page.locator('button[role="switch"][aria-label*="completed"]').first();
     console.log(`Show Completed has role="switch": ${await completedSwitch.count() > 0 ? '✅' : '❌'}`);
 
-    // Test filter chip activation
-    console.log('\n=== FILTER CHIPS ACCESSIBILITY ===');
-
-    // Activate a filter to create chips
+    // Activate a filter to create chips (while drawer is still open)
     await page.locator('select[aria-label="Quick filter"]').selectOption('my_tasks');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
-    // Close drawer
-    await closeBtn.click();
+    // Test ESC key to close drawer
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    const drawerClosedByEsc = await drawer.isVisible() === false;
+    console.log(`ESC key closes drawer: ${drawerClosedByEsc ? '✅' : '❌'}`);
+
+    // Test filter chip accessibility
+    console.log('\n=== FILTER CHIPS ACCESSIBILITY ===');
     await page.waitForTimeout(500);
 
     // Check for active filters region
