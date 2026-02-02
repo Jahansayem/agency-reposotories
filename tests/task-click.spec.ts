@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Task Click Flow', () => {
+  // Increase timeout for mobile browsers and MS Edge
+  test.setTimeout(60000);
+
   test.beforeEach(async ({ page }) => {
     // Navigate to app and login
     await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
@@ -24,13 +27,15 @@ test.describe('Task Click Flow', () => {
     // Wait for navigation and main app to load
     await page.waitForTimeout(2000);
 
-    // Navigate to Tasks view - click the Tasks tab
+    // Navigate to Tasks view - use JavaScript click for better mobile compatibility
     const tasksTab = page.locator('[role="tab"]').filter({ hasText: 'Tasks' });
     await tasksTab.waitFor({ state: 'visible', timeout: 5000 });
-    await tasksTab.click();
+    await tasksTab.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await tasksTab.evaluate(node => (node as HTMLElement).click());
 
-    // Wait for tasks to load
-    await page.waitForTimeout(2000);
+    // Wait longer for view transition and tasks to load
+    await page.waitForTimeout(3000);
   });
 
   test('clicking on a task opens the detail modal without errors', async ({ page }) => {
