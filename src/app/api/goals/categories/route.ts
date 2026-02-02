@@ -25,6 +25,7 @@ export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
 // POST - Create a new category
 export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = createServiceRoleClient();
     const body = await request.json();
     const { name, color, icon } = body;
 
@@ -67,6 +68,7 @@ export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agency
 // PUT - Update a category
 export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = createServiceRoleClient();
     const body = await request.json();
     const { id, name, color, icon, display_order } = body;
 
@@ -100,6 +102,7 @@ export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
 // DELETE - Delete a category
 export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = createServiceRoleClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
