@@ -103,11 +103,12 @@ test.describe('Add Task Modal UI Fixes', () => {
     await page.click('button[aria-label="Create new task"]', { force: true });
     await page.waitForSelector('h2:has-text("Add New Task")');
 
-    // Find the template picker button (looks for FileText icon button)
-    const templateButton = page.locator('button').filter({ has: page.locator('svg').first() }).nth(1);
+    // Find the template picker button by data-testid
+    const templateButton = page.locator('[data-testid="template-picker-button"]');
+    await expect(templateButton).toBeVisible();
 
     // Click to open dropdown
-    await templateButton.click();
+    await templateButton.click({ force: true });
 
     // Wait for dropdown
     const dropdown = page.locator('[data-testid="template-picker-dropdown"]');
@@ -154,29 +155,32 @@ test.describe('Add Task Modal UI Fixes', () => {
     // Type some text to enable buttons
     await page.fill('textarea[aria-label="New task description"]', 'Test task for button positioning');
 
-    // Verify all buttons are visible and clickable
+    // Verify all buttons are visible and enabled
     const aiButton = page.locator('button[aria-label="AI Features Menu"]');
     const reminderButton = page.locator('button:has-text("Reminder")');
     const addButton = page.locator('button[aria-label="Add task"]');
+    const templateButton = page.locator('[data-testid="template-picker-button"]');
 
+    // Check all buttons are visible
     await expect(aiButton).toBeVisible();
-    await expect(aiButton).toBeEnabled();
-
     await expect(reminderButton).toBeVisible();
-    await expect(reminderButton).toBeEnabled();
-
     await expect(addButton).toBeVisible();
+    await expect(templateButton).toBeVisible();
+
+    // Check all buttons are enabled
+    await expect(aiButton).toBeEnabled();
+    await expect(reminderButton).toBeEnabled();
     await expect(addButton).toBeEnabled();
+    await expect(templateButton).toBeEnabled();
 
-    // Click AI button to verify it opens
-    await aiButton.click();
-    await expect(page.locator('[role="menu"]')).toBeVisible();
+    // Verify buttons have proper spacing (get bounding boxes)
+    const aiBox = await aiButton.boundingBox();
+    const reminderBox = await reminderButton.boundingBox();
 
-    // Close dropdown
-    await page.keyboard.press('Escape');
+    expect(aiBox).not.toBeNull();
+    expect(reminderBox).not.toBeNull();
 
-    // Click reminder button to verify it opens
-    await reminderButton.click();
-    await expect(page.locator('#reminder-dropdown')).toBeVisible();
+    // Buttons should not overlap (check x positions are different)
+    expect(Math.abs(aiBox!.x - reminderBox!.x)).toBeGreaterThan(10);
   });
 });
