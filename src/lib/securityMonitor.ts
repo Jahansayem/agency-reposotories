@@ -14,7 +14,19 @@
  * - ALERT_EMAIL: Email for critical alerts (optional)
  */
 
+import { Redis } from '@upstash/redis';
 import { logger } from './logger';
+
+// ============================================================================
+// Redis client (shared with serverLockout.ts pattern)
+// ============================================================================
+
+const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
 
 // ============================================================================
 // Types
@@ -105,81 +117,72 @@ const SEVERITY_COLORS: Record<AlertSeverity, string> = {
 };
 
 // ============================================================================
-// Event Storage (In-Memory with TTL)
-// ============================================================================
-//
-// LIMITATION: Events are stored in-memory and will be lost on server restart.
-// In a multi-instance deployment, each instance has its own isolated store,
-// which means threshold checks may undercount events.
-// TODO: Migrate to Redis (Upstash) for persistent, shared event storage
-// across instances. The project already has Upstash configured for other
-// features (see serverLockout.ts).
+// Event Storage (Redis-backed with in-memory fallback)
 // ============================================================================
 
-interface StoredEvent {
-  event: SecurityEvent;
-  expiresAt: number;
-}
+const SECURITY_EVENT_PREFIX = 'sec_event:';
+const EVENT_TTL_SECONDS = 3600; // 1 hour
 
-// In-memory event store for threshold checking
-// In production, this should use Redis for multi-instance support
-const eventStore: Map<string, StoredEvent[]> = new Map();
-
-// Maximum number of events to keep per key to prevent memory leaks
-const MAX_EVENTS_PER_KEY = 1000;
-// Maximum total keys in the store to prevent unbounded growth
-const MAX_STORE_KEYS = 500;
+// In-memory fallback when Redis is unavailable
+const fallbackStore: Map<string, string[]> = new Map();
+const MAX_FALLBACK_EVENTS_PER_KEY = 200;
 
 function getEventKey(type: SecurityEventType, identifier?: string): string {
-  return identifier ? `${type}:${identifier}` : type;
+  return identifier ? `${SECURITY_EVENT_PREFIX}${type}:${identifier}` : `${SECURITY_EVENT_PREFIX}${type}`;
 }
 
-function storeEvent(event: SecurityEvent, identifier?: string): void {
+async function storeEvent(event: SecurityEvent, identifier?: string): Promise<void> {
   const key = getEventKey(event.type, identifier);
-  const stored = eventStore.get(key) || [];
+  const timestamp = event.timestamp;
 
-  // Add event with expiration
-  stored.push({
-    event,
-    expiresAt: Date.now() + 3600000, // 1 hour TTL
-  });
-
-  // Clean expired events
-  const now = Date.now();
-  let active = stored.filter(e => e.expiresAt > now);
-
-  // Cap per-key size to prevent memory leaks from high-volume event types
-  if (active.length > MAX_EVENTS_PER_KEY) {
-    active = active.slice(active.length - MAX_EVENTS_PER_KEY);
-  }
-
-  eventStore.set(key, active);
-
-  // Cap total keys to prevent unbounded memory growth from unique identifiers
-  if (eventStore.size > MAX_STORE_KEYS) {
-    // Remove oldest keys (first entries in Map iteration order)
-    const keysToRemove = eventStore.size - MAX_STORE_KEYS;
-    let removed = 0;
-    for (const existingKey of eventStore.keys()) {
-      if (removed >= keysToRemove) break;
-      eventStore.delete(existingKey);
-      removed++;
+  if (redis) {
+    try {
+      // Use a sorted set with score = timestamp for efficient windowed queries
+      const score = new Date(timestamp).getTime();
+      await redis.zadd(key, { score, member: `${timestamp}:${Math.random().toString(36).slice(2, 8)}` });
+      // Set TTL on the key to auto-expire old data
+      await redis.expire(key, EVENT_TTL_SECONDS);
+      // Trim to keep only the most recent entries
+      await redis.zremrangebyrank(key, 0, -201); // Keep last 200
+      return;
+    } catch (error) {
+      logger.error('Redis storeEvent failed, using fallback', error as Error, {
+        component: 'securityMonitor',
+      });
     }
   }
+
+  // In-memory fallback
+  const stored = fallbackStore.get(key) || [];
+  stored.push(timestamp);
+  if (stored.length > MAX_FALLBACK_EVENTS_PER_KEY) {
+    stored.splice(0, stored.length - MAX_FALLBACK_EVENTS_PER_KEY);
+  }
+  fallbackStore.set(key, stored);
 }
 
-function countRecentEvents(
+async function countRecentEvents(
   type: SecurityEventType,
   windowMs: number,
   identifier?: string
-): number {
+): Promise<number> {
   const key = getEventKey(type, identifier);
-  const stored = eventStore.get(key) || [];
   const cutoff = Date.now() - windowMs;
 
-  return stored.filter(e =>
-    new Date(e.event.timestamp).getTime() > cutoff
-  ).length;
+  if (redis) {
+    try {
+      // Count entries in sorted set with score >= cutoff
+      return await redis.zcount(key, cutoff, '+inf');
+    } catch (error) {
+      logger.error('Redis countRecentEvents failed, using fallback', error as Error, {
+        component: 'securityMonitor',
+      });
+    }
+  }
+
+  // In-memory fallback
+  const stored = fallbackStore.get(key) || [];
+  return stored.filter(ts => new Date(ts).getTime() > cutoff).length;
 }
 
 // ============================================================================
@@ -298,7 +301,7 @@ class SecurityMonitor {
 
     // Store event for threshold checking
     const identifier = event.userId || event.ip;
-    storeEvent(fullEvent, identifier);
+    await storeEvent(fullEvent, identifier);
 
     // Log the event
     logger.security(`Security event: ${event.type}`, {
@@ -326,7 +329,7 @@ class SecurityMonitor {
     for (const threshold of ALERT_THRESHOLDS) {
       if (threshold.eventType !== event.type) continue;
 
-      const count = countRecentEvents(
+      const count = await countRecentEvents(
         event.type,
         threshold.windowMs,
         identifier
@@ -501,12 +504,12 @@ class SecurityMonitor {
   /**
    * Get recent security events summary (for dashboard)
    */
-  getRecentEventsSummary(): Record<SecurityEventType, number> {
+  async getRecentEventsSummary(): Promise<Record<SecurityEventType, number>> {
     const summary: Partial<Record<SecurityEventType, number>> = {};
     const windowMs = 3600000; // Last hour
 
     for (const type of Object.values(SecurityEventType)) {
-      const count = countRecentEvents(type, windowMs);
+      const count = await countRecentEvents(type, windowMs);
       if (count > 0) {
         summary[type] = count;
       }

@@ -11,11 +11,15 @@ test.describe('Add Task Modal UI Fixes', () => {
     // Click Derrick's card
     await page.click('[data-testid="user-card-Derrick"]');
 
-    // Enter PIN
-    await page.fill('[data-testid="pin-input"]', '8008');
+    // Enter PIN - fill each digit individually
+    const pinInputs = page.locator('input[type="password"]');
+    await pinInputs.nth(0).fill('8');
+    await pinInputs.nth(1).fill('0');
+    await pinInputs.nth(2).fill('0');
+    await pinInputs.nth(3).fill('8');
 
-    // Click login - use force to bypass animation blocking
-    await page.click('[data-testid="login-button"]', { force: true });
+    // Wait a moment for auto-submit to trigger
+    await page.waitForTimeout(500);
 
     // Wait for navigation and main app to load
     await page.waitForTimeout(2000);
@@ -26,13 +30,13 @@ test.describe('Add Task Modal UI Fixes', () => {
       await viewTasksBtn.click();
     }
 
-    // Wait for main app - look for add button
-    await expect(page.locator('button').filter({ hasText: /Add/ })).toBeVisible({ timeout: 10000 });
+    // Wait for main app - look for new task button
+    await expect(page.locator('button[aria-label="Create new task"]').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('AI Features button dropdown is visible and not off-screen', async ({ page }) => {
     // Open the Add Task modal by clicking the Add button
-    await page.click('button:has-text("Add New Task")');
+    await page.click('button[aria-label="Create new task"]', { force: true });
 
     // Wait for modal to appear
     await page.waitForSelector('h2:has-text("Add New Task")');
@@ -67,7 +71,7 @@ test.describe('Add Task Modal UI Fixes', () => {
 
   test('Reminder button matches size of other buttons', async ({ page }) => {
     // Open the Add Task modal
-    await page.click('button:has-text("Add New Task")');
+    await page.click('button[aria-label="Create new task"]', { force: true });
     await page.waitForSelector('h2:has-text("Add New Task")');
 
     // Find reminder button and AI button
@@ -96,7 +100,7 @@ test.describe('Add Task Modal UI Fixes', () => {
 
   test('Template picker dropdown is visible and not off-screen', async ({ page }) => {
     // Open the Add Task modal
-    await page.click('button:has-text("Add New Task")');
+    await page.click('button[aria-label="Create new task"]', { force: true });
     await page.waitForSelector('h2:has-text("Add New Task")');
 
     // Find the template picker button (looks for FileText icon button)
@@ -123,7 +127,7 @@ test.describe('Add Task Modal UI Fixes', () => {
 
   test('Add Task modal is wider (increased from 2xl to 4xl)', async ({ page }) => {
     // Open the Add Task modal
-    await page.click('button:has-text("Add New Task")');
+    await page.click('button[aria-label="Create new task"]', { force: true });
     await page.waitForSelector('h2:has-text("Add New Task")');
 
     // Get modal dialog
@@ -144,7 +148,7 @@ test.describe('Add Task Modal UI Fixes', () => {
 
   test('All action buttons are clickable and properly positioned', async ({ page }) => {
     // Open the Add Task modal
-    await page.click('button:has-text("Add New Task")');
+    await page.click('button[aria-label="Create new task"]', { force: true });
     await page.waitForSelector('h2:has-text("Add New Task")');
 
     // Type some text to enable buttons

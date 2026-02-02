@@ -27,7 +27,7 @@ export const GET = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyA
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 500);
 
     // Get in-memory event summary
-    const eventSummary = securityMonitor.getRecentEventsSummary();
+    const eventSummary = await securityMonitor.getRecentEventsSummary();
 
     // Get recent events from database
     const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
