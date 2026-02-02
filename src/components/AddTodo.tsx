@@ -19,6 +19,7 @@ import { SimpleAccordion } from './ui/Accordion';
 import { AIFeaturesMenu } from './ui/AIFeaturesMenu';
 import { useSuggestedDefaults } from '@/hooks/useSuggestedDefaults';
 import TemplatePicker from './TemplatePicker';
+import { usePermission } from '@/hooks/usePermission';
 
 interface AddTodoProps {
   onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => void;
@@ -95,6 +96,7 @@ declare global {
 
 export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddTodoProps) {
   const toast = useToast();
+  const canUseAiFeatures = usePermission('can_use_ai_features');
 
   // Fetch smart defaults based on user patterns
   const { suggestions, isLoading: suggestionsLoading } = useSuggestedDefaults(currentUserId);
@@ -640,13 +642,15 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
             <div className="flex gap-3 flex-shrink-0 items-center justify-between">
               <div className="flex gap-2 items-center">
                 {/* AI Features Menu - consolidates Upload, Voice, and AI Parse */}
-                <AIFeaturesMenu
-                  onSmartParse={handleAiClick}
-                  onVoiceInput={toggleRecording}
-                  onFileImport={() => setShowFileImporter(true)}
-                  disabled={isProcessing}
-                  voiceSupported={speechSupported}
-                />
+                {canUseAiFeatures && (
+                  <AIFeaturesMenu
+                    onSmartParse={handleAiClick}
+                    onVoiceInput={toggleRecording}
+                    onFileImport={() => setShowFileImporter(true)}
+                    disabled={isProcessing}
+                    voiceSupported={speechSupported}
+                  />
+                )}
 
                 {/* Template Picker - quick-apply saved templates (Phase 2.2) */}
                 <TemplatePicker

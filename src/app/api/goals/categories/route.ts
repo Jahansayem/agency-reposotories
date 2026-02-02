@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // GET - Fetch all goal categories
 export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = createServiceRoleClient();
     const { data, error } = await supabase
       .from('goal_categories')
       .select('*')

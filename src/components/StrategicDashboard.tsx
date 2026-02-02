@@ -46,6 +46,7 @@ import {
 } from '@/types/todo';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { usePermission } from '@/hooks/usePermission';
 
 interface StrategicDashboardProps {
   userName: string;
@@ -90,6 +91,7 @@ export default function StrategicDashboard({
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const canManageGoals = usePermission('can_manage_strategic_goals');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'all'>('all');
   const [showAddGoal, setShowAddGoal] = useState(false);
@@ -475,15 +477,17 @@ export default function StrategicDashboard({
             </div>
           </div>
 
-          <div className={`p-3 border-t ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-            <button
-              onClick={() => setShowAddGoal(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0033A0] text-white text-sm font-medium rounded-xl hover:bg-[#002878] transition-all shadow-lg shadow-[#0033A0]/20"
-            >
-              <Plus className="w-4 h-4" />
-              New Goal
-            </button>
-          </div>
+          {canManageGoals && (
+            <div className={`p-3 border-t ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+              <button
+                onClick={() => setShowAddGoal(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0033A0] text-white text-sm font-medium rounded-xl hover:bg-[#002878] transition-all shadow-lg shadow-[#0033A0]/20"
+              >
+                <Plus className="w-4 h-4" />
+                New Goal
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Main content */}
@@ -606,7 +610,7 @@ export default function StrategicDashboard({
                     <X className="w-4 h-4" />
                     Clear search
                   </button>
-                ) : (
+                ) : canManageGoals ? (
                   <button
                     onClick={() => setShowAddGoal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-[#0033A0] text-white text-sm font-medium rounded-lg hover:bg-[#002878] transition-colors shadow-lg shadow-[#0033A0]/20"
@@ -614,7 +618,7 @@ export default function StrategicDashboard({
                     <Plus className="w-4 h-4" />
                     Create your first goal
                   </button>
-                )}
+                ) : null}
               </div>
             ) : viewMode === 'list' ? (
               <ListView
@@ -623,25 +627,25 @@ export default function StrategicDashboard({
                 darkMode={darkMode}
                 hoveredGoal={hoveredGoal}
                 setHoveredGoal={setHoveredGoal}
-                onEdit={setEditingGoal}
-                onDelete={handleDeleteGoal}
-                onStatusChange={(id, status) => handleUpdateGoal(id, { status })}
+                onEdit={canManageGoals ? setEditingGoal : undefined}
+                onDelete={canManageGoals ? handleDeleteGoal : undefined}
+                onStatusChange={canManageGoals ? (id, status) => handleUpdateGoal(id, { status }) : undefined}
               />
             ) : viewMode === 'board' ? (
               <BoardView
                 goalsByStatus={goalsByStatus}
                 categories={categories}
                 darkMode={darkMode}
-                onEdit={setEditingGoal}
-                onStatusChange={(id, status) => handleUpdateGoal(id, { status })}
+                onEdit={canManageGoals ? setEditingGoal : undefined}
+                onStatusChange={canManageGoals ? (id, status) => handleUpdateGoal(id, { status }) : undefined}
               />
             ) : (
               <TableView
                 goals={filteredGoals}
                 categories={categories}
                 darkMode={darkMode}
-                onEdit={setEditingGoal}
-                onStatusChange={(id, status) => handleUpdateGoal(id, { status })}
+                onEdit={canManageGoals ? setEditingGoal : undefined}
+                onStatusChange={canManageGoals ? (id, status) => handleUpdateGoal(id, { status }) : undefined}
               />
             )}
           </div>
@@ -695,9 +699,9 @@ interface ListViewProps {
   darkMode: boolean;
   hoveredGoal: string | null;
   setHoveredGoal: (id: string | null) => void;
-  onEdit: (goal: StrategicGoal) => void;
-  onDelete: (id: string) => void;
-  onStatusChange: (id: string, status: GoalStatus) => void;
+  onEdit?: (goal: StrategicGoal) => void;
+  onDelete?: (id: string) => void;
+  onStatusChange?: (id: string, status: GoalStatus) => void;
 }
 
 function ListView({
@@ -739,9 +743,10 @@ function ListView({
                     const statuses: GoalStatus[] = ['not_started', 'in_progress', 'on_hold', 'completed', 'cancelled'];
                     const currentIndex = statuses.indexOf(goal.status);
                     const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-                    onStatusChange(goal.id, nextStatus);
+                    onStatusChange?.(goal.id, nextStatus);
                   }}
-                  className="p-2 rounded-lg transition-all hover:scale-110"
+                  disabled={!onStatusChange}
+                  className={`p-2 rounded-lg transition-all ${onStatusChange ? 'hover:scale-110' : 'cursor-default'}`}
                   style={{ backgroundColor: statusConfig.bgColor, color: statusConfig.color }}
                   title={`Status: ${statusConfig.label}`}
                 >
@@ -768,28 +773,32 @@ function ListView({
                     </div>
 
                     <div className={`flex items-center gap-1 transition-opacity ${
-                      isHovered ? 'opacity-100' : 'opacity-0'
+                      isHovered && (onEdit || onDelete) ? 'opacity-100' : 'opacity-0'
                     }`}>
-                      <button
-                        onClick={() => onEdit(goal)}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          darkMode
-                            ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
-                            : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
-                        }`}
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => onDelete(goal.id)}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          darkMode
-                            ? 'hover:bg-red-900/30 text-slate-400 hover:text-red-400'
-                            : 'hover:bg-red-50 text-slate-400 hover:text-red-500'
-                        }`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(goal)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            darkMode
+                              ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+                              : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+                          }`}
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(goal.id)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            darkMode
+                              ? 'hover:bg-red-900/30 text-slate-400 hover:text-red-400'
+                              : 'hover:bg-red-50 text-slate-400 hover:text-red-500'
+                          }`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -879,8 +888,8 @@ interface BoardViewProps {
   goalsByStatus: Record<GoalStatus, StrategicGoal[]>;
   categories: GoalCategory[];
   darkMode: boolean;
-  onEdit: (goal: StrategicGoal) => void;
-  onStatusChange: (id: string, status: GoalStatus) => void;
+  onEdit?: (goal: StrategicGoal) => void;
+  onStatusChange?: (id: string, status: GoalStatus) => void;
 }
 
 function BoardView({ goalsByStatus, categories, darkMode, onEdit }: BoardViewProps) {
@@ -929,7 +938,7 @@ function BoardView({ goalsByStatus, categories, darkMode, onEdit }: BoardViewPro
                         ? 'bg-slate-800 border-slate-700 hover:border-slate-600'
                         : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
                     }`}
-                    onClick={() => onEdit(goal)}
+                    onClick={() => onEdit?.(goal)}
                   >
                     <h4 className={`font-medium text-sm mb-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
                       {goal.title}
@@ -987,8 +996,8 @@ interface TableViewProps {
   goals: StrategicGoal[];
   categories: GoalCategory[];
   darkMode: boolean;
-  onEdit: (goal: StrategicGoal) => void;
-  onStatusChange: (id: string, status: GoalStatus) => void;
+  onEdit?: (goal: StrategicGoal) => void;
+  onStatusChange?: (id: string, status: GoalStatus) => void;
 }
 
 function TableView({ goals, categories, darkMode, onEdit, onStatusChange }: TableViewProps) {
@@ -1029,7 +1038,7 @@ function TableView({ goals, categories, darkMode, onEdit, onStatusChange }: Tabl
                 className={`cursor-pointer transition-colors ${
                   darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
                 }`}
-                onClick={() => onEdit(goal)}
+                onClick={() => onEdit?.(goal)}
               >
                 <td className="px-4 py-3">
                   <span className={`font-medium ${
@@ -1043,7 +1052,7 @@ function TableView({ goals, categories, darkMode, onEdit, onStatusChange }: Tabl
                       const statuses: GoalStatus[] = ['not_started', 'in_progress', 'on_hold', 'completed', 'cancelled'];
                       const currentIndex = statuses.indexOf(goal.status);
                       const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-                      onStatusChange(goal.id, nextStatus);
+                      onStatusChange?.(goal.id, nextStatus);
                     }}
                     className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all hover:scale-105"
                     style={{ backgroundColor: statusConfig.bgColor, color: statusConfig.color }}

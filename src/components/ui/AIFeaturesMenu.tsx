@@ -176,7 +176,7 @@ export function AIFeaturesMenu({
             exit={prefersReducedMotion() ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15 }}
             className="
-              absolute right-0 top-full mt-2 w-72
+              absolute left-0 top-full mt-2 w-72
               rounded-xl border border-[var(--border)]
               bg-[var(--surface)] shadow-2xl
               overflow-hidden z-50

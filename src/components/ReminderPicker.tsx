@@ -227,7 +227,7 @@ export default function ReminderPicker({
           ref={buttonRef}
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all hover:shadow-sm ${
+          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all hover:shadow-sm min-h-[44px] touch-manipulation ${
             parsedValue
               ? 'border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
               : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)] text-[var(--text-muted)]'

@@ -44,6 +44,7 @@ import {
 import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask, RecurrencePattern, Attachment, WaitingContactType } from '@/types/todo';
 import Celebration from './Celebration';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
+import { usePermission } from '@/hooks/usePermission';
 
 // Import from kanban submodules
 import { KanbanCard } from './kanban/KanbanCard';
@@ -124,6 +125,10 @@ function TaskDetailModal({
   onSaveAsTemplate,
   onEmailCustomer,
 }: TaskDetailModalProps) {
+  const canDeleteTasks = usePermission('can_delete_tasks');
+  const canEditAnyTask = usePermission('can_edit_any_task');
+  const canAssignTasks = usePermission('can_assign_tasks');
+
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
   const [notes, setNotes] = useState(todo.notes || '');
@@ -441,7 +446,8 @@ function TaskDetailModal({
               <select
                 value={todo.assigned_to || ''}
                 onChange={(e) => onAssign(todo.id, e.target.value || null)}
-                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                disabled={!canAssignTasks}
+                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${!canAssignTasks ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 <option value="">Unassigned</option>
                 {users.map((user) => (
@@ -715,16 +721,20 @@ function TaskDetailModal({
 
         {/* Footer */}
         <div className={`flex items-center justify-between p-4 border-t border-[var(--border)]`}>
-          <button
-            onClick={() => {
-              onDelete(todo.id);
-              onClose();
-            }}
-            className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[var(--radius-lg)] transition-colors text-sm"
-          >
-            <Trash2 className="w-4 h-4" />
-            Delete Task
-          </button>
+          {canDeleteTasks ? (
+            <button
+              onClick={() => {
+                onDelete(todo.id);
+                onClose();
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[var(--radius-lg)] transition-colors text-sm"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Task
+            </button>
+          ) : (
+            <div />
+          )}
           <button
             onClick={onClose}
             className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-sm font-medium"
