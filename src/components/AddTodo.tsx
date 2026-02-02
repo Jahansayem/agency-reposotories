@@ -18,6 +18,7 @@ import { useToast } from './ui/Toast';
 import { SimpleAccordion } from './ui/Accordion';
 import { AIFeaturesMenu } from './ui/AIFeaturesMenu';
 import { useSuggestedDefaults } from '@/hooks/useSuggestedDefaults';
+import TemplatePicker from './TemplatePicker';
 
 interface AddTodoProps {
   onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => void;
@@ -138,6 +139,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
 
   // File importer state
   const [showFileImporter, setShowFileImporter] = useState(false);
+
+  // Template picker state (Phase 2.2)
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [templateSubtasks, setTemplateSubtasks] = useState<Subtask[]>([]);
 
   // Quick task template state (Feature 4)
   const { patterns } = useTaskPatterns();
@@ -319,8 +324,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     e.preventDefault();
     if (!text.trim()) return;
 
-    // Convert suggested subtasks to proper Subtask objects
-    const subtasks: Subtask[] = suggestedSubtasks.length > 0
+    // Use template subtasks if available, otherwise convert suggested subtasks to proper Subtask objects
+    const subtasks: Subtask[] = templateSubtasks.length > 0
+      ? templateSubtasks
+      : suggestedSubtasks.length > 0
       ? suggestedSubtasks.map((text, index) => ({
           id: `subtask-${Date.now()}-${index}`,
           text,
@@ -336,6 +343,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     }
     resetForm();
     setSuggestedSubtasks([]); // Clear suggested subtasks after creating
+    setTemplateSubtasks([]); // Clear template subtasks after creating
   };
 
   // Check if input might benefit from AI parsing
@@ -405,6 +413,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     setShowOptions(false);
     setParsedResult(null);
     setSuggestedSubtasks([]);
+    setTemplateSubtasks([]); // Clear template subtasks (Phase 2.2)
     setPatternDismissed(false); // Reset so new pattern can be detected on next input
   };
 
@@ -503,6 +512,55 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     }
   };
 
+  // Handle template selection from TemplatePicker (Phase 2.2)
+  const handleTemplateSelect = useCallback((
+    templateText: string,
+    templatePriority: TodoPriority,
+    templateAssignedTo?: string,
+    templateSubtasks?: Subtask[]
+  ) => {
+    setText(templateText);
+    setPriority(templatePriority);
+    if (templateAssignedTo && users.includes(templateAssignedTo)) {
+      setAssignedTo(templateAssignedTo);
+    }
+    if (templateSubtasks && templateSubtasks.length > 0) {
+      setTemplateSubtasks(templateSubtasks);
+    } else {
+      setTemplateSubtasks([]);
+    }
+    setShowOptions(true);
+    setShowTemplatePicker(false);
+    
+    // Focus the textarea and expand options so user can review/edit
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+
+    toast.success('Template applied', {
+      description: 'Review and adjust fields as needed',
+    });
+  }, [users, toast]);
+
+  // Keyboard shortcut for template picker (Cmd+T)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+        const target = e.target as HTMLElement;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        // Only trigger if we're inside the AddTodo form
+        if (isInputField && textareaRef.current === target) {
+          e.preventDefault();
+          setShowTemplatePicker(prev => !prev);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <>
       {/* AI Pattern Detection Indicator (Feature 4) */}
@@ -580,14 +638,26 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
 
             {/* Action buttons - grouped dock style */}
             <div className="flex gap-3 flex-shrink-0 items-center justify-between">
-              {/* AI Features Menu - consolidates Upload, Voice, and AI Parse */}
-              <AIFeaturesMenu
-                onSmartParse={handleAiClick}
-                onVoiceInput={toggleRecording}
-                onFileImport={() => setShowFileImporter(true)}
-                disabled={isProcessing}
-                voiceSupported={speechSupported}
-              />
+              <div className="flex gap-2 items-center">
+                {/* AI Features Menu - consolidates Upload, Voice, and AI Parse */}
+                <AIFeaturesMenu
+                  onSmartParse={handleAiClick}
+                  onVoiceInput={toggleRecording}
+                  onFileImport={() => setShowFileImporter(true)}
+                  disabled={isProcessing}
+                  voiceSupported={speechSupported}
+                />
+
+                {/* Template Picker - quick-apply saved templates (Phase 2.2) */}
+                <TemplatePicker
+                  currentUserName={currentUserId || ''}
+                  users={users}
+                  compact={true}
+                  isOpen={showTemplatePicker}
+                  onOpenChange={setShowTemplatePicker}
+                  onSelectTemplate={handleTemplateSelect}
+                />
+              </div>
 
               {/* Primary Add button - elevated with shadow for prominence */}
               <button
