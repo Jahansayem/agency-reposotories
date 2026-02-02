@@ -24,7 +24,7 @@ export function useRoleCheck(): RoleCheckResult {
 
   const role: AgencyRole | null = isFeatureEnabled('multi_tenancy')
     ? agencyRole
-    : (currentUser.role as AgencyRole) || null;
+    : (currentUser?.role as AgencyRole) || null;
 
   return {
     isOwner: role === 'owner',
