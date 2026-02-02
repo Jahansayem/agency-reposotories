@@ -139,7 +139,7 @@ export default function NavigationSidebar({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-2 overflow-hidden flex-1"
+              className="flex items-center gap-2 flex-1"
             >
               {/* Show AgencySwitcher when multi-tenancy is enabled */}
               {isMultiTenancyEnabled ? (
