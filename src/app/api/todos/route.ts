@@ -1,10 +1,11 @@
 /**
- * Secure Todos API with Field-Level Encryption
+ * Secure Todos API with Field-Level Encryption & Multi-Tenancy
  *
  * Server-side API for todo operations that handles:
+ * - Agency-scoped access control via withAgencyAuth
+ * - RLS defense-in-depth via set_request_context()
  * - Field-level encryption for PII (transcription, notes)
- * - Proper session validation
- * - Activity logging
+ * - Activity logging with agency_id
  *
  * This API should be used instead of direct Supabase client calls
  * when handling sensitive data like transcriptions.
@@ -14,9 +15,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
-import { validateSession } from '@/lib/sessionValidator';
 import { encryptTodoPII, decryptTodoPII } from '@/lib/fieldEncryption';
 import { verifyTodoAccess } from '@/lib/apiAuth';
+import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 // Use service role key for server-side operations
 const supabase = createClient(
@@ -27,19 +28,21 @@ const supabase = createClient(
 /**
  * GET /api/todos - Fetch todos with decrypted PII fields
  */
-export async function GET(request: NextRequest) {
-  // Validate session
-  const session = await validateSession(request);
-  if (!session.valid || !session.userName) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const includeCompleted = searchParams.get('includeCompleted') === 'true';
 
     let query = supabase.from('todos').select('*');
+
+    // Always scope to agency
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
 
     if (id) {
       // Fetch single todo
@@ -75,19 +78,16 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/todos - Create a new todo with encrypted PII
  */
-export async function POST(request: NextRequest) {
-  // Validate session
-  const session = await validateSession(request);
-  if (!session.valid || !session.userName) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const body = await request.json();
     const {
       text,
@@ -110,21 +110,26 @@ export async function POST(request: NextRequest) {
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    // Build task object
-    const task = {
+    // Build task object with agency_id
+    const task: Record<string, unknown> = {
       id: taskId,
       text: text.trim(),
       completed: false,
       status,
       priority,
       created_at: now,
-      created_by: session.userName,
+      created_by: ctx.userName,
       assigned_to: assignedTo?.trim() || null,
       due_date: dueDate || null,
       notes: notes || null,
       transcription: transcription || null,
       subtasks: subtasks,
     };
+
+    // Set agency_id on insert
+    if (ctx.agencyId) {
+      task.agency_id = ctx.agencyId;
+    }
 
     // Encrypt PII fields before storage
     const encryptedTask = encryptTodoPII(task);
@@ -139,13 +144,14 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Log activity
+    // Log activity with agency_id
     await supabase.from('activity_log').insert({
       action: 'task_created',
       todo_id: taskId,
       todo_text: text.trim().substring(0, 100),
-      user_name: session.userName,
+      user_name: ctx.userName,
       details: { priority, has_transcription: !!transcription },
+      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
     });
 
     logger.info('Todo created with encryption', {
@@ -171,19 +177,16 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PUT /api/todos - Update a todo with encrypted PII
  */
-export async function PUT(request: NextRequest) {
-  // Validate session
-  const session = await validateSession(request);
-  if (!session.valid || !session.userName) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const body = await request.json();
     const { id, ...updates } = body;
 
@@ -195,13 +198,14 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify the user has access to this todo (creator, assigned, or updater)
-    const { todo, error: accessError } = await verifyTodoAccess(id, session.userName);
+    // Pass agencyId for cross-tenant protection
+    const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
     if (accessError) return accessError;
 
     // Build update object
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
-      updated_by: session.userName,
+      updated_by: ctx.userName,
     };
 
     // Copy allowed fields
@@ -228,12 +232,17 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('todos')
       .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('id', id);
+
+    // Scope update to agency
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data, error } = await query.select().single();
 
     if (error) {
       throw error;
@@ -245,7 +254,8 @@ export async function PUT(request: NextRequest) {
         action: updates.completed ? 'task_completed' : 'task_reopened',
         todo_id: id,
         todo_text: data.text?.substring(0, 100),
-        user_name: session.userName,
+        user_name: ctx.userName,
+        ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
       });
     }
 
@@ -271,19 +281,16 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/todos - Delete a todo
  */
-export async function DELETE(request: NextRequest) {
-  // Validate session
-  const session = await validateSession(request);
-  if (!session.valid || !session.userName) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -295,24 +302,33 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify the user has access to this todo (creator, assigned, or updater)
-    const { todo, error: accessError } = await verifyTodoAccess(id, session.userName);
+    // Pass agencyId for cross-tenant protection
+    const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
     if (accessError) return accessError;
 
-    const { error } = await supabase
+    let query = supabase
       .from('todos')
       .delete()
       .eq('id', id);
+
+    // Scope delete to agency
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error } = await query;
 
     if (error) {
       throw error;
     }
 
-    // Log activity
+    // Log activity with agency_id
     await supabase.from('activity_log').insert({
       action: 'task_deleted',
       todo_id: id,
       todo_text: todo.text?.substring(0, 100),
-      user_name: session.userName,
+      user_name: ctx.userName,
+      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
     });
 
     logger.info('Todo deleted', {
@@ -332,4 +348,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

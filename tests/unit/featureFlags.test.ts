@@ -213,7 +213,7 @@ describe('Feature Flags', () => {
   });
 
   describe('getAllFeatureFlags', () => {
-    it('should return all 6 feature flags', () => {
+    it('should return all 7 feature flags', () => {
       const flags = getAllFeatureFlags();
 
       const expectedFlags: FeatureFlag[] = [
@@ -223,13 +223,14 @@ describe('Feature Flags', () => {
         'refactored_components',
         'new_state_management',
         'server_rate_limiting',
+        'multi_tenancy',
       ];
 
       expectedFlags.forEach(flag => {
         expect(flags).toHaveProperty(flag);
       });
 
-      expect(Object.keys(flags)).toHaveLength(6);
+      expect(Object.keys(flags)).toHaveLength(7);
     });
 
     it('should include enabled and description for each flag', () => {

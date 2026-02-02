@@ -13,6 +13,7 @@ import { AppShell, useAppShell } from './layout';
 import { useTodoStore } from '@/store/todoStore';
 import { useTodoData } from '@/hooks';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import SkipLink from './SkipLink';
@@ -78,6 +79,10 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     closeShortcuts,
   } = useAppShell();
   const { theme } = useTheme();
+  const { currentAgencyId } = useAgency();
+
+  // Agency key forces full remount of view components on agency switch (H7 fix)
+  const agencyKey = currentAgencyId || 'default';
 
   // Kick off data fetching & real-time subscriptions so the Zustand store
   // gets populated. This must run here (not only in TodoList) because
@@ -288,6 +293,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       case 'dashboard':
         return (
           <DashboardPage
+            key={agencyKey}
             currentUser={currentUser}
             todos={todos}
             users={users}
@@ -301,6 +307,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       case 'chat':
         return (
           <ChatView
+            key={agencyKey}
             currentUser={currentUser}
             users={usersWithColors}
             onBack={handleChatBack}
@@ -313,6 +320,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // Just switch to tasks view for now
         return (
           <TodoList
+            key={agencyKey}
             currentUser={currentUser}
             onUserChange={onUserChange}
             initialFilter={initialFilter}
@@ -329,6 +337,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // Strategic goals is handled by TodoList internally
         return (
           <TodoList
+            key={agencyKey}
             currentUser={currentUser}
             onUserChange={onUserChange}
             initialFilter={initialFilter}
@@ -345,6 +354,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // Full-featured archive browser
         return (
           <ArchiveView
+            key={agencyKey}
             currentUser={currentUser}
             users={users}
             onRestore={handleRestoreTask}
@@ -357,6 +367,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // AI Inbox view for reviewing AI-derived tasks
         return (
           <AIInbox
+            key={agencyKey}
             items={[]} // TODO: Connect to actual AI inbox state from store
             users={usersWithColors.map(u => u.name)}
             onAccept={handleAIAccept}
@@ -369,6 +380,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       default:
         return (
           <TodoList
+            key={agencyKey}
             currentUser={currentUser}
             onUserChange={onUserChange}
             initialFilter={initialFilter}
@@ -383,6 +395,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     }
   }, [
     activeView,
+    agencyKey,
     currentUser,
     todos,
     users,

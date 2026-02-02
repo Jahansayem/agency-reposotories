@@ -15,7 +15,8 @@ import {
   BarChart2,
   Keyboard,
 } from 'lucide-react';
-import { AuthUser, isOwner } from '@/types/todo';
+import { AuthUser } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 import { useAppShell, ActiveView } from './AppShell';
 import { useAgency } from '@/contexts/AgencyContext';
 import { AgencySwitcher } from '@/components/AgencySwitcher';
@@ -42,7 +43,7 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   badge?: number;
   badgeColor?: string;
-  ownerOnly?: boolean;
+  permission?: 'can_view_strategic_goals' | 'can_view_archive' | 'can_view_dashboard' | 'can_view_activity_feed';
 }
 
 const primaryNavItems: NavItem[] = [
@@ -52,8 +53,8 @@ const primaryNavItems: NavItem[] = [
 ];
 
 const secondaryNavItems: NavItem[] = [
-  { id: 'goals', label: 'Strategic Goals', icon: Target, ownerOnly: true },
-  { id: 'archive', label: 'Archive', icon: Archive },
+  { id: 'goals', label: 'Strategic Goals', icon: Target, permission: 'can_view_strategic_goals' },
+  { id: 'archive', label: 'Archive', icon: Archive, permission: 'can_view_archive' },
 ];
 
 export default function NavigationSidebar({
@@ -71,6 +72,14 @@ export default function NavigationSidebar({
     openRightPanel,
     triggerNewTask,
   } = useAppShell();
+
+  // Permission checks for gated nav items
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canViewArchive = usePermission('can_view_archive');
+  const permissionMap: Record<string, boolean> = {
+    can_view_strategic_goals: canViewStrategicGoals,
+    can_view_archive: canViewArchive,
+  };
 
   // Multi-tenancy context
   const { currentAgency, isMultiTenancyEnabled } = useAgency();
@@ -141,7 +150,7 @@ export default function NavigationSidebar({
               {isMultiTenancyEnabled ? (
                 <div className="relative flex-1">
                   <AgencySwitcher
-                    size="sm"
+                    size="md"
                     showRole={false}
                     onCreateAgency={() => setShowCreateAgencyModal(true)}
                     onManageMembers={() => setShowMembersModal(true)}
@@ -257,7 +266,7 @@ export default function NavigationSidebar({
 
         {/* Secondary Navigation */}
         {secondaryNavItems
-          .filter(item => !item.ownerOnly || isOwner(currentUser))
+          .filter(item => !item.permission || permissionMap[item.permission] !== false)
           .map(item => {
             const Icon = item.icon;
             const isActive = activeView === item.id;

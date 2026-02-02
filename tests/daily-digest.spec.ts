@@ -44,8 +44,8 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
     await page.waitForTimeout(500);
   }
 
-  // Wait for main app
-  await page.waitForTimeout(1000);
+  // Wait for main app to load
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Daily Digest Tests', () => {

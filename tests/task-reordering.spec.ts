@@ -34,7 +34,7 @@ async function login(page: any) {
   await page.click('[data-testid="login-button"]');
 
   // Wait for main app to load
-  await page.waitForSelector('[data-testid="add-task-input"]', { timeout: 10000 });
+  await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 15000 });
 }
 
 // Helper: Create a test task

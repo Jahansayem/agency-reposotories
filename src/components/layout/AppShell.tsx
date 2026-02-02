@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser, isOwner } from '@/types/todo';
+import { AuthUser } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 import { useTodoStore } from '@/store/todoStore';
 import NavigationSidebar from './NavigationSidebar';
 import CommandPalette from './CommandPalette';
@@ -442,6 +443,7 @@ export default function AppShell({
 function MobileMenuContent({ onClose }: { onClose: () => void }) {
   const { theme } = useTheme();
   const { setActiveView, currentUser } = useAppShell();
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
 
   const menuItems = [
     { id: 'tasks', label: 'Tasks', icon: '📋' },
@@ -474,7 +476,7 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
         </button>
       ))}
 
-      {isOwner(currentUser) && (
+      {canViewStrategicGoals && (
         <>
           <div className={`border-t my-4 ${'border-[var(--border)]'}`} />
           <button

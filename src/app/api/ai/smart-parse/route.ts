@@ -11,6 +11,7 @@ import {
   withAiErrorHandling,
   ParsedSubtask,
 } from '@/lib/aiApiHelper';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 export interface SmartParseResult {
   mainTask: {
@@ -233,4 +234,6 @@ async function handleSmartParse(request: NextRequest) {
   return aiSuccessResponse({ result: validatedResult });
 }
 
-export const POST = withAiErrorHandling('SmartParseAPI', handleSmartParse);
+export const POST = withAiErrorHandling('SmartParseAPI', withSessionAuth(async (request) => {
+  return handleSmartParse(request);
+}));

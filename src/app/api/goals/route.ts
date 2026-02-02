@@ -1,59 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Legacy owner name for backward compatibility
-const LEGACY_OWNER_NAME = 'Derrick';
-
-/**
- * Verify owner access by checking user's role in database
- * Falls back to name check for backward compatibility
- */
-async function verifyOwnerAccess(userName: string | null): Promise<boolean> {
-  if (!userName) return false;
-
-  try {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('name', userName)
-      .single();
-
-    if (error || !user) {
-      // Fall back to legacy name check
-      return userName === LEGACY_OWNER_NAME;
-    }
-
-    // Check role first, then fall back to legacy name check
-    if (user.role === 'owner' || user.role === 'admin') {
-      return true;
-    }
-
-    // Legacy fallback
-    return userName === LEGACY_OWNER_NAME;
-  } catch {
-    // On error, fall back to legacy check
-    return userName === LEGACY_OWNER_NAME;
-  }
-}
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // GET - Fetch all strategic goals with categories and milestones
-export async function GET(request: NextRequest) {
+export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
-
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId');
-
-    if (!(await verifyOwnerAccess(userName))) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
     let query = supabase
       .from('strategic_goals')
@@ -62,6 +20,7 @@ export async function GET(request: NextRequest) {
         category:goal_categories(*),
         milestones:goal_milestones(*)
       `)
+      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: true });
 
     if (categoryId) {
@@ -77,14 +36,11 @@ export async function GET(request: NextRequest) {
     logger.error('Error fetching goals', error, { component: 'api/goals', action: 'GET' });
     return NextResponse.json({ error: 'Failed to fetch goals' }, { status: 500 });
   }
-}
+});
 
 // POST - Create a new strategic goal
-export async function POST(request: NextRequest) {
+export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
-
     const body = await request.json();
     const {
       title,
@@ -97,20 +53,15 @@ export async function POST(request: NextRequest) {
       notes,
     } = body;
 
-    const created_by = userName;
-
-    if (!(await verifyOwnerAccess(created_by))) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (!title) {
+      return NextResponse.json({ error: 'title is required' }, { status: 400 });
     }
 
-    if (!title || !created_by) {
-      return NextResponse.json({ error: 'title and created_by are required' }, { status: 400 });
-    }
-
-    // Get max display_order for new goal
+    // Get max display_order for new goal within this agency
     const { data: maxOrderData } = await supabase
       .from('strategic_goals')
       .select('display_order')
+      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: false })
       .limit(1)
       .single();
@@ -129,7 +80,8 @@ export async function POST(request: NextRequest) {
         target_value: target_value || null,
         notes: notes || null,
         display_order: nextOrder,
-        created_by,
+        created_by: ctx.userName,
+        agency_id: ctx.agencyId,
       })
       .select(`
         *,
@@ -145,14 +97,11 @@ export async function POST(request: NextRequest) {
     logger.error('Error creating goal', error, { component: 'api/goals', action: 'POST' });
     return NextResponse.json({ error: 'Failed to create goal' }, { status: 500 });
   }
-}
+});
 
 // PUT - Update a strategic goal
-export async function PUT(request: NextRequest) {
+export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
-
     const body = await request.json();
     const {
       id,
@@ -168,12 +117,6 @@ export async function PUT(request: NextRequest) {
       notes,
       display_order,
     } = body;
-
-    const updated_by = userName;
-
-    if (!(await verifyOwnerAccess(updated_by))) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -199,6 +142,7 @@ export async function PUT(request: NextRequest) {
       .from('strategic_goals')
       .update(updateData)
       .eq('id', id)
+      .eq('agency_id', ctx.agencyId)
       .select(`
         *,
         category:goal_categories(*),
@@ -213,20 +157,13 @@ export async function PUT(request: NextRequest) {
     logger.error('Error updating goal', error, { component: 'api/goals', action: 'PUT' });
     return NextResponse.json({ error: 'Failed to update goal' }, { status: 500 });
   }
-}
+});
 
 // DELETE - Delete a strategic goal
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-
-    if (!(await verifyOwnerAccess(userName))) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -235,7 +172,8 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase
       .from('strategic_goals')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('agency_id', ctx.agencyId);
 
     if (error) throw error;
 
@@ -244,4 +182,4 @@ export async function DELETE(request: NextRequest) {
     logger.error('Error deleting goal', error, { component: 'api/goals', action: 'DELETE' });
     return NextResponse.json({ error: 'Failed to delete goal' }, { status: 500 });
   }
-}
+});

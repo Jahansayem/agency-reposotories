@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import { logger } from '@/lib/logger';
 
 // Create Supabase client lazily to avoid build-time initialization
@@ -17,12 +17,11 @@ function getSupabase() {
 
 /**
  * POST /api/push-subscribe
- * Store a web push subscription for a user
+ * Store a web push subscription for a user.
+ * Push tokens are user-scoped (not agency-scoped) since a device token
+ * is valid regardless of which agency the user is viewing.
  */
-export async function POST(request: NextRequest) {
-  const { userName, error: authError } = await extractAndValidateUserName(request);
-  if (authError) return authError;
-
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
     const { subscription } = body;
@@ -34,14 +33,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a single Supabase client for this request
     const supabase = getSupabase();
 
-    // Look up the authenticated user's ID from the database instead of trusting body
+    // Look up the authenticated user's ID from the database
     const { data: userRecord, error: userLookupError } = await supabase
       .from('users')
       .select('id')
-      .eq('name', userName)
+      .eq('name', ctx.userName)
       .single();
 
     if (userLookupError || !userRecord) {
@@ -64,9 +62,7 @@ export async function POST(request: NextRequest) {
     // Store the full subscription as JSON string in the token field
     const subscriptionToken = JSON.stringify(subscription);
 
-    // Delete existing web tokens for this user, then insert the new one.
-    // This is safer than upsert with onConflict since the DB may not have
-    // a unique constraint on (user_id, platform).
+    // Delete existing web tokens for this user, then insert the new one
     const { error: deleteError } = await supabase
       .from('device_tokens')
       .delete()
@@ -75,7 +71,6 @@ export async function POST(request: NextRequest) {
 
     if (deleteError) {
       logger.error('Error deleting old subscription', deleteError, { component: 'push-subscribe' });
-      // Continue anyway - insert may still work
     }
 
     const { error } = await supabase
@@ -88,9 +83,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      // Handle duplicate token gracefully (race condition: two requests inserted simultaneously)
       if (error.code === '23505') {
-        // Unique constraint violation - subscription already exists, treat as success
         return NextResponse.json({ success: true });
       }
       logger.error('Error storing push subscription', error, { component: 'push-subscribe' });
@@ -108,28 +101,24 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/push-subscribe
  * Remove a web push subscription for a user
  */
-export async function DELETE(request: NextRequest) {
-  const { userName, error: authError } = await extractAndValidateUserName(request);
-  if (authError) return authError;
-
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
     const { subscription } = body;
 
-    // Create a single Supabase client for this request
     const supabase = getSupabase();
 
-    // Look up the authenticated user's ID from the database instead of trusting body
+    // Look up the authenticated user's ID
     const { data: userRecord, error: userLookupError } = await supabase
       .from('users')
       .select('id')
-      .eq('name', userName)
+      .eq('name', ctx.userName)
       .single();
 
     if (userLookupError || !userRecord) {
@@ -141,8 +130,6 @@ export async function DELETE(request: NextRequest) {
 
     const userId = userRecord.id;
 
-    // If subscription provided, delete that specific one
-    // Otherwise, delete all web subscriptions for user
     if (subscription) {
       const subscriptionToken = JSON.stringify(subscription);
 
@@ -185,25 +172,21 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/push-subscribe
  * Check if user has an active web push subscription
  */
-export async function GET(request: NextRequest) {
-  const { userName, error: authError } = await extractAndValidateUserName(request);
-  if (authError) return authError;
-
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    // Create a single Supabase client for this request
     const supabase = getSupabase();
 
-    // Look up the authenticated user's ID from the database instead of trusting query params
+    // Look up the authenticated user's ID
     const { data: userRecord, error: userLookupError } = await supabase
       .from('users')
       .select('id')
-      .eq('name', userName)
+      .eq('name', ctx.userName)
       .single();
 
     if (userLookupError || !userRecord) {
@@ -223,7 +206,6 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      // PGRST116 = no rows returned, which is fine
       logger.error('Error checking subscription', error, { component: 'push-subscribe' });
       return NextResponse.json(
         { success: false, error: 'Failed to check subscription' },
@@ -243,4 +225,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

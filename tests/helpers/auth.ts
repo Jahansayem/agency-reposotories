@@ -23,13 +23,9 @@ export async function loginAsUser(page: any, userName: string, pin: string) {
   }
 
   // Wait for auto-submit and main app to load
-  // The app loads on the Dashboard view by default
-  await page.waitForSelector('text=Good morning', { timeout: 2000 }).catch(() =>
-    page.waitForSelector('text=Good afternoon', { timeout: 2000 }).catch(() =>
-      page.waitForSelector('text=Good evening', { timeout: 2000 })
-    )
-  ).catch(() => {
-    // If greeting not found, just wait for any content to load
-    return page.waitForTimeout(1000);
+  // The sidebar navigation landmark is always present after login
+  await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 15000 }).catch(() => {
+    // Fallback: wait for any content to load
+    return page.waitForTimeout(2000);
   });
 }

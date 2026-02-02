@@ -13,6 +13,7 @@ import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 import { WaitingStatusBadge, WaitingBadge } from './WaitingStatusBadge';
 import { sanitizeTranscription } from '@/lib/sanitize';
 import { haptics } from '@/lib/haptics';
+import { usePermission } from '@/hooks/usePermission';
 
 // Map priority levels to Badge variants
 const PRIORITY_TO_BADGE_VARIANT: Record<TodoPriority, 'danger' | 'warning' | 'info' | 'default'> = {
@@ -105,7 +106,8 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
       {!isEditing && !subtask.completed && (
         <button
           onClick={() => setIsEditing(true)}
-          className="p-1.5 -m-1 text-[var(--text-light)] hover:text-[var(--accent)] active:text-[var(--accent-hover)] rounded transition-colors touch-manipulation opacity-0 group-hover:opacity-100 sm:opacity-100"
+          className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--text-light)] hover:text-[var(--accent)] active:text-[var(--accent-hover)] rounded transition-colors touch-manipulation opacity-0 group-hover:opacity-100 sm:opacity-100"
+          aria-label="Edit subtask"
         >
           <Pencil className="w-3.5 h-3.5" />
         </button>
@@ -114,7 +116,8 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
       {/* Delete button */}
       <button
         onClick={() => onDelete(subtask.id)}
-        className="p-1.5 -m-1 text-[var(--text-light)] hover:text-[var(--danger)] active:text-[var(--danger)] rounded transition-colors touch-manipulation"
+        className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--text-light)] hover:text-[var(--danger)] active:text-[var(--danger)] rounded transition-colors touch-manipulation"
+        aria-label="Delete subtask"
       >
         <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       </button>
@@ -300,6 +303,10 @@ function TodoItemComponent({
   onOpenDetail,
 }: TodoItemProps) {
   const [expanded, setExpanded] = useState(false);
+
+  // Permission check: can delete tasks (or own tasks)
+  const canDeleteTasks = usePermission('can_delete_tasks');
+  const canDeleteThisTask = canDeleteTasks || todo.created_by === currentUserName;
 
   // Auto-expand when triggered from external navigation (e.g., dashboard task click)
   useEffect(() => {
@@ -1213,16 +1220,18 @@ function TodoItemComponent({
 
                     <div className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />
 
-                    {/* Delete - shows confirmation */}
-                    <button
-                      ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                      role="menuitem"
-                      onClick={() => { setShowDeleteConfirm(true); setShowActionsMenu(false); }}
-                      className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] focus:bg-[var(--danger-light)] focus:outline-none text-[var(--danger)] flex items-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" aria-hidden="true" />
-                      Delete
-                    </button>
+                    {/* Delete - shows confirmation (gated on can_delete_tasks permission or own task) */}
+                    {canDeleteThisTask && (
+                      <button
+                        ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                        role="menuitem"
+                        onClick={() => { setShowDeleteConfirm(true); setShowActionsMenu(false); }}
+                        className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] focus:bg-[var(--danger-light)] focus:outline-none text-[var(--danger)] flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" aria-hidden="true" />
+                        Delete
+                      </button>
+                    )}
                   </div>
                 );
               })(),

@@ -33,7 +33,7 @@ export function createMockAuthUser(overrides?: Partial<AuthUser>): AuthUser {
     id: faker.string.uuid(),
     name: faker.person.firstName(),
     color: faker.helpers.arrayElement(USER_COLORS),
-    role: 'member',
+    role: 'staff',
     created_at: faker.date.past().toISOString(),
     last_login: faker.date.recent().toISOString(),
     streak_count: faker.number.int({ min: 0, max: 30 }),
@@ -46,7 +46,7 @@ export function createMockAuthUser(overrides?: Partial<AuthUser>): AuthUser {
  */
 export function createMockAdminUser(overrides?: Partial<AuthUser>): AuthUser {
   return createMockAuthUser({
-    role: 'admin',
+    role: 'manager',
     name: 'Derrick',
     ...overrides,
   });

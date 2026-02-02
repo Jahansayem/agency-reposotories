@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { generateAgencySlug, DEFAULT_PERMISSIONS, SUBSCRIPTION_LIMITS } from '@/types/agency';
-import type { CreateAgencyRequest, Agency } from '@/types/agency';
+import type { Agency } from '@/types/agency';
+import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { apiErrorResponse } from '@/lib/apiResponse';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/agencies
  * Create a new agency
  *
- * Access: Owner-only (Derrick) or system administrators
+ * Access: Any authenticated user can create an agency.
+ * The creating user becomes the owner of the new agency.
  *
  * Request body:
  * {
@@ -16,26 +20,19 @@ import type { CreateAgencyRequest, Agency } from '@/types/agency';
  *   logo_url?: string;      // Logo URL (optional)
  *   primary_color?: string; // Hex color (defaults to Allstate Blue)
  *   secondary_color?: string; // Hex color (defaults to Sky Blue)
- *   created_by: string;     // User name creating the agency (becomes owner)
  * }
  */
 export async function POST(request: NextRequest) {
   try {
-    const body: CreateAgencyRequest & { created_by: string } = await request.json();
+    // Authenticate via session — any authenticated user can create
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
+
+    const body = await request.json();
 
     // Validation
     if (!body.name?.trim()) {
-      return NextResponse.json(
-        { error: 'Agency name is required' },
-        { status: 400 }
-      );
-    }
-
-    if (!body.created_by?.trim()) {
-      return NextResponse.json(
-        { error: 'created_by (user name) is required' },
-        { status: 400 }
-      );
+      return apiErrorResponse('VALIDATION_ERROR', 'Agency name is required');
     }
 
     // Generate slug if not provided
@@ -49,35 +46,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingAgency) {
-      return NextResponse.json(
-        { error: 'An agency with this name already exists. Please choose a different name.' },
-        { status: 409 }
-      );
+      return apiErrorResponse('DUPLICATE_SLUG', 'An agency with this name already exists. Please choose a different name.', 409);
     }
 
-    // Get the user who is creating the agency
+    // Get the authenticated user's record
     const { data: creator } = await supabase
       .from('users')
       .select('id, name, role')
-      .eq('name', body.created_by)
+      .eq('name', userName)
       .single();
 
     if (!creator) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Authorization: Only system owners (Derrick) can create agencies
-    // In the future, this could be expanded to allow any user (multi-tenant SaaS model)
-    const isSystemOwner = creator.role === 'owner' || creator.name === 'Derrick';
-
-    if (!isSystemOwner) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Only system administrators can create agencies.' },
-        { status: 403 }
-      );
+      return apiErrorResponse('NOT_FOUND', 'User not found', 404);
     }
 
     // Default values
@@ -104,11 +84,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (agencyError) {
-      console.error('Failed to create agency:', agencyError);
-      return NextResponse.json(
-        { error: 'Failed to create agency', details: agencyError.message },
-        { status: 500 }
-      );
+      logger.error('Failed to create agency', agencyError, { component: 'api/agencies', action: 'POST' });
+      return apiErrorResponse('INSERT_FAILED', 'Failed to create agency', 500);
     }
 
     // Assign the creator as owner of the new agency
@@ -124,14 +101,11 @@ export async function POST(request: NextRequest) {
       });
 
     if (memberError) {
-      console.error('Failed to assign creator as owner:', memberError);
+      logger.error('Failed to assign creator as owner', memberError, { component: 'api/agencies', action: 'POST' });
       // Rollback: delete the agency
       await supabase.from('agencies').delete().eq('id', newAgency.id);
 
-      return NextResponse.json(
-        { error: 'Failed to assign owner to agency', details: memberError.message },
-        { status: 500 }
-      );
+      return apiErrorResponse('INSERT_FAILED', 'Failed to assign owner to agency', 500);
     }
 
     // Log activity
@@ -146,7 +120,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (logError) {
-      console.error('Failed to log activity:', logError);
+      logger.error('Failed to log activity', logError, { component: 'api/agencies', action: 'POST' });
       // Don't fail the request if logging fails
     }
 
@@ -157,73 +131,67 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unexpected error in POST /api/agencies:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    logger.error('Unexpected error in POST /api/agencies', error, { component: 'api/agencies', action: 'POST' });
+    return apiErrorResponse('INTERNAL_ERROR', 'Internal server error', 500);
   }
 }
 
 /**
  * GET /api/agencies
- * List all agencies (optionally filtered by user membership)
+ * List agencies the authenticated user belongs to.
  *
- * Query params:
- * - user_id: Filter agencies by user membership (optional)
+ * Access: Authenticated users only. Returns only agencies the user is a member of.
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('user_id');
+    // Authenticate via session
+    const { userName, error: authError } = await extractAndValidateUserName(request);
+    if (authError) return authError;
 
-    if (userId) {
-      // Get agencies for specific user
-      const { data, error } = await supabase
-        .from('agency_members')
-        .select(`
-          agency_id,
-          role,
-          status,
-          agencies!inner (
-            id,
-            name,
-            slug,
-            logo_url,
-            primary_color,
-            is_active
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .eq('agencies.is_active', true);
+    // Look up the user's ID from the validated session name
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('name', userName)
+      .single();
 
-      if (error) throw error;
-
-      const agencies = (data || []).map((m: any) => ({
-        ...m.agencies,
-        user_role: m.role,
-      }));
-
-      return NextResponse.json({ agencies });
-    } else {
-      // Get all active agencies
-      const { data, error } = await supabase
-        .from('agencies')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-
-      return NextResponse.json({ agencies: data || [] });
+    if (userError || !user) {
+      return apiErrorResponse('NOT_FOUND', 'User not found', 404);
     }
 
+    // Get agencies for the authenticated user only
+    const { data, error } = await supabase
+      .from('agency_members')
+      .select(`
+        agency_id,
+        role,
+        status,
+        is_default_agency,
+        agencies!inner (
+          id,
+          name,
+          slug,
+          logo_url,
+          primary_color,
+          is_active
+        )
+      `)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .eq('agencies.is_active', true);
+
+    if (error) throw error;
+
+    const agencies = (data || []).map((m: any) => ({
+      ...m.agencies,
+      user_role: m.role,
+      is_default: m.is_default_agency,
+    }));
+
+    return NextResponse.json({ agencies });
+
   } catch (error) {
-    console.error('Error in GET /api/agencies:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch agencies', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    logger.error('Error in GET /api/agencies', error, { component: 'api/agencies', action: 'GET' });
+    return apiErrorResponse('INTERNAL_ERROR', 'Failed to fetch agencies', 500);
   }
 }

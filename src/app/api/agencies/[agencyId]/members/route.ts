@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { DEFAULT_PERMISSIONS } from '@/types/agency';
 import type { AgencyRole } from '@/types/agency';
+import { apiErrorResponse } from '@/lib/apiResponse';
+import { logger } from '@/lib/logger';
 
 /**
  * GET /api/agencies/[agencyId]/members
@@ -52,11 +54,8 @@ export async function GET(
     return NextResponse.json({ members });
 
   } catch (error) {
-    console.error('Error fetching agency members:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch members', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    logger.error('Error fetching agency members', error, { component: 'api/agencies/members', action: 'GET' });
+    return apiErrorResponse('INTERNAL_ERROR', 'Failed to fetch members', 500);
   }
 }
 
@@ -76,10 +75,7 @@ export async function POST(
     const { user_name, role, requested_by } = body;
 
     if (!user_name || !role || !requested_by) {
-      return NextResponse.json(
-        { error: 'user_name, role, and requested_by are required' },
-        { status: 400 }
-      );
+      return apiErrorResponse('VALIDATION_ERROR', 'user_name, role, and requested_by are required');
     }
 
     // Verify requesting user has permission (owner or admin)
@@ -90,11 +86,8 @@ export async function POST(
       .eq('user_id', (await supabase.from('users').select('id').eq('name', requested_by).single()).data?.id)
       .single();
 
-    if (!requester || (requester.role !== 'owner' && requester.role !== 'admin')) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Only agency owners and admins can add members.' },
-        { status: 403 }
-      );
+    if (!requester || (requester.role !== 'owner' && requester.role !== 'manager')) {
+      return apiErrorResponse('FORBIDDEN', 'Only agency owners and managers can add members', 403);
     }
 
     // Get user to add
@@ -105,10 +98,7 @@ export async function POST(
       .single();
 
     if (userError || !userToAdd) {
-      return NextResponse.json(
-        { error: `User "${user_name}" not found` },
-        { status: 404 }
-      );
+      return apiErrorResponse('NOT_FOUND', `User "${user_name}" not found`, 404);
     }
 
     // Check if already a member
@@ -120,10 +110,7 @@ export async function POST(
       .single();
 
     if (existingMember) {
-      return NextResponse.json(
-        { error: `${user_name} is already a member of this agency` },
-        { status: 409 }
-      );
+      return apiErrorResponse('DUPLICATE_MEMBER', `${user_name} is already a member of this agency`, 409);
     }
 
     // Add user to agency
@@ -143,11 +130,8 @@ export async function POST(
       .single();
 
     if (insertError) {
-      console.error('Failed to add member:', insertError);
-      return NextResponse.json(
-        { error: 'Failed to add member', details: insertError.message },
-        { status: 500 }
-      );
+      logger.error('Failed to add member', insertError, { component: 'api/agencies/members', action: 'POST' });
+      return apiErrorResponse('INSERT_FAILED', 'Failed to add member', 500);
     }
 
     // Log activity
@@ -162,7 +146,7 @@ export async function POST(
         },
       });
     } catch (logError) {
-      console.error('Failed to log activity:', logError);
+      logger.error('Failed to log activity', logError, { component: 'api/agencies/members', action: 'POST' });
     }
 
     return NextResponse.json({
@@ -172,11 +156,8 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error adding member:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    logger.error('Error adding member', error, { component: 'api/agencies/members', action: 'POST' });
+    return apiErrorResponse('INTERNAL_ERROR', 'Internal server error', 500);
   }
 }
 
@@ -197,10 +178,7 @@ export async function DELETE(
     const requestedBy = searchParams.get('requested_by');
 
     if (!memberId || !requestedBy) {
-      return NextResponse.json(
-        { error: 'memberId and requested_by are required' },
-        { status: 400 }
-      );
+      return apiErrorResponse('VALIDATION_ERROR', 'memberId and requested_by are required');
     }
 
     // Verify requesting user has permission
@@ -211,11 +189,8 @@ export async function DELETE(
       .eq('user_id', (await supabase.from('users').select('id').eq('name', requestedBy).single()).data?.id)
       .single();
 
-    if (!requester || (requester.role !== 'owner' && requester.role !== 'admin')) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Only agency owners and admins can remove members.' },
-        { status: 403 }
-      );
+    if (!requester || (requester.role !== 'owner' && requester.role !== 'manager')) {
+      return apiErrorResponse('FORBIDDEN', 'Only agency owners and managers can remove members', 403);
     }
 
     // Get member to remove
@@ -227,18 +202,12 @@ export async function DELETE(
       .single();
 
     if (!memberToRemove) {
-      return NextResponse.json(
-        { error: 'Member not found' },
-        { status: 404 }
-      );
+      return apiErrorResponse('NOT_FOUND', 'Member not found', 404);
     }
 
     // Can't remove owners (unless you're also an owner)
     if (memberToRemove.role === 'owner' && requester.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Only owners can remove other owners' },
-        { status: 403 }
-      );
+      return apiErrorResponse('FORBIDDEN', 'Only owners can remove other owners', 403);
     }
 
     // Delete the membership
@@ -248,11 +217,8 @@ export async function DELETE(
       .eq('id', memberId);
 
     if (deleteError) {
-      console.error('Failed to remove member:', deleteError);
-      return NextResponse.json(
-        { error: 'Failed to remove member', details: deleteError.message },
-        { status: 500 }
-      );
+      logger.error('Failed to remove member', deleteError, { component: 'api/agencies/members', action: 'DELETE' });
+      return apiErrorResponse('DELETE_FAILED', 'Failed to remove member', 500);
     }
 
     // Log activity
@@ -266,7 +232,7 @@ export async function DELETE(
         },
       });
     } catch (logError) {
-      console.error('Failed to log activity:', logError);
+      logger.error('Failed to log activity', logError, { component: 'api/agencies/members', action: 'DELETE' });
     }
 
     return NextResponse.json({
@@ -275,10 +241,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error removing member:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    logger.error('Error removing member', error, { component: 'api/agencies/members', action: 'DELETE' });
+    return apiErrorResponse('INTERNAL_ERROR', 'Internal server error', 500);
   }
 }

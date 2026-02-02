@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
 import { logger } from '@/lib/logger';
+import { withAgencyAdminAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 /**
  * POST /api/patterns/analyze
  *
  * Analyzes completed tasks from the last 90 days to identify patterns
  * and update the task_patterns table for smart suggestions.
+ *
+ * Requires owner/manager role (withAgencyAdminAuth).
+ * Scoped to the caller's agency.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -33,16 +37,23 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    // Fetch completed tasks from last 90 days
+    // Fetch completed tasks from last 90 days, scoped to agency
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data: completedTasks, error: fetchError } = await supabase
+    let query = supabase
       .from('todos')
       .select('*')
       .eq('completed', true)
       .gte('created_at', ninetyDaysAgo)
       .order('created_at', { ascending: false })
       .limit(500);
+
+    // Scope to agency
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: completedTasks, error: fetchError } = await query;
 
     if (fetchError) {
       logger.error('Failed to fetch completed tasks', fetchError, { component: 'patterns/analyze' });
@@ -134,7 +145,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
       );
     }
 
-    // Upsert patterns into database
+    // Upsert patterns into database with agency_id
     let upsertedCount = 0;
     for (const pattern of patterns.patterns || []) {
       const { error: upsertError } = await supabase
@@ -147,6 +158,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
             avg_priority: pattern.avg_priority,
             common_subtasks: pattern.suggested_subtasks,
             updated_at: new Date().toISOString(),
+            ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
           },
           {
             onConflict: 'pattern_text',
@@ -173,4 +185,4 @@ Group similar tasks together and extract common subtask patterns. Only include p
       { status: 500 }
     );
   }
-}
+});

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
-import { AlertCircle, ChevronLeft, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronUp, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap, Ticket, Loader2, Check, Building2 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import {
   isValidPin,
@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { OAuthLoginButtons } from './OAuthLoginButtons';
 import RegisterModal from './RegisterModal';
 import { ContextualErrorMessages } from '@/lib/errorMessages';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
@@ -158,7 +159,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         .select('id, name, color, role, created_at, last_login')
         .order('name');
       if (data) {
-        setUsers(data.map(u => ({ ...u, role: u.role || 'member' })));
+        setUsers(data.map(u => ({ ...u, role: u.role || 'staff' })));
       }
       setLoading(false);
     };
@@ -639,6 +640,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       )}
 
                       <OAuthLoginButtons />
+
+                      {/* Invite Code Section */}
+                      <InviteCodeSection />
                     </div>
                   </div>
                 </motion.div>
@@ -796,6 +800,309 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       />
     </div>
     </MotionConfig>
+  );
+}
+
+// Invite code section for joining agencies
+function InviteCodeSection() {
+  const [expanded, setExpanded] = useState(false);
+  const [token, setToken] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [validatedInvite, setValidatedInvite] = useState<{
+    agency_name: string;
+    role: string;
+    email: string;
+    expires_at: string;
+  } | null>(null);
+  const [accepted, setAccepted] = useState(false);
+
+  // New user registration fields
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPin, setNewPin] = useState('');
+
+  const handleValidate = async () => {
+    if (!token.trim()) {
+      setInviteError('Please enter an invitation token');
+      return;
+    }
+
+    setIsValidating(true);
+    setInviteError(null);
+    setValidatedInvite(null);
+
+    try {
+      const response = await fetchWithCsrf('/api/invitations/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
+        throw new Error(data.error || 'Invalid or expired invitation');
+      }
+
+      setValidatedInvite({
+        agency_name: data.agency_name,
+        role: data.role,
+        email: data.email,
+        expires_at: data.expires_at,
+      });
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to validate invitation');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleAccept = async () => {
+    setIsAccepting(true);
+    setInviteError(null);
+
+    try {
+      // Check if user is logged in
+      const session = localStorage.getItem('todoSession');
+      let payload: Record<string, unknown> = { token: token.trim() };
+
+      if (isNewUser) {
+        if (!newName.trim()) {
+          setInviteError('Please enter your name');
+          setIsAccepting(false);
+          return;
+        }
+        if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+          setInviteError('Please enter a 4-digit PIN');
+          setIsAccepting(false);
+          return;
+        }
+        payload = {
+          ...payload,
+          is_new_user: true,
+          name: newName.trim(),
+          pin: newPin,
+        };
+      } else if (session) {
+        const parsed = JSON.parse(session);
+        payload = {
+          ...payload,
+          is_new_user: false,
+          name: parsed.userName,
+        };
+      } else {
+        // No session and not new user -- prompt to create account
+        setIsNewUser(true);
+        setIsAccepting(false);
+        return;
+      }
+
+      const response = await fetchWithCsrf('/api/invitations/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to accept invitation');
+      }
+
+      setAccepted(true);
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to accept invitation');
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setToken('');
+    setValidatedInvite(null);
+    setInviteError(null);
+    setAccepted(false);
+    setIsNewUser(false);
+    setNewName('');
+    setNewPin('');
+  };
+
+  if (accepted) {
+    return (
+      <div className="p-4 rounded-[var(--radius-xl)] bg-emerald-500/10 border border-emerald-500/20">
+        <div className="flex items-center gap-2 text-emerald-400 text-sm">
+          <Check className="w-4 h-4" />
+          <span className="font-medium">You have joined {validatedInvite?.agency_name}!</span>
+        </div>
+        <p className="text-xs text-white/40 mt-1">Please log in to access the agency workspace.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-center gap-2 py-2 text-xs text-white/40 hover:text-white/60 transition-colors"
+      >
+        <Ticket className="w-3.5 h-3.5" />
+        Have an invite code?
+        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 rounded-[var(--radius-xl)] bg-white/[0.04] border border-white/10 space-y-3">
+              {/* Error */}
+              {inviteError && (
+                <div className="flex items-start gap-2 text-red-400 text-xs bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>{inviteError}</span>
+                </div>
+              )}
+
+              {/* Token input + validate */}
+              {!validatedInvite && (
+                <>
+                  <input
+                    type="text"
+                    value={token}
+                    onChange={(e) => { setToken(e.target.value); setInviteError(null); }}
+                    placeholder="Paste invitation token..."
+                    className="w-full px-3 py-2.5 rounded-[var(--radius-lg)] bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 focus:border-[var(--brand-sky)]/40"
+                  />
+                  <button
+                    onClick={handleValidate}
+                    disabled={isValidating || !token.trim()}
+                    className="w-full py-2.5 px-4 rounded-[var(--radius-lg)] bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isValidating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Validating...
+                      </>
+                    ) : (
+                      'Validate Invitation'
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Validated invite info */}
+              {validatedInvite && !isNewUser && (
+                <>
+                  <div className="p-3 rounded-lg bg-[var(--brand-sky)]/10 border border-[var(--brand-sky)]/20">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Building2 className="w-4 h-4 text-[var(--brand-sky)]" />
+                      <span className="text-sm font-medium text-white">{validatedInvite.agency_name}</span>
+                    </div>
+                    <p className="text-xs text-white/50">
+                      Role: <span className="capitalize text-white/70">{validatedInvite.role}</span>
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleAccept}
+                    disabled={isAccepting}
+                    className="w-full py-2.5 px-4 rounded-[var(--radius-lg)] bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isAccepting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Accept & Join
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleReset}
+                    className="w-full text-xs text-white/40 hover:text-white/60 transition-colors py-1"
+                  >
+                    Use a different code
+                  </button>
+                </>
+              )}
+
+              {/* New user registration fields */}
+              {validatedInvite && isNewUser && (
+                <>
+                  <div className="p-3 rounded-lg bg-[var(--brand-sky)]/10 border border-[var(--brand-sky)]/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="w-4 h-4 text-[var(--brand-sky)]" />
+                      <span className="text-sm font-medium text-white">{validatedInvite.agency_name}</span>
+                    </div>
+                    <p className="text-xs text-white/50">Create an account to join</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">Your Name</label>
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => { setNewName(e.target.value); setInviteError(null); }}
+                      placeholder="e.g., John Smith"
+                      className="w-full px-3 py-2.5 rounded-[var(--radius-lg)] bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">4-Digit PIN</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={newPin}
+                      onChange={(e) => { setNewPin(e.target.value.replace(/\D/g, '')); setInviteError(null); }}
+                      placeholder="****"
+                      className="w-full px-3 py-2.5 rounded-[var(--radius-lg)] bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 tracking-widest text-center font-mono"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleAccept}
+                    disabled={isAccepting}
+                    className="w-full py-2.5 px-4 rounded-[var(--radius-lg)] bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isAccepting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Create Account & Join
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setIsNewUser(false)}
+                    className="w-full text-xs text-white/40 hover:text-white/60 transition-colors py-1"
+                  >
+                    I already have an account
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 

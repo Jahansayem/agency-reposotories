@@ -4,6 +4,12 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+
+// Mock usePermission hook (added during multi-tenancy migration)
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => true,
+}));
+
 import BulkActionBar from '@/components/todo/BulkActionBar';
 
 describe('BulkActionBar', () => {

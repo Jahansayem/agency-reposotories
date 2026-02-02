@@ -227,9 +227,9 @@ test.describe('UserSwitcher - Sign Out Flow', () => {
 });
 
 test.describe('UserSwitcher - Mobile Responsiveness', () => {
-  test.use({ ...devices['iPhone 13'] });
-
   test.beforeEach(async ({ page }) => {
+    // Set iPhone 13 viewport
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);

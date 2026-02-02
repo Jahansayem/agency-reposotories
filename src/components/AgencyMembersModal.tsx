@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Plus, Trash2, Crown, Shield, User as UserIcon, Loader2, AlertCircle, Check } from 'lucide-react';
+import { X, Users, Plus, Trash2, Crown, Shield, User as UserIcon, Loader2, AlertCircle, Check, Mail, Send } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
 import type { AgencyRole } from '@/types/agency';
+import { InvitationForm } from '@/components/InvitationForm';
+import { PendingInvitationsList } from '@/components/PendingInvitationsList';
 
 // ============================================
 // Types
@@ -36,7 +38,7 @@ const getRoleIcon = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
       return <Crown className="w-4 h-4" />;
-    case 'admin':
+    case 'manager':
       return <Shield className="w-4 h-4" />;
     default:
       return <UserIcon className="w-4 h-4" />;
@@ -47,7 +49,7 @@ const getRoleColor = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
       return 'text-yellow-600 dark:text-yellow-500';
-    case 'admin':
+    case 'manager':
       return 'text-blue-600 dark:text-blue-500';
     default:
       return 'text-gray-600 dark:text-gray-400';
@@ -58,7 +60,7 @@ const getRoleBadgeColor = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
       return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
-    case 'admin':
+    case 'manager':
       return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
     default:
       return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300';
@@ -83,13 +85,17 @@ export function AgencyMembersModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Tab state: 'members' | 'invite' | 'pending'
+  const [activeTab, setActiveTab] = useState<'members' | 'invite' | 'pending'>('members');
+  const [invitationRefreshTrigger, setInvitationRefreshTrigger] = useState(0);
+
   // Add member form state
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
-  const [selectedRole, setSelectedRole] = useState<AgencyRole>('member');
+  const [selectedRole, setSelectedRole] = useState<AgencyRole>('staff');
 
   // Check if current user can manage members
-  const canManageMembers = currentRole === 'owner' || currentRole === 'admin';
+  const canManageMembers = currentRole === 'owner' || currentRole === 'manager';
 
   // Load members and available users
   useEffect(() => {
@@ -159,7 +165,7 @@ export function AgencyMembersModal({
       setSuccess(data.message);
       setShowAddForm(false);
       setSelectedUser('');
-      setSelectedRole('member');
+      setSelectedRole('staff');
       await loadMembers(); // Reload list
 
     } catch (err) {
@@ -206,6 +212,7 @@ export function AgencyMembersModal({
       setShowAddForm(false);
       setError(null);
       setSuccess(null);
+      setActiveTab('members');
       onClose();
     }
   };
@@ -268,6 +275,59 @@ export function AgencyMembersModal({
                 </button>
               </div>
 
+              {/* Tabs */}
+              {canManageMembers && (
+                <div className="border-b border-gray-200 dark:border-gray-700 px-6">
+                  <nav className="flex -mb-px gap-4" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTab('members')}
+                      className={`
+                        py-3 px-1 text-sm font-medium border-b-2 transition-colors
+                        ${activeTab === 'members'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        Members
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('invite')}
+                      className={`
+                        py-3 px-1 text-sm font-medium border-b-2 transition-colors
+                        ${activeTab === 'invite'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Send className="w-4 h-4" />
+                        Invite
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('pending')}
+                      className={`
+                        py-3 px-1 text-sm font-medium border-b-2 transition-colors
+                        ${activeTab === 'pending'
+                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Pending
+                      </span>
+                    </button>
+                  </nav>
+                </div>
+              )}
+
               {/* Content */}
               <div className="p-6 space-y-6">
                 {/* Error/Success Messages */}
@@ -285,206 +345,239 @@ export function AgencyMembersModal({
                   </div>
                 )}
 
-                {/* Add Member Button */}
-                {canManageMembers && !showAddForm && (
-                  <button
-                    onClick={() => setShowAddForm(true)}
-                    className="
-                      w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg
-                      border-2 border-dashed border-gray-300 dark:border-gray-600
-                      text-gray-600 dark:text-gray-400
-                      hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50
-                      dark:hover:border-blue-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/20
-                      transition-all
-                    "
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span className="font-medium">Add Team Member</span>
-                  </button>
+                {/* ========== Invite Tab ========== */}
+                {activeTab === 'invite' && canManageMembers && currentAgency && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      Invite a Team Member
+                    </h3>
+                    <InvitationForm
+                      agencyId={currentAgency.id}
+                      currentUserRole={currentRole || 'staff'}
+                      onInvitationSent={() => setInvitationRefreshTrigger((prev) => prev + 1)}
+                    />
+                  </div>
                 )}
 
-                {/* Add Member Form */}
-                {showAddForm && (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg space-y-4">
-                    <h3 className="font-medium text-gray-900 dark:text-white">Add New Member</h3>
+                {/* ========== Pending Tab ========== */}
+                {activeTab === 'pending' && canManageMembers && currentAgency && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      Pending Invitations
+                    </h3>
+                    <PendingInvitationsList
+                      agencyId={currentAgency.id}
+                      currentUserRole={currentRole || 'staff'}
+                      refreshTrigger={invitationRefreshTrigger}
+                    />
+                  </div>
+                )}
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        User Name
-                      </label>
-                      <input
-                        type="text"
-                        value={selectedUser}
-                        onChange={(e) => setSelectedUser(e.target.value)}
-                        placeholder="Enter exact user name (e.g., Sefra)"
-                        disabled={isSubmitting}
+                {/* ========== Members Tab ========== */}
+                {activeTab === 'members' && (
+                  <>
+                    {/* Add Member Button */}
+                    {canManageMembers && !showAddForm && (
+                      <button
+                        onClick={() => setShowAddForm(true)}
                         className="
-                          w-full px-4 py-2 rounded-lg
-                          bg-white dark:bg-gray-700
-                          border border-gray-300 dark:border-gray-600
-                          text-gray-900 dark:text-white
-                          placeholder:text-gray-400
-                          focus:outline-none focus:ring-2 focus:ring-blue-500
-                          disabled:opacity-50
+                          w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg
+                          border-2 border-dashed border-gray-300 dark:border-gray-600
+                          text-gray-600 dark:text-gray-400
+                          hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50
+                          dark:hover:border-blue-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/20
+                          transition-all
                         "
-                      />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        User must already have an account in the system
-                      </p>
-                    </div>
+                      >
+                        <Plus className="w-5 h-5" />
+                        <span className="font-medium">Add Team Member</span>
+                      </button>
+                    )}
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Role
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(['member', 'admin', 'owner'] as AgencyRole[]).map((role) => (
+                    {/* Add Member Form */}
+                    {showAddForm && (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg space-y-4">
+                        <h3 className="font-medium text-gray-900 dark:text-white">Add New Member</h3>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            User Name
+                          </label>
+                          <input
+                            type="text"
+                            value={selectedUser}
+                            onChange={(e) => setSelectedUser(e.target.value)}
+                            placeholder="Enter exact user name (e.g., Sefra)"
+                            disabled={isSubmitting}
+                            className="
+                              w-full px-4 py-2 rounded-lg
+                              bg-white dark:bg-gray-700
+                              border border-gray-300 dark:border-gray-600
+                              text-gray-900 dark:text-white
+                              placeholder:text-gray-400
+                              focus:outline-none focus:ring-2 focus:ring-blue-500
+                              disabled:opacity-50
+                            "
+                          />
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            User must already have an account in the system
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Role
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(['staff', 'manager', 'owner'] as AgencyRole[]).map((role) => (
+                              <button
+                                key={role}
+                                type="button"
+                                onClick={() => setSelectedRole(role)}
+                                disabled={isSubmitting || (role === 'owner' && currentRole !== 'owner')}
+                                className={`
+                                  px-4 py-2 rounded-lg border-2 transition-all
+                                  ${selectedRole === role
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                                  }
+                                  disabled:opacity-50 disabled:cursor-not-allowed
+                                `}
+                              >
+                                <div className="flex items-center gap-2 justify-center">
+                                  {getRoleIcon(role)}
+                                  <span className="capitalize text-sm">{role}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                          {currentRole !== 'owner' && (
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              Only owners can assign the owner role
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
                           <button
-                            key={role}
-                            type="button"
-                            onClick={() => setSelectedRole(role)}
-                            disabled={isSubmitting || (role === 'owner' && currentRole !== 'owner')}
-                            className={`
-                              px-4 py-2 rounded-lg border-2 transition-all
-                              ${selectedRole === role
-                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
-                              }
-                              disabled:opacity-50 disabled:cursor-not-allowed
-                            `}
+                            onClick={() => setShowAddForm(false)}
+                            disabled={isSubmitting}
+                            className="
+                              flex-1 px-4 py-2 rounded-lg
+                              text-gray-700 dark:text-gray-300
+                              hover:bg-gray-100 dark:hover:bg-gray-700
+                              transition-colors
+                              disabled:opacity-50
+                            "
                           >
-                            <div className="flex items-center gap-2 justify-center">
-                              {getRoleIcon(role)}
-                              <span className="capitalize text-sm">{role}</span>
-                            </div>
+                            Cancel
                           </button>
+                          <button
+                            onClick={handleAddMember}
+                            disabled={isSubmitting || !selectedUser.trim()}
+                            className="
+                              flex-1 px-4 py-2 rounded-lg
+                              bg-blue-600 hover:bg-blue-700
+                              text-white font-medium
+                              transition-colors
+                              disabled:opacity-50
+                              flex items-center justify-center gap-2
+                            "
+                          >
+                            {isSubmitting ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Adding...
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-4 h-4" />
+                                Add Member
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Members List */}
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                      </div>
+                    ) : members.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-500 dark:text-gray-400">No members yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {members.map((member) => (
+                          <div
+                            key={member.id}
+                            className="
+                              flex items-center gap-4 p-4 rounded-lg
+                              bg-gray-50 dark:bg-gray-700/50
+                              hover:bg-gray-100 dark:hover:bg-gray-700
+                              transition-colors
+                            "
+                          >
+                            {/* Avatar */}
+                            <div
+                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                              style={{ backgroundColor: member.user_color }}
+                            >
+                              {member.user_name.charAt(0)}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white truncate">
+                                {member.user_name}
+                                {member.user_name === currentUserName && (
+                                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(You)</span>
+                                )}
+                              </p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Joined {new Date(member.joined_at).toLocaleDateString()}
+                              </p>
+                            </div>
+
+                            {/* Role Badge */}
+                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${getRoleBadgeColor(member.agency_role)}`}>
+                              {getRoleIcon(member.agency_role)}
+                              <span className="text-xs font-medium capitalize">{member.agency_role}</span>
+                            </div>
+
+                            {/* Remove Button */}
+                            {canManageMembers && member.user_name !== currentUserName && (
+                              <button
+                                onClick={() => handleRemoveMember(member.id, member.user_name)}
+                                disabled={isSubmitting || (member.agency_role === 'owner' && currentRole !== 'owner')}
+                                className="
+                                  p-2 rounded-lg
+                                  text-red-600 dark:text-red-400
+                                  hover:bg-red-50 dark:hover:bg-red-900/20
+                                  transition-colors
+                                  disabled:opacity-50 disabled:cursor-not-allowed
+                                "
+                                aria-label={`Remove ${member.user_name}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
-                      {currentRole !== 'owner' && (
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          Only owners can assign the owner role
-                        </p>
-                      )}
-                    </div>
+                    )}
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowAddForm(false)}
-                        disabled={isSubmitting}
-                        className="
-                          flex-1 px-4 py-2 rounded-lg
-                          text-gray-700 dark:text-gray-300
-                          hover:bg-gray-100 dark:hover:bg-gray-700
-                          transition-colors
-                          disabled:opacity-50
-                        "
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleAddMember}
-                        disabled={isSubmitting || !selectedUser.trim()}
-                        className="
-                          flex-1 px-4 py-2 rounded-lg
-                          bg-blue-600 hover:bg-blue-700
-                          text-white font-medium
-                          transition-colors
-                          disabled:opacity-50
-                          flex items-center justify-center gap-2
-                        "
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Adding...
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4" />
-                            Add Member
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Members List */}
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-                  </div>
-                ) : members.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-500 dark:text-gray-400">No members yet</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {members.map((member) => (
-                      <div
-                        key={member.id}
-                        className="
-                          flex items-center gap-4 p-4 rounded-lg
-                          bg-gray-50 dark:bg-gray-700/50
-                          hover:bg-gray-100 dark:hover:bg-gray-700
-                          transition-colors
-                        "
-                      >
-                        {/* Avatar */}
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-                          style={{ backgroundColor: member.user_color }}
-                        >
-                          {member.user_name.charAt(0)}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-white truncate">
-                            {member.user_name}
-                            {member.user_name === currentUserName && (
-                              <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(You)</span>
-                            )}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Joined {new Date(member.joined_at).toLocaleDateString()}
-                          </p>
-                        </div>
-
-                        {/* Role Badge */}
-                        <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${getRoleBadgeColor(member.agency_role)}`}>
-                          {getRoleIcon(member.agency_role)}
-                          <span className="text-xs font-medium capitalize">{member.agency_role}</span>
-                        </div>
-
-                        {/* Remove Button */}
-                        {canManageMembers && member.user_name !== currentUserName && (
-                          <button
-                            onClick={() => handleRemoveMember(member.id, member.user_name)}
-                            disabled={isSubmitting || (member.agency_role === 'owner' && currentRole !== 'owner')}
-                            className="
-                              p-2 rounded-lg
-                              text-red-600 dark:text-red-400
-                              hover:bg-red-50 dark:hover:bg-red-900/20
-                              transition-colors
-                              disabled:opacity-50 disabled:cursor-not-allowed
-                            "
-                            aria-label={`Remove ${member.user_name}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Info Text */}
-                {!canManageMembers && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                    Only agency owners and admins can manage members
-                  </p>
+                    {/* Info Text */}
+                    {!canManageMembers && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                        Only agency owners and admins can manage members
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </motion.div>

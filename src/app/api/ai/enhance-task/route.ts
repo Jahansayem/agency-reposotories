@@ -10,6 +10,7 @@ import {
   withAiErrorHandling,
 } from '@/lib/aiApiHelper';
 import { logger } from '@/lib/logger';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 interface EnhancedTask {
   text: string;
@@ -119,4 +120,6 @@ async function handleEnhanceTask(request: NextRequest) {
   return aiSuccessResponse({ enhanced: validatedResult });
 }
 
-export const POST = withAiErrorHandling('EnhanceTaskAPI', handleEnhanceTask);
+export const POST = withAiErrorHandling('EnhanceTaskAPI', withSessionAuth(async (request) => {
+  return handleEnhanceTask(request);
+}));

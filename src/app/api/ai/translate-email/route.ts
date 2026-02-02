@@ -8,6 +8,7 @@ import {
   isAiConfigured,
   withAiErrorHandling,
 } from '@/lib/aiApiHelper';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 // Email translation endpoint
 // Translates existing emails from English to Spanish
@@ -110,4 +111,6 @@ async function handleTranslateEmail(request: NextRequest) {
   });
 }
 
-export const POST = withAiErrorHandling('TranslateEmailAPI', handleTranslateEmail);
+export const POST = withAiErrorHandling('TranslateEmailAPI', withSessionAuth(async (request) => {
+  return handleTranslateEmail(request);
+}));

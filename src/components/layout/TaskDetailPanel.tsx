@@ -41,6 +41,7 @@ import { Todo, TodoPriority, TodoStatus, Subtask, User as UserType, PRIORITY_CON
 import { fetchWithCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { sanitizeTranscription } from '@/lib/sanitize';
+import { usePermission } from '@/hooks/usePermission';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TASK DETAIL PANEL
@@ -74,6 +75,7 @@ export default function TaskDetailPanel({
   onGenerateEmail,
 }: TaskDetailPanelProps) {
   const { theme } = useTheme();
+  const canDeleteTasks = usePermission('can_delete_tasks');
 
   // Editing states
   const [isEditingText, setIsEditingText] = useState(false);
@@ -1001,20 +1003,22 @@ export default function TaskDetailPanel({
           ${'border-[var(--border)]'}
         `}
       >
-        <button
-          onClick={() => {
-            if (!window.confirm('Are you sure you want to delete this task?')) return;
-            onDelete(task.id);
-          }}
-          className={`
-            flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-sm font-medium
-            transition-colors
-            ${'text-[var(--danger)] hover:bg-[var(--danger-light)]'}
-          `}
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete
-        </button>
+        {canDeleteTasks && (
+          <button
+            onClick={() => {
+              if (!window.confirm('Are you sure you want to delete this task?')) return;
+              onDelete(task.id);
+            }}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-sm font-medium
+              transition-colors
+              ${'text-[var(--danger)] hover:bg-[var(--danger-light)]'}
+            `}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        )}
 
         <div className="flex items-center gap-2">
           <button

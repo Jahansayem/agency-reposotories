@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 import { X, Trash2, Check, GitMerge, ChevronDown } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
 
 interface BulkActionBarProps {
   selectedCount: number;
@@ -28,6 +29,8 @@ function BulkActionBar({
   onInitiateMerge,
   getDateOffset,
 }: BulkActionBarProps) {
+  const canDeleteTasks = usePermission('can_delete_tasks');
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
       <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
@@ -106,10 +109,16 @@ function BulkActionBar({
                 </button>
               )}
 
-              {/* Delete */}
+              {/* Delete - disabled if user lacks can_delete_tasks permission */}
               <button
                 onClick={onBulkDelete}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--danger)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+                disabled={!canDeleteTasks}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] text-white transition-all text-sm font-medium whitespace-nowrap ${
+                  canDeleteTasks
+                    ? 'bg-[var(--danger)] hover:opacity-90'
+                    : 'bg-[var(--danger)] opacity-40 cursor-not-allowed'
+                }`}
+                title={!canDeleteTasks ? 'You do not have permission to delete tasks' : undefined}
               >
                 <Trash2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Delete</span>

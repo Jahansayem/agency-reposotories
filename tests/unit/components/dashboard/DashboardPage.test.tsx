@@ -35,6 +35,7 @@ vi.mock('framer-motion', () => ({
     button: ({ children, ...props }: { children: React.ReactNode }) => <button {...props}>{children}</button>,
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useReducedMotion: () => false,
 }));
 
 // Helper to create mock user
@@ -42,7 +43,7 @@ const createMockUser = (name: string): AuthUser => ({
   id: `user-${name.toLowerCase().replace(' ', '-')}`,
   name,
   color: '#0033A0',
-  role: 'member',
+  role: 'staff',
   created_at: new Date().toISOString(),
 });
 

@@ -13,9 +13,8 @@ import {
   Mail,
   Clock,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
 import { isFeatureEnabled } from '@/lib/featureFlags';
-import type { AgencyInvitation, Agency } from '@/types/agency';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 // ============================================
 // Types
@@ -23,9 +22,11 @@ import type { AgencyInvitation, Agency } from '@/types/agency';
 
 type Step = 'loading' | 'invalid' | 'account' | 'existing_user' | 'complete';
 
-interface InvitationDetails {
-  invitation: AgencyInvitation;
-  agency: Agency;
+interface ValidatedInvitation {
+  agency_name: string;
+  role: string;
+  email: string;
+  expires_at: string;
 }
 
 // ============================================
@@ -40,7 +41,7 @@ export default function JoinInvitationPage({
   const { token } = use(params);
   const router = useRouter();
   const [step, setStep] = useState<Step>('loading');
-  const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
+  const [invitation, setInvitation] = useState<ValidatedInvitation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +54,7 @@ export default function JoinInvitationPage({
   const [existingUserName, setExistingUserName] = useState('');
   const [existingUserPin, setExistingUserPin] = useState('');
 
-  // Check if multi-tenancy is enabled and load invitation
+  // Check if multi-tenancy is enabled and validate invitation via API
   useEffect(() => {
     if (!isFeatureEnabled('multi_tenancy')) {
       setStep('invalid');
@@ -61,116 +62,38 @@ export default function JoinInvitationPage({
       return;
     }
 
-    loadInvitation();
+    validateInvitation();
   }, [token]);
 
-  const loadInvitation = async () => {
+  const validateInvitation = async () => {
     try {
-      // Get invitation with agency details
-      const { data, error: invError } = await supabase
-        .from('agency_invitations')
-        .select(`
-          *,
-          agencies!inner (
-            id,
-            name,
-            slug,
-            primary_color,
-            is_active
-          )
-        `)
-        .eq('token', token)
-        .single();
+      const response = await fetchWithCsrf('/api/invitations/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
 
-      if (invError || !data) {
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
         setStep('invalid');
-        setError('This invitation link is invalid or has expired');
+        setError(data.error || 'This invitation link is invalid or has expired');
         return;
       }
-
-      // Check if invitation is valid
-      if (data.accepted_at) {
-        setStep('invalid');
-        setError('This invitation has already been accepted');
-        return;
-      }
-
-      if (new Date(data.expires_at) < new Date()) {
-        setStep('invalid');
-        setError('This invitation has expired');
-        return;
-      }
-
-      if (!data.agencies.is_active) {
-        setStep('invalid');
-        setError('This agency is no longer active');
-        return;
-      }
-
-      // Type assertion for the joined data
-      interface JoinedInvitation {
-        id: string;
-        agency_id: string;
-        email: string;
-        role: 'admin' | 'member';
-        token: string;
-        invited_by: string;
-        expires_at: string;
-        accepted_at: string | null;
-        created_at: string;
-        agencies: {
-          id: string;
-          name: string;
-          slug: string;
-          primary_color: string;
-          is_active: boolean;
-        };
-      }
-
-      const joinedData = data as JoinedInvitation;
 
       setInvitation({
-        invitation: {
-          id: joinedData.id,
-          agency_id: joinedData.agency_id,
-          email: joinedData.email,
-          role: joinedData.role,
-          token: joinedData.token,
-          invited_by: joinedData.invited_by,
-          expires_at: joinedData.expires_at,
-          accepted_at: joinedData.accepted_at || undefined,
-          created_at: joinedData.created_at,
-        },
-        agency: {
-          id: joinedData.agencies.id,
-          name: joinedData.agencies.name,
-          slug: joinedData.agencies.slug,
-          primary_color: joinedData.agencies.primary_color,
-          // Fill in defaults for other required Agency fields
-          secondary_color: '#72B5E8',
-          subscription_tier: 'starter',
-          max_users: 10,
-          max_storage_mb: 1024,
-          is_active: joinedData.agencies.is_active,
-          created_at: '',
-          updated_at: '',
-        },
+        agency_name: data.agency_name,
+        role: data.role,
+        email: data.email,
+        expires_at: data.expires_at,
       });
 
       setStep('account');
     } catch (err) {
-      console.error('Error loading invitation:', err);
+      console.error('Error validating invitation:', err);
       setStep('invalid');
       setError('Failed to load invitation');
     }
-  };
-
-  const hashPin = async (pinValue: string): Promise<string> => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(pinValue);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
   const handleCreateAccount = async () => {
@@ -192,46 +115,30 @@ export default function JoinInvitationPage({
     setError(null);
 
     try {
-      const pinHash = await hashPin(pin);
-
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('name', userName.trim())
-        .single();
-
-      if (existingUser) {
-        setError('A user with this name already exists. Please login instead.');
-        setStep('existing_user');
-        setExistingUserName(userName);
-        setIsLoading(false);
-        return;
-      }
-
-      // Create user
-      const { data: newUser, error: userError } = await supabase
-        .from('users')
-        .insert({
+      const response = await fetchWithCsrf('/api/invitations/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          is_new_user: true,
           name: userName.trim(),
-          email: invitation?.invitation.email || null,
-          pin_hash: pinHash,
-          color: invitation?.agency.primary_color || '#0033A0',
-          global_role: 'user',
-        })
-        .select()
-        .single();
+          pin,
+        }),
+      });
 
-      if (userError) throw userError;
+      const data = await response.json();
 
-      // Accept invitation
-      const { error: acceptError } = await supabase
-        .rpc('accept_agency_invitation', {
-          p_token: token,
-          p_user_id: newUser.id,
-        });
-
-      if (acceptError) throw acceptError;
+      if (!response.ok) {
+        // If user already exists, suggest login
+        if (data.error?.toLowerCase().includes('already exists')) {
+          setError('A user with this name already exists. Please login instead.');
+          setStep('existing_user');
+          setExistingUserName(userName);
+          setIsLoading(false);
+          return;
+        }
+        throw new Error(data.error || 'Failed to create account');
+      }
 
       setStep('complete');
     } catch (err) {
@@ -256,30 +163,22 @@ export default function JoinInvitationPage({
     setError(null);
 
     try {
-      const pinHash = await hashPin(existingUserPin);
+      const response = await fetchWithCsrf('/api/invitations/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          is_new_user: false,
+          name: existingUserName.trim(),
+          pin: existingUserPin,
+        }),
+      });
 
-      // Verify user credentials
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('name', existingUserName.trim())
-        .eq('pin_hash', pinHash)
-        .single();
+      const data = await response.json();
 
-      if (userError || !user) {
-        setError('Invalid name or PIN');
-        setIsLoading(false);
-        return;
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to join agency');
       }
-
-      // Accept invitation
-      const { error: acceptError } = await supabase
-        .rpc('accept_agency_invitation', {
-          p_token: token,
-          p_user_id: user.id,
-        });
-
-      if (acceptError) throw acceptError;
 
       setStep('complete');
     } catch (err) {
@@ -342,13 +241,12 @@ export default function JoinInvitationPage({
       <div className="mb-8 text-center">
         <div className="inline-flex items-center gap-2 mb-2">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
-            style={{ backgroundColor: invitation?.agency.primary_color || '#0033A0' }}
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold bg-[#0033A0]"
           >
-            {invitation?.agency.name.charAt(0) || 'A'}
+            {invitation?.agency_name?.charAt(0) || 'A'}
           </div>
           <span className="text-2xl font-bold text-gray-900 dark:text-white">
-            {invitation?.agency.name || 'Agency'}
+            {invitation?.agency_name || 'Agency'}
           </span>
         </div>
         <p className="text-gray-500 dark:text-gray-400">
@@ -370,13 +268,13 @@ export default function JoinInvitationPage({
               <div className="flex items-center gap-3 mb-2">
                 <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 <span className="text-sm text-blue-700 dark:text-blue-300">
-                  Invitation for {invitation.invitation.email}
+                  Invitation for {invitation.email}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm text-blue-600 dark:text-blue-400">
                 <Clock className="w-4 h-4" />
                 <span>
-                  Expires {new Date(invitation.invitation.expires_at).toLocaleDateString()}
+                  Expires {new Date(invitation.expires_at).toLocaleDateString()}
                 </span>
               </div>
             </div>
@@ -389,7 +287,7 @@ export default function JoinInvitationPage({
                 Create Your Account
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-                Join {invitation?.agency.name} as a {invitation?.invitation.role}
+                Join {invitation?.agency_name} as a {invitation?.role}
               </p>
 
               <div className="space-y-4">
@@ -498,7 +396,7 @@ export default function JoinInvitationPage({
                     </>
                   ) : (
                     <>
-                      Join {invitation?.agency.name}
+                      Join {invitation?.agency_name}
                       <Check className="w-4 h-4" />
                     </>
                   )}
@@ -523,7 +421,7 @@ export default function JoinInvitationPage({
                 Sign In to Join
               </h2>
               <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-                Enter your existing credentials to join {invitation?.agency.name}
+                Enter your existing credentials to join {invitation?.agency_name}
               </p>
 
               <div className="space-y-4">
@@ -627,10 +525,10 @@ export default function JoinInvitationPage({
                 <Check className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                Welcome to {invitation?.agency.name}!
+                Welcome to {invitation?.agency_name}!
               </h2>
               <p className="text-gray-500 dark:text-gray-400 mb-6">
-                You&apos;ve successfully joined as a {invitation?.invitation.role}.
+                You&apos;ve successfully joined as a {invitation?.role}.
               </p>
               <button
                 onClick={handleGoToLogin}

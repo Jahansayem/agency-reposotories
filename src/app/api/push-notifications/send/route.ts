@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
 /**
  * API: Send Push Notification
  * Sprint 3 Issue #36: Push Notifications
  *
  * Sends a push notification to specified user(s).
- * Requires authentication (service role or valid user session).
+ * Requires authenticated session with agency context.
+ * Notification targets are restricted to users in the same agency.
  *
  * POST /api/push-notifications/send
  * Body: {
@@ -46,7 +48,7 @@ if (vapidPublicKey && vapidPrivateKey) {
     vapidPrivateKey
   );
 } else {
-  console.warn('⚠️ VAPID keys not configured - push notifications will not work');
+  console.warn('VAPID keys not configured - push notifications will not work');
 }
 
 interface SendPushRequest {
@@ -61,7 +63,7 @@ interface SendPushRequest {
   requireInteraction?: boolean;
 }
 
-export async function POST(request: NextRequest) {
+async function handleSendPush(request: NextRequest, ctx: AgencyAuthContext) {
   try {
     // Parse request body
     const body: SendPushRequest = await request.json();
@@ -96,13 +98,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Restrict notification targets to users in the same agency
+    const supabase = await getSupabaseClient();
+    if (ctx.agencyId) {
+      const { data: agencyMembers } = await supabase
+        .from('agency_members')
+        .select('user_id')
+        .eq('agency_id', ctx.agencyId)
+        .eq('status', 'active');
+
+      const allowedUserIds = new Set((agencyMembers || []).map((m: any) => m.user_id));
+      const blockedIds = userIds.filter(uid => !allowedUserIds.has(uid));
+
+      if (blockedIds.length > 0) {
+        return NextResponse.json(
+          { error: 'Cannot send notifications to users outside your agency' },
+          { status: 403 }
+        );
+      }
+    }
+
     const results: Array<{ userId: string; success: boolean; error?: string }> = [];
 
     // Send to each user
     for (const uid of userIds) {
       try {
         // Get user's push subscriptions
-        const supabase = await getSupabaseClient();
         const { data: subscriptions, error: fetchError } = await supabase
           .from('push_subscriptions')
           .select('*')
@@ -233,3 +254,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAgencyAuth(handleSendPush);

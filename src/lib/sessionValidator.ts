@@ -26,6 +26,7 @@ export interface SessionValidationResult {
   userId?: string;
   userName?: string;
   userRole?: string;
+  agencyId?: string;
   error?: string;
 }
 
@@ -108,6 +109,7 @@ export async function validateSession(
       user_id: string;
       user_name: string;
       user_role: string;
+      agency_id: string | null;
       valid: boolean;
     }
 
@@ -123,7 +125,7 @@ export async function validateSession(
       // First get the session
       const { data: session, error: sessionError } = await supabaseAdmin
         .from('user_sessions')
-        .select('user_id, expires_at, is_valid, last_activity')
+        .select('user_id, expires_at, is_valid, last_activity, current_agency_id')
         .eq('token_hash', tokenHash)
         .single();
 
@@ -185,7 +187,8 @@ export async function validateSession(
         valid: true,
         userId: session.user_id,
         userName: user.name,
-        userRole: user.role || 'member',
+        userRole: user.role || 'staff',
+        agencyId: session.current_agency_id || undefined,
       };
     }
 
@@ -200,7 +203,8 @@ export async function validateSession(
       valid: true,
       userId: data.user_id,
       userName: data.user_name,
-      userRole: data.user_role || 'member',
+      userRole: data.user_role || 'staff',
+      agencyId: data.agency_id || undefined,
     };
   } catch (error) {
     logger.error('Session validation error:', error, { component: 'SessionValidator' });
@@ -217,7 +221,8 @@ export async function validateSession(
 export async function createSession(
   userId: string,
   ipAddress?: string,
-  userAgent?: string
+  userAgent?: string,
+  agencyId?: string
 ): Promise<{ token: string; expiresAt: Date } | null> {
   try {
     const token = generateSessionToken();
@@ -228,14 +233,30 @@ export async function createSession(
     expiresAt.setHours(expiresAt.getHours() + 8);
 
     const supabaseAdmin = getSupabaseAdmin();
-    const { error } = await supabaseAdmin.from('user_sessions').insert({
+    const sessionData: Record<string, unknown> = {
       user_id: userId,
       token_hash: tokenHash,
       expires_at: expiresAt.toISOString(),
       ip_address: ipAddress,
       user_agent: userAgent,
       is_valid: true,
-    });
+    };
+
+    if (agencyId) {
+      sessionData.current_agency_id = agencyId;
+    }
+
+    let { error } = await supabaseAdmin.from('user_sessions').insert(sessionData);
+
+    // If the current_agency_id column doesn't exist yet (migration not run),
+    // retry without it so login still works
+    if (error && error.code === 'PGRST204' && agencyId) {
+      logger.warn('user_sessions table missing current_agency_id column, retrying without it. Run the latest migration to fix.', {
+        component: 'SessionValidator',
+      });
+      delete sessionData.current_agency_id;
+      ({ error } = await supabaseAdmin.from('user_sessions').insert(sessionData));
+    }
 
     if (error) {
       logger.error('Failed to create session:', error, {

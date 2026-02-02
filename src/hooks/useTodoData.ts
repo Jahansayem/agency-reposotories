@@ -40,7 +40,8 @@ export function useTodoData(currentUser: AuthUser) {
     appendTodos,
   } = useTodoStore();
 
-  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+  const { currentAgencyId, isMultiTenancyEnabled, hasPermission } = useAgency();
+  const canViewAllTasks = hasPermission('can_view_all_tasks');
   const userName = currentUser.name;
 
   // Fetch todos and users with pagination
@@ -58,6 +59,14 @@ export function useTodoData(currentUser: AuthUser) {
     if (isMultiTenancyEnabled && currentAgencyId) {
       countQuery = countQuery.eq('agency_id', currentAgencyId);
       todosQuery = todosQuery.eq('agency_id', currentAgencyId);
+    }
+
+    // Staff data scoping (M6 fix): when user lacks can_view_all_tasks,
+    // only fetch tasks they created or are assigned to.
+    if (!canViewAllTasks) {
+      const scopeFilter = `created_by.eq.${userName},assigned_to.eq.${userName}`;
+      countQuery = countQuery.or(scopeFilter);
+      todosQuery = todosQuery.or(scopeFilter);
     }
 
     // Fetch count, initial todos (limited), and users in parallel
@@ -88,7 +97,7 @@ export function useTodoData(currentUser: AuthUser) {
       setError(null);
     }
     setLoading(false);
-  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId]);
+  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId, canViewAllTasks, userName]);
 
   // Setup real-time subscription
   useEffect(() => {
@@ -139,8 +148,15 @@ export function useTodoData(currentUser: AuthUser) {
         subscriptionConfig,
         (payload) => {
           if (!isMounted) return;
+
+          // Staff data scoping (M6 fix): when user lacks can_view_all_tasks,
+          // only allow todos they created or are assigned to into the store.
+          const isVisibleToUser = (todo: Todo) =>
+            canViewAllTasks || todo.created_by === userName || todo.assigned_to === userName;
+
           if (payload.eventType === 'INSERT') {
             const newTodo = payload.new as Todo;
+            if (!isVisibleToUser(newTodo)) return;
             // Check if todo already exists (to avoid duplicates from optimistic updates)
             const store = useTodoStore.getState();
             const exists = store.todos.some((t) => t.id === newTodo.id);
@@ -148,7 +164,14 @@ export function useTodoData(currentUser: AuthUser) {
               addTodoToStore(newTodo);
             }
           } else if (payload.eventType === 'UPDATE') {
-            updateTodoInStore(payload.new.id, payload.new as Todo);
+            const updatedTodo = payload.new as Todo;
+            if (isVisibleToUser(updatedTodo)) {
+              updateTodoInStore(updatedTodo.id, updatedTodo);
+            } else {
+              // Todo is no longer visible to this user (e.g. unassigned from them).
+              // Remove it from the store.
+              deleteTodoFromStore(updatedTodo.id);
+            }
           } else if (payload.eventType === 'DELETE') {
             deleteTodoFromStore(payload.old.id);
           }
@@ -162,7 +185,7 @@ export function useTodoData(currentUser: AuthUser) {
       isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchTodos, currentUser, setShowWelcomeBack, setConnected, setError, setLoading, addTodoToStore, updateTodoInStore, deleteTodoFromStore, currentAgencyId, isMultiTenancyEnabled]);
+  }, [fetchTodos, currentUser, setShowWelcomeBack, setConnected, setError, setLoading, addTodoToStore, updateTodoInStore, deleteTodoFromStore, currentAgencyId, isMultiTenancyEnabled, canViewAllTasks, userName]);
 
   // Create a new todo
   const createTodo = useCallback(async (
@@ -443,6 +466,11 @@ export function useTodoData(currentUser: AuthUser) {
         query = query.eq('agency_id', currentAgencyId);
       }
 
+      // Staff data scoping for pagination too
+      if (!canViewAllTasks) {
+        query = query.or(`created_by.eq.${userName},assigned_to.eq.${userName}`);
+      }
+
       const { data, error } = await query;
 
       if (error) {
@@ -455,7 +483,7 @@ export function useTodoData(currentUser: AuthUser) {
     } finally {
       setLoadingMore(false);
     }
-  }, [setLoadingMore, appendTodos, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId]);
+  }, [setLoadingMore, appendTodos, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId, canViewAllTasks, userName]);
 
   return {
     createTodo,

@@ -21,11 +21,8 @@ async function loginAsUser(page: Page, userName: string = 'Derrick', pin: string
   // Wait for app to load
   await page.waitForTimeout(2000);
   
-  // Check if already logged in - look for specific logged-in indicators
-  const alreadyLoggedIn = await page.locator('text=/\\d+ active tasks?/i')
-    .or(page.locator('input[placeholder*="Add a task" i]'))
-    .or(page.locator('button:has-text("List view")'))
-    .first()
+  // Check if already logged in - look for sidebar navigation
+  const alreadyLoggedIn = await page.getByRole('complementary', { name: 'Main navigation' })
     .isVisible({ timeout: 3000 })
     .catch(() => false);
   
@@ -58,20 +55,14 @@ async function loginAsUser(page: Page, userName: string = 'Derrick', pin: string
     }
   }
   
-  // Final wait for app to settle
-  await page.waitForTimeout(1000);
+  // Wait for main app to load
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 }).catch(() => {});
 }
 
 async function waitForAppReady(page: Page) {
   // Wait for logged-in app to be ready
-  const appReady = page.locator('text=/\\d+ active/i')
-    .or(page.locator('input[placeholder*="Add a task" i]'))
-    .or(page.locator('button:has-text("List view")'))
-    .or(page.locator('main'))
-    .first();
-  
   try {
-    await expect(appReady).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
   } catch {
     // Fallback wait
     await page.waitForTimeout(3000);

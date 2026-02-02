@@ -1,38 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
-import { getAgencyScope } from '@/lib/agencyAuth';
+import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// GET - Fetch all templates (user's own + shared)
-export async function GET(request: NextRequest) {
+// GET - Fetch all templates (user's own + shared) within agency
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    // Validate user session
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
-    if (!userName) {
-      return NextResponse.json({ error: 'userName is required' }, { status: 400 });
-    }
-
-    // Get agency scope for multi-tenancy filtering
-    const scope = await getAgencyScope(request);
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
     // SECURITY: Use separate parameterized queries instead of string interpolation
     // in .or() filter to prevent Supabase filter injection
+    const baseQuery = () => {
+      let q = supabase.from('task_templates').select('*');
+      if (ctx.agencyId) {
+        q = q.eq('agency_id', ctx.agencyId);
+      }
+      return q;
+    };
+
     const [ownResult, sharedResult] = await Promise.all([
-      supabase
-        .from('task_templates')
-        .select('*')
-        .match({ ...scope, created_by: userName })
+      baseQuery()
+        .eq('created_by', ctx.userName)
         .order('created_at', { ascending: false }),
-      supabase
-        .from('task_templates')
-        .select('*')
-        .match({ ...scope, is_shared: true })
+      baseQuery()
+        .eq('is_shared', true)
         .order('created_at', { ascending: false }),
     ]);
 
@@ -51,31 +47,26 @@ export async function GET(request: NextRequest) {
     logger.error('Error fetching templates', error, { component: 'api/templates', action: 'GET' });
     return NextResponse.json({ error: 'Failed to fetch templates' }, { status: 500 });
   }
-}
+});
 
 // POST - Create a new template
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    // Validate user session
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
     const body = await request.json();
     const { name, description, default_priority, default_assigned_to, subtasks, is_shared } = body;
     // Use validated session userName as created_by instead of trusting client body
-    const created_by = userName;
+    const created_by = ctx.userName;
 
     if (!name || !created_by) {
       return NextResponse.json({ error: 'name and created_by are required' }, { status: 400 });
     }
 
-    // Get agency scope for multi-tenancy
-    const scope = await getAgencyScope(request);
-
     const { data, error } = await supabase
       .from('task_templates')
       .insert({
-        ...scope,
         name,
         description: description || null,
         default_priority: default_priority || 'medium',
@@ -83,18 +74,19 @@ export async function POST(request: NextRequest) {
         subtasks: subtasks || [],
         created_by,
         is_shared: is_shared || false,
+        ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // Log activity
+    // Log activity with agency_id
     await supabase.from('activity_log').insert({
-      ...scope,
       action: 'template_created',
       user_name: created_by,
       details: { template_name: name, is_shared },
+      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
     });
 
     return NextResponse.json(data);
@@ -102,14 +94,13 @@ export async function POST(request: NextRequest) {
     logger.error('Error creating template', error, { component: 'api/templates', action: 'POST' });
     return NextResponse.json({ error: 'Failed to create template' }, { status: 500 });
   }
-}
+});
 
 // DELETE - Delete a template
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    // Validate user session
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -118,18 +109,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    if (!userName) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    // Get agency scope for multi-tenancy
-    const scope = await getAgencyScope(request);
-
     // Only allow deletion by the creator within their agency
-    const { error } = await supabase
+    let query = supabase
       .from('task_templates')
       .delete()
-      .match({ ...scope, id, created_by: userName });
+      .eq('id', id)
+      .eq('created_by', ctx.userName);
+
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 
@@ -138,4 +129,4 @@ export async function DELETE(request: NextRequest) {
     logger.error('Error deleting template', error, { component: 'api/templates', action: 'DELETE' });
     return NextResponse.json({ error: 'Failed to delete template' }, { status: 500 });
   }
-}
+});

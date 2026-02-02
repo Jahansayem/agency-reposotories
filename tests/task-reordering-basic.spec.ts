@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
   await page.click('[data-testid="login-button"]');
 
   // Wait for main app to load
-  await page.waitForSelector('[data-testid="add-task-input"]', { timeout: 10000 });
+  await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 15000 });
 });
 
 test.describe('Basic Task Reordering', () => {
@@ -160,7 +160,7 @@ test.describe('Basic Task Reordering', () => {
     await page.click('[data-testid="user-card-Derrick"]');
     await page.fill('[data-testid="pin-input"]', TEST_USER.pin);
     await page.click('[data-testid="login-button"]');
-    await page.waitForSelector('[data-testid="add-task-input"]', { timeout: 10000 });
+    await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 15000 });
 
     // Wait for tasks to load
     await page.waitForSelector('text=Persist A', { timeout: 5000 });

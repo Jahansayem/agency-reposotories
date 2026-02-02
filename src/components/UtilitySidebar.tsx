@@ -16,7 +16,8 @@ import {
   Flame,
   Zap,
 } from 'lucide-react';
-import { Todo, AuthUser, isOwner as checkIsOwner } from '@/types/todo';
+import { Todo, AuthUser } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 import { format, isToday, isPast, startOfDay } from 'date-fns';
 
 interface UtilitySidebarProps {
@@ -44,7 +45,7 @@ export default function UtilitySidebar({
 }: UtilitySidebarProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>('stats');
 
-  const isOwner = checkIsOwner(currentUser);
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -326,7 +327,7 @@ export default function UtilitySidebar({
             <ChevronRight className="w-4 h-4 ml-auto opacity-50" />
           </button>
 
-          {isOwner && (
+          {canViewStrategicGoals && (
             <button
               onClick={() => onNavigate?.('goals')}
               className={`

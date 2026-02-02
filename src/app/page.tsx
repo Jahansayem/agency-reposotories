@@ -8,6 +8,7 @@ import { getStoredSession, setStoredSession, clearStoredSession } from '@/lib/au
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { AgencyProvider } from '@/contexts/AgencyContext';
+import { UserProvider } from '@/contexts/UserContext';
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -36,8 +37,8 @@ export default function Home() {
             const { data } = result as { data: AuthUser | null };
 
             if (data) {
-              // Default role to 'member' if not set
-              setCurrentUser({ ...data, role: data.role || 'member' });
+              // Default role to 'staff' if not set
+              setCurrentUser({ ...data, role: data.role || 'staff' });
             } else {
               // User no longer exists, clear session
               clearStoredSession();
@@ -108,8 +109,10 @@ export default function Home() {
   }
 
   return (
-    <AgencyProvider userId={currentUser.id}>
-      <MainApp currentUser={currentUser} onUserChange={handleUserChange} />
-    </AgencyProvider>
+    <UserProvider currentUser={currentUser}>
+      <AgencyProvider userId={currentUser.id}>
+        <MainApp currentUser={currentUser} onUserChange={handleUserChange} />
+      </AgencyProvider>
+    </UserProvider>
   );
 }

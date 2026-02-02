@@ -57,7 +57,7 @@ async function loginAsExistingUser(page: Page): Promise<boolean> {
 
   // Wait for app to load
   try {
-    await expect(page.locator('textarea[placeholder*="task"]')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
     return true;
   } catch {
     console.log('Failed to load main app after login.');

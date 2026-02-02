@@ -79,10 +79,7 @@ async function loginAsExistingUserWebKit(
   }
 
   // Wait for main app to load - increased timeout for WebKit
-  const todoInput = page
-    .locator('textarea[placeholder*="Add a task"]')
-    .or(page.locator('textarea[placeholder*="task"]').first());
-  await expect(todoInput).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 20000 });
 }
 
 test.describe('WebKit Compatibility - Critical Bugs Fixed', () => {

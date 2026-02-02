@@ -41,6 +41,7 @@ export interface AgencyPermissions {
   can_delete_tasks: boolean;
   can_assign_tasks: boolean;
   can_reorder_tasks: boolean;
+  can_view_all_tasks: boolean;
 
   // Strategic Goals
   can_view_strategic_goals: boolean;
@@ -179,6 +180,7 @@ export const DEFAULT_PERMISSIONS: Record<AgencyRole, AgencyPermissions> = {
     can_delete_tasks: true,
     can_assign_tasks: true,
     can_reorder_tasks: true,
+    can_view_all_tasks: true,
     can_view_strategic_goals: true,
     can_manage_strategic_goals: true,
     can_invite_users: true,
@@ -201,6 +203,7 @@ export const DEFAULT_PERMISSIONS: Record<AgencyRole, AgencyPermissions> = {
     can_delete_tasks: true,
     can_assign_tasks: true,
     can_reorder_tasks: true,
+    can_view_all_tasks: true,
     can_view_strategic_goals: true,
     can_manage_strategic_goals: false,
     can_invite_users: true,
@@ -223,6 +226,7 @@ export const DEFAULT_PERMISSIONS: Record<AgencyRole, AgencyPermissions> = {
     can_delete_tasks: false,
     can_assign_tasks: false,
     can_reorder_tasks: false,
+    can_view_all_tasks: false,
     can_view_strategic_goals: false,
     can_manage_strategic_goals: false,
     can_invite_users: false,

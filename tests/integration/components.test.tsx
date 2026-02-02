@@ -33,6 +33,11 @@ vi.mock('@/lib/activityLogger', () => ({
   logActivity: vi.fn(),
 }));
 
+// Mock usePermission hook (added during multi-tenancy migration)
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => true,
+}));
+
 describe('Component Integration Tests', () => {
   beforeEach(() => {
     // Reset store state

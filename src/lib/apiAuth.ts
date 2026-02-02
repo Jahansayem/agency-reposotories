@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Todo, Attachment } from '@/types/todo';
 import { validateSession } from './sessionValidator';
 
@@ -27,7 +27,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
  */
 export async function extractAndValidateUserName(
   request: NextRequest
-): Promise<{ userName: string | null; error?: NextResponse }> {
+): Promise<{ userName: string | null; agencyId?: string; error?: NextResponse }> {
   // First, validate the session
   const sessionResult = await validateSession(request);
 
@@ -46,7 +46,7 @@ export async function extractAndValidateUserName(
 
   // Session is valid - use the userName from the validated session
   if (sessionResult.userName) {
-    return { userName: sessionResult.userName };
+    return { userName: sessionResult.userName, agencyId: sessionResult.agencyId };
   }
 
   // Session is valid but userName was not populated - treat as auth error
@@ -114,18 +114,39 @@ export function validateUserName(userName: string | null): NextResponse | null {
 }
 
 /**
+ * Create an agency-scoped query builder for a given table.
+ *
+ * Usage:
+ * ```typescript
+ * const query = agencyScopedQuery(supabase, 'todos', agencyId);
+ * const { data } = await query;
+ * ```
+ */
+export function agencyScopedQuery(supabaseClient: SupabaseClient, table: string, agencyId: string) {
+  return supabaseClient.from(table).select().eq('agency_id', agencyId);
+}
+
+/**
  * Verify that a user can access a specific todo
  * Returns the todo if access is granted, or an error response
  */
 export async function verifyTodoAccess(
   todoId: string,
-  userName: string
+  userName: string,
+  agencyId?: string
 ): Promise<{ todo: Todo; error: null } | { todo: null; error: NextResponse }> {
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-  const { data: todo, error: fetchError } = await supabase
+  let query = supabase
     .from('todos')
-    .select('*')
+    .select('*');
+
+  // Apply agency scope first when provided
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  const { data: todo, error: fetchError } = await query
     .eq('id', todoId)
     .single();
 

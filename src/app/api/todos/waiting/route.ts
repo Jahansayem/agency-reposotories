@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import type { WaitingContactType } from '@/types/todo';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -34,11 +34,8 @@ interface ClearWaitingRequest {
  * POST /api/todos/waiting
  * Mark a task as waiting for customer response
  */
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
-
     const body = await request.json() as MarkWaitingRequest;
     const { todoId, contactType, followUpAfterHours = 48 } = body;
 
@@ -59,7 +56,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseClient();
     const now = new Date().toISOString();
 
-    // Update the todo with waiting status
+    // Update the todo with waiting status, scoped to this agency
     const { data: todo, error: updateError } = await supabase
       .from('todos')
       .update({
@@ -68,9 +65,10 @@ export async function POST(request: NextRequest) {
         waiting_contact_type: contactType,
         follow_up_after_hours: followUpAfterHours,
         updated_at: now,
-        updated_by: userName,
+        updated_by: ctx.userName,
       })
       .eq('id', todoId)
+      .eq('agency_id', ctx.agencyId)
       .select()
       .single();
 
@@ -87,7 +85,8 @@ export async function POST(request: NextRequest) {
       action: 'marked_waiting',
       todo_id: todoId,
       todo_text: todo.text,
-      user_name: userName,
+      user_name: ctx.userName,
+      agency_id: ctx.agencyId,
       details: {
         contact_type: contactType,
         follow_up_after_hours: followUpAfterHours,
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
       component: 'WaitingAPI',
       todoId,
       contactType,
-      userName,
+      userName: ctx.userName,
     });
 
     return NextResponse.json({
@@ -114,17 +113,14 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/todos/waiting
  * Clear waiting status (customer responded)
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { userName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
-
     const body = await request.json() as ClearWaitingRequest;
     const { todoId } = body;
 
@@ -138,12 +134,20 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabaseClient();
     const now = new Date().toISOString();
 
-    // Get the current todo to log details
+    // Get the current todo to log details, scoped to this agency
     const { data: currentTodo } = await supabase
       .from('todos')
       .select('text, waiting_since, waiting_contact_type')
       .eq('id', todoId)
+      .eq('agency_id', ctx.agencyId)
       .single();
+
+    if (!currentTodo) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found' },
+        { status: 404 }
+      );
+    }
 
     // Calculate how long they were waiting
     let waitingDuration = null;
@@ -162,9 +166,10 @@ export async function DELETE(request: NextRequest) {
         waiting_since: null,
         waiting_contact_type: null,
         updated_at: now,
-        updated_by: userName,
+        updated_by: ctx.userName,
       })
       .eq('id', todoId)
+      .eq('agency_id', ctx.agencyId)
       .select()
       .single();
 
@@ -181,7 +186,8 @@ export async function DELETE(request: NextRequest) {
       action: 'customer_responded',
       todo_id: todoId,
       todo_text: todo.text,
-      user_name: userName,
+      user_name: ctx.userName,
+      agency_id: ctx.agencyId,
       details: {
         waited_hours: waitingDuration,
         contact_type: currentTodo?.waiting_contact_type,
@@ -192,7 +198,7 @@ export async function DELETE(request: NextRequest) {
       component: 'WaitingAPI',
       todoId,
       waitingDuration,
-      userName,
+      userName: ctx.userName,
     });
 
     return NextResponse.json({
@@ -209,4 +215,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

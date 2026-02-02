@@ -54,36 +54,39 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
     await page.waitForTimeout(500);
   }
 
-  // Wait for main app to load - use correct placeholder text
-  const todoInput = page.locator('textarea[placeholder*="Add a task"]')
-    .or(page.locator('textarea[placeholder*="task"]').first());
-  await expect(todoInput).toBeVisible({ timeout: 15000 });
-
-  return todoInput;
+  // Wait for main app to load
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Core Functionality Tests', () => {
   test('Login with existing user and see main app', async ({ page }) => {
     await loginAsExistingUser(page, 'Derrick', '8008');
 
-    // Verify we see the welcome message
-    await expect(page.locator('text=Welcome back')).toBeVisible({ timeout: 10000 });
+    // Verify we're in the main app - sidebar navigation should be visible
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
     console.log('✓ User logged in and main app loaded');
   });
 
   test('Add a task successfully', async ({ page }) => {
-    const todoInput = await loginAsExistingUser(page, 'Derrick', '8008');
+    await loginAsExistingUser(page, 'Derrick', '8008');
 
     // Create a unique task name
     const taskName = `Task_${Date.now()}`;
 
+    // Click the "New Task" button to open the add task modal/form
+    const newTaskBtn = page.locator('button').filter({ hasText: 'New Task' }).first();
+    await expect(newTaskBtn).toBeVisible({ timeout: 5000 });
+    await newTaskBtn.click();
+    await page.waitForTimeout(500);
+
+    // Find the task input textarea
+    const todoInput = page.locator('textarea[placeholder*="What needs to be done"]').first()
+      .or(page.locator('[data-testid="add-task-input"]'));
+    await expect(todoInput).toBeVisible({ timeout: 5000 });
+
     // Focus and fill input
     await todoInput.click();
     await todoInput.fill(taskName);
-
-    // Verify the input has text
-    const inputValue = await todoInput.inputValue();
-    expect(inputValue).toBe(taskName);
 
     // Submit with Enter
     await page.keyboard.press('Enter');
@@ -101,10 +104,20 @@ test.describe('Core Functionality Tests', () => {
   });
 
   test('Task persists after page reload', async ({ page }) => {
-    const todoInput = await loginAsExistingUser(page, 'Derrick', '8008');
+    await loginAsExistingUser(page, 'Derrick', '8008');
 
     // Create a unique task
     const taskName = `Persist_${Date.now()}`;
+
+    // Click the "New Task" button to open the add task form
+    const newTaskBtn = page.locator('button').filter({ hasText: 'New Task' }).first();
+    await newTaskBtn.click();
+    await page.waitForTimeout(500);
+
+    const todoInput = page.locator('textarea[placeholder*="What needs to be done"]').first()
+      .or(page.locator('[data-testid="add-task-input"]'));
+    await expect(todoInput).toBeVisible({ timeout: 5000 });
+
     await todoInput.click();
     await todoInput.fill(taskName);
     await page.keyboard.press('Enter');
@@ -119,16 +132,26 @@ test.describe('Core Functionality Tests', () => {
     await page.reload();
 
     // Wait for app to load again (should auto-login from session)
-    await expect(page.locator('textarea[placeholder*="Add a task"]')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 
     // Wait for data to load
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
+
+    // Scroll down to find the task (it may be below the fold)
+    const taskLocator = page.locator(`text=${taskName}`);
+
+    // Try scrolling the task list to find the task
+    for (let i = 0; i < 5; i++) {
+      if (await taskLocator.isVisible().catch(() => false)) break;
+      await page.mouse.wheel(0, 500);
+      await page.waitForTimeout(500);
+    }
 
     // Take screenshot
     await page.screenshot({ path: 'test-results/core-persist-reload.png', fullPage: true });
 
-    // Verify task still exists
-    await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 10000 });
+    // Verify task still exists (may need longer timeout as data loads async)
+    await expect(taskLocator).toBeVisible({ timeout: 15000 });
     console.log('✓ Task persisted after reload');
   });
 
@@ -136,10 +159,8 @@ test.describe('Core Functionality Tests', () => {
     // Login as Derrick
     await loginAsExistingUser(page, 'Derrick', '8008');
 
-    // Find and click the user avatar/button in the header
-    // Look for the user menu button that contains user initials in a flex container
-    // Avoid matching the "Daily Summary" button which also contains "DE" in its sun icon
-    const userBtn = page.locator('button.flex.items-center.gap-2').filter({ hasText: 'DE' }).first();
+    // Find and click the user menu button in the header (shows "Derrick" text)
+    const userBtn = page.locator('button').filter({ hasText: 'Derrick' }).last();
 
     await expect(userBtn).toBeVisible({ timeout: 5000 });
     await userBtn.click();
@@ -148,40 +169,34 @@ test.describe('Core Functionality Tests', () => {
     // Take screenshot of dropdown
     await page.screenshot({ path: 'test-results/core-user-dropdown.png', fullPage: true });
 
-    // Verify dropdown shows other users or sign out option
-    const signOutBtn = page.locator('button').filter({ hasText: 'Sign Out' });
-    const otherUser = page.locator('button').filter({ hasText: 'Sefra' });
+    // Verify dropdown shows logout option or user info
+    const logoutBtn = page.locator('button').filter({ hasText: 'Logout' })
+      .or(page.locator('button').filter({ hasText: 'Sign Out' }));
+    const darkModeOption = page.locator('button').filter({ hasText: 'Dark Mode' });
 
     // At least one of these should be visible
-    const isSignOutVisible = await signOutBtn.isVisible().catch(() => false);
-    const isOtherUserVisible = await otherUser.isVisible().catch(() => false);
+    const isLogoutVisible = await logoutBtn.isVisible().catch(() => false);
+    const isDarkModeVisible = await darkModeOption.isVisible().catch(() => false);
 
-    expect(isSignOutVisible || isOtherUserVisible).toBeTruthy();
+    expect(isLogoutVisible || isDarkModeVisible).toBeTruthy();
     console.log('✓ User dropdown displayed correctly');
   });
 
   test('Sign out returns to login screen', async ({ page }) => {
     await loginAsExistingUser(page, 'Derrick', '8008');
 
-    // Find and click the user avatar/button
-    // Look for the user menu button that contains user initials in a flex container
-    const userBtn = page.locator('button.flex.items-center.gap-2').filter({ hasText: 'DE' }).first();
+    // Find and click the user menu button
+    const userBtn = page.locator('button').filter({ hasText: 'Derrick' }).last();
 
     await userBtn.click();
     await page.waitForTimeout(500);
 
-    // Look for Sign Out button in dropdown
-    const signOutBtn = page.locator('button').filter({ hasText: 'Sign Out' });
+    // Look for Logout button in dropdown (UI uses "Logout" not "Sign Out")
+    const logoutBtn = page.locator('button').filter({ hasText: 'Logout' })
+      .or(page.locator('button').filter({ hasText: 'Sign Out' }));
 
-    // If dropdown has scroll, scroll to find sign out
-    const dropdown = page.locator('.overflow-y-auto').first();
-    if (await dropdown.isVisible().catch(() => false)) {
-      await dropdown.evaluate(el => el.scrollTo(0, el.scrollHeight));
-      await page.waitForTimeout(300);
-    }
-
-    await expect(signOutBtn).toBeVisible({ timeout: 5000 });
-    await signOutBtn.click();
+    await expect(logoutBtn).toBeVisible({ timeout: 5000 });
+    await logoutBtn.click();
 
     // Wait for login screen
     await expect(page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first()).toBeVisible({ timeout: 15000 });

@@ -162,7 +162,7 @@ describe('Auth Utilities', () => {
           id: 'user-123',
           name: 'TestUser',
           color: '#0033A0',
-          role: 'member',
+          role: 'staff',
           created_at: new Date().toISOString(),
         };
 

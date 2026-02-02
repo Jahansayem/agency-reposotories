@@ -3,12 +3,13 @@
  *
  * Fetches the most recent stored digest for a user.
  * Marks the digest as read when fetched.
+ * Scoped to the user's agency via withAgencyAuth.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 /**
  * Get today's date in Pacific Time (YYYY-MM-DD format).
@@ -73,8 +74,8 @@ function getSupabaseClient() {
 /**
  * GET /api/digest/latest
  *
- * Fetch the latest digest for a user.
- * Requires X-User-Name header for authentication.
+ * Fetch the latest digest for a user within their agency.
+ * Requires valid session via withAgencyAuth.
  *
  * Query params:
  * - markRead: 'true' to mark the digest as read (default: true)
@@ -86,23 +87,28 @@ function getSupabaseClient() {
  * - isNew: Whether this is the first time the user is viewing it
  * - nextScheduled: When the next digest will be generated
  */
-export async function GET(request: NextRequest) {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    // Validate session and extract user name
-    const { userName: sanitizedUserName, error: authError } = await extractAndValidateUserName(request);
-    if (authError) return authError;
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
     const { searchParams } = new URL(request.url);
     const markRead = searchParams.get('markRead') !== 'false';
 
     const supabase = getSupabaseClient();
 
-    // Verify user exists
-    const { data: user, error: userError } = await supabase
+    // Verify user exists and scope to agency
+    let userQuery = supabase
       .from('users')
       .select('id, name')
-      .eq('name', sanitizedUserName)
-      .single();
+      .eq('name', ctx.userName);
+
+    if (ctx.agencyId) {
+      // Join through agency_members to ensure user belongs to this agency
+      // For now, trust the auth context which already verified membership
+    }
+
+    const { data: user, error: userError } = await userQuery.single();
 
     if (userError || !user) {
       return NextResponse.json(
@@ -111,17 +117,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the most recent digest for this user from today (UTC, matching DB's CURRENT_DATE)
+    // Get the most recent digest for this user from today
     const todayPT = getTodayDate();
 
-    const { data: digest, error: digestError } = await supabase
+    let digestQuery = supabase
       .from('daily_digests')
       .select('*')
       .eq('user_id', user.id)
       .eq('digest_date', todayPT)
       .order('generated_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    // Scope to agency if the table has agency_id
+    if (ctx.agencyId) {
+      digestQuery = digestQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: digest, error: digestError } = await digestQuery.single();
 
     if (digestError && digestError.code !== 'PGRST116') {
       // PGRST116 is "no rows returned" - that's expected if no digest exists
@@ -176,4 +188,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

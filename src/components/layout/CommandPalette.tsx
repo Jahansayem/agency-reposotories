@@ -23,7 +23,9 @@ import {
   CornerDownLeft,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser, isOwner } from '@/types/todo';
+import { AuthUser } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
+import type { AgencyPermissions } from '@/types/agency';
 import { useAppShell } from './AppShell';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -47,7 +49,7 @@ interface CommandItem {
   category: 'navigation' | 'actions' | 'settings' | 'recent';
   shortcut?: string;
   action: () => void;
-  ownerOnly?: boolean;
+  permission?: keyof AgencyPermissions;
 }
 
 export default function CommandPalette({
@@ -57,6 +59,12 @@ export default function CommandPalette({
 }: CommandPaletteProps) {
   const { theme, toggleTheme } = useTheme();
   const { setActiveView, openRightPanel, triggerNewTask } = useAppShell();
+
+  // Permission checks for gated commands
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const permissionResults: Record<string, boolean> = {
+    can_view_strategic_goals: canViewStrategicGoals,
+  };
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -119,7 +127,7 @@ export default function CommandPalette({
       category: 'navigation',
       shortcut: 'G G',
       action: () => { setActiveView('goals'); onClose(); },
-      ownerOnly: true,
+      permission: 'can_view_strategic_goals',
     },
     {
       id: 'nav-archive',
@@ -191,8 +199,8 @@ export default function CommandPalette({
 
     return commands
       .filter(cmd => {
-        // Owner-only commands
-        if (cmd.ownerOnly && !isOwner(currentUser)) {
+        // Permission-gated commands
+        if (cmd.permission && permissionResults[cmd.permission] === false) {
           return false;
         }
 
@@ -204,7 +212,7 @@ export default function CommandPalette({
           cmd.category.toLowerCase().includes(lowerQuery)
         );
       });
-  }, [commands, query, currentUser.name]);
+  }, [commands, query, permissionResults]);
 
   // Group commands by category
   const groupedCommands = useMemo(() => {

@@ -415,11 +415,8 @@ export interface ActivityLogEntry {
   agency_id?: string; // Multi-tenancy: which agency this activity belongs to
 }
 
-// Activity feed is now accessible to all users (legacy constants kept for compatibility)
-export const ACTIVITY_FEED_USERS: string[] = [];
-
-// All users can now see all todos (legacy constants kept for compatibility)
-export const FULL_VISIBILITY_USERS: string[] = [];
+// Legacy constants removed in Phase 4E multi-tenancy migration.
+// Use usePermission('can_view_activity_feed') and usePermission('can_view_all_tasks') instead.
 
 // Notification settings for activity feed
 export interface ActivityNotificationSettings {
@@ -498,76 +495,9 @@ export const GOAL_PRIORITY_CONFIG: Record<GoalPriority, { label: string; color: 
   low: { label: 'Low', color: '#6b7280', bgColor: 'rgba(107, 114, 128, 0.1)' },
 };
 
-// OWNER_USERNAME deleted in Phase 1E — use isOwner(user) or role-based checks instead
-
-/**
- * Check if a user has owner privileges
- * Supports both single-tenant (legacy) and multi-tenant modes
- *
- * In multi-tenant mode, checks current_agency_role
- * In single-tenant mode, checks role from database
- *
- * NOTE: This function will be deleted entirely in Phase 4.
- * Use usePermission() or useRoleCheck() hooks instead.
- */
-export function isOwner(user: {
-  role?: string;
-  name?: string;
-  current_agency_role?: string;
-} | null | undefined): boolean {
-  if (!user) return false;
-
-  // Multi-tenant: check agency-specific role
-  if (user.current_agency_role === 'owner') return true;
-
-  // Single-tenant: use role from database
-  if (user.role === 'owner') return true;
-
-  return false;
-}
-
-/**
- * Check if a user has admin privileges (owner or manager)
- * Supports both single-tenant (legacy) and multi-tenant modes
- *
- * NOTE: This function will be deleted entirely in Phase 4.
- * Use usePermission() or useRoleCheck() hooks instead.
- */
-export function isAdmin(user: {
-  role?: string;
-  name?: string;
-  current_agency_role?: string;
-} | null | undefined): boolean {
-  if (!user) return false;
-
-  // Multi-tenant: check agency-specific role
-  if (user.current_agency_role === 'owner' || user.current_agency_role === 'manager') return true;
-
-  // Single-tenant: use role from database
-  if (user.role === 'owner' || user.role === 'manager') return true;
-
-  return false;
-}
-
-/**
- * Check if a user can view strategic goals
- * In multi-tenant mode, checks permissions
- * In single-tenant mode, checks if user is admin
- */
-export function canViewStrategicGoals(user: {
-  role?: string;
-  name?: string;
-  current_agency_role?: string;
-  current_agency_permissions?: { can_view_strategic_goals?: boolean };
-} | null | undefined): boolean {
-  if (!user) return false;
-
-  // Multi-tenant: check permissions
-  if (user.current_agency_permissions?.can_view_strategic_goals) return true;
-
-  // Fall back to admin check
-  return isAdmin(user);
-}
+// Legacy isOwner(), isAdmin(), canViewStrategicGoals() functions deleted in Phase 4E.
+// Use usePermission() hook or useRoleCheck() hook instead.
+// See src/hooks/usePermission.ts and src/hooks/useRoleCheck.ts.
 
 // ============================================
 // Task Completion & Celebration Types

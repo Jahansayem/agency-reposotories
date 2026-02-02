@@ -12,6 +12,7 @@ import { TaskAssignmentCard, SystemNotificationType } from './TaskAssignmentCard
 import { haptics } from '@/lib/haptics';
 import { SkeletonChatPanel } from '@/components/SkeletonLoader';
 import { ChatImageGallery, ImageLightbox } from '@/components/ChatAttachments';
+import { usePermission } from '@/hooks/usePermission';
 
 // Tapback emoji mapping
 const TAPBACK_EMOJIS: Record<TapbackType, string> = {
@@ -127,6 +128,8 @@ export const ChatMessageList = memo(function ChatMessageList({
   onLoadMore,
   searchQuery = '',
 }: ChatMessageListProps) {
+  const canPinMessages = usePermission('can_pin_messages');
+
   const [tapbackMessageId, setTapbackMessageId] = useState<string | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showMessageMenu, setShowMessageMenu] = useState<string | null>(null);
@@ -538,15 +541,17 @@ export const ChatMessageList = memo(function ChatMessageList({
                           >
                             <Reply className="w-4 h-4" /> Reply
                           </button>
-                          <button
-                            onClick={() => {
-                              onPin(msg);
-                              setShowMessageMenu(null);
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
-                          >
-                            <Pin className="w-4 h-4" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
-                          </button>
+                          {canPinMessages && (
+                            <button
+                              onClick={() => {
+                                onPin(msg);
+                                setShowMessageMenu(null);
+                              }}
+                              className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
+                            >
+                              <Pin className="w-4 h-4" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
+                            </button>
+                          )}
                           {onCreateTask && (
                             <button
                               onClick={() => {

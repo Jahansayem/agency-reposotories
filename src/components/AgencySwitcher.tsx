@@ -31,7 +31,7 @@ const getRoleIcon = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
       return <Crown className="w-3 h-3" />;
-    case 'admin':
+    case 'manager':
       return <Shield className="w-3 h-3" />;
     default:
       return <User className="w-3 h-3" />;
@@ -42,10 +42,10 @@ const getRoleLabel = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
       return 'Owner';
-    case 'admin':
-      return 'Admin';
+    case 'manager':
+      return 'Manager';
     default:
-      return 'Member';
+      return 'Staff';
   }
 };
 
@@ -53,7 +53,7 @@ const getRoleColor = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
       return 'text-yellow-500';
-    case 'admin':
+    case 'manager':
       return 'text-blue-500';
     default:
       return 'text-gray-500 dark:text-gray-400';
@@ -251,8 +251,8 @@ export function AgencySwitcher({
               <>
                 <div className="border-t border-gray-200 dark:border-gray-700" />
 
-                {/* Manage Members Button (owner/admin only) */}
-                {onManageMembers && (currentRole === 'owner' || currentRole === 'admin') && (
+                {/* Manage Members Button (owner/manager only) */}
+                {onManageMembers && (currentRole === 'owner' || currentRole === 'manager') && (
                   <button
                     onClick={() => {
                       setIsOpen(false);

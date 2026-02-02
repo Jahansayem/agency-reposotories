@@ -36,8 +36,8 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
         .select('id, name, color, role, created_at, last_login')
         .order('name');
       if (data) {
-        // Default role to 'member' if not set
-        setUsers(data.map(u => ({ ...u, role: u.role || 'member' })));
+        // Default role to 'staff' if not set
+        setUsers(data.map(u => ({ ...u, role: u.role || 'staff' })));
       }
     };
     fetchUsers();

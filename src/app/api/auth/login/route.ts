@@ -5,6 +5,7 @@ import { createSession } from '@/lib/sessionValidator';
 import { checkLockout, recordFailedAttempt, clearLockout, getLockoutIdentifier } from '@/lib/serverLockout';
 import { setSessionCookie } from '@/lib/sessionCookies';
 import { logger } from '@/lib/logger';
+import { apiErrorResponse } from '@/lib/apiResponse';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -42,18 +43,12 @@ export async function POST(request: NextRequest) {
     const { userId, pin } = body;
 
     if (!userId || !pin) {
-      return NextResponse.json(
-        { error: 'Missing userId or pin' },
-        { status: 400 }
-      );
+      return apiErrorResponse('VALIDATION_ERROR', 'Missing userId or pin');
     }
 
     // Validate PIN format (4 digits)
     if (!/^\d{4}$/.test(pin)) {
-      return NextResponse.json(
-        { error: 'Invalid PIN format' },
-        { status: 400 }
-      );
+      return apiErrorResponse('VALIDATION_ERROR', 'Invalid PIN format');
     }
 
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
@@ -127,14 +122,62 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', userId);
 
-    // Create DB-backed session
-    const session = await createSession(userId, ip, userAgent);
+    // Look up user's default agency membership
+    let agencyId: string | null = null;
+
+    // First try: default agency
+    const { data: defaultMembership } = await getSupabase()
+      .from('agency_members')
+      .select('agency_id')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .eq('is_default_agency', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (defaultMembership?.agency_id) {
+      agencyId = defaultMembership.agency_id;
+    } else {
+      // Fallback: any active agency
+      const { data: anyMembership } = await getSupabase()
+        .from('agency_members')
+        .select('agency_id')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+
+      if (anyMembership?.agency_id) {
+        agencyId = anyMembership.agency_id;
+      }
+    }
+
+    // Fetch all agencies the user belongs to
+    let agencies: Array<{ id: string; name: string; slug: string; role: string; is_default: boolean }> = [];
+    {
+      const { data: membershipRows } = await getSupabase()
+        .from('agency_members')
+        .select('agency_id, role, is_default_agency, agencies!inner(id, name, slug)')
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (membershipRows && Array.isArray(membershipRows)) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        agencies = membershipRows.map((row: any) => ({
+          id: row.agency_id,
+          name: row.agencies?.name || '',
+          slug: row.agencies?.slug || '',
+          role: row.role,
+          is_default: row.is_default_agency || false,
+        }));
+      }
+    }
+
+    // Create DB-backed session with agency context
+    const session = await createSession(userId, ip, userAgent, agencyId || undefined);
     if (!session) {
       logger.error('Failed to create session for user', null, { userId });
-      return NextResponse.json(
-        { error: 'Failed to create session' },
-        { status: 500 }
-      );
+      return apiErrorResponse('SESSION_FAILED', 'Failed to create session', 500);
     }
 
     // Build response with HttpOnly session cookie
@@ -144,8 +187,10 @@ export async function POST(request: NextRequest) {
         id: user.id,
         name: user.name,
         color: user.color,
-        role: user.role || 'member',
+        role: user.role || 'staff',
       },
+      ...(agencyId ? { currentAgencyId: agencyId } : {}),
+      agencies,
     });
 
     // Set HttpOnly session cookie
@@ -160,9 +205,6 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     logger.error('Login endpoint error', error, {});
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiErrorResponse('INTERNAL_ERROR', 'Internal server error', 500);
   }
 }

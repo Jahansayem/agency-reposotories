@@ -26,7 +26,7 @@ async function loginAsUser(page: import('@playwright/test').Page, userName: stri
     await page.fill('[data-testid="pin-input"]', pin);
     await page.click('[data-testid="login-button"]');
     // Wait for main app to load
-    await page.waitForSelector('[data-testid="main-app"]', { timeout: 10000 });
+    await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 15000 });
   }
 }
 

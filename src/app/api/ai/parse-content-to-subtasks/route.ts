@@ -12,6 +12,7 @@ import {
   ParsedSubtask,
 } from '@/lib/aiApiHelper';
 import { logger } from '@/lib/logger';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 function buildPrompt(
   content: string,
@@ -172,5 +173,7 @@ async function handleParseContentToSubtasks(request: NextRequest) {
 
 export const POST = withAiErrorHandling(
   'ParseContentToSubtasksAPI',
-  handleParseContentToSubtasks
+  withSessionAuth(async (request) => {
+    return handleParseContentToSubtasks(request);
+  })
 );

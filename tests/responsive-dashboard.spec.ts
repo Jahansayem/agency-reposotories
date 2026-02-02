@@ -2,9 +2,11 @@ import { test, expect, devices } from '@playwright/test';
 
 test.describe('Responsive Dashboard - Tablet Layout', () => {
   test.describe('iPad Pro viewport', () => {
-    test.use({ ...devices['iPad Pro'] });
 
     test.beforeEach(async ({ page }) => {
+      // Set iPad Pro viewport
+      await page.setViewportSize({ width: 1024, height: 1366 });
+
       await page.goto('http://localhost:3000');
 
       // Login as Derrick (manager)
@@ -104,9 +106,10 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
   });
 
   test.describe('iPad viewport (portrait)', () => {
-    test.use({ ...devices['iPad (gen 7)'] });
-
     test.beforeEach(async ({ page }) => {
+      // Set iPad Gen 7 viewport
+      await page.setViewportSize({ width: 810, height: 1080 });
+
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
@@ -142,9 +145,9 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
   });
 
   test.describe('Tablet landscape (1024px)', () => {
-    test.use({ viewport: { width: 1024, height: 768 } });
-
     test.beforeEach(async ({ page }) => {
+      // Set tablet landscape viewport
+      await page.setViewportSize({ width: 1024, height: 768 });
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
@@ -172,9 +175,9 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
   });
 
   test.describe('Desktop (1280px and above)', () => {
-    test.use({ viewport: { width: 1440, height: 900 } });
-
     test.beforeEach(async ({ page }) => {
+      // Set desktop viewport
+      await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
@@ -215,16 +218,18 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
 
 test.describe('Dashboard Header - Responsive', () => {
   const viewports = [
-    { name: 'iPad Pro', device: devices['iPad Pro'] },
-    { name: 'iPad', device: devices['iPad (gen 7)'] },
-    { name: 'iPhone 13', device: devices['iPhone 13'] },
+    { name: 'iPad Pro', width: 1024, height: 1366 },
+    { name: 'iPad', width: 810, height: 1080 },
+    { name: 'iPhone 13', width: 390, height: 844 },
   ];
 
-  for (const { name, device } of viewports) {
+  for (const { name, width, height } of viewports) {
     test.describe(`${name} viewport`, () => {
-      test.use({ ...device });
 
       test('should display all dashboard header metrics', async ({ page }) => {
+        // Set viewport for this viewport type
+        await page.setViewportSize({ width, height });
+
         await page.goto('http://localhost:3000');
         await page.click('[data-testid="user-card-Derrick"]');
         await page.waitForTimeout(600);
@@ -239,6 +244,9 @@ test.describe('Dashboard Header - Responsive', () => {
       });
 
       test('should have tap-friendly metric cards', async ({ page }) => {
+        // Set viewport for this viewport type
+        await page.setViewportSize({ width, height });
+
         await page.goto('http://localhost:3000');
         await page.click('[data-testid="user-card-Derrick"]');
         await page.waitForTimeout(600);

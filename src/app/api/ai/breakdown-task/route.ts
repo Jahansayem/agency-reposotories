@@ -16,6 +16,7 @@ import {
   getAllPatternDefinitions,
   getCompletionRateWarning,
 } from '@/lib/insurancePatterns';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 export interface Subtask {
   text: string;
@@ -205,4 +206,6 @@ ${patternMatch.tips ? `\nTip: ${patternMatch.tips}` : ''}`
   return aiSuccessResponse(response);
 }
 
-export const POST = withAiErrorHandling('BreakdownTaskAPI', handleBreakdownTask);
+export const POST = withAiErrorHandling('BreakdownTaskAPI', withSessionAuth(async (request) => {
+  return handleBreakdownTask(request);
+}));

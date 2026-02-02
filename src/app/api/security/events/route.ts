@@ -2,13 +2,13 @@
  * Security Events API
  *
  * Provides access to security event data for monitoring dashboard.
- * Restricted to owner/admin users only.
+ * Restricted to agency owner/admin users via withAgencyAdminAuth.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { validateSession } from '@/lib/sessionValidator';
+import { withAgencyAdminAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import { securityMonitor } from '@/lib/securityMonitor';
 
 const supabase = createClient(
@@ -17,45 +17,10 @@ const supabase = createClient(
 );
 
 /**
- * Verify user has admin/owner access
- */
-async function verifyAdminAccess(userName: string): Promise<boolean> {
-  try {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('name', userName)
-      .single();
-
-    if (error || !user) {
-      return userName === 'Derrick'; // Legacy fallback
-    }
-
-    return user.role === 'owner' || user.role === 'admin';
-  } catch {
-    return false;
-  }
-}
-
-/**
  * GET /api/security/events - Get security event summary and recent events
+ * Access restricted to owner/manager roles via withAgencyAdminAuth.
  */
-export async function GET(request: NextRequest) {
-  // Validate session
-  const session = await validateSession(request);
-  if (!session.valid || !session.userName) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Verify admin access
-  if (!(await verifyAdminAccess(session.userName))) {
-    logger.security('Unauthorized access attempt to security events', {
-      userName: session.userName,
-      endpoint: '/api/security/events',
-    });
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-  }
-
+export const GET = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const { searchParams } = new URL(request.url);
     const hours = parseInt(searchParams.get('hours') || '24', 10);
@@ -140,4 +105,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

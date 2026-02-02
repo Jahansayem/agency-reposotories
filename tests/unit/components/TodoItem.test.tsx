@@ -32,6 +32,11 @@ vi.mock('@/lib/activityLogger', () => ({
   logActivity: vi.fn(),
 }));
 
+// Mock usePermission hook (added during multi-tenancy migration)
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => true,
+}));
+
 // Import after mocking
 import TodoItem from '@/components/TodoItem';
 

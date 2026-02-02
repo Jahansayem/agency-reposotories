@@ -344,7 +344,7 @@ export default function TemplatePicker({
                         <TemplateItem
                           key={template.id}
                           template={template}
-                          isOwner={true}
+                          isTemplateCreator={true}
                           onSelect={() => handleSelectTemplate(template)}
                           onDelete={(e) => handleDeleteTemplate(template, e)}
                         />
@@ -365,7 +365,7 @@ export default function TemplatePicker({
                         <TemplateItem
                           key={template.id}
                           template={template}
-                          isOwner={false}
+                          isTemplateCreator={false}
                           onSelect={() => handleSelectTemplate(template)}
                           onDelete={() => {}}
                         />
@@ -385,12 +385,12 @@ export default function TemplatePicker({
 // Template item component
 function TemplateItem({
   template,
-  isOwner,
+  isTemplateCreator,
   onSelect,
   onDelete,
 }: {
   template: TaskTemplate;
-  isOwner: boolean;
+  isTemplateCreator: boolean;
   onSelect: () => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
@@ -447,7 +447,7 @@ function TemplateItem({
           )}
         </div>
       </div>
-      {isOwner && (
+      {isTemplateCreator && (
         <button
           onClick={onDelete}
           aria-label={`Delete template: ${template.name}`}

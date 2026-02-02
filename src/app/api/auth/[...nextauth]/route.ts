@@ -70,7 +70,7 @@ export const authOptions: NextAuthOptions = {
       // Add user ID and role to session
       if (session.user) {
         session.user.id = user.id;
-        session.user.role = user.role || 'member';
+        session.user.role = user.role || 'staff';
       }
 
       logger.info('Session created', {
@@ -113,7 +113,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role || 'member';
+        token.role = user.role || 'staff';
       }
       return token;
     },

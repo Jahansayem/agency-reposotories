@@ -49,9 +49,8 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
     await page.waitForTimeout(500);
   }
 
-  // Wait for main app to load - look for the "New Task" button in the sidebar
-  const newTaskBtn = page.getByRole('button', { name: 'New Task' });
-  await expect(newTaskBtn).toBeVisible({ timeout: 15000 });
+  // Wait for main app to load
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Archive Feature Tests', () => {

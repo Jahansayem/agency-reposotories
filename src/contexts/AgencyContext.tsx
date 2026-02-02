@@ -16,6 +16,9 @@ import type {
   AgencyRole,
   AgencyPermissions,
 } from '@/types/agency';
+import { DEFAULT_PERMISSIONS } from '@/types/agency';
+import { useCurrentUser } from '@/contexts/UserContext';
+import { useTodoStore } from '@/store/todoStore';
 
 // ============================================
 // Types
@@ -64,6 +67,7 @@ interface AgencyProviderProps {
 }
 
 export function AgencyProvider({ children, userId }: AgencyProviderProps) {
+  const currentUserFromContext = useCurrentUser();
   const [currentAgency, setCurrentAgency] = useState<Agency | null>(null);
   const [currentMembership, setCurrentMembership] = useState<AgencyMembership | null>(null);
   const [agencies, setAgencies] = useState<AgencyMembership[]>([]);
@@ -205,6 +209,11 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
       return;
     }
 
+    // Reset the Zustand store to clear stale cross-agency data (H7 fix).
+    // This sets loading: true and empties todos, users, filters, bulk selections,
+    // and custom order so no stale data is visible during the re-fetch.
+    useTodoStore.getState().resetStore();
+
     await loadAgencyDetails(agencyId, membership);
   }, [agencies, loadAgencyDetails]);
 
@@ -218,17 +227,25 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
   }, [userId, loadUserAgencies]);
 
   /**
-   * Check if user has a specific permission
+   * Check if user has a specific permission.
+   * When multi-tenancy is disabled, falls back to DEFAULT_PERMISSIONS for the user's role.
    */
   const hasPermission = useCallback((permission: keyof AgencyPermissions): boolean => {
-    if (!isMultiTenancyEnabled) return true;
+    if (!isMultiTenancyEnabled) {
+      // Single-tenant mode: look up defaults by user role
+      const role = currentUserFromContext?.role as AgencyRole | undefined;
+      if (!role) return false;
+      const defaults = DEFAULT_PERMISSIONS[role];
+      if (!defaults) return false;
+      return defaults[permission] === true;
+    }
     if (!currentMembership?.permissions) return false;
     return currentMembership.permissions[permission] === true;
-  }, [currentMembership, isMultiTenancyEnabled]);
+  }, [currentMembership, isMultiTenancyEnabled, currentUserFromContext]);
 
   // Computed values
   const isAgencyOwner = currentMembership?.role === 'owner';
-  const isAgencyAdmin = currentMembership?.role === 'owner' || currentMembership?.role === 'admin';
+  const isAgencyAdmin = currentMembership?.role === 'owner' || currentMembership?.role === 'manager';
 
   // Subscribe to real-time agency updates
   useEffect(() => {

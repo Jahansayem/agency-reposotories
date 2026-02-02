@@ -154,7 +154,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
           name: name.trim(),
           pin_hash,
           color: getRandomUserColor(),
-          role: 'member',
+          role: 'staff',
           created_at: new Date().toISOString(),
         })
         .select()

@@ -17,10 +17,10 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Wait for page to load
   await page.waitForTimeout(2000);
 
-  // Check if already logged in (has task input)
-  const todoInput = page.locator('textarea[placeholder*="Add a task"]');
-  if (await todoInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-    return todoInput;
+  // Check if already logged in (has sidebar navigation)
+  const sidebar = page.getByRole('complementary', { name: 'Main navigation' });
+  if (await sidebar.isVisible({ timeout: 3000 }).catch(() => false)) {
+    return;
   }
 
   // Wait for login screen
@@ -57,8 +57,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
     await page.waitForTimeout(500);
   }
 
-  await expect(todoInput).toBeVisible({ timeout: 15000 });
-  return todoInput;
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('Visual Improvements Tests', () => {

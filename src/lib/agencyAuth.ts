@@ -14,6 +14,7 @@ import type {
   AgencyPermissions,
   AgencyMembership,
 } from '@/types/agency';
+import { DEFAULT_PERMISSIONS } from '@/types/agency';
 import { isFeatureEnabled } from './featureFlags';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -112,26 +113,22 @@ export async function verifyAgencyAccess(
       context: {
         userId: session.userId,
         userName: session.userName,
-        userRole: session.userRole || 'member',
+        userRole: session.userRole || 'staff',
         agencyId: '', // No agency in single-tenant mode
         agencySlug: '',
         agencyName: '',
-        agencyRole: 'member',
-        permissions: {
-          can_create_tasks: true,
-          can_delete_tasks: session.userRole === 'owner' || session.userRole === 'admin',
-          can_view_strategic_goals: session.userRole === 'owner' || session.userRole === 'admin',
-          can_invite_users: session.userRole === 'owner' || session.userRole === 'admin',
-          can_manage_templates: true,
-        },
+        agencyRole: (session.userRole as AgencyRole) || 'staff',
+        permissions: DEFAULT_PERMISSIONS[(session.userRole as AgencyRole) || 'staff'],
       },
     };
   }
 
-  // Get agency ID from options, header, or cookie
+  // Get agency ID: options > session (authoritative) > header/cookie (fallback)
   let agencyId = options.agencyId;
   if (!agencyId) {
-    agencyId = request.headers.get('X-Agency-Id') ||
+    // Session is the authoritative source for current agency
+    agencyId = session.agencyId ||
+               request.headers.get('X-Agency-Id') ||
                request.cookies.get('current_agency_id')?.value ||
                undefined;
   }
@@ -154,18 +151,12 @@ export async function verifyAgencyAccess(
             context: {
               userId: session.userId,
               userName: session.userName,
-              userRole: session.userRole || 'admin',
+              userRole: session.userRole || 'owner',
               agencyId: agency.id,
               agencySlug: agency.slug,
               agencyName: agency.name,
               agencyRole: 'owner', // Super admin has full access
-              permissions: {
-                can_create_tasks: true,
-                can_delete_tasks: true,
-                can_view_strategic_goals: true,
-                can_invite_users: true,
-                can_manage_templates: true,
-              },
+              permissions: DEFAULT_PERMISSIONS.owner,
             },
           };
         }
@@ -478,7 +469,7 @@ export function withAgencyAuth(
 export function withAgencyAdminAuth(
   handler: (request: NextRequest, context: AgencyAuthContext) => Promise<NextResponse>
 ): (request: NextRequest) => Promise<NextResponse> {
-  return withAgencyAuth(handler, { requiredRoles: ['owner', 'admin'] });
+  return withAgencyAuth(handler, { requiredRoles: ['owner', 'manager'] });
 }
 
 /**
@@ -488,6 +479,106 @@ export function withAgencyOwnerAuth(
   handler: (request: NextRequest, context: AgencyAuthContext) => Promise<NextResponse>
 ): (request: NextRequest) => Promise<NextResponse> {
   return withAgencyAuth(handler, { requiredRoles: ['owner'] });
+}
+
+/**
+ * Create a system/cron route handler that authenticates via:
+ * 1. Authorization: Bearer <CRON_SECRET>  (preferred)
+ * 2. X-API-Key header matching CRON_SECRET or OUTLOOK_ADDON_API_KEY (legacy compat)
+ *
+ * No user or agency context is provided -- the handler runs with service-role privileges.
+ * System routes process all agencies; they are not scoped to a single tenant.
+ *
+ * Usage:
+ * ```typescript
+ * export const GET = withSystemAuth(async (request) => {
+ *   // ... cron logic
+ *   return NextResponse.json({ ok: true });
+ * });
+ * ```
+ */
+export function withSystemAuth(
+  handler: (request: NextRequest) => Promise<NextResponse>
+): (request: NextRequest) => Promise<NextResponse> {
+  return async (request: NextRequest) => {
+    const authHeader = request.headers.get('authorization');
+    const apiKeyHeader = request.headers.get('X-API-Key');
+    const cronSecret = process.env.CRON_SECRET;
+    const outlookApiKey = process.env.OUTLOOK_ADDON_API_KEY;
+
+    let authenticated = false;
+
+    // Method 1: Authorization: Bearer <CRON_SECRET>
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+      authenticated = true;
+    }
+
+    // Method 2: X-API-Key matching CRON_SECRET or OUTLOOK_ADDON_API_KEY (timing-safe)
+    if (!authenticated && apiKeyHeader) {
+      const { timingSafeEqual } = await import('crypto');
+      const apiKeyBuf = Buffer.from(apiKeyHeader);
+
+      if (cronSecret) {
+        try {
+          const secretBuf = Buffer.from(cronSecret);
+          if (apiKeyBuf.length === secretBuf.length && timingSafeEqual(apiKeyBuf, secretBuf)) {
+            authenticated = true;
+          }
+        } catch { /* length mismatch */ }
+      }
+
+      if (!authenticated && outlookApiKey) {
+        try {
+          const keyBuf = Buffer.from(outlookApiKey);
+          if (apiKeyBuf.length === keyBuf.length && timingSafeEqual(apiKeyBuf, keyBuf)) {
+            authenticated = true;
+          }
+        } catch { /* length mismatch */ }
+      }
+    }
+
+    if (!authenticated) {
+      logger.security('System auth rejected - no valid credentials', {
+        component: 'AgencyAuth',
+        hasAuthHeader: !!authHeader,
+        hasApiKey: !!apiKeyHeader,
+      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    return handler(request);
+  };
+}
+
+/**
+ * Lightweight session-only auth wrapper for stateless endpoints (e.g., AI routes).
+ * Does NOT perform agency membership lookup — only validates the session cookie.
+ * This avoids the extra DB queries that withAgencyAuth adds, which are unnecessary
+ * for endpoints that don't query agency-scoped data.
+ *
+ * Usage:
+ * ```typescript
+ * export const POST = withSessionAuth(async (request, userId, userName) => {
+ *   // ... handle request
+ *   return NextResponse.json({ success: true });
+ * });
+ * ```
+ */
+export function withSessionAuth(
+  handler: (request: NextRequest, userId: string, userName: string) => Promise<NextResponse>
+): (request: NextRequest) => Promise<NextResponse> {
+  return async (request: NextRequest) => {
+    const session = await validateSession(request);
+
+    if (!session.valid || !session.userId || !session.userName) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: session.error || 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    return handler(request, session.userId, session.userName);
+  };
 }
 
 /**

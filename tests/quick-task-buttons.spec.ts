@@ -57,12 +57,8 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
     await page.waitForTimeout(500);
   }
 
-  // Wait for main app to load - use correct placeholder text
-  const todoInput = page.locator('textarea[placeholder*="Add a task"]')
-    .or(page.locator('textarea[placeholder*="task"]').first());
-  await expect(todoInput).toBeVisible({ timeout: 15000 });
-
-  return todoInput;
+  // Wait for main app to load
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 }
 
 test.describe('QuickTaskButtons', () => {

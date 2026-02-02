@@ -9,6 +9,7 @@ import {
   dateHelpers,
   withAiErrorHandling,
 } from '@/lib/aiApiHelper';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 interface ParsedTask {
   text: string;
@@ -150,4 +151,6 @@ async function handleParseVoicemail(request: NextRequest) {
   return aiSuccessResponse({ tasks: validatedTasks });
 }
 
-export const POST = withAiErrorHandling('ParseVoicemailAPI', handleParseVoicemail);
+export const POST = withAiErrorHandling('ParseVoicemailAPI', withSessionAuth(async (request) => {
+  return handleParseVoicemail(request);
+}));

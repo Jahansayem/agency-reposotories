@@ -176,6 +176,9 @@ export interface TodoState {
   // Actions - Custom order
   setCustomOrder: (order: string[]) => void;
 
+  // Actions - Agency switch reset
+  resetStore: () => void;
+
   // Computed - these are selectors, called outside the store
 }
 
@@ -539,6 +542,27 @@ export const useTodoStore = create<TodoState>()(
 
       // Custom order
       setCustomOrder: (customOrder) => set({ customOrder }, false, 'setCustomOrder'),
+
+      // Agency switch reset — clears all data so stale cross-agency content is never shown
+      resetStore: () => set(
+        {
+          todos: [],
+          users: [],
+          usersWithColors: [],
+          loading: true,
+          connected: false,
+          error: null,
+          totalTodoCount: 0,
+          hasMoreTodos: false,
+          loadingMore: false,
+          filters: defaultFilters,
+          bulkActions: defaultBulkActions,
+          ui: defaultUI,
+          customOrder: [],
+        },
+        false,
+        'resetStore'
+      ),
     })),
     { name: 'TodoStore' }
   )

@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import { logger } from '@/lib/logger';
 
 // Configure web-push with VAPID keys
@@ -164,11 +164,9 @@ async function sendToSubscription(
  * POST /api/push-send
  *
  * Send web push notifications to specified users.
+ * Restricts notification targets to users within the same agency.
  */
-export async function POST(request: NextRequest) {
-  const { userName, error: authError } = await extractAndValidateUserName(request);
-  if (authError) return authError;
-
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   // Validate VAPID configuration
   if (!webPushInitialized) {
     return NextResponse.json(
@@ -191,9 +189,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Authorization: verify sender identity matches authenticated user
-    // Prevents users from sending notifications impersonating another user.
-    // Sender fields are REQUIRED for their respective notification types to prevent
-    // bypassing identity checks by omitting the field.
     if (type === 'task_assigned') {
       if (!payload.assignedBy) {
         return NextResponse.json(
@@ -201,7 +196,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (payload.assignedBy !== userName) {
+      if (payload.assignedBy !== ctx.userName) {
         return NextResponse.json(
           { success: false, error: 'Sender identity mismatch' },
           { status: 403 }
@@ -215,7 +210,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (payload.completedBy !== userName) {
+      if (payload.completedBy !== ctx.userName) {
         return NextResponse.json(
           { success: false, error: 'Sender identity mismatch' },
           { status: 403 }
@@ -229,7 +224,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (payload.senderName !== userName) {
+      if (payload.senderName !== ctx.userName) {
         return NextResponse.json(
           { success: false, error: 'Sender identity mismatch' },
           { status: 403 }
@@ -239,6 +234,16 @@ export async function POST(request: NextRequest) {
 
     // Initialize Supabase client
     const supabase = getSupabase();
+
+    // Restrict target users to members of the same agency
+    // First get all user IDs that are members of this agency
+    const { data: agencyMembers } = await supabase
+      .from('agency_members')
+      .select('user_id')
+      .eq('agency_id', ctx.agencyId)
+      .eq('status', 'active');
+
+    const agencyMemberIds = new Set((agencyMembers || []).map(m => m.user_id));
 
     // If userNames provided but not userIds, look up the user IDs
     if ((!userIds || userIds.length === 0) && userNames && userNames.length > 0) {
@@ -269,11 +274,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get web push subscriptions for users
+    // Filter userIds to only include agency members
+    const filteredUserIds = userIds.filter(id => agencyMemberIds.has(id));
+
+    if (filteredUserIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: 'No agency members to notify',
+        sent: 0,
+      });
+    }
+
+    // Get web push subscriptions for agency-filtered users
     const { data: tokens, error: fetchError } = await supabase
       .from('device_tokens')
       .select('token, user_id')
-      .in('user_id', userIds)
+      .in('user_id', filteredUserIds)
       .eq('platform', 'web');
 
     if (fetchError) {
@@ -332,4 +348,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

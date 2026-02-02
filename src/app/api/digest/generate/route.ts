@@ -1,22 +1,21 @@
 /**
  * Scheduled Digest Generation API
  *
- * Generates daily digests for all users at scheduled times (5am and 4pm).
+ * Generates daily digests for all users across all agencies at scheduled times (5am and 4pm).
  * Called by an external cron service.
  *
- * Protected by API key authentication.
+ * Protected by system authentication (CRON_SECRET or API key).
+ * This is a system route -- it iterates per-agency and generates
+ * digests scoped to each agency's data.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
 import { logger } from '@/lib/logger';
+import { withSystemAuth } from '@/lib/agencyAuth';
 import type { Todo, ActivityLogEntry } from '@/types/todo';
-
-// Use the same API key as other cron endpoints
-const API_KEY = process.env.OUTLOOK_ADDON_API_KEY;
 
 /**
  * Get today's date in Pacific Time (YYYY-MM-DD format).
@@ -24,9 +23,8 @@ const API_KEY = process.env.OUTLOOK_ADDON_API_KEY;
  */
 function getTodayInPacific(): string {
   const now = new Date();
-  // Format date in Pacific timezone
   const pacificDate = now.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
-  return pacificDate; // Returns YYYY-MM-DD format
+  return pacificDate;
 }
 
 /**
@@ -35,13 +33,10 @@ function getTodayInPacific(): string {
  */
 function getPacificMidnightUTC(dateStr: string): Date {
   const parts = dateStr.split('-').map(Number);
-  // Create a date at midnight on the given date in local time
   const localDate = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0);
-  // Compare UTC and Pacific representations to compute the actual offset
   const utcStr = localDate.toLocaleString('en-US', { timeZone: 'UTC' });
   const pacificStr = localDate.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
   const offsetMs = new Date(utcStr).getTime() - new Date(pacificStr).getTime();
-  // Midnight Pacific in UTC = midnight UTC + offset (7h for PDT, 8h for PST)
   return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]) + offsetMs);
 }
 
@@ -61,20 +56,7 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   }
 }
 
-// Timing-safe API key comparison to prevent timing attacks
-function safeCompareApiKey(provided: string | null, expected: string | undefined): boolean {
-  if (!provided || !expected) return false;
-  try {
-    const a = Buffer.from(provided);
-    const b = Buffer.from(expected);
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
-}
-
-// Response types (same as in /api/ai/daily-digest)
+// Response types
 export interface DailyDigestTask {
   id: string;
   text: string;
@@ -106,7 +88,7 @@ export interface DailyDigestResponse {
   generatedAt: string;
 }
 
-// Helper functions (same as in /api/ai/daily-digest)
+// Helper functions
 function getTimeOfDayGreeting(type: 'morning' | 'afternoon'): string {
   return type === 'morning' ? 'Good morning' : 'Good afternoon';
 }
@@ -176,17 +158,16 @@ function getSupabaseClient(): SupabaseClient {
   });
 }
 
-// Generate digest for a single user
+// Generate digest for a single user, scoped to their agency
 async function generateDigestForUser(
   supabase: SupabaseClient,
   userId: string,
   userName: string,
+  agencyId: string | null,
   digestType: 'morning' | 'afternoon'
 ): Promise<{ digest: DailyDigestResponse; overdueTasks: number; todayTasks: number } | null> {
   const now = new Date();
-  const pacificDateStr = getTodayInPacific(); // YYYY-MM-DD in Pacific time
-  // Use Pacific date for day boundaries so digest reflects the correct local day
-  // Parse as UTC noon to avoid any date-shifting from timezone interpretation
+  const pacificDateStr = getTodayInPacific();
   const todayStart = getPacificMidnightUTC(pacificDateStr);
   const todayEnd = new Date(todayStart);
   todayEnd.setDate(todayEnd.getDate() + 1);
@@ -194,34 +175,38 @@ async function generateDigestForUser(
   yesterdayStart.setDate(yesterdayStart.getDate() - 1);
   const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-  // Run all database queries in parallel
+  // Build agency-scoped queries inline
+  // Each query is built step-by-step to avoid type mismatches
+  const buildOverdueQuery = () => {
+    let q = supabase.from('todos').select('*').lt('due_date', todayStart.toISOString()).eq('completed', false);
+    if (agencyId) q = q.eq('agency_id', agencyId);
+    return q.order('due_date', { ascending: true });
+  };
+
+  const buildTodayQuery = () => {
+    let q = supabase.from('todos').select('*').gte('due_date', todayStart.toISOString()).lt('due_date', todayEnd.toISOString()).eq('completed', false);
+    if (agencyId) q = q.eq('agency_id', agencyId);
+    return q.order('priority', { ascending: false });
+  };
+
+  const buildCompletedQuery = () => {
+    let q = supabase.from('todos').select('*').eq('completed', true).gte('updated_at', yesterdayStart.toISOString()).lt('updated_at', todayStart.toISOString());
+    if (agencyId) q = q.eq('agency_id', agencyId);
+    return q.order('updated_at', { ascending: false });
+  };
+
+  const buildActivityQuery = () => {
+    let q = supabase.from('activity_log').select('*').gte('created_at', last24Hours.toISOString());
+    if (agencyId) q = q.eq('agency_id', agencyId);
+    return q.order('created_at', { ascending: false }).limit(50);
+  };
+
+  // Run all database queries in parallel, scoped to agency
   const [overdueResult, todayResult, completedResult, activityResult] = await Promise.all([
-    supabase
-      .from('todos')
-      .select('*')
-      .lt('due_date', todayStart.toISOString())
-      .eq('completed', false)
-      .order('due_date', { ascending: true }),
-    supabase
-      .from('todos')
-      .select('*')
-      .gte('due_date', todayStart.toISOString())
-      .lt('due_date', todayEnd.toISOString())
-      .eq('completed', false)
-      .order('priority', { ascending: false }),
-    supabase
-      .from('todos')
-      .select('*')
-      .eq('completed', true)
-      .gte('updated_at', yesterdayStart.toISOString())
-      .lt('updated_at', todayStart.toISOString())
-      .order('updated_at', { ascending: false }),
-    supabase
-      .from('activity_log')
-      .select('*')
-      .gte('created_at', last24Hours.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(50),
+    buildOverdueQuery(),
+    buildTodayQuery(),
+    buildCompletedQuery(),
+    buildActivityQuery(),
   ]);
 
   if (overdueResult.error || todayResult.error || completedResult.error || activityResult.error) {
@@ -247,7 +232,7 @@ async function generateDigestForUser(
     t => t.assigned_to === userName || t.created_by === userName || !t.assigned_to
   );
 
-  // Initialize Anthropic client lazily (only when needed, avoids module-level crash if key is missing)
+  // Initialize Anthropic client
   const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
   });
@@ -430,20 +415,11 @@ async function sendDigestNotification(
 /**
  * POST /api/digest/generate?type=morning|afternoon
  *
- * Generate daily digests for all users and send push notifications.
- * Requires X-API-Key header for authentication.
+ * Generate daily digests for all users across all agencies and send push notifications.
+ * Requires system-level auth (CRON_SECRET or X-API-Key).
+ * Iterates per-agency so each user's digest contains only their agency's data.
  */
-export async function POST(request: NextRequest) {
-  // Authenticate with API key
-  const apiKey = request.headers.get('X-API-Key');
-
-  if (!safeCompareApiKey(apiKey, API_KEY)) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export const POST = withSystemAuth(async (request: NextRequest) => {
   // Get digest type from query param
   const { searchParams } = new URL(request.url);
   const typeParam = searchParams.get('type');
@@ -463,94 +439,163 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    // Get all active users
-    const { data: users, error: usersError } = await supabase
-      .from('users')
+    // Get all active agencies
+    const { data: agencies, error: agencyError } = await supabase
+      .from('agencies')
       .select('id, name')
-      .order('name');
+      .eq('is_active', true);
 
-    if (usersError) {
-      logger.error('Failed to fetch users', usersError, { component: 'DigestGenerate' });
-      return NextResponse.json(
-        { success: false, error: 'Failed to fetch users' },
-        { status: 500 }
-      );
-    }
+    // If agencies table doesn't exist or is empty, fall back to non-agency mode
+    const hasAgencies = !agencyError && agencies && agencies.length > 0;
 
-    if (!users || users.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'No users to generate digests for',
-        generated: 0,
-        notified: 0,
-      });
-    }
-
-    // Generate digest for each user
+    // Results accumulator
     const results: {
       userId: string;
       userName: string;
+      agencyId?: string;
       generated: boolean;
       notified: boolean;
       error?: string;
     }[] = [];
 
-    for (const user of users) {
-      try {
-        const result = await generateDigestForUser(supabase, user.id, user.name, digestType);
+    if (hasAgencies) {
+      // Multi-tenant mode: generate per-agency digests
+      for (const agency of agencies!) {
+        // Get active members for this agency
+        const { data: members, error: membersError } = await supabase
+          .from('agency_members')
+          .select('user_id, users!inner(id, name)')
+          .eq('agency_id', agency.id)
+          .eq('status', 'active');
 
-        if (result) {
-          // Store the digest
-          // Note: digest_date uses database default (CURRENT_DATE) due to column constraint
-          // First, delete any existing digest for this user/type/date to prevent duplicates
-          await supabase
-            .from('daily_digests')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('digest_type', digestType)
-            .gte('generated_at', getPacificMidnightUTC(getTodayInPacific()).toISOString());
-
-          const { error: insertError } = await supabase
-            .from('daily_digests')
-            .insert({
-              user_id: user.id,
-              user_name: user.name,
-              digest_type: digestType,
-              digest_data: result.digest,
-              generated_at: new Date().toISOString(),
-              read_at: null,
-              // digest_date will default to CURRENT_DATE in database
-            });
-
-          if (insertError) {
-            logger.error('Digest storage error details', insertError, { component: 'digest/generate' });
-            logger.error('Failed to store digest', insertError, {
-              component: 'DigestGenerate',
-              errorCode: insertError.code,
-              errorMessage: insertError.message,
-              errorDetails: insertError.details,
-            });
-            results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: `Storage failed: ${insertError.message}` });
-            continue;
-          }
-
-          // Send push notification
-          const notified = await sendDigestNotification(
-            supabase,
-            user.id,
-            digestType,
-            result.overdueTasks,
-            result.todayTasks
-          );
-
-          results.push({ userId: user.id, userName: user.name, generated: true, notified });
-        } else {
-          results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: 'Generation failed' });
+        if (membersError || !members || members.length === 0) {
+          logger.warn(`No active members for agency ${agency.name}`, { component: 'DigestGenerate' });
+          continue;
         }
-      } catch (err) {
-        const error = err as Error;
-        logger.error('Error generating digest for user', error, { component: 'DigestGenerate' });
-        results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: 'Internal error during generation' });
+
+        for (const member of members) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const user = (member as any).users;
+          if (!user) continue;
+
+          try {
+            const result = await generateDigestForUser(
+              supabase, user.id, user.name, agency.id, digestType
+            );
+
+            if (result) {
+              // Delete existing digest for this user/type/date/agency to prevent duplicates
+              await supabase
+                .from('daily_digests')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('digest_type', digestType)
+                .eq('agency_id', agency.id)
+                .gte('generated_at', getPacificMidnightUTC(getTodayInPacific()).toISOString());
+
+              const { error: insertError } = await supabase
+                .from('daily_digests')
+                .insert({
+                  user_id: user.id,
+                  user_name: user.name,
+                  digest_type: digestType,
+                  digest_data: result.digest,
+                  generated_at: new Date().toISOString(),
+                  read_at: null,
+                  agency_id: agency.id,
+                });
+
+              if (insertError) {
+                logger.error('Failed to store digest', insertError, {
+                  component: 'DigestGenerate',
+                  agencyId: agency.id,
+                });
+                results.push({ userId: user.id, userName: user.name, agencyId: agency.id, generated: false, notified: false, error: `Storage failed: ${insertError.message}` });
+                continue;
+              }
+
+              // Send push notification
+              const notified = await sendDigestNotification(
+                supabase, user.id, digestType, result.overdueTasks, result.todayTasks
+              );
+
+              results.push({ userId: user.id, userName: user.name, agencyId: agency.id, generated: true, notified });
+            } else {
+              results.push({ userId: user.id, userName: user.name, agencyId: agency.id, generated: false, notified: false, error: 'Generation failed' });
+            }
+          } catch (err) {
+            const error = err as Error;
+            logger.error('Error generating digest for user', error, { component: 'DigestGenerate', agencyId: agency.id });
+            results.push({ userId: user.id, userName: user.name, agencyId: agency.id, generated: false, notified: false, error: 'Internal error during generation' });
+          }
+        }
+      }
+    } else {
+      // Legacy single-tenant mode: get all users directly
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('id, name')
+        .order('name');
+
+      if (usersError) {
+        logger.error('Failed to fetch users', usersError, { component: 'DigestGenerate' });
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch users' },
+          { status: 500 }
+        );
+      }
+
+      if (!users || users.length === 0) {
+        return NextResponse.json({
+          success: true,
+          message: 'No users to generate digests for',
+          generated: 0,
+          notified: 0,
+        });
+      }
+
+      for (const user of users) {
+        try {
+          const result = await generateDigestForUser(supabase, user.id, user.name, null, digestType);
+
+          if (result) {
+            await supabase
+              .from('daily_digests')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('digest_type', digestType)
+              .gte('generated_at', getPacificMidnightUTC(getTodayInPacific()).toISOString());
+
+            const { error: insertError } = await supabase
+              .from('daily_digests')
+              .insert({
+                user_id: user.id,
+                user_name: user.name,
+                digest_type: digestType,
+                digest_data: result.digest,
+                generated_at: new Date().toISOString(),
+                read_at: null,
+              });
+
+            if (insertError) {
+              logger.error('Failed to store digest', insertError, { component: 'DigestGenerate' });
+              results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: `Storage failed: ${insertError.message}` });
+              continue;
+            }
+
+            const notified = await sendDigestNotification(
+              supabase, user.id, digestType, result.overdueTasks, result.todayTasks
+            );
+
+            results.push({ userId: user.id, userName: user.name, generated: true, notified });
+          } else {
+            results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: 'Generation failed' });
+          }
+        } catch (err) {
+          const error = err as Error;
+          logger.error('Error generating digest for user', error, { component: 'DigestGenerate' });
+          results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: 'Internal error during generation' });
+        }
       }
     }
 
@@ -562,7 +607,7 @@ export async function POST(request: NextRequest) {
     logger.performance('Digest generation batch', duration, {
       component: 'DigestGenerate',
       digestType,
-      usersProcessed: users.length,
+      usersProcessed: results.length,
       generated,
       notified,
       failed,
@@ -577,6 +622,7 @@ export async function POST(request: NextRequest) {
       duration: `${duration}ms`,
       results: results.map(r => ({
         userName: r.userName,
+        agencyId: r.agencyId,
         generated: r.generated,
         notified: r.notified,
         error: r.error,
@@ -591,24 +637,15 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/digest/generate
  *
  * Health check endpoint.
+ * Requires system-level auth (CRON_SECRET or X-API-Key).
  */
-export async function GET(request: NextRequest) {
-  // Authenticate with API key
-  const apiKey = request.headers.get('X-API-Key');
-
-  if (!safeCompareApiKey(apiKey, API_KEY)) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export const GET = withSystemAuth(async (_request: NextRequest) => {
   try {
     const supabase = getSupabaseClient();
 
@@ -644,4 +681,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

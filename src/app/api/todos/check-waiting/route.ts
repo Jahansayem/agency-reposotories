@@ -1,36 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { withSystemAuth } from '@/lib/agencyAuth';
 
 /**
  * GET /api/todos/check-waiting
- * Cron endpoint to check for overdue follow-ups and log activity
- * Should be called periodically (e.g., every hour)
+ * Cron endpoint to check for overdue follow-ups and log activity.
+ * Authenticated via CRON_SECRET bearer token.
+ * Processes all agencies (system-level route).
  */
-export async function GET(request: Request) {
+export const GET = withSystemAuth(async (_request: NextRequest) => {
   // Initialize inside handler to avoid build-time errors
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-  // Verify cron secret for security
-  const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (!cronSecret) {
-    logger.error('CRON_SECRET is not configured. Rejecting request.', undefined, { component: 'check-waiting' });
-    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
-  }
-
-  if (authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
 
   try {
-    // Get all tasks that are waiting for response
+    // Get all tasks that are waiting for response (across all agencies)
     const { data: waitingTasks, error: fetchError } = await supabase
       .from('todos')
-      .select('id, text, waiting_since, follow_up_after_hours, assigned_to, created_by')
+      .select('id, text, waiting_since, follow_up_after_hours, assigned_to, created_by, agency_id')
       .eq('waiting_for_response', true)
       .eq('completed', false);
 
@@ -51,6 +41,7 @@ export async function GET(request: Request) {
       todo_id: string;
       todo_text: string;
       user_name: string;
+      agency_id: string | null;
       details: Record<string, unknown>;
     }> = [];
 
@@ -64,12 +55,13 @@ export async function GET(request: Request) {
       if (hoursWaiting >= threshold) {
         overdueTaskIds.push(task.id);
 
-        // Create activity log entry for overdue follow-up
+        // Create activity log entry for overdue follow-up, including agency_id
         activityEntries.push({
           action: 'follow_up_overdue',
           todo_id: task.id,
           todo_text: task.text,
           user_name: 'System',
+          agency_id: task.agency_id || null,
           details: {
             hours_waiting: Math.round(hoursWaiting),
             threshold_hours: threshold,
@@ -131,4 +123,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+});

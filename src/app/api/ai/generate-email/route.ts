@@ -8,6 +8,7 @@ import {
   isAiConfigured,
   withAiErrorHandling,
 } from '@/lib/aiApiHelper';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 // Customer email generation endpoint
 // Generates professional update emails for internal staff to send to customers
@@ -299,4 +300,6 @@ async function handleGenerateEmail(request: NextRequest) {
   });
 }
 
-export const POST = withAiErrorHandling('GenerateEmailAPI', handleGenerateEmail);
+export const POST = withAiErrorHandling('GenerateEmailAPI', withSessionAuth(async (request) => {
+  return handleGenerateEmail(request);
+}));

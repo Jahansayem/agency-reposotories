@@ -209,12 +209,12 @@ function TodoFiltersBar({
 
       {/* Main Controls Row - 3 simplified controls */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-        {/* Quick filter dropdown - 40px minimum touch target */}
+        {/* Quick filter dropdown - 44px minimum touch target (WCAG 2.5.5) */}
         <div className="relative flex-shrink-0">
           <select
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
-            className="appearance-none h-10 pl-3 pr-8 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            className="appearance-none min-h-[44px] h-11 pl-3 pr-8 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             aria-label="Quick filter"
           >
             <option value="all">All Tasks</option>
@@ -225,13 +225,13 @@ function TodoFiltersBar({
           <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
         </div>
 
-        {/* Sort dropdown - 40px minimum touch target */}
+        {/* Sort dropdown - 44px minimum touch target (WCAG 2.5.5) */}
         <div className="relative flex-shrink-0">
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value as SortOption)}
             aria-label="Sort tasks"
-            className="appearance-none h-10 pl-3 pr-8 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            className="appearance-none min-h-[44px] h-11 pl-3 pr-8 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
           >
             <option value="created">Newest First</option>
             <option value="due_date">By Due Date</option>
@@ -243,11 +243,11 @@ function TodoFiltersBar({
           <ArrowUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
         </div>
 
-        {/* Advanced Filters button with count badge - 40px minimum touch target */}
+        {/* Advanced Filters button with count badge - 44px minimum touch target (WCAG 2.5.5) */}
         <button
           type="button"
           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className={`flex items-center gap-2 h-10 px-3 text-sm font-medium rounded-lg transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
+          className={`flex items-center gap-2 min-h-[44px] h-11 px-3 text-sm font-medium rounded-lg transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
             showAdvancedFilters || advancedFilterCount > 0
               ? 'bg-[var(--accent)] text-white shadow-md'
               : 'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)]'
@@ -264,12 +264,12 @@ function TodoFiltersBar({
           )}
         </button>
 
-        {/* More dropdown - moved to right side - 40px minimum touch target */}
+        {/* More dropdown - moved to right side - 44px minimum touch target (WCAG 2.5.5) */}
         <div className="relative ml-auto flex-shrink-0">
           <button
             type="button"
             onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-            className={`flex items-center gap-2 h-10 px-3 text-sm font-medium rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
+            className={`flex items-center gap-2 min-h-[44px] h-11 px-3 text-sm font-medium rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
               showMoreDropdown || showBulkActions || useSectionedView
                 ? 'bg-[var(--accent)] text-white'
                 : 'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)]'
@@ -453,7 +453,7 @@ function TodoFiltersBar({
                       setShowAdvancedFilters(false);
                     }
                   }}
-                  className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  className="p-2 rounded min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                   aria-label="Close advanced filters panel"
                 >
                   <X className="w-4 h-4" aria-hidden="true" />

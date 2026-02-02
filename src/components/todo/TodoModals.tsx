@@ -12,6 +12,7 @@ import AddTaskModal from '../AddTaskModal';
 import SaveTemplateModal from '../SaveTemplateModal';
 import { CompletionCelebration } from '../CompletionCelebration';
 import { TaskCompletionSummary } from '../TaskCompletionSummary';
+import { usePermission } from '@/hooks/usePermission';
 
 // Lazy load heavy modal components (only loaded when opened)
 // ArchivedTaskModal: 372 lines
@@ -167,6 +168,8 @@ function TodoModals({
   selectArchivedTodo,
   onNextTaskClick,
 }: TodoModalsProps) {
+  const canManageTemplates = usePermission('can_manage_templates');
+
   return (
     <>
       <CelebrationEffect
@@ -210,8 +213,8 @@ function TodoModals({
         currentUserId={currentUser.id}
       />
 
-      {/* Save Template Modal */}
-      {templateTodo && (
+      {/* Save Template Modal - gated on can_manage_templates permission */}
+      {templateTodo && canManageTemplates && (
         <SaveTemplateModal
           todo={templateTodo}
           onClose={closeTemplateModal}

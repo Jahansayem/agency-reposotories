@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
 /**
  * POST /api/todos/reorder
  *
  * Reorder tasks in the list view by updating display_order
+ * Requires authenticated session with agency context.
  *
  * Request body options:
  * 1. Move task to specific position:
@@ -16,7 +18,7 @@ import { createClient } from '@supabase/supabase-js';
  * 3. Swap two tasks:
  *    { todoId: string, targetTodoId: string }
  */
-export async function POST(request: NextRequest) {
+async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
   try {
     // Create Supabase client at request time (not module level)
     const supabase = createClient(
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
     );
 
     const body = await request.json();
-    const { todoId, newOrder, direction, targetTodoId, userName } = body;
+    const { todoId, newOrder, direction, targetTodoId } = body;
 
     if (!todoId) {
       return NextResponse.json(
@@ -34,12 +36,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the current task
-    const { data: currentTask, error: fetchError } = await supabase
+    // Get the current task — scoped to agency
+    let query = supabase
       .from('todos')
       .select('*')
-      .eq('id', todoId)
-      .single();
+      .eq('id', todoId);
+
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: currentTask, error: fetchError } = await query.single();
 
     if (fetchError || !currentTask) {
       return NextResponse.json(
@@ -53,13 +60,13 @@ export async function POST(request: NextRequest) {
     // Handle different reorder modes
     if (newOrder !== undefined) {
       // Mode 1: Move to specific position
-      updatedTasks = await moveToPosition(supabase, todoId, currentTask.display_order, newOrder);
+      updatedTasks = await moveToPosition(supabase, todoId, currentTask.display_order, newOrder, ctx.agencyId);
     } else if (direction) {
       // Mode 2: Move up or down
-      updatedTasks = await moveUpOrDown(supabase, todoId, currentTask.display_order, direction);
+      updatedTasks = await moveUpOrDown(supabase, todoId, currentTask.display_order, direction, ctx.agencyId);
     } else if (targetTodoId) {
       // Mode 3: Swap with target task
-      updatedTasks = await swapTasks(supabase, todoId, targetTodoId);
+      updatedTasks = await swapTasks(supabase, todoId, targetTodoId, ctx.agencyId);
     } else {
       return NextResponse.json(
         { error: 'Must provide newOrder, direction, or targetTodoId' },
@@ -68,18 +75,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Log activity
-    if (userName) {
-      await supabase.from('activity_log').insert({
-        action: 'task_reordered',
-        todo_id: todoId,
-        todo_text: currentTask.text,
-        user_name: userName,
-        details: {
-          from: currentTask.display_order,
-          to: updatedTasks.find(t => t.id === todoId)?.display_order,
-        },
-      });
-    }
+    await supabase.from('activity_log').insert({
+      action: 'task_reordered',
+      todo_id: todoId,
+      todo_text: currentTask.text,
+      user_name: ctx.userName,
+      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+      details: {
+        from: currentTask.display_order,
+        to: updatedTasks.find(t => t.id === todoId)?.display_order,
+      },
+    });
 
     return NextResponse.json({
       success: true,
@@ -94,20 +100,29 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const POST = withAgencyAuth(handleReorder);
+
 /**
- * Move task to a specific position
+ * Move task to a specific position — scoped to agency
  */
 async function moveToPosition(
   supabase: any,
   todoId: string,
   currentOrder: number,
-  newOrder: number
+  newOrder: number,
+  agencyId: string
 ): Promise<any[]> {
-  // Get all tasks ordered by display_order
-  const { data: allTasks } = await supabase
+  // Get all tasks ordered by display_order — scoped to agency
+  let query = supabase
     .from('todos')
     .select('*')
     .order('display_order', { ascending: true });
+
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  const { data: allTasks } = await query;
 
   if (!allTasks) return [];
 
@@ -141,23 +156,29 @@ async function moveToPosition(
 }
 
 /**
- * Move task up or down one position
+ * Move task up or down one position — scoped to agency
  */
 async function moveUpOrDown(
   supabase: any,
   todoId: string,
   currentOrder: number,
-  direction: 'up' | 'down'
+  direction: 'up' | 'down',
+  agencyId: string
 ): Promise<any[]> {
   const offset = direction === 'up' ? -1 : 1;
   const targetOrder = currentOrder + offset;
 
-  // Get task at target position
-  const { data: targetTask } = await supabase
+  // Get task at target position — scoped to agency
+  let query = supabase
     .from('todos')
     .select('*')
-    .eq('display_order', targetOrder)
-    .single();
+    .eq('display_order', targetOrder);
+
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  const { data: targetTask } = await query.single();
 
   if (!targetTask) {
     // Already at boundary (top or bottom)
@@ -192,13 +213,19 @@ async function moveUpOrDown(
 }
 
 /**
- * Swap two tasks
+ * Swap two tasks — verifies both belong to same agency
  */
-async function swapTasks(supabase: any, todoId: string, targetTodoId: string): Promise<any[]> {
-  const { data: tasks } = await supabase
+async function swapTasks(supabase: any, todoId: string, targetTodoId: string, agencyId: string): Promise<any[]> {
+  let query = supabase
     .from('todos')
     .select('*')
     .in('id', [todoId, targetTodoId]);
+
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  const { data: tasks } = await query;
 
   if (!tasks || tasks.length !== 2) {
     return [];
