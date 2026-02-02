@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2 } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2, GripVertical } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO, WaitingContactType } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
 import AttachmentList from './AttachmentList';
@@ -64,7 +64,7 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
         role="checkbox"
         aria-checked={subtask.completed}
         aria-label={`${subtask.completed ? 'Completed' : 'Incomplete'}: ${subtask.text}`}
-        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-[var(--radius-sm)] border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
+        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
           subtask.completed
             ? 'bg-[var(--accent)] border-[var(--accent)]'
             : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
@@ -685,15 +685,23 @@ function TodoItemComponent({
           </div>
         )}
 
+        {/* Drag handle - for manual reordering */}
+        <div
+          className="drag-handle flex items-center justify-center w-8 h-8 -ml-1 opacity-0 group-hover:opacity-30 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0"
+          title="Drag to reorder"
+        >
+          <GripVertical className="w-4 h-4 text-[var(--text-light)]" />
+        </div>
+
         {/* Completion checkbox - prominent one-click complete with 44x44px touch target */}
         <button
           onClick={handleToggle}
-          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-[var(--radius-md)] flex items-center justify-center flex-shrink-0 transition-all duration-200 hover:scale-110 active:scale-95`}
+          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 hover:scale-110 active:scale-95`}
           style={{ touchAction: 'manipulation' }}
           title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
         >
           {/* Visual checkbox */}
-          <span className={`w-8 h-8 sm:w-7 sm:h-7 rounded-[var(--radius-md)] border-2 flex items-center justify-center transition-all duration-200 ${
+          <span className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
             todo.completed
               ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
               : 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'

@@ -70,6 +70,7 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   marked_waiting: { icon: Clock, label: 'marked waiting for response', color: '#8b5cf6' },
   customer_responded: { icon: CheckCircle2, label: 'customer responded', color: '#10b981' },
   follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: '#ef4444' },
+  task_reordered: { icon: ArrowRight, label: 'reordered task', color: '#3b82f6' },
 };
 
 // Activity type filter options
