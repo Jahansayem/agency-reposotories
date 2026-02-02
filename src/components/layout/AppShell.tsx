@@ -167,9 +167,23 @@ export default function AppShell({
         setSidebarCollapsed(prev => !prev);
       }
 
+      // Keyboard shortcuts modal: ? key
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // Don't trigger if user is typing in an input/textarea
+        const target = e.target as HTMLElement;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+        if (!isInputField) {
+          e.preventDefault();
+          setShowShortcuts(prev => !prev);
+        }
+      }
+
       // Close panels on Escape
       if (e.key === 'Escape') {
-        if (commandPaletteOpen) {
+        if (showShortcuts) {
+          setShowShortcuts(false);
+        } else if (commandPaletteOpen) {
           setCommandPaletteOpen(false);
         } else if (rightPanel) {
           setRightPanel(null);
@@ -182,7 +196,7 @@ export default function AppShell({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [commandPaletteOpen, rightPanel, mobileSheetOpen]);
+  }, [commandPaletteOpen, rightPanel, mobileSheetOpen, showShortcuts]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev);
