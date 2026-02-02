@@ -1597,7 +1597,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }, [visibleTodos, quickFilter, highPriorityOnly, userName]);
 
   // Handle drag end for manual reordering
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -1610,10 +1610,44 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         newIndex
       );
 
+      // Optimistic update - update local state first
       setCustomOrder(newOrder);
       // Auto-switch to custom sort when reordering
       if (sortOption !== 'custom') {
         setSortOption('custom');
+      }
+
+      // Persist to database via API
+      try {
+        const response = await fetch('/api/todos/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            todoId: active.id,
+            newOrder: newIndex,
+            userName: currentUser.name,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to reorder task');
+        }
+
+        // Log activity
+        await logActivity({
+          action: 'task_reordered',
+          todoId: active.id as string,
+          todoText: filteredAndSortedTodos[oldIndex].text,
+          userName: currentUser.name,
+          details: { from: oldIndex, to: newIndex },
+        });
+
+        announce('Task reordered');
+      } catch (error) {
+        console.error('Failed to persist task order:', error);
+        // Rollback optimistic update
+        setCustomOrder([]);
+        announce('Failed to reorder task. Please try again.');
       }
     }
   };
