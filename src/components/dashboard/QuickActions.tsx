@@ -6,6 +6,7 @@ import { Plus, AlertCircle, Play, MessageCircle, LucideIcon } from 'lucide-react
 interface QuickAction {
   id: string;
   label: string;
+  shortLabel: string;
   icon: LucideIcon;
   onClick: () => void;
   variant?: 'default' | 'primary' | 'warning';
@@ -31,6 +32,7 @@ export default function QuickActions({
     {
       id: 'add-task',
       label: 'Add Task',
+      shortLabel: 'Add',
       icon: Plus,
       onClick: onAddTask || (() => {}),
       variant: 'primary',
@@ -38,6 +40,7 @@ export default function QuickActions({
     {
       id: 'my-overdue',
       label: 'My Overdue',
+      shortLabel: 'Overdue',
       icon: AlertCircle,
       onClick: onFilterOverdue || (() => {}),
       variant: overdueCount > 0 ? 'warning' : 'default',
@@ -46,12 +49,14 @@ export default function QuickActions({
     {
       id: 'start-focus',
       label: 'Start Focus',
+      shortLabel: 'Focus',
       icon: Play,
       onClick: onStartFocus || (() => {}),
     },
     {
       id: 'chat',
       label: 'Team Chat',
+      shortLabel: 'Chat',
       icon: MessageCircle,
       onClick: onOpenChat || (() => {}),
     },
@@ -99,6 +104,7 @@ export default function QuickActions({
             `}
           >
             <Icon className="w-4 h-4" />
+            <span className="sm:hidden text-xs">{action.shortLabel}</span>
             <span className="hidden sm:inline">{action.label}</span>
             {action.badge !== undefined && (
               <span className={`

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Task Click Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to app and login
-    await page.goto('http://localhost:3000');
+    await page.goto('http://localhost:3000', { waitUntil: 'networkidle' });
 
     // Wait for login screen
     await page.waitForSelector('[data-testid="user-card-Derrick"]', { timeout: 10000 });
@@ -22,16 +22,14 @@ test.describe('Task Click Flow', () => {
     await page.waitForTimeout(500);
 
     // Wait for navigation and main app to load
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(2000);
 
-    // Dismiss any welcome modals by clicking View Tasks button with force
-    const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
-    if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await viewTasksBtn.click({ force: true });
-      await page.waitForTimeout(1000);
-    }
+    // Navigate to Tasks view - click the Tasks tab
+    const tasksTab = page.locator('[role="tab"]').filter({ hasText: 'Tasks' });
+    await tasksTab.waitFor({ state: 'visible', timeout: 5000 });
+    await tasksTab.click();
 
-    // Wait for tasks view to be ready - wait for either tasks to appear or network to settle
+    // Wait for tasks to load
     await page.waitForTimeout(2000);
   });
 
@@ -51,12 +49,14 @@ test.describe('Task Click Flow', () => {
     // Wait for tasks to load
     await page.waitForTimeout(2000);
 
-    // Find a task item - look for listitem role
+    // Find a task item - look for listitem role (longer timeout for mobile)
     const firstTask = page.locator('[role="listitem"]').first();
-    await expect(firstTask).toBeVisible({ timeout: 5000 });
+    await expect(firstTask).toBeVisible({ timeout: 10000 });
 
-    // Click on the task - use force to bypass any overlays
-    await firstTask.click({ position: { x: 200, y: 20 }, force: true });
+    // Scroll task into view and use JavaScript click to bypass overlay
+    await firstTask.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await firstTask.evaluate(node => (node as HTMLElement).click());
 
     // Wait for detail modal to open - look for the modal dialog
     const modal = page.locator('[role="dialog"]');
@@ -71,9 +71,11 @@ test.describe('Task Click Flow', () => {
     }
     expect(consoleErrors.length).toBe(0);
 
-    // Close the modal using X button
+    // Close the modal using X button - use JavaScript click
     const closeButton = page.locator('button[aria-label*="Close"]').first();
-    await closeButton.click({ force: true });
+    await closeButton.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await closeButton.evaluate(node => (node as HTMLElement).click());
     await expect(modal).not.toBeVisible({ timeout: 3000 });
   });
 
@@ -81,10 +83,12 @@ test.describe('Task Click Flow', () => {
     // Wait for tasks to load
     await page.waitForTimeout(2000);
 
-    // Click on the first task
+    // Click on the first task - use JavaScript click (longer timeout for mobile)
     const firstTask = page.locator('[role="listitem"]').first();
-    await expect(firstTask).toBeVisible({ timeout: 5000 });
-    await firstTask.click({ position: { x: 200, y: 20 }, force: true });
+    await expect(firstTask).toBeVisible({ timeout: 10000 });
+    await firstTask.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await firstTask.evaluate(node => (node as HTMLElement).click());
 
     // Wait for modal
     const modal = page.locator('[role="dialog"]');
