@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, ReactNode } from 'react';
+import { memo, useState, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
@@ -23,6 +23,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -53,6 +54,7 @@ interface TodoListContentProps {
   onSelectedTaskHandled?: () => void;
 
   // Handlers
+  onDragStart?: (event: DragStartEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
   onSelectTodo: (id: string) => void;
   onToggle: (id: string, completed: boolean) => void;
@@ -92,6 +94,7 @@ function TodoListContent({
   stats,
   selectedTaskId,
   onSelectedTaskHandled,
+  onDragStart,
   onDragEnd,
   onSelectTodo,
   onToggle,
@@ -127,6 +130,7 @@ function TodoListContent({
     })
   );
 
+  const [isDragging, setIsDragging] = useState(false);
   const isDragEnabled = !showBulkActions;
 
   // Determine empty state variant
@@ -160,7 +164,7 @@ function TodoListContent({
   const renderTodoItem = (todo: Todo, index: number): ReactNode => (
     <motion.div
       key={todo.id}
-      layout={!prefersReducedMotion()}
+      layout={!isDragging && !prefersReducedMotion()}
       variants={prefersReducedMotion() ? undefined : listItemVariants}
       initial={prefersReducedMotion() ? false : 'hidden'}
       animate="visible"
@@ -241,7 +245,15 @@ function TodoListContent({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
+            onDragStart={(event) => {
+              setIsDragging(true);
+              onDragStart?.(event);
+            }}
+            onDragEnd={(event) => {
+              setIsDragging(false);
+              onDragEnd(event);
+            }}
+            onDragCancel={() => setIsDragging(false)}
           >
             <SortableContext
               items={todos.map((t) => t.id)}
@@ -280,7 +292,7 @@ function TodoListContent({
               ) : (
                 /* Flat list view (original behavior) */
                 <div className="space-y-2" role="list" aria-label="Task list">
-                  <AnimatePresence mode="popLayout" initial={false}>
+                  <AnimatePresence initial={false}>
                     {todos.length === 0 ? (
                       renderEmptyState()
                     ) : (

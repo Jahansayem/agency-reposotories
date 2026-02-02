@@ -17,13 +17,33 @@ import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
  *
  * 3. Swap two tasks:
  *    { todoId: string, targetTodoId: string }
+ *
+ * 4. Set explicit order for a list of tasks (preferred for drag-and-drop):
+ *    { orderedIds: string[] }
  */
 async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
   try {
     const supabase = createServiceRoleClient();
 
     const body = await request.json();
-    const { todoId, newOrder, direction, targetTodoId } = body;
+    const { todoId, newOrder, direction, targetTodoId, orderedIds } = body;
+
+    let updatedTasks: any[] = [];
+
+    // Mode 4: Explicit ordered list (preferred for drag-and-drop)
+    if (orderedIds && Array.isArray(orderedIds)) {
+      updatedTasks = await setExplicitOrder(supabase, orderedIds, ctx.agencyId);
+
+      // Log activity
+      await supabase.from('activity_log').insert({
+        action: 'task_reordered',
+        user_name: ctx.userName,
+        ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+        details: { mode: 'explicit_order', count: orderedIds.length },
+      });
+
+      return NextResponse.json({ success: true, updatedTasks });
+    }
 
     if (!todoId) {
       return NextResponse.json(
@@ -51,8 +71,6 @@ async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
       );
     }
 
-    let updatedTasks: any[] = [];
-
     // Handle different reorder modes
     if (newOrder !== undefined) {
       // Mode 1: Move to specific position
@@ -65,7 +83,7 @@ async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
       updatedTasks = await swapTasks(supabase, todoId, targetTodoId, ctx.agencyId);
     } else {
       return NextResponse.json(
-        { error: 'Must provide newOrder, direction, or targetTodoId' },
+        { error: 'Must provide newOrder, direction, targetTodoId, or orderedIds' },
         { status: 400 }
       );
     }
@@ -233,6 +251,58 @@ async function swapTasks(supabase: any, todoId: string, targetTodoId: string, ag
     { id: task1.id, display_order: task2.display_order },
     { id: task2.id, display_order: task1.display_order },
   ];
+
+  const updatedTasks = [];
+  for (const update of updates) {
+    const { data } = await supabase
+      .from('todos')
+      .update({ display_order: update.display_order })
+      .eq('id', update.id)
+      .select()
+      .single();
+
+    if (data) updatedTasks.push(data);
+  }
+
+  return updatedTasks;
+}
+
+/**
+ * Set explicit display_order for a list of task IDs.
+ * The index in the array becomes the display_order.
+ * Only updates tasks whose display_order actually changed.
+ */
+async function setExplicitOrder(
+  supabase: any,
+  orderedIds: string[],
+  agencyId: string
+): Promise<any[]> {
+  if (orderedIds.length === 0) return [];
+
+  // Fetch current display_order for these tasks (to skip unchanged ones)
+  let query = supabase
+    .from('todos')
+    .select('id, display_order')
+    .in('id', orderedIds);
+
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  const { data: currentTasks } = await query;
+  if (!currentTasks) return [];
+
+  const currentOrderMap = new Map<string, number | null>(
+    currentTasks.map((t: any) => [t.id, t.display_order])
+  );
+
+  // Only update tasks whose display_order actually changed
+  const updates: { id: string; display_order: number }[] = [];
+  orderedIds.forEach((id, index) => {
+    if (currentOrderMap.has(id) && currentOrderMap.get(id) !== index) {
+      updates.push({ id, display_order: index });
+    }
+  });
 
   const updatedTasks = [];
   for (const update of updates) {

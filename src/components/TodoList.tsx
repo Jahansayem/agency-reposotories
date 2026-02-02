@@ -104,6 +104,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     addTodo: addTodoToStore,
     updateTodo: updateTodoInStore,
     deleteTodo: deleteTodoFromStore,
+    setTodos: setTodosInStore,
     // Bulk action helpers from store
     toggleTodoSelection,
   } = useTodoStore();
@@ -1612,32 +1613,47 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     if (over && active.id !== over.id) {
       const oldIndex = filteredAndSortedTodos.findIndex((t) => t.id === active.id);
       const newIndex = filteredAndSortedTodos.findIndex((t) => t.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
 
-      // Compute new order array
+      // Compute new order array from current visual order
       const reordered = arrayMove([...filteredAndSortedTodos], oldIndex, newIndex);
 
-      // Save old display_order values for rollback
-      const oldOrders = new Map(filteredAndSortedTodos.map(t => [t.id, t.display_order]));
+      // Build a map of new display_order for the visible/filtered todos
+      const newOrderMap = new Map<string, number>();
+      reordered.forEach((todo, index) => {
+        newOrderMap.set(todo.id, index);
+      });
 
-      // Auto-switch to custom sort when reordering
+      // Snapshot the entire todos array for rollback
+      const allTodos = useTodoStore.getState().todos;
+      const snapshot = allTodos.map(t => ({ ...t }));
+
+      // Suppress real-time updates during reorder
+      setReorderingFlag(true);
+
+      // Atomic update: update display_order on all todos in one setTodos call
+      // This prevents N intermediate re-renders
+      const updatedTodos = allTodos.map(t => {
+        const newOrder = newOrderMap.get(t.id);
+        if (newOrder !== undefined) {
+          return { ...t, display_order: newOrder };
+        }
+        return t;
+      });
+      setTodosInStore(updatedTodos);
+
+      // Switch to custom sort AFTER setting display_order so the sort is stable
       if (sortOption !== 'custom') {
         setSortOption('custom');
       }
 
-      // Optimistic update: assign sequential display_order in store
-      setReorderingFlag(true);
-      reordered.forEach((todo, index) => {
-        updateTodoInStore(todo.id, { display_order: index });
-      });
-
-      // Persist to database via API
+      // Persist to database via API — send the explicit ordered ID list
       try {
         const response = await fetchWithCsrf('/api/todos/reorder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            todoId: active.id,
-            newOrder: newIndex,
+            orderedIds: reordered.map(t => t.id),
           }),
         });
 
@@ -1649,7 +1665,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         await logActivity({
           action: 'task_reordered',
           todoId: active.id as string,
-          todoText: filteredAndSortedTodos[oldIndex].text,
+          todoText: reordered[newIndex]?.text || '',
           userName: currentUser.name,
           details: { from: oldIndex, to: newIndex },
         });
@@ -1657,10 +1673,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         announce('Task reordered');
       } catch (error) {
         console.error('Failed to persist task order:', error);
-        // Rollback optimistic update
-        oldOrders.forEach((order, id) => {
-          updateTodoInStore(id, { display_order: order });
-        });
+        // Rollback: restore the full snapshot
+        setTodosInStore(snapshot);
         announce('Failed to reorder task. Please try again.');
       } finally {
         setReorderingFlag(false);
