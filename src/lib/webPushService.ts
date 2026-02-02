@@ -98,30 +98,24 @@ export async function subscribeToPush(
   registration: ServiceWorkerRegistration
 ): Promise<PushSubscription | null> {
   if (!VAPID_PUBLIC_KEY) {
-    console.error('VAPID public key not configured');
-    return null;
+    throw new Error('VAPID public key not configured. Set NEXT_PUBLIC_VAPID_PUBLIC_KEY in your environment.');
   }
 
-  try {
-    // Check for existing subscription
-    const existingSubscription = await registration.pushManager.getSubscription();
-    if (existingSubscription) {
-      console.log('Returning existing push subscription');
-      return existingSubscription;
-    }
-
-    // Create new subscription
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-    });
-
-    console.log('Push subscription created successfully');
-    return subscription;
-  } catch (error) {
-    console.error('Push subscription failed:', error);
-    return null;
+  // Check for existing subscription
+  const existingSubscription = await registration.pushManager.getSubscription();
+  if (existingSubscription) {
+    console.log('Returning existing push subscription');
+    return existingSubscription;
   }
+
+  // Create new subscription
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+  });
+
+  console.log('Push subscription created successfully');
+  return subscription;
 }
 
 /**
@@ -230,9 +224,14 @@ export async function enablePushNotifications(
   }
 
   // Request permission
-  const permission = await requestNotificationPermission();
-  if (permission !== 'granted') {
-    return { success: false, error: 'Notification permission was denied' };
+  try {
+    const permission = await requestNotificationPermission();
+    if (permission !== 'granted') {
+      return { success: false, error: 'Notification permission was denied. Check your browser settings.' };
+    }
+  } catch (err) {
+    console.error('Permission request failed:', err);
+    return { success: false, error: 'Failed to request notification permission' };
   }
 
   // Register service worker
@@ -241,19 +240,40 @@ export async function enablePushNotifications(
     return { success: false, error: 'Failed to register service worker' };
   }
 
+  // Wait for SW to be active (needed for pushManager.subscribe)
+  if (!registration.active) {
+    await new Promise<void>((resolve) => {
+      const sw = registration.installing || registration.waiting;
+      if (!sw) { resolve(); return; }
+      if (sw.state === 'activated') { resolve(); return; }
+      sw.addEventListener('statechange', function handler() {
+        if (sw.state === 'activated') {
+          sw.removeEventListener('statechange', handler);
+          resolve();
+        }
+      });
+    });
+  }
+
   // Subscribe to push
-  const subscription = await subscribeToPush(registration);
-  if (!subscription) {
-    return { success: false, error: 'Failed to subscribe to push notifications' };
-  }
+  try {
+    const subscription = await subscribeToPush(registration);
+    if (!subscription) {
+      return { success: false, error: 'Failed to subscribe to push notifications' };
+    }
 
-  // Save to server
-  const saved = await saveSubscriptionToServer(subscription, userId, userName);
-  if (!saved) {
-    return { success: false, error: 'Failed to save subscription to server' };
-  }
+    // Save to server
+    const saved = await saveSubscriptionToServer(subscription, userId, userName);
+    if (!saved) {
+      return { success: false, error: 'Failed to save subscription to server' };
+    }
 
-  return { success: true };
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error during push subscription';
+    console.error('Push subscription failed:', err);
+    return { success: false, error: message };
+  }
 }
 
 /**

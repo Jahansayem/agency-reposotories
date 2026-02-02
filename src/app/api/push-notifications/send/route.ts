@@ -22,11 +22,16 @@ import webpush from 'web-push';
  * }
  */
 
-// Initialize Supabase client with service role
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization of Supabase client (only when API is called)
+function getSupabaseClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase environment variables not configured');
+  }
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 // Configure web-push
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -96,7 +101,7 @@ export async function POST(request: NextRequest) {
     for (const uid of userIds) {
       try {
         // Get user's push subscriptions
-        const { data: subscriptions, error: fetchError } = await supabase
+        const { data: subscriptions, error: fetchError } = await getSupabaseClient()
           .from('push_subscriptions')
           .select('*')
           .eq('user_id', uid)
@@ -158,7 +163,7 @@ export async function POST(request: NextRequest) {
             sentCount++;
 
             // Update last_used_at
-            await supabase
+            await getSupabaseClient()
               .from('push_subscriptions')
               .update({ last_used_at: new Date().toISOString() })
               .eq('id', sub.id);
@@ -169,7 +174,7 @@ export async function POST(request: NextRequest) {
 
             // If subscription is invalid/expired, mark as inactive
             if (error.statusCode === 410 || error.statusCode === 404) {
-              await supabase
+              await getSupabaseClient()
                 .from('push_subscriptions')
                 .update({ is_active: false })
                 .eq('id', sub.id);
@@ -178,7 +183,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Log notification
-        await supabase.from('notification_log').insert({
+        await getSupabaseClient().from('notification_log').insert({
           user_id: uid,
           notification_type: type,
           title,
