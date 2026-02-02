@@ -99,6 +99,176 @@ Phase 5 depends only on Phase 1 (role types) and can run in parallel with Phases
 
 ---
 
+## Agent Orchestration Plan
+
+### Available Agent Types
+
+| Agent | Capabilities | Tools | Best For |
+|-------|-------------|-------|----------|
+| **general-purpose** | Full tool access, multi-step autonomous work | Read, Write, Edit, Grep, Glob, Bash, Web | Writing code, implementing features, fixing bugs across multiple files |
+| **Bash** | Command execution | Bash only | Running migrations, builds, tests, git operations |
+| **Explore** | Fast codebase search and analysis | Read, Grep, Glob (no write) | Finding files, understanding patterns, pre-implementation research |
+| **Plan** | Architecture design, implementation planning | Read, Grep, Glob (no write) | Designing approaches, reviewing code, identifying dependencies |
+
+### Phase 0: Prerequisites (Sequential — 1 agent)
+
+**Agent:** 1x general-purpose
+**Why sequential:** These are small, interconnected SQL fixes that must be tested together.
+
+```
+general-purpose Agent A:
+  1. Fix set_request_context() is_local → true
+  2. Fix agency_role type cast in seed migration
+  3. Fix accept_agency_invitation demotion bug
+  4. Add covering indexes
+  5. Define apiErrorResponse() helper + type
+```
+
+### Phase 1: Database & Type Foundation (2 agents in parallel)
+
+```
+general-purpose Agent A (Database):        general-purpose Agent B (TypeScript):
+  1A. Write reconcile RLS migration           1E. Update AgencyRole type
+      - Drop correct v3 policies              1E. Expand AgencyPermissions to 20 fields
+      - Create agency policies for            1E. Update DEFAULT_PERMISSIONS
+        activity_log, task_templates,         1E. Update UserRole, delete OWNER_USERNAME
+        goal_categories                       1E. Add apiErrorResponse() to shared location
+      - Scoped user SELECT policy
+  1B. Write role migration SQL
+      - Include auth.is_admin() update
+  1C. Write permissions expansion SQL
+  1D. Add current_agency_id to sessions
+      + update validate_session_token RPC
+
+  ──── SYNC POINT: Both complete ────
+  Bash Agent: Run migrations in test env
+```
+
+**Interaction:** Agent B's type changes must match Agent A's SQL constraints. Agent A should output the exact role values and permission field names so Agent B uses identical strings.
+
+### Phase 2: Auth Plumbing (2 agents in parallel)
+
+```
+general-purpose Agent A (Backend):         general-purpose Agent B (Frontend):
+  2A. sessionValidator.ts                    2D. Create UserContext (above AgencyProvider)
+      - Add agencyId from session            2D. Create usePermission hook
+      - Update fallback query path           2D. Create useRoleCheck hook
+  2B. login/route.ts                         2D. Create PermissionGate component
+      - Default agency lookup                2D. Fix AgencyContext.hasPermission()
+      - Handle no-membership edge case           non-multi-tenancy fallback
+  2C. apiAuth.ts
+      - Return agencyId
+      - Create agencyScopedQuery helper
+      - Update verifyTodoAccess
+
+  ──── SYNC POINT: Both complete ────
+```
+
+**Interaction:** Agent B's `usePermission` hook consumes the permission type that Phase 1E defined. Agent A's `extractAndValidateUserName()` return type change affects how Phase 3 routes consume it — no direct dependency on Agent B.
+
+### Phase 3: API Route Hardening (3 agents in parallel)
+
+This is the largest phase with 42 routes. Split by route category:
+
+```
+general-purpose Agent A:          general-purpose Agent B:          general-purpose Agent C:
+  3A. Zero-auth routes (6):         3C-1. Data routes (10):           3C-2. Remaining routes (8):
+      - Delete debug endpoints        - /api/todos (CRUD)              - /api/goals (CRUD)
+      - todos/reorder                 - /api/activity                  - /api/goals/categories
+      - push-notifications/send       - /api/templates                 - /api/goals/milestones
+      - /api/agencies GET/POST        - /api/attachments               - /api/reminders
+                                      - /api/patterns/*                - /api/push-send
+  3B. AI routes (8):                  - /api/digest/latest             - /api/push-subscribe
+      - Create withSessionAuth                                         - /api/todos/waiting
+      - Apply to all 8 AI routes    3D. System/cron routes (3):        - /api/todos/check-waiting
+                                      - reminders/process
+                                      - digest/generate
+                                      - Create withSystemAuth
+
+  ──── SYNC POINT: All 3 complete ────
+  Bash Agent: npm run build + verify no type errors
+  Bash Agent: Run API auth tests
+```
+
+**Interaction:** All 3 agents import from the same `agencyAuth.ts` and `apiAuth.ts`. Agent A creates `withSessionAuth`. Agents B and C use `withAgencyAuth` and `agencyScopedQuery` from Phase 2. No cross-agent file conflicts since each touches different route files.
+
+### Phase 4: Frontend Permission Migration (2 agents in parallel)
+
+```
+general-purpose Agent A (Components):      general-purpose Agent B (Data/State):
+  4A. Navigation gating (5 components)       4C. Staff data scoping in useTodoData
+  4B. Feature-level gates (7 components)     4C. Real-time event handler filtering
+  4D. Role display updates (7 components)    4C. Agency-switch state reset
+  4E. Legacy code cleanup                        (Zustand resetStore, component keys)
+      - Delete isOwner/isAdmin imports       Rename TemplatePicker.isOwner
+      - Remove OWNER_USERNAME
+      - Remove hardcoded name arrays
+
+  ──── SYNC POINT: Both complete ────
+  Bash Agent: npm run build
+```
+
+**Interaction:** Agent A removes `isOwner()` imports that Agent B's files may also import. Agent A should complete the removal from `types/todo.ts` first; Agent B should not touch that file. Both agents touch different component files.
+
+### Phase 5: Onboarding & Invitations (2 agents in parallel)
+
+```
+general-purpose Agent A (API):             general-purpose Agent B (UI):
+  5A. /api/auth/register                     5B. InvitationForm component
+  5A. /api/agencies/[id]/invitations         5B. PendingInvitationsList component
+  5A. /api/invitations/validate              5B. OnboardingWizard component
+  5A. /api/invitations/accept                5B. InviteCodeInput component
+  5C. Remove creator name guard              5B. Modify AgencyMembersModal
+                                             5B. Modify LoginScreen
+                                             5B. Modify join/[token]/page.tsx
+
+  ──── Agent B starts after Agent A's API routes exist ────
+```
+
+**Interaction:** Agent B's UI components call Agent A's API endpoints. Agent A should complete the route implementations first. Agent B can start on component scaffolding/UI in parallel but needs the API response shapes from Agent A for integration.
+
+### Phase 6: Polish (1 agent)
+
+```
+general-purpose Agent A:
+  6A. Email integration (Resend)
+  6B. Error response standardization (retrofit existing routes)
+  6C. Final verification
+
+Bash Agent: Full build + E2E test suite
+```
+
+### Parallelism Summary
+
+| Phase | Parallel Agents | Bottleneck |
+|-------|----------------|------------|
+| Phase 0 | 1 | Small scope, sequential fixes |
+| Phase 1 | 2 (DB + TS) | Migration must run before Phase 2 |
+| Phase 2 | 2 (Backend + Frontend) | Both needed before Phase 3/4 |
+| Phase 3 | **3** (routes split by category) | Largest phase, max parallelism |
+| Phase 4 | 2 (Components + Data/State) | isOwner removal is a shared dependency |
+| Phase 5 | 2 (API → then UI) | UI depends on API shapes |
+| Phase 6 | 1 | Final polish, must be sequential |
+
+**Maximum concurrent agents across phases: 3** (during Phase 3).
+**Total estimated agent dispatches: ~15** across all phases.
+
+### Cross-Phase Sync Points
+
+After each phase, run these verification steps before proceeding:
+
+```
+Phase 0 → Bash: Run migrations in test, verify set_request_context works
+Phase 1 → Bash: npm run build (expect errors in consumers — that's Phase 2-4 work)
+Phase 2 → Bash: npm run build (should compile), manual test login flow
+Phase 3 → Bash: npm run build, curl all routes for 401 without session
+Phase 4 → Bash: npm run build (zero errors), manual test permission gates
+Phase 5 → Bash: npm run build, test registration + invitation flow
+Phase 6 → Bash: Full E2E test suite
+```
+
+---
+
 ## Phase 1: Database & Type Foundation
 
 **Goal:** Fix RLS conflicts, upgrade roles to owner/manager/staff, expand permissions to 20 flags, add agency context to sessions.
@@ -872,5 +1042,271 @@ Each phase section above includes its own verification checklist. Complete all i
 
 ---
 
-*Last updated: 2026-02-01*
+## Agent Review Findings (2026-02-02)
+
+Four specialist agents reviewed this plan. Below is the consolidated feedback organized by severity, with amendments to the plan noted inline.
+
+### CRITICAL Issues (Must Fix Before Starting)
+
+#### C1: `set_request_context()` uses `is_local=false` — cross-tenant data leakage via connection pooling
+**Source:** Database Agent
+**Problem:** The `set_request_context()` function (line 228-241 of `20260126_multi_tenancy.sql`) calls `set_config('app.user_id', ..., false)`. The `false` parameter means GUC variables persist for the **entire connection**, not just the current transaction. With Supabase's PgBouncer in transaction mode, the previous user's identity leaks to the next request on the same connection.
+**Additionally:** The function only sets `app.agency_id` conditionally (`IF p_agency_id IS NOT NULL`), leaving stale values from previous connections.
+**Fix:** Change all `set_config` calls to use `true` (transaction-local). Always set/clear `app.agency_id` unconditionally:
+```sql
+PERFORM set_config('app.agency_id', COALESCE(p_agency_id::text, ''), true);
+```
+**Plan amendment:** Add to Phase 1A migration SQL.
+
+#### C2: `agency_role` type cast in seed migration does not exist — migration will fail
+**Source:** Database Agent
+**Problem:** `20260201000000_seed_default_agency.sql` lines 72-74 cast to `::agency_role`, which is a PostgreSQL type that was never created. The seed migration will fail at runtime.
+**Fix:** Remove the `::agency_role` casts and use plain string values (the CHECK constraint validates them).
+**Plan amendment:** Add as a prerequisite fix before running any new migrations.
+
+#### C3: RLS migration window creates total data exposure
+**Source:** Security Agent
+**Problem:** Dropping v3 policies (Phase 1A) before agency policies are fully functional creates a window where tables have RLS enabled but no working policies — meaning all data is blocked OR all data is visible (depending on whether any fallback exists).
+**Fix:** Execute the policy drop + agency policy verification in a single transaction. Test the agency policies work (with `set_request_context()` called) BEFORE dropping the v3 policies:
+1. In the migration: first verify agency policies return correct results via test queries
+2. Only then `DROP POLICY IF EXISTS rls_*`
+3. Wrap in `BEGIN ... COMMIT`
+**Plan amendment:** Phase 1A must be a single-transaction migration with verification steps.
+
+#### C4: Client-side Supabase queries bypass all server-side auth
+**Source:** Security Agent
+**Problem:** 20+ direct `supabase.from('todos')` calls in `TodoList.tsx`, `ChatPanel.tsx`, `MainApp.tsx` bypass all API route auth. These use the client-side anon key and only RLS stands between them and the database.
+**Implication:** Until RLS is fully working AND `set_request_context()` is called before every subscription, client-side queries are a data isolation vulnerability.
+**Fix:** RLS must be fully operational before any multi-tenancy launch. Long-term, migrate CRUD calls to API routes (keeping client-side Supabase only for real-time subscriptions).
+**Plan amendment:** Add a Phase 0 prerequisite: verify RLS works end-to-end with `set_request_context()` in a test environment before proceeding.
+
+#### C5: Agency ID from client-controlled cookie enables cross-tenant probing
+**Source:** Security Agent
+**Problem:** `AgencyContext.tsx` line 191 sets `current_agency_id` cookie client-side without `HttpOnly` or `Secure` flags. `agencyAuth.ts` reads this cookie (lines 132-136) to determine agency context. An attacker can set this cookie to any agency ID.
+**Fix:** Server-side agency resolution: read `current_agency_id` from the session record (Phase 1D adds it), not from a client cookie. The cookie can remain for UI convenience but must not be the authoritative source.
+**Plan amendment:** Phase 2A/2C must prioritize reading agency from session, not cookie. Add explicit note that `agencyAuth.ts` must use session-derived agency ID.
+
+### HIGH Issues
+
+#### H1: Plan lists wrong v3 policies to drop — they were already dropped by earlier migration
+**Source:** Database Agent
+**Problem:** Phase 1A lists `rls_todos_select`, `rls_messages_select`, etc. for dropping. But `20260125_security_hardening.sql` already dropped these and replaced them with `todos_select_policy`, etc. Then `20260126_multi_tenancy.sql` dropped those and created `*_agency` policies. The v3 `rls_*` policies on `todos/messages/goals/milestones` are already gone.
+**What actually needs dropping:** Surviving v3 policies on tables NOT covered by `20260125` or `20260126`:
+- `users`: `rls_users_select`, `rls_users_insert` (+ hardening-era `users_update_policy`, `users_delete_policy`)
+- `activity_log`: `rls_activity_select`, `rls_activity_insert`, `rls_activity_delete`
+- `task_templates`: `rls_templates_select/insert/update/delete`
+- `device_tokens`: `rls_device_tokens_select/insert/delete`
+- `goal_categories`: `rls_goal_categories_select/insert/update/delete`
+**Plan amendment:** Rewrite Phase 1A with the correct policy list. Create agency-scoped replacement policies for `activity_log`, `task_templates`, and `goal_categories`.
+
+#### H2: Three tables have `agency_id` but NO agency RLS policy
+**Source:** Database Agent
+**Problem:** `activity_log`, `task_templates`, and `goal_categories` all have an `agency_id` column but zero agency-scoped RLS policies. Their only policies are the old v3 versions with `USING(true)` fallbacks.
+**Fix:** Create agency-scoped policies for these three tables in the Phase 1A migration.
+**Plan amendment:** Add to Phase 1A.
+
+#### H3: `users` table has `USING(true)` SELECT policy — user enumeration across tenants
+**Source:** Database + Security Agents
+**Problem:** `rls_users_select` policy uses `USING(true)`, meaning any user can enumerate all users across all agencies.
+**Fix:** Scope user listing to agency-visible users (those sharing at least one agency via `agency_members`). Keep a public-access path for login/registration only.
+**Plan amendment:** Add to Phase 1A — create agency-scoped user SELECT policy.
+
+#### H4: No shared query builder — 80-100+ manual `.eq('agency_id')` calls
+**Source:** Backend Agent
+**Problem:** Every API route will independently call `.eq('agency_id', ctx.agencyId)`. Missing it once = data leak. With 42 routes and multiple queries per route, this is 80-100+ places where the filter must be manually added.
+**Recommendations:**
+1. Call `set_request_context()` RPC at the start of every API route and rely on RLS for defense-in-depth
+2. Create an `agencyScopedQuery(table, ctx)` helper that auto-appends the filter
+3. The `.eq('agency_id')` in routes becomes a secondary defense layer on top of RLS
+**Plan amendment:** Add `agencyScopedQuery` helper to Phase 2C. Add `set_request_context()` call requirement to Phase 3 route template.
+
+#### H5: `validate_session_token` RPC not updated in migration SQL
+**Source:** Backend Agent
+**Problem:** Phase 1D adds `current_agency_id` to `user_sessions` but doesn't update the `validate_session_token` PostgreSQL function to return it. The fallback query path (line 127 of `sessionValidator.ts`) also isn't updated.
+**Fix:** Add RPC function update to the Phase 1D migration. Update the fallback SELECT to include `current_agency_id`.
+**Plan amendment:** Add to Phase 1D migration SQL and Phase 2A file changes.
+
+#### H6: `accept_agency_invitation` ON CONFLICT can demote an owner to staff
+**Source:** Database Agent
+**Problem:** The `ON CONFLICT (agency_id, user_id) DO UPDATE SET status = 'active', role = v_invitation.role` will silently demote an active owner if they receive and accept a staff invitation.
+**Fix:** Add `WHERE agency_members.status != 'active' OR agency_members.role NOT IN ('owner', 'manager')` to the ON CONFLICT clause.
+**Plan amendment:** Add to Phase 5A or as a prerequisite fix.
+
+#### H7: Agency switch does not reset Zustand store — stale cross-agency data visible
+**Source:** Frontend Agent
+**Problem:** When switching agencies, old todos remain in the Zustand store until `useTodoData`'s `useEffect` refires. During re-fetch, stale data is visible. Chat, activity, goals, templates, and filters also don't reset.
+**Fix:** Add `resetStore()` action to Zustand store, called from `switchAgency()`. Key components on `currentAgencyId` for full remount:
+```tsx
+<TodoList key={currentAgencyId} ... />
+```
+**Plan amendment:** Add to Phase 4 with a state reset checklist.
+
+#### H8: RLS must be fixed before real-time subscriptions provide any data isolation
+**Source:** Frontend Agent
+**Problem:** `supabase.channel().on('postgres_changes', ...)` is a WebSocket that cannot move to API routes. RLS is the only enforcement layer for real-time data. Until RLS works, subscriptions leak data.
+**Fix:** This reinforces C4 — RLS must be fully operational as a prerequisite.
+**Plan amendment:** Already covered by C4 / Phase 0 prerequisite.
+
+### MEDIUM Issues
+
+#### M1: No-agency-membership edge case on login not handled
+**Source:** Backend Agent
+**Problem:** If a user has no agency memberships, the login flow (Phase 2B) would fail when looking up default agency.
+**Fix:** Login should succeed with `agencies: []` and `default_agency_id: null`, redirecting to an onboarding/agency-selection flow.
+**Plan amendment:** Add edge case handling to Phase 2B.
+
+#### M2: AI routes don't need full agency auth — 3 extra DB queries per request
+**Source:** Backend Agent
+**Problem:** Most AI routes are stateless (no database queries). `withAgencyAuth` adds 3 extra DB queries (session + membership + agency) that are unnecessary.
+**Fix:** Create a lightweight `withSessionAuth` for stateless endpoints that only validates the session.
+**Plan amendment:** Phase 3B should use `withSessionAuth` instead of `withAgencyAiAuth` for AI routes that don't query data.
+
+#### M3: Error response standardization deferred to Phase 6 causes churn
+**Source:** Backend Agent
+**Problem:** Currently 3+ different error shapes. All code written in Phases 2-5 will use inconsistent shapes and need rewriting in Phase 6.
+**Fix:** Define the standard error shape and helper in Phase 1 (type + `apiErrorResponse()` function). Require all new code to use it.
+**Plan amendment:** Move error shape definition from Phase 6B to Phase 1E.
+
+#### M4: Cron routes have no multi-agency auth pattern
+**Source:** Backend Agent
+**Problem:** Cron/system routes (`reminders/process`, `digest/generate`, `todos/check-waiting`) bypass session auth via API key. They have no agency context in the request. The plan's `withAgencyAuth` doesn't apply.
+**Fix:** Define a `withSystemAuth` pattern that authenticates via API key and iterates across all agencies. Use batch queries with agency joins rather than per-agency iteration.
+**Plan amendment:** Add `withSystemAuth` pattern to Phase 3D.
+
+#### M5: `usePermission` cannot access `currentUser.role` when multi-tenancy is off
+**Source:** Frontend Agent
+**Problem:** `AgencyProvider` wraps `AppShell`, so `usePermission` cannot call `useAppShell()` to get `currentUser.role` — that context isn't available yet. When multi-tenancy is off, role data has no source.
+**Fix:** Create a `UserContext` that sits above both `AgencyProvider` and `AppShell`, providing `currentUser` including `.role`.
+**Plan amendment:** Add `UserContext` to Phase 2D.
+
+#### M6: Real-time subscriptions cannot be scoped to staff-visible tasks
+**Source:** Frontend Agent
+**Problem:** Supabase real-time `filter` only supports single equality checks. Cannot filter for `created_by=X OR assigned_to=X`. Staff scoping must happen client-side.
+**Fix:** Keep agency-level filter on subscription. In the event handler, check `created_by === userName || assigned_to === userName` before writing to store. Handle task **un-assignment** by removing from store when a task no longer matches.
+**Plan amendment:** Add to Phase 4C implementation details.
+
+#### M7: `auth.is_admin()` not updated for new role values
+**Source:** Database Agent
+**Problem:** The `auth.is_admin()` function (from `20260114`) checks `role IN ('owner', 'admin')`. After role migration, no users have `role = 'admin'`, so managers lose admin privileges on hardening-era policies.
+**Fix:** Update `auth.is_admin()` to check `('owner', 'manager')` in the Phase 1B migration.
+**Plan amendment:** Add to Phase 1B migration SQL.
+
+#### M8: Missing composite indexes for RLS query patterns
+**Source:** Database Agent
+**Problem:** `user_agency_ids()` is called per-row in RLS without a covering index. Common query patterns (`agency_id + created_by`, `agency_id + status`) lack composite indexes.
+**Fix:** Add covering indexes:
+```sql
+CREATE INDEX idx_agency_members_user_status ON agency_members(user_id, status) INCLUDE (agency_id);
+CREATE INDEX idx_todos_agency_created ON todos(agency_id, created_by);
+CREATE INDEX idx_todos_agency_status ON todos(agency_id, status);
+CREATE INDEX idx_messages_agency_created ON messages(agency_id, created_at DESC);
+```
+**Plan amendment:** Add to Phase 1A or 1D migration.
+
+#### M9: `AgencyPermissions` has 5 fields currently; plan requires 20 — stale defaults in code
+**Source:** Frontend Agent
+**Problem:** `DEFAULT_PERMISSIONS` in `src/types/agency.ts` still uses old `admin`/`member` roles and only 5 permission fields. This will break at runtime until Phase 1E is complete.
+**Plan amendment:** Already covered by Phase 1E but should be highlighted as a blocking dependency for all frontend work.
+
+#### M10: No `NOT NULL` constraint on `agency_id` after backfill
+**Source:** Database Agent
+**Problem:** After backfilling all rows with `agency_id`, new rows can still be inserted with `agency_id = NULL`, bypassing agency scoping.
+**Fix:** After confirming backfill is complete and application always sets `agency_id`, add:
+```sql
+ALTER TABLE todos ALTER COLUMN agency_id SET NOT NULL;
+ALTER TABLE messages ALTER COLUMN agency_id SET NOT NULL;
+-- etc. for all agency-scoped tables
+```
+Also remove the `OR agency_id IS NULL` fallback from RLS policies.
+**Plan amendment:** Add as a Phase 3 post-verification step.
+
+### LOW Issues
+
+#### L1: Potential circular dependency if `withAgencyAiAuth` lives in `agencyAuth.ts`
+**Source:** Backend Agent
+**Fix:** Compose `withAgencyAuth` + `withAiErrorHandling` in route files, not in helper modules.
+
+#### L2: `TemplatePicker.isOwner` naming collision with agency `isOwner`
+**Source:** Frontend Agent
+**Fix:** Rename prop to `isTemplateCreator` or `canDelete` during Phase 4.
+
+#### L3: Milestone/attachment join-through-parent queries not specified
+**Source:** Backend Agent
+**Fix:** Document the two-hop query pattern for milestones (via goal) and attachments (via todo).
+
+#### L4: `withAgencyAdminAuth` hardcodes `['owner', 'admin']` at line 481
+**Source:** Backend Agent
+**Fix:** Update to `['owner', 'manager']` in Phase 3 when `agencyAuth.ts` is modified.
+
+#### L5: Race condition in session-agency switching
+**Source:** Security Agent
+**Fix:** Update `current_agency_id` on `user_sessions` server-side when agency is switched, not just in client cookie/localStorage.
+
+#### L6: No rollback migration or transactional wrapping
+**Source:** Database Agent
+**Fix:** Take database snapshot before running. Wrap migrations in `BEGIN ... COMMIT`. Create a documented rollback migration.
+
+#### L7: Invitation tokens stored as plaintext
+**Source:** Security Agent
+**Fix:** Store `sha256(token)` in the database. Compare hashed values in `accept_agency_invitation()`.
+
+#### L8: Two separate backfill mechanisms exist (function + seed migration)
+**Source:** Database Agent
+**Fix:** Remove the dead `migrate_to_bealer_agency()` function. Keep only the seed migration.
+
+#### L9: `users.role` CHECK constraint may have auto-generated name
+**Source:** Database Agent
+**Fix:** Query `pg_constraint` for actual constraint name before dropping:
+```sql
+SELECT conname FROM pg_constraint WHERE conrelid = 'users'::regclass AND contype = 'c';
+```
+
+### Summary: Amended Phase Sequence
+
+Based on the reviews, the recommended execution order becomes:
+
+```
+Phase 0 (NEW): Prerequisites
+  - Fix set_request_context() is_local parameter
+  - Fix agency_role type cast in seed migration
+  - Fix accept_agency_invitation demotion bug
+  - Define standard error response shape
+  - Add covering indexes for RLS performance
+  - Verify RLS works end-to-end in test environment
+
+Phase 1: Database & Type Foundation (AMENDED)
+  - 1A: Drop CORRECT v3 policies (users, activity_log, task_templates, device_tokens, goal_categories)
+       + Create agency policies for activity_log, task_templates, goal_categories
+       + Create scoped user SELECT policy
+       + All in single transaction with verification
+  - 1B: Role migration (add auth.is_admin() update for 'manager')
+  - 1C: Permissions expansion (20 flags)
+  - 1D: Session agency_id + validate_session_token RPC update
+  - 1E: Type definitions + error response helper
+
+Phase 2: Auth Plumbing (AMENDED)
+  - 2A: Session validator (use session-derived agency, not cookie)
+  - 2B: Login flow (handle no-membership edge case)
+  - 2C: API auth + agencyScopedQuery helper
+  - 2D: Frontend (add UserContext above AgencyProvider; usePermission; PermissionGate)
+
+Phase 3: API Route Hardening (AMENDED)
+  - 3A: Close zero-auth routes
+  - 3B: AI routes use withSessionAuth (lightweight, not full agency auth)
+  - 3C: Data routes with agency filtering + set_request_context() calls
+  - 3D: System/cron routes with withSystemAuth pattern
+  - Post: Add NOT NULL constraints on agency_id columns
+
+Phase 4: Frontend Permission Migration (AMENDED)
+  - Add agency-switch state reset (Zustand reset + component key)
+  - Staff real-time filtering in event handlers
+  - Rename TemplatePicker.isOwner → isTemplateCreator
+
+Phases 5-6: Unchanged
+```
+
+---
+
+*Last updated: 2026-02-02*
 *Generated from analysis by 5 specialized agents covering RLS, roles, onboarding, API hardening, and frontend permissions.*
+*Reviewed by 4 specialist agents: Security, Backend Architecture, Frontend Architecture, Database Engineering.*

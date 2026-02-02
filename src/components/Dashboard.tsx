@@ -200,10 +200,7 @@ export default function Dashboard({
       {/* Header */}
       <div className="relative overflow-hidden">
         <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
-          }}
+          className="absolute inset-0 bg-[var(--gradient-hero)]"
         />
 
         <div className="relative max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-6 py-8 sm:py-10">
