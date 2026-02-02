@@ -185,110 +185,89 @@ function TodoFiltersBar({
 
   return (
     <div className="mb-4">
-      {/* Single Row: All filters, sort, select */}
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-        {/* Quick filter dropdown - compact */}
-        <div className="relative">
+      {/* ═══════════════════════════════════════════════════════════════════════════
+          SIMPLIFIED FILTERS BAR - UX Phase 2 (Feb 2026)
+          Layout: 3 main controls + active filter chips
+          - Quick Filter dropdown (All/Mine/Today/Overdue)
+          - Sort dropdown (New/Due/Priority/etc.)
+          - Advanced Filters button (opens drawer with all filters)
+          Goal: Reduce visual clutter, improve scannability
+          ═══════════════════════════════════════════════════════════════════════════ */}
+
+      {/* Main Controls Row - 3 simplified controls */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
+        {/* Quick filter dropdown - 40px minimum touch target */}
+        <div className="relative flex-shrink-0">
           <select
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
-            className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
+            className="appearance-none h-10 pl-3 pr-8 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            aria-label="Quick filter"
           >
-            <option value="all">All</option>
-            <option value="my_tasks">Mine</option>
-            <option value="due_today">Today</option>
+            <option value="all">All Tasks</option>
+            <option value="my_tasks">My Tasks</option>
+            <option value="due_today">Due Today</option>
             <option value="overdue">Overdue</option>
           </select>
-          <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[var(--text-muted)]" />
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
         </div>
 
-        {/* High Priority toggle - icon only on mobile */}
-        <button
-          type="button"
-          onClick={() => setHighPriorityOnly(!highPriorityOnly)}
-          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
-            highPriorityOnly
-              ? 'bg-[var(--danger)] text-white'
-              : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-          }`}
-          aria-pressed={highPriorityOnly}
-          title="High Priority"
-        >
-          <AlertTriangle className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Urgent</span>
-        </button>
+        {/* Sort dropdown - 40px minimum touch target */}
+        <div className="relative flex-shrink-0">
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value as SortOption)}
+            aria-label="Sort tasks"
+            className="appearance-none h-10 pl-3 pr-8 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          >
+            <option value="created">Newest First</option>
+            <option value="due_date">By Due Date</option>
+            <option value="priority">By Priority</option>
+            <option value="urgency">By Urgency</option>
+            <option value="alphabetical">Alphabetical</option>
+            <option value="custom">Custom Order</option>
+          </select>
+          <ArrowUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
+        </div>
 
-        {/* Show completed toggle - icon only on mobile */}
-        <button
-          type="button"
-          onClick={() => setShowCompleted(!showCompleted)}
-          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
-            showCompleted
-              ? 'bg-[var(--success)] text-white'
-              : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-          }`}
-          aria-pressed={showCompleted}
-          title="Show Completed"
-        >
-          <CheckSquare className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Done</span>
-        </button>
-
-        {/* More filters button */}
+        {/* Advanced Filters button with count badge - 40px minimum touch target */}
         <button
           type="button"
           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
+          className={`flex items-center gap-2 h-10 px-3 text-sm font-medium rounded-lg transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
             showAdvancedFilters || advancedFilterCount > 0
-              ? 'bg-[var(--accent)] text-white'
-              : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
+              ? 'bg-[var(--accent)] text-white shadow-md'
+              : 'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)]'
           }`}
           aria-expanded={showAdvancedFilters}
-          title="More Filters"
+          aria-label={`Advanced filters${advancedFilterCount > 0 ? ` (${advancedFilterCount} active)` : ''}`}
         >
-          <Filter className="w-3.5 h-3.5" />
+          <Filter className="w-4 h-4" />
+          <span>Filters</span>
           {advancedFilterCount > 0 && (
-            <span className="px-1 py-0.5 text-[10px] rounded-full bg-white/20 leading-none">
+            <span className="min-w-[20px] h-5 flex items-center justify-center px-1.5 text-xs rounded-full bg-white/25 font-bold">
               {advancedFilterCount}
             </span>
           )}
         </button>
 
-        {/* Sort dropdown - compact */}
-        <div className="relative">
-          <select
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value as SortOption)}
-            aria-label="Sort tasks"
-            className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
-          >
-            <option value="created">New</option>
-            <option value="due_date">Due</option>
-            <option value="priority">Priority</option>
-            <option value="urgency">Urgency</option>
-            <option value="alphabetical">A-Z</option>
-            <option value="custom">Manual</option>
-          </select>
-          <ArrowUpDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[var(--text-muted)]" />
-        </div>
-
-        {/* More dropdown - contains Templates, Select, and Sections */}
-        <div className="relative">
+        {/* More dropdown - moved to right side - 40px minimum touch target */}
+        <div className="relative ml-auto flex-shrink-0">
           <button
             type="button"
             onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-            className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
+            className={`flex items-center gap-2 h-10 px-3 text-sm font-medium rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
               showMoreDropdown || showBulkActions || useSectionedView
                 ? 'bg-[var(--accent)] text-white'
-                : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
+                : 'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)]'
             }`}
             aria-expanded={showMoreDropdown}
             aria-haspopup="menu"
             title="More options"
           >
-            <MoreHorizontal className="w-3.5 h-3.5" />
+            <MoreHorizontal className="w-4 h-4" />
             <span className="hidden sm:inline">More</span>
-            <ChevronDown className={`w-3 h-3 transition-transform ${showMoreDropdown ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 transition-transform ${showMoreDropdown ? 'rotate-180' : ''}`} />
           </button>
 
           {showMoreDropdown && (
@@ -297,8 +276,7 @@ function TodoFiltersBar({
               <div className="fixed inset-0 z-40" onClick={() => setShowMoreDropdown(false)} />
 
               {/* Dropdown */}
-              <div className={`absolute right-0 top-full mt-1 w-48 rounded-[var(--radius-lg)] shadow-lg border z-50 overflow-hidden ${
-                'bg-[var(--surface)] border-[var(--border)]'}`}>
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-lg shadow-lg border z-50 overflow-hidden bg-[var(--surface)] border-[var(--border)]">
                 {/* Templates button */}
                 <button
                   type="button"
@@ -306,8 +284,7 @@ function TodoFiltersBar({
                     setShowMoreDropdown(false);
                     setShowTemplatePicker(true);
                   }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                    'hover:bg-slate-50 text-slate-700'}`}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors text-[var(--foreground)] hover:bg-[var(--surface-2)]"
                 >
                   <FileText className="w-4 h-4 text-[var(--text-muted)]" />
                   <span>Templates</span>
@@ -323,13 +300,15 @@ function TodoFiltersBar({
                     setShowBulkActions(!showBulkActions);
                     setShowMoreDropdown(false);
                   }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
                     showBulkActions
-                      ? 'bg-[var(--brand-sky)]/10 text-[var(--brand-sky)]'
-                      : 'hover:bg-slate-50 text-slate-700'}`}
+                      ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                      : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+                  }`}
                 >
-                  <CheckSquare className="w-4 h-4 text-[var(--text-muted)]" />
+                  <CheckSquare className="w-4 h-4" />
                   <span>{showBulkActions ? 'Cancel Selection' : 'Select Tasks'}</span>
+                  {showBulkActions && <Check className="w-4 h-4 ml-auto text-[var(--accent)]" />}
                 </button>
 
                 {/* Sections Toggle - Show when not using custom sort */}
@@ -340,15 +319,16 @@ function TodoFiltersBar({
                       setUseSectionedView(!useSectionedView);
                       setShowMoreDropdown(false);
                     }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-colors ${
                       useSectionedView
                         ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                        : 'hover:bg-slate-50 text-slate-700'}`}
+                        : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+                    }`}
                     aria-pressed={useSectionedView}
                   >
-                    <Layers className="w-4 h-4 text-[var(--text-muted)]" />
-                    <span>Sections</span>
-                    {useSectionedView && <Check className="w-3.5 h-3.5 ml-auto" />}
+                    <Layers className="w-4 h-4" />
+                    <span>Group by Sections</span>
+                    {useSectionedView && <Check className="w-4 h-4 ml-auto text-[var(--accent)]" />}
                   </button>
                 )}
               </div>
@@ -370,36 +350,37 @@ function TodoFiltersBar({
             }}
           />
         </div>
-
-        {/* Clear all - only when filters active */}
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={clearAllFilters}
-            className="flex items-center gap-1 px-2 py-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-dark)] font-medium"
-            title="Clear all filters"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span className="hidden sm:inline">Clear</span>
-          </button>
-        )}
       </div>
 
+      {/* Active Filter Chips - Shows what's currently filtered */}
       {activeFilterChips.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-[var(--text-light)]">Active filters</span>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-[var(--text-muted)]">
+            Active:
+          </span>
           {activeFilterChips.map((chip) => (
             <button
               key={chip.label}
               type="button"
               onClick={chip.onClear}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors"
-              aria-label={`Clear filter ${chip.label}`}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              aria-label={`Remove filter: ${chip.label}`}
             >
               <span>{chip.label}</span>
-              <X className="w-3 h-3 text-[var(--text-muted)]" />
+              <X className="w-3.5 h-3.5" />
             </button>
           ))}
+          {activeFilterChips.length > 1 && (
+            <button
+              type="button"
+              onClick={clearAllFilters}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors focus:outline-none"
+              aria-label="Clear all filters"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear All</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -410,7 +391,7 @@ function TodoFiltersBar({
         </div>
       )}
 
-      {/* Advanced Filters Panel - expandable */}
+      {/* Advanced Filters Drawer - expandable panel */}
       <AnimatePresence>
         {showAdvancedFilters && (
           <motion.div
@@ -420,88 +401,202 @@ function TodoFiltersBar({
             transition={{ duration: DURATION.normal }}
             className="overflow-hidden"
           >
-            <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {/* Status filter */}
-              <div>
-                <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as TodoStatus | 'all')}
-                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
+            <div className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+              {/* Header with close button */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-[var(--accent)]" />
+                  Advanced Filters
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedFilters(false)}
+                  className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors"
+                  aria-label="Close advanced filters"
                 >
-                  <option value="all">All</option>
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="done">Done</option>
-                </select>
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* Assigned to filter */}
-              <div>
-                <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Assigned</label>
-                <select
-                  value={assignedToFilter}
-                  onChange={(e) => setAssignedToFilter(e.target.value)}
-                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                >
-                  <option value="all">Anyone</option>
-                  <option value="unassigned">Unassigned</option>
-                  {users.map((user) => (
-                    <option key={user} value={user}>{user}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Filters Grid - responsive layout */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Task Properties Section */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                    Task Properties
+                  </h4>
 
-              {/* Customer filter */}
-              <div>
-                <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Customer</label>
-                <select
-                  value={customerFilter}
-                  onChange={(e) => setCustomerFilter(e.target.value)}
-                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                >
-                  <option value="all">All</option>
-                  {uniqueCustomers.map((customer) => (
-                    <option key={customer} value={customer}>{customer}</option>
-                  ))}
-                </select>
-              </div>
+                  {/* Status filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
+                      Status
+                    </label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value as TodoStatus | 'all')}
+                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="todo">To Do</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </div>
 
-              {/* Has attachments filter */}
-              <div>
-                <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Attachments</label>
-                <select
-                  value={hasAttachmentsFilter === null ? 'all' : hasAttachmentsFilter ? 'yes' : 'no'}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setHasAttachmentsFilter(val === 'all' ? null : val === 'yes');
-                  }}
-                  className="w-full text-xs py-1.5 px-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                >
-                  <option value="all">Any</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
+                  {/* Priority toggles */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
+                      Priority
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setHighPriorityOnly(!highPriorityOnly)}
+                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all ${
+                          highPriorityOnly
+                            ? 'bg-[var(--danger)] text-white'
+                            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)]'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4" />
+                          High Priority Only
+                        </span>
+                        {highPriorityOnly && <Check className="w-4 h-4" />}
+                      </button>
 
-              {/* Date range filter */}
-              <div>
-                <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Due Range</label>
-                <div className="flex gap-1">
-                  <input
-                    type="date"
-                    value={dateRangeFilter.start}
-                    onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
-                    className="flex-1 text-xs py-1.5 px-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
-                  />
-                  <input
-                    type="date"
-                    value={dateRangeFilter.end}
-                    onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
-                    className="flex-1 text-xs py-1.5 px-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
-                  />
+                      <button
+                        type="button"
+                        onClick={() => setShowCompleted(!showCompleted)}
+                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all ${
+                          showCompleted
+                            ? 'bg-[var(--success)] text-white'
+                            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)]'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <CheckSquare className="w-4 h-4" />
+                          Show Completed
+                        </span>
+                        {showCompleted && <Check className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assignment Section */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                    Assignment
+                  </h4>
+
+                  {/* Assigned to filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
+                      Assigned To
+                    </label>
+                    <select
+                      value={assignedToFilter}
+                      onChange={(e) => setAssignedToFilter(e.target.value)}
+                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="all">Anyone</option>
+                      <option value="unassigned">Unassigned</option>
+                      {users.map((user) => (
+                        <option key={user} value={user}>{user}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Customer filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
+                      Customer
+                    </label>
+                    <select
+                      value={customerFilter}
+                      onChange={(e) => setCustomerFilter(e.target.value)}
+                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="all">All Customers</option>
+                      {uniqueCustomers.map((customer) => (
+                        <option key={customer} value={customer}>{customer}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Attachments Section */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                    Attachments
+                  </h4>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
+                      Has Attachments
+                    </label>
+                    <select
+                      value={hasAttachmentsFilter === null ? 'all' : hasAttachmentsFilter ? 'yes' : 'no'}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setHasAttachmentsFilter(val === 'all' ? null : val === 'yes');
+                      }}
+                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    >
+                      <option value="all">Any</option>
+                      <option value="yes">With Attachments</option>
+                      <option value="no">Without Attachments</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Date Range Section */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                    Due Date
+                  </h4>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
+                      Date Range
+                    </label>
+                    <div className="space-y-2">
+                      <input
+                        type="date"
+                        value={dateRangeFilter.start}
+                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
+                        placeholder="Start date"
+                        className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                      />
+                      <input
+                        type="date"
+                        value={dateRangeFilter.end}
+                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
+                        placeholder="End date"
+                        className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Footer with actions */}
+              {advancedFilterCount > 0 && (
+                <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] flex items-center justify-between">
+                  <span className="text-xs text-[var(--text-muted)]">
+                    {advancedFilterCount} {advancedFilterCount === 1 ? 'filter' : 'filters'} active
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--accent)] hover:text-[var(--accent-dark)] font-medium transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
