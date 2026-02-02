@@ -16,6 +16,7 @@ import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useToast } from './ui/Toast';
 import { SimpleAccordion } from './ui/Accordion';
+import { AIFeaturesMenu } from './ui/AIFeaturesMenu';
 
 interface AddTodoProps {
   onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => void;
@@ -549,63 +550,14 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
 
             {/* Action buttons - grouped dock style */}
             <div className="flex gap-3 flex-shrink-0 items-center justify-between">
-              {/* Secondary actions grouped in a subtle container */}
-              <div className="flex items-center gap-0.5 p-1 rounded-full bg-[var(--surface-2)] border border-[var(--border-subtle)]">
-                {/* File import button */}
-                <button
-                  type="button"
-                  onClick={() => setShowFileImporter(true)}
-                  disabled={isProcessing}
-                  className="p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] active:scale-95 disabled:opacity-50"
-                  aria-label="Import file"
-                  title="Import voicemail, PDF, or image"
-                >
-                  <Upload className="w-4.5 h-4.5" />
-                </button>
-
-                {/* Voice input - only show if supported */}
-                {speechSupported && (
-                  <button
-                    type="button"
-                    onClick={toggleRecording}
-                    disabled={isProcessing}
-                    className={`p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation ${
-                      isRecording
-                        ? 'bg-[var(--danger)] text-white animate-pulse'
-                        : 'text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]'
-                    } active:scale-95 disabled:opacity-50`}
-                    aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
-                    aria-pressed={isRecording}
-                  >
-                    {isRecording ? <MicOff className="w-4.5 h-4.5" /> : <Mic className="w-4.5 h-4.5" />}
-                  </button>
-                )}
-
-                {/* Separator and AI button when text is present */}
-                {text.trim() && (
-                  <>
-                    <div className="w-px h-6 bg-[var(--border)] mx-0.5" />
-                    <button
-                      type="button"
-                      onClick={handleAiClick}
-                      disabled={isProcessing}
-                      className={`p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation ${
-                        isComplexInput()
-                          ? 'bg-[var(--accent)] text-white shadow-sm'
-                          : 'text-[var(--accent)] hover:bg-[var(--accent-light)]'
-                      } active:scale-95 disabled:opacity-50`}
-                      aria-label="Parse with AI"
-                      title={isComplexInput() ? 'Complex input - AI can help organize' : 'Use AI to parse'}
-                    >
-                      {isProcessing ? (
-                        <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-4.5 h-4.5" />
-                      )}
-                    </button>
-                  </>
-                )}
-              </div>
+              {/* AI Features Menu - consolidates Upload, Voice, and AI Parse */}
+              <AIFeaturesMenu
+                onSmartParse={handleAiClick}
+                onVoiceInput={toggleRecording}
+                onFileImport={() => setShowFileImporter(true)}
+                disabled={isProcessing}
+                voiceSupported={speechSupported}
+              />
 
               {/* Primary Add button - elevated with shadow for prominence */}
               <button
