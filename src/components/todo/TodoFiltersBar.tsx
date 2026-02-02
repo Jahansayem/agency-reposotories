@@ -413,7 +413,11 @@ function TodoFiltersBar({
             transition={{ duration: DURATION.normal }}
             className="overflow-hidden"
           >
-            <div className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+            <div
+              className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]"
+              role="region"
+              aria-labelledby="advanced-filters-title"
+            >
               {/* Header with close button */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2" id="advanced-filters-title">
@@ -469,33 +473,39 @@ function TodoFiltersBar({
                       <button
                         type="button"
                         onClick={() => setHighPriorityOnly(!highPriorityOnly)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all ${
+                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
                           highPriorityOnly
                             ? 'bg-[var(--danger)] text-white'
                             : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)]'
                         }`}
+                        role="switch"
+                        aria-checked={highPriorityOnly}
+                        aria-label="Show only high priority tasks"
                       >
                         <span className="flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4" />
+                          <AlertTriangle className="w-4 h-4" aria-hidden="true" />
                           High Priority Only
                         </span>
-                        {highPriorityOnly && <Check className="w-4 h-4" />}
+                        {highPriorityOnly && <Check className="w-4 h-4" aria-hidden="true" />}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setShowCompleted(!showCompleted)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all ${
+                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
                           showCompleted
                             ? 'bg-[var(--success)] text-white'
                             : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)]'
                         }`}
+                        role="switch"
+                        aria-checked={showCompleted}
+                        aria-label="Show completed tasks"
                       >
                         <span className="flex items-center gap-2">
-                          <CheckSquare className="w-4 h-4" />
+                          <CheckSquare className="w-4 h-4" aria-hidden="true" />
                           Show Completed
                         </span>
-                        {showCompleted && <Check className="w-4 h-4" />}
+                        {showCompleted && <Check className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                   </div>
