@@ -61,7 +61,8 @@ export function useTodoData(currentUser: AuthUser) {
 
     // Build query with agency filter if multi-tenancy is enabled
     let countQuery = supabase.from('todos').select('*', { count: 'exact', head: true });
-    let todosQuery = supabase.from('todos').select('*').order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }).limit(TODOS_PER_PAGE);
+    // Order by created_at descending (display_order ordering happens in useFilters for custom sort)
+    let todosQuery = supabase.from('todos').select('*').order('created_at', { ascending: false }).limit(TODOS_PER_PAGE);
 
     if (isMultiTenancyEnabled && currentAgencyId) {
       countQuery = countQuery.eq('agency_id', currentAgencyId);
