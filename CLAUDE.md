@@ -1744,6 +1744,18 @@ Use browser DevTools Network tab:
 
 ## Testing Strategy
 
+### CRITICAL: Production Data Protection
+
+**All existing tasks in the Supabase database are OFF LIMITS.** This includes incomplete tasks, completed tasks, and archived tasks. When running E2E tests or any automated process:
+
+- **NEVER delete real user tasks** from the database — not even "completed" or "old" ones
+- **NEVER bulk-delete tasks** based on broad filters (e.g., `agency_id IS NULL`) without first verifying each task is a test artifact
+- **Any tasks created during testing MUST be cleaned up** by the test itself (use `afterEach`/`afterAll` hooks) or identified by a clear naming convention (e.g., `E2E_Test_*`)
+- **Before deleting any data**, always verify by checking the `text` field — real tasks contain customer names and insurance terminology; test tasks contain timestamps or generic text like "test"
+- If a cleanup script is needed, it must target **only** tasks matching test patterns (e.g., `Task_\d+`, `Persist_\d+`, `E2E_Test_*`) and must log what it deletes
+
+Violating this rule risks losing irreplaceable business data. When in doubt, **do not delete**.
+
 ### E2E Tests (Playwright)
 
 **Test Files:** `tests/*.spec.ts`
