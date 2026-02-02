@@ -7,7 +7,7 @@ import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, Recu
 import { usePermission } from '@/hooks/usePermission';
 import { logger } from '@/lib/logger';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder, hydrateFocusMode } from '@/store/todoStore';
-import { useTodoData, useFilters, useBulkActions, useEscapeKey, useTodoModals } from '@/hooks';
+import { useTodoData, useFilters, useBulkActions, useEscapeKey, useTodoModals, setReorderingFlag } from '@/hooks';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DragEndEvent } from '@dnd-kit/core';
 import PullToRefresh from './PullToRefresh';
@@ -316,9 +316,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       closeArchiveView();
     }
   }, [activeView, openActivityFeed, closeActivityFeed, openStrategicDashboard, closeStrategicDashboard, openArchiveView, closeArchiveView]);
-
-  // Custom order for drag-and-drop sorting (component-specific, not in modal hook)
-  const [customOrder, setCustomOrder] = useState<string[]>([]);
 
   // Add Task modal state (separate from useTodoModals as it's a different concern)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
@@ -1578,24 +1575,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     return filterArchivedTodos(archiveQuery);
   }, [filterArchivedTodos, archiveQuery]);
 
-  // Final filtered and sorted todos (uses hook result, applies custom order if needed)
-  const filteredAndSortedTodos = useMemo(() => {
-    // Custom order sorting is handled separately since it's component-specific state
-    if (sortOption === 'custom' && customOrder.length > 0) {
-      const result = [...hookFilteredTodos];
-      result.sort((a, b) => {
-        const aIndex = customOrder.indexOf(a.id);
-        const bIndex = customOrder.indexOf(b.id);
-        // Items not in custom order go to the end
-        if (aIndex === -1 && bIndex === -1) return 0;
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
-      });
-      return result;
-    }
-    return hookFilteredTodos;
-  }, [hookFilteredTodos, sortOption, customOrder]);
+  // Final filtered and sorted todos — custom order now handled by useFilters via display_order
+  const filteredAndSortedTodos = hookFilteredTodos;
 
   // Stats - calculate based on filter context for dynamic counts
   // Create a Map of todos by ID for efficient lookup (used by ChatPanel for TaskAssignmentCards)
@@ -1632,28 +1613,31 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       const oldIndex = filteredAndSortedTodos.findIndex((t) => t.id === active.id);
       const newIndex = filteredAndSortedTodos.findIndex((t) => t.id === over.id);
 
-      const newOrder = arrayMove(
-        filteredAndSortedTodos.map((t) => t.id),
-        oldIndex,
-        newIndex
-      );
+      // Compute new order array
+      const reordered = arrayMove([...filteredAndSortedTodos], oldIndex, newIndex);
 
-      // Optimistic update - update local state first
-      setCustomOrder(newOrder);
+      // Save old display_order values for rollback
+      const oldOrders = new Map(filteredAndSortedTodos.map(t => [t.id, t.display_order]));
+
       // Auto-switch to custom sort when reordering
       if (sortOption !== 'custom') {
         setSortOption('custom');
       }
 
+      // Optimistic update: assign sequential display_order in store
+      setReorderingFlag(true);
+      reordered.forEach((todo, index) => {
+        updateTodoInStore(todo.id, { display_order: index });
+      });
+
       // Persist to database via API
       try {
-        const response = await fetch('/api/todos/reorder', {
+        const response = await fetchWithCsrf('/api/todos/reorder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             todoId: active.id,
             newOrder: newIndex,
-            userName: currentUser.name,
           }),
         });
 
@@ -1674,8 +1658,12 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       } catch (error) {
         console.error('Failed to persist task order:', error);
         // Rollback optimistic update
-        setCustomOrder([]);
+        oldOrders.forEach((order, id) => {
+          updateTodoInStore(id, { display_order: order });
+        });
         announce('Failed to reorder task. Please try again.');
+      } finally {
+        setReorderingFlag(false);
       }
     }
   };

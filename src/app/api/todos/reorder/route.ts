@@ -129,18 +129,17 @@ async function moveToPosition(
   // Insert task at new position
   otherTasks.splice(newOrder, 0, task!);
 
-  // Reassign display_order to all tasks
-  const updates = otherTasks.map((t: any, index: number) => ({
-    id: t.id,
-    display_order: index,
-  }));
+  // Reassign display_order — only update tasks whose order actually changed
+  const updates = otherTasks
+    .map((t: any, index: number) => ({ id: t.id, display_order: index, oldOrder: t.display_order }))
+    .filter((u: any) => u.display_order !== u.oldOrder);
 
-  // Batch update
+  // Don't touch updated_at — avoids triggering real-time content-change events
   const updatedTasks = [];
   for (const update of updates) {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('todos')
-      .update({ display_order: update.display_order, updated_at: new Date().toISOString() })
+      .update({ display_order: update.display_order })
       .eq('id', update.id)
       .select()
       .single();
@@ -197,7 +196,7 @@ async function moveUpOrDown(
   for (const update of updates) {
     const { data } = await supabase
       .from('todos')
-      .update({ display_order: update.display_order, updated_at: new Date().toISOString() })
+      .update({ display_order: update.display_order })
       .eq('id', update.id)
       .select()
       .single();
@@ -239,7 +238,7 @@ async function swapTasks(supabase: any, todoId: string, targetTodoId: string, ag
   for (const update of updates) {
     const { data } = await supabase
       .from('todos')
-      .update({ display_order: update.display_order, updated_at: new Date().toISOString() })
+      .update({ display_order: update.display_order })
       .eq('id', update.id)
       .select()
       .single();

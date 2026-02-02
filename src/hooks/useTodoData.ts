@@ -22,6 +22,13 @@ import { useAgency } from '@/contexts/AgencyContext';
 // Number of todos to fetch per page
 const TODOS_PER_PAGE = 200;
 
+// Reorder guard: when true, real-time UPDATE events that only change
+// display_order are suppressed to prevent snap-back during drag-and-drop.
+let _isReordering = false;
+export function setReorderingFlag(value: boolean) {
+  _isReordering = value;
+}
+
 export function useTodoData(currentUser: AuthUser) {
   const {
     setTodos,
@@ -54,7 +61,7 @@ export function useTodoData(currentUser: AuthUser) {
 
     // Build query with agency filter if multi-tenancy is enabled
     let countQuery = supabase.from('todos').select('*', { count: 'exact', head: true });
-    let todosQuery = supabase.from('todos').select('*').order('created_at', { ascending: false }).limit(TODOS_PER_PAGE);
+    let todosQuery = supabase.from('todos').select('*').order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }).limit(TODOS_PER_PAGE);
 
     if (isMultiTenancyEnabled && currentAgencyId) {
       countQuery = countQuery.eq('agency_id', currentAgencyId);
@@ -165,6 +172,21 @@ export function useTodoData(currentUser: AuthUser) {
             }
           } else if (payload.eventType === 'UPDATE') {
             const updatedTodo = payload.new as Todo;
+            // During reorder, suppress updates that only change display_order/updated_at
+            // to prevent the list from reshuffling mid-drag
+            if (_isReordering) {
+              const existing = useTodoStore.getState().todos.find(t => t.id === updatedTodo.id);
+              if (existing) {
+                const isReorderOnly =
+                  existing.text === updatedTodo.text &&
+                  existing.completed === updatedTodo.completed &&
+                  existing.status === updatedTodo.status &&
+                  existing.priority === updatedTodo.priority &&
+                  existing.assigned_to === updatedTodo.assigned_to &&
+                  existing.notes === updatedTodo.notes;
+                if (isReorderOnly) return;
+              }
+            }
             if (isVisibleToUser(updatedTodo)) {
               updateTodoInStore(updatedTodo.id, updatedTodo);
             } else {

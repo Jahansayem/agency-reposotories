@@ -5,7 +5,7 @@
  */
 
 // Core Data Hooks
-export { useTodoData } from './useTodoData';
+export { useTodoData, setReorderingFlag } from './useTodoData';
 export { useFilters } from './useFilters';
 export type { FilterState } from './useFilters';
 export { useBulkActions } from './useBulkActions';

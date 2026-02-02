@@ -253,7 +253,14 @@ export function useFilters(userName: string) {
         break;
 
       case 'custom':
-        // Custom order is handled separately in the component via customOrder state
+        // Sort by display_order (persisted via drag-and-drop reorder API)
+        result.sort((a, b) => {
+          const aOrder = a.display_order ?? Number.MAX_SAFE_INTEGER;
+          const bOrder = b.display_order ?? Number.MAX_SAFE_INTEGER;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          // Fallback to created_at descending for tasks without display_order
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
         break;
     }
 
