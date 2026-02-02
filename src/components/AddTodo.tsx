@@ -17,6 +17,7 @@ import { fetchWithCsrf } from '@/lib/csrf';
 import { useToast } from './ui/Toast';
 import { SimpleAccordion } from './ui/Accordion';
 import { AIFeaturesMenu } from './ui/AIFeaturesMenu';
+import { useSuggestedDefaults } from '@/hooks/useSuggestedDefaults';
 
 interface AddTodoProps {
   onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => void;
@@ -94,6 +95,9 @@ declare global {
 export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddTodoProps) {
   const toast = useToast();
 
+  // Fetch smart defaults based on user patterns
+  const { suggestions, isLoading: suggestionsLoading } = useSuggestedDefaults(currentUserId);
+
   // Initialize priority and assignedTo from user preferences (lazy initial state)
   const [text, setText] = useState('');
   const [priority, setPriority] = useState<TodoPriority>(() => {
@@ -114,6 +118,11 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     }
     return '';
   });
+
+  // Track which fields are using smart defaults
+  const [usingSuggestedPriority, setUsingSuggestedPriority] = useState(false);
+  const [usingSuggestedAssignee, setUsingSuggestedAssignee] = useState(false);
+  const [usingSuggestedDueDate, setUsingSuggestedDueDate] = useState(false);
   const [notes, setNotes] = useState('');
   const [recurrence, setRecurrence] = useState<'daily' | 'weekly' | 'monthly' | ''>('');
   const [showOptions, setShowOptions] = useState(false);
@@ -174,6 +183,27 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
       textareaRef.current.focus();
     }
   }, [autoFocus]);
+
+  // Apply smart defaults when suggestions load (only if confidence is high enough)
+  useEffect(() => {
+    if (suggestions && suggestions.confidence >= 0.5 && !text) {
+      // Only apply if fields haven't been manually changed
+      if (suggestions.assignedTo && assignedTo === '' && users.includes(suggestions.assignedTo)) {
+        setAssignedTo(suggestions.assignedTo);
+        setUsingSuggestedAssignee(true);
+      }
+
+      if (suggestions.priority && priority === 'medium') {
+        setPriority(suggestions.priority);
+        setUsingSuggestedPriority(true);
+      }
+
+      if (suggestions.dueDate && dueDate === '') {
+        setDueDate(suggestions.dueDate);
+        setUsingSuggestedDueDate(true);
+      }
+    }
+  }, [suggestions, text, assignedTo, priority, dueDate, users]);
 
   // Handle accepting AI suggestions
   const handleAcceptSuggestions = useCallback(() => {
@@ -604,6 +634,18 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
         {/* Options row - visible when focused or has content */}
         {(showOptions || text) && (
           <div className="px-5 pb-6 pt-5 border-t border-[var(--border-subtle)]">
+            {/* Smart Defaults Indicator */}
+            {suggestions && suggestions.confidence >= 0.5 && (usingSuggestedPriority || usingSuggestedAssignee || usingSuggestedDueDate) && (
+              <div className="flex items-center gap-2 text-xs text-[var(--accent)] mb-3 px-1">
+                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                <span className="font-medium">
+                  Smart defaults applied ({Math.round(suggestions.confidence * 100)}% confidence)
+                </span>
+                <span className="text-[var(--text-muted)]">
+                  • Based on {suggestions.metadata.basedOnTasks} recent tasks
+                </span>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-4">
               {/* Priority - improved pill proportions */}
               <div
@@ -616,7 +658,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                 <Flag className="w-4 h-4 flex-shrink-0" style={{ color: priorityConfig.color }} />
                 <select
                   value={priority}
-                  onChange={(e) => setPriority(e.target.value as TodoPriority)}
+                  onChange={(e) => {
+                    setPriority(e.target.value as TodoPriority);
+                    setUsingSuggestedPriority(false);
+                  }}
                   aria-label="Priority"
                   className="bg-transparent text-sm font-semibold cursor-pointer focus:outline-none appearance-none pr-1"
                   style={{ color: priorityConfig.color }}
@@ -638,7 +683,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                 <input
                   type="date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    setDueDate(e.target.value);
+                    setUsingSuggestedDueDate(false);
+                  }}
                   aria-label="Due date"
                   className={`bg-transparent text-sm font-medium cursor-pointer focus:outline-none w-[100px] ${
                     dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
@@ -655,7 +703,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                 <User className={`w-4 h-4 flex-shrink-0 ${assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}`} />
                 <select
                   value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
+                  onChange={(e) => {
+                    setAssignedTo(e.target.value);
+                    setUsingSuggestedAssignee(false);
+                  }}
                   aria-label="Assign to"
                   className={`bg-transparent text-sm font-medium cursor-pointer focus:outline-none appearance-none pr-1 ${
                     assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'
