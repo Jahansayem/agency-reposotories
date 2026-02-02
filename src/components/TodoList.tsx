@@ -53,7 +53,6 @@ const ActivityFeed = dynamic(() => import('./ActivityFeed'), {
 interface TodoListProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
-  onOpenDashboard?: () => void;
   initialFilter?: QuickFilter | null;
   autoFocusAddTask?: boolean;
   onAddTaskModalOpened?: () => void;
@@ -77,7 +76,7 @@ const getCompletedAtMs = (todo: Todo): number | null => {
   return null;
 };
 
-export default function TodoList({ currentUser, onUserChange, onOpenDashboard, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
+export default function TodoList({ currentUser, onUserChange, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
   const userName = currentUser.name;
   const { theme } = useTheme();
   const canViewArchive = usePermission('can_view_archive');

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { X, MoreHorizontal, Check } from 'lucide-react';
+import { X, MoreHorizontal, Check, Edit2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { TodoPriority } from '@/types/todo';
 import { PRIORITY_CONFIG } from '@/types/todo';
@@ -69,7 +69,7 @@ export default function TaskDetailHeader({
     <div className="flex-shrink-0 relative">
       {/* Priority color bar — thick enough to be intentional */}
       <div
-        className="h-1.5 w-full rounded-t-2xl"
+        className="h-2 w-full rounded-t-2xl"
         style={{ backgroundColor: priorityColor }}
       />
 
@@ -99,14 +99,14 @@ export default function TaskDetailHeader({
           <div className="flex items-center gap-0.5">
             <button
               onClick={onOverflowClick}
-              className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-all duration-150"
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 sm:w-9 sm:h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-all duration-150"
               aria-label="More options"
             >
               <MoreHorizontal size={18} />
             </button>
             <button
               onClick={onClose}
-              className="flex items-center justify-center w-9 h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-all duration-150"
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 sm:w-9 sm:h-9 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-all duration-150"
               aria-label="Close"
             >
               <X size={18} />
@@ -148,22 +148,29 @@ export default function TaskDetailHeader({
         ) : (
           <motion.button
             onClick={onStartEditTitle}
-            className="w-full text-left group rounded-lg -mx-2 px-2 py-1 hover:bg-[var(--surface-2)] transition-colors duration-150"
+            className="w-full text-left group rounded-lg -mx-2 px-2 py-1 hover:bg-[var(--surface-2)] transition-colors duration-150 flex items-start justify-between gap-3"
             aria-label="Click to edit task title"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
           >
-            <h2
-              className={`text-lg font-semibold leading-snug text-[var(--foreground)] transition-opacity ${
-                completed ? 'line-through opacity-50' : ''
-              }`}
-            >
-              {title}
-            </h2>
-            <span className="text-xs text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 block">
-              Click to edit
-            </span>
+            <div className="flex-1 min-w-0">
+              <h2
+                className={`text-lg font-semibold leading-snug text-[var(--foreground)] transition-opacity ${
+                  completed ? 'line-through opacity-50' : ''
+                }`}
+              >
+                {title}
+              </h2>
+              <span className="text-xs text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 block">
+                Click to edit
+              </span>
+            </div>
+            {/* Edit icon - visible on mobile, appears on hover on desktop */}
+            <Edit2
+              size={16}
+              className="text-[var(--text-muted)] opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1"
+            />
           </motion.button>
         )}
       </div>

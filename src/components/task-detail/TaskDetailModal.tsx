@@ -35,11 +35,11 @@ export interface TaskDetailModalProps {
 }
 
 const sectionStagger = {
-  hidden: { opacity: 0, y: 6 },
+  hidden: { opacity: 0, y: 4 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: 0.08 * i, duration: 0.2 },
+    transition: { delay: 0.04 * i, duration: 0.15 },
   }),
 };
 
@@ -109,7 +109,7 @@ export default function TaskDetailModal({
       title={todo.text}
       size="2xl"
       showCloseButton={false}
-      className="flex flex-col h-[85vh]"
+      className="flex flex-col h-[92vh] sm:h-[85vh]"
     >
       {/* Header with overflow menu positioned inside a relative container */}
       <div className="relative">
@@ -146,9 +146,9 @@ export default function TaskDetailModal({
       {/* Scrollable body with gradient fade hints */}
       <div className="relative flex-1 min-h-0">
         {/* Top fade */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-gradient-to-b from-[var(--surface)] to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-[var(--surface)] to-transparent" />
 
-        <div className="absolute inset-0 overflow-y-auto px-5 py-3 space-y-1">
+        <div className="absolute inset-0 overflow-y-auto px-4 sm:px-5 py-4 space-y-3">
           {/* Key-value metadata rows */}
           <MetadataSection
             todo={todo}
@@ -188,6 +188,7 @@ export default function TaskDetailModal({
             initial="hidden"
             animate="visible"
             variants={sectionStagger}
+            className="bg-[var(--surface-2)]/30 rounded-xl p-4 border border-[var(--border)]/50"
           >
             <NotesSection
               notes={detail.notes}
@@ -203,6 +204,7 @@ export default function TaskDetailModal({
             initial="hidden"
             animate="visible"
             variants={sectionStagger}
+            className="bg-[var(--surface-2)]/30 rounded-xl p-4 border border-[var(--border)]/50"
           >
             <SubtasksSection
               subtasks={detail.subtasks}
@@ -224,6 +226,7 @@ export default function TaskDetailModal({
             initial="hidden"
             animate="visible"
             variants={sectionStagger}
+            className="bg-[var(--surface-2)]/30 rounded-xl p-4 border border-[var(--border)]/50"
           >
             <AttachmentsSection
               attachments={detail.attachments}
@@ -236,7 +239,7 @@ export default function TaskDetailModal({
         </div>
 
         {/* Bottom fade */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-4 bg-gradient-to-t from-[var(--surface)] to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-6 bg-gradient-to-t from-[var(--surface)] to-transparent" />
       </div>
 
       {/* Footer with timestamps and complete button */}

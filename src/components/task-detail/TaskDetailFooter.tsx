@@ -79,10 +79,10 @@ export default function TaskDetailFooter({
       <button
         onClick={onToggleComplete}
         className={`
-          flex items-center gap-1.5 rounded-[var(--radius-lg)] px-5 py-2.5 text-sm font-medium text-white transition-colors shadow-[var(--shadow-sm)]
+          flex items-center gap-1.5 rounded-[var(--radius-lg)] px-5 py-2.5 text-sm font-medium transition-colors
           ${completed
-            ? 'bg-emerald-600 hover:bg-emerald-700'
-            : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)]'
+            ? 'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface)] border border-[var(--border)] shadow-none'
+            : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white shadow-[var(--shadow-sm)]'
           }
         `}
       >

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
-import { DashboardModalSkeleton, ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton } from './LoadingSkeletons';
+import { ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton, DashboardModalSkeleton } from './LoadingSkeletons';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser, QuickFilter, Todo } from '@/types/todo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
@@ -17,12 +17,6 @@ import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import SkipLink from './SkipLink';
-
-// Lazy load DashboardModal for better initial load performance
-const DashboardModal = dynamic(() => import('./DashboardModal'), {
-  ssr: false,
-  loading: () => <DashboardModalSkeleton />,
-});
 
 // Lazy load ChatView for the dedicated messages view
 const ChatView = dynamic(() => import('./views/ChatView'), {
@@ -97,41 +91,33 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   const [initialFilter, setInitialFilter] = useState<QuickFilter | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
-  // Initialize showDashboard to false - we'll check for daily show AFTER data loads
-  const [showDashboard, setShowDashboard] = useState(false);
   const [hasCheckedDailyDashboard, setHasCheckedDailyDashboard] = useState(false);
   // Track which task to auto-expand when navigating from dashboard/notifications
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  // Check if we should show daily dashboard on first login of the day
+  // Navigate to dashboard on first login of the day
   // Only check ONCE after initial data load - prevents flash on hard refresh
   useEffect(() => {
     if (!loading && !hasCheckedDailyDashboard) {
       setHasCheckedDailyDashboard(true);
       if (shouldShowDailyDashboard()) {
-        markDailyDashboardShown(); // Mark BEFORE showing to prevent duplicates
-        setShowDashboard(true);
+        markDailyDashboardShown();
+        setActiveView('dashboard');
       }
     }
-  }, [loading, hasCheckedDailyDashboard]);
+  }, [loading, hasCheckedDailyDashboard, setActiveView]);
 
   const handleNavigateToTasks = useCallback((filter?: QuickFilter) => {
     if (filter) {
       setInitialFilter(filter);
     }
-    setShowDashboard(false);
     setActiveView('tasks');
   }, [setActiveView]);
 
   const handleAddTask = useCallback(() => {
     setShowAddTask(true);
-    setShowDashboard(false);
     setActiveView('tasks');
   }, [setActiveView]);
-
-  const handleOpenDashboard = useCallback(() => {
-    setShowDashboard(true);
-  }, []);
 
   // Reset the add task trigger after modal opens
   const handleAddTaskModalOpened = useCallback(() => {
@@ -256,9 +242,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     }
   }, [currentUser.name]);
 
-  // Dashboard view is now a full page, no longer triggers modal
-  // The modal is only shown on daily login check
-
   // Register the new task trigger callback with AppShell
   useEffect(() => {
     onNewTaskTrigger(() => {
@@ -298,6 +281,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             todos={todos}
             users={users}
             onNavigateToTasks={() => handleNavigateToTasks()}
+            onAddTask={handleAddTask}
             onTaskClick={handleTaskLinkClick}
             onFilterOverdue={() => handleNavigateToTasks('overdue')}
             onFilterDueToday={() => handleNavigateToTasks('due_today')}
@@ -327,7 +311,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             autoFocusAddTask={showAddTask}
             onAddTaskModalOpened={handleAddTaskModalOpened}
             onInitialFilterApplied={handleInitialFilterApplied}
-            onOpenDashboard={handleOpenDashboard}
+
             selectedTaskId={selectedTaskId}
             onSelectedTaskHandled={handleSelectedTaskHandled}
           />
@@ -344,7 +328,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             autoFocusAddTask={showAddTask}
             onAddTaskModalOpened={handleAddTaskModalOpened}
             onInitialFilterApplied={handleInitialFilterApplied}
-            onOpenDashboard={handleOpenDashboard}
+
             selectedTaskId={selectedTaskId}
             onSelectedTaskHandled={handleSelectedTaskHandled}
           />
@@ -387,7 +371,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             autoFocusAddTask={showAddTask}
             onAddTaskModalOpened={handleAddTaskModalOpened}
             onInitialFilterApplied={handleInitialFilterApplied}
-            onOpenDashboard={handleOpenDashboard}
+
             selectedTaskId={selectedTaskId}
             onSelectedTaskHandled={handleSelectedTaskHandled}
           />
@@ -410,7 +394,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleDeleteTask,
     handleAddTaskModalOpened,
     handleInitialFilterApplied,
-    handleOpenDashboard,
     handleChatBack,
     handleArchiveClose,
     handleAIAccept,
@@ -439,21 +422,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <main id="main-content" tabIndex={-1}>
         {activeViewContent}
       </main>
-
-      {/* Only render DashboardModal when it needs to be shown - prevents skeleton flash */}
-      {showDashboard && (
-        <DashboardModal
-          isOpen={showDashboard}
-          onClose={() => setShowDashboard(false)}
-          todos={todos}
-          currentUser={currentUser}
-          onNavigateToTasks={() => handleNavigateToTasks()}
-          onAddTask={handleAddTask}
-          onFilterOverdue={() => handleNavigateToTasks('overdue')}
-          onFilterDueToday={() => handleNavigateToTasks('due_today')}
-          users={users}
-        />
-      )}
 
       {/* Push notification permission banner */}
       <NotificationPermissionBanner currentUser={currentUser} />
