@@ -554,7 +554,7 @@ function TodoItemComponent({
   };
 
   // Subtask functions
-  const subtasks = todo.subtasks || [];
+  const subtasks = Array.isArray(todo.subtasks) ? todo.subtasks : [];
   const completedSubtasks = subtasks.filter(s => s.completed).length;
   const subtaskProgress = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
 

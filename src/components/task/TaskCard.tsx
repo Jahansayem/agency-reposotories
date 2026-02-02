@@ -142,7 +142,7 @@ export function TaskCard({
       )}
 
       {/* Subtask progress indicator (compact) */}
-      {todo.subtasks && todo.subtasks.length > 0 && (
+      {Array.isArray(todo.subtasks) && todo.subtasks.length > 0 && (
         <div className="mt-2 flex items-center gap-2">
           <div className="flex-1 h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
             <div

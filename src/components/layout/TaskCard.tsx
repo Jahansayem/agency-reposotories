@@ -107,7 +107,7 @@ export default function TaskCard({
 
   // Calculate subtask progress
   const subtaskProgress = useMemo(() => {
-    if (!task.subtasks?.length) return null;
+    if (!Array.isArray(task.subtasks) || task.subtasks.length === 0) return null;
     const completed = task.subtasks.filter(s => s.completed).length;
     return {
       completed,

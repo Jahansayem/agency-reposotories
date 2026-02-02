@@ -139,8 +139,10 @@ export function SubtaskList({
 }: SubtaskListProps) {
   const [newSubtaskText, setNewSubtaskText] = useState('');
 
-  const completedSubtasks = subtasks.filter(s => s.completed).length;
-  const subtaskProgress = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
+  // Ensure safeSubtasks is always an array
+  const safeSubtasks = Array.isArray(safeSubtasks) ? safeSubtasks : [];
+  const completedSubtasks = safeSubtasks.filter(s => s.completed).length;
+  const subtaskProgress = safeSubtasks.length > 0 ? Math.round((completedSubtasks / safeSubtasks.length) * 100) : 0;
 
   const handleAddManualSubtask = useCallback(() => {
     if (newSubtaskText.trim()) {
@@ -175,7 +177,7 @@ export function SubtaskList({
 
         {/* Subtask list */}
         <div className="space-y-2">
-          {subtasks.map((subtask) => (
+          {safeSubtasks.map((subtask) => (
             <SubtaskItem
               key={subtask.id}
               subtask={subtask}
@@ -196,8 +198,8 @@ export function SubtaskList({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-[var(--accent)]">Subtasks</span>
-          {subtasks.length > 0 && (
-            <span className="text-xs text-[var(--accent)]/70">({completedSubtasks}/{subtasks.length})</span>
+          {safeSubtasks.length > 0 && (
+            <span className="text-xs text-[var(--accent)]/70">({completedSubtasks}/{safeSubtasks.length})</span>
           )}
         </div>
         <button
@@ -210,7 +212,7 @@ export function SubtaskList({
       </div>
 
       {/* Progress bar */}
-      {subtasks.length > 0 && (
+      {safeSubtasks.length > 0 && (
         <div className="mb-3">
           <div className="h-2 bg-[var(--accent)]/10 rounded-full overflow-hidden">
             <div
@@ -222,9 +224,9 @@ export function SubtaskList({
       )}
 
       {/* Subtask list */}
-      {subtasks.length > 0 && (
+      {safeSubtasks.length > 0 && (
         <div className="space-y-2 mb-3">
-          {subtasks.map((subtask) => (
+          {safeSubtasks.map((subtask) => (
             <SubtaskItem
               key={subtask.id}
               subtask={subtask}

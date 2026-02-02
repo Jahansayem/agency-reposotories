@@ -160,7 +160,7 @@ function TaskDetailModal({
 
   const priority = todo.priority || 'medium';
   const priorityConfig = PRIORITY_CONFIG[priority];
-  const subtasks = todo.subtasks || [];
+  const subtasks = Array.isArray(todo.subtasks) ? todo.subtasks : [];
 
   const handleSaveText = () => {
     if (onUpdateText && text.trim() !== todo.text) {
