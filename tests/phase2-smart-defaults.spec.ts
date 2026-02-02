@@ -24,7 +24,16 @@ test.describe('Phase 2.1: Smart Defaults', () => {
       await page.waitForTimeout(100);
     }
     await page.waitForURL('/');
-    // Wait for app to load - check for add task input instead
+
+    // Wait for dashboard to load
+    await page.waitForTimeout(1000);
+
+    // Navigate to "All" tasks view using sidebar navigation
+    // Look for navigation link/button in sidebar (not the tab)
+    await page.click('text=All Tasks');
+    await page.waitForTimeout(1000);
+
+    // The InlineAddTask component should now be visible with data-testid="add-task-input"
     await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible({ timeout: 10000 });
   });
 

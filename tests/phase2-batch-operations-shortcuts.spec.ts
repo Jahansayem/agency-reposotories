@@ -23,6 +23,18 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     }
     await page.waitForURL('/');
 
+    // Close any welcome dialogs or modals
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+
+    // Navigate to tasks view by clicking "All" tab
+    await page.click('button:has-text("All")');
+    await page.waitForTimeout(500);
+
+    // Wait for add task input to be visible
+    await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible({ timeout: 10000 });
+
     // Create a few test tasks
     const tasks = [
       'Test task 1 - Review policy',

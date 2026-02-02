@@ -30,6 +30,10 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
     }
     // Wait for app to load
     await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
+
+    // Navigate to tasks view by clicking "All" tab
+    await page.click('button:has-text("All")');
+    await page.waitForTimeout(500);
   });
 
   test('TodoFiltersBar: Quick filter dropdown should be 44px minimum', async ({ page }) => {
