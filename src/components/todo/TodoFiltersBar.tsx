@@ -1,6 +1,6 @@
 'use client';
 
-import { memo } from 'react';
+import { memo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUpDown, AlertTriangle, CheckSquare, ChevronDown,
@@ -113,6 +113,19 @@ function TodoFiltersBar({
   onAddFromTemplate,
   userName,
 }: TodoFiltersBarProps) {
+  // Global ESC key handler for closing advanced filters drawer
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showAdvancedFilters) {
+        e.preventDefault();
+        setShowAdvancedFilters(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, [showAdvancedFilters, setShowAdvancedFilters]);
+
   const hasActiveFilters = quickFilter !== 'all' ||
     highPriorityOnly ||
     showCompleted ||
@@ -417,6 +430,7 @@ function TodoFiltersBar({
               className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]"
               role="region"
               aria-labelledby="advanced-filters-title"
+              tabIndex={-1}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   e.preventDefault();
