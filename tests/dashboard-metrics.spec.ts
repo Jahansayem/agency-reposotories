@@ -7,8 +7,13 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     // Wait for app to load
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
@@ -53,8 +58,10 @@ test.describe('Dashboard Metrics - Completed Today', () => {
 
     // Create a new task
     const taskText = `Test task ${Date.now()}`;
-    await page.fill('[data-testid="task-input"]', taskText);
-    await page.click('[data-testid="add-task-button"]');
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    await page.fill('[data-testid="add-task-input"]', taskText);
+    await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
 
     // Find and complete the task
@@ -97,8 +104,13 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     await page2.goto('http://localhost:3000');
     await page2.click('[data-testid="user-card-Derrick"]');
     await page2.waitForTimeout(600);
-    await page2.keyboard.type('8008');
-    await page2.keyboard.press('Enter');
+    await page2.waitForTimeout(600);
+    const pinInputs2 = page2.locator('input[type="password"]');
+    await expect(pinInputs2.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs2.nth(i).fill('8008'[i]);
+      await page2.waitForTimeout(100);
+    }
     await expect(page2.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
     // Get initial count from both tabs
@@ -114,8 +126,10 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     await page.click('button:has-text("Tasks")');
     await page.waitForTimeout(500);
     const taskText = `Real-time test ${Date.now()}`;
-    await page.fill('[data-testid="task-input"]', taskText);
-    await page.click('[data-testid="add-task-button"]');
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    await page.fill('[data-testid="add-task-input"]', taskText);
+    await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
     const taskCheckbox = page.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
     await taskCheckbox.click();
@@ -152,8 +166,10 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     await page.waitForTimeout(500);
 
     const taskText = `Highlight test ${Date.now()}`;
-    await page.fill('[data-testid="task-input"]', taskText);
-    await page.click('[data-testid="add-task-button"]');
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    await page.fill('[data-testid="add-task-input"]', taskText);
+    await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
 
     const taskCheckbox = page.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
@@ -178,8 +194,13 @@ test.describe('Dashboard Metrics - Filtering by Date', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
 
@@ -196,8 +217,10 @@ test.describe('Dashboard Metrics - Filtering by Date', () => {
     await page.waitForTimeout(500);
 
     const taskText = `Timestamp test ${Date.now()}`;
-    await page.fill('[data-testid="task-input"]', taskText);
-    await page.click('[data-testid="add-task-button"]');
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    await page.fill('[data-testid="add-task-input"]', taskText);
+    await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
 
     const taskCheckbox = page.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();

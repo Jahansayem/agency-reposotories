@@ -33,8 +33,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
 
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
     });
@@ -76,8 +81,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
 
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Open chat to potentially see skeleton
       const chatButton = page.locator('button[aria-label*="Open chat"]');
@@ -95,8 +105,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test('should use theme variables for skeleton colors', async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       const chatButton = page.locator('button[aria-label*="Open chat"]');
       if (await chatButton.isVisible()) {
@@ -116,8 +131,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test.beforeEach(async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
       await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
     });
 
@@ -157,8 +177,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test('should not announce loading skeletons to screen readers', async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       const chatButton = page.locator('button[aria-label*="Open chat"]');
 
@@ -178,8 +203,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test('should maintain proper focus during loading transitions', async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       const chatButton = page.locator('button[aria-label*="Open chat"]');
 
@@ -201,8 +231,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test('should render skeleton quickly (< 100ms)', async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       const chatButton = page.locator('button[aria-label*="Open chat"]');
 
@@ -225,8 +260,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test('should not cause layout shift when transitioning to content', async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       const chatButton = page.locator('button[aria-label*="Open chat"]');
 
@@ -259,8 +299,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test('should render skeletons correctly in dark mode', async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Ensure dark mode is on
       const darkModeToggle = page.locator('button[aria-label*="theme"]');
@@ -291,8 +336,13 @@ test.describe('Loading States Consistency (Issue #27)', () => {
     test('should render skeletons correctly in light mode', async ({ page }) => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Ensure light mode is on
       const darkModeToggle = page.locator('button[aria-label*="theme"]');

@@ -38,7 +38,13 @@ test.describe('Server-Side Lockout - Login Flow', () => {
     await page.keyboard.press('Backspace');
 
     // Attempt 3: Correct PIN
-    await page.keyboard.type('8008');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await page.waitForTimeout(1500);
 
     // Should login successfully
@@ -69,7 +75,13 @@ test.describe('Server-Side Lockout - Login Flow', () => {
     expect(lockoutData.length).toBe(0);
 
     // After 3 attempts, should still be able to enter PIN (not locked yet)
-    await page.keyboard.type('8008');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await page.waitForTimeout(1500);
 
     // Should login successfully (server allows up to 5 attempts)
@@ -84,8 +96,13 @@ test.describe('Server-Side Lockout - User Switching', () => {
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
@@ -209,7 +226,13 @@ test.describe('Lockout - No Client-Side Logic', () => {
     // Verify by logging in successfully
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await page.waitForTimeout(1500);
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
@@ -282,7 +305,13 @@ test.describe('Lockout Security - Redis-based', () => {
       // Try to login again
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
-      await page.keyboard.type('8008'); // Correct PIN
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    } // Correct PIN
       await page.waitForTimeout(1500);
 
       // Should still be locked (lockout persists in Redis, not localStorage)

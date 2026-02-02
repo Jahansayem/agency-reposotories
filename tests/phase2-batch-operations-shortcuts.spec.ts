@@ -14,10 +14,14 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     // Login as Derrick
     await page.goto('/');
     await page.getByTestId('user-card-Derrick').click();
-    await page.fill('[data-testid="pin-input"]', '8008');
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await page.waitForURL('/');
-    await page.click('[data-testid="nav-tasks"]');
 
     // Create a few test tasks
     const tasks = [
@@ -28,8 +32,8 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     ];
 
     for (const task of tasks) {
-      await page.fill('[data-testid="task-input"]', task);
-      await page.click('[data-testid="add-task-button"]');
+      await page.fill('[data-testid="add-task-input"]', task);
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
     }
 
@@ -62,10 +66,10 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
 
   test('should NOT trigger Cmd+A when typing in input field', async ({ page, browserName }) => {
     // Focus on task input
-    await page.focus('[data-testid="task-input"]');
+    await page.focus('[data-testid="add-task-input"]');
 
     // Type some text
-    await page.fill('[data-testid="task-input"]', 'New task text');
+    await page.fill('[data-testid="add-task-input"]', 'New task text');
 
     // Press Cmd+A (should select text, not todos)
     const modifierKey = browserName === 'webkit' || process.platform === 'darwin' ? 'Meta' : 'Control';

@@ -31,7 +31,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
   test.describe('Arrow Key Navigation (when implemented)', () => {
     test('should focus task list when tabbing from input', async ({ page }) => {
       // Create a few tasks first
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 3; i++) {
         await taskInput.fill(`Task ${i} for keyboard test`);
@@ -59,7 +61,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should support Home key to jump to first task', async ({ page }) => {
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 5; i++) {
         await taskInput.fill(`Task ${i}`);
@@ -91,7 +95,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should support End key to jump to last task', async ({ page }) => {
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 5; i++) {
         await taskInput.fill(`Task ${i}`);
@@ -124,7 +130,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
   test.describe('Roving Tabindex Pattern', () => {
     test('should have only one task focusable at a time (roving tabindex)', async ({ page }) => {
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 3; i++) {
         await taskInput.fill(`Keyboard nav task ${i}`);
@@ -150,7 +158,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should move focus with arrow keys (when implemented)', async ({ page }) => {
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       await taskInput.fill('First keyboard task');
       await page.keyboard.press('Enter');
@@ -183,7 +193,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should prevent default scroll behavior on arrow keys', async ({ page }) => {
       // Create many tasks to enable scrolling
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 10; i++) {
         await taskInput.fill(`Scroll test task ${i}`);
@@ -227,7 +239,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
   test.describe('Keyboard Accessibility Best Practices', () => {
     test('should allow Tab to exit task list', async ({ page }) => {
       // Create a task
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Tab exit test');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
@@ -255,7 +269,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should support Shift+Tab for reverse navigation', async ({ page }) => {
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Reverse nav test');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
@@ -279,7 +295,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should maintain focus visibility when navigating with keyboard', async ({ page }) => {
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Focus visibility test');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
@@ -310,7 +328,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should not interfere with button/checkbox interactions', async ({ page }) => {
       // Create a task
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Interaction test task');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
@@ -347,7 +367,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should have aria-label on focusable task items', async ({ page }) => {
       // Create a task
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('ARIA label test');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
@@ -371,7 +393,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should announce current position when navigating (aria-live)', async ({ page }) => {
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 3; i++) {
         await taskInput.fill(`Position ${i}`);
@@ -393,7 +417,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
   test.describe('Integration with Existing Features', () => {
     test('should work with task completion via keyboard', async ({ page }) => {
       // Create a task
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Complete via keyboard');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
@@ -415,7 +441,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should work with task deletion via keyboard', async ({ page }) => {
       // Create a task
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Delete via keyboard');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
@@ -454,7 +482,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
     test('should work with task editing via keyboard', async ({ page }) => {
       // Create a task
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Edit via keyboard');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
@@ -486,7 +516,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
       await page.waitForTimeout(300);
 
       // Create a task
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Touch test');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
@@ -511,7 +543,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
       await page.waitForTimeout(300);
 
       // Create tasks
-      const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Mobile keyboard test');
       await page.keyboard.press('Enter');
       await page.waitForTimeout(300);

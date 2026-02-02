@@ -20,8 +20,13 @@ test.describe('React Query Integration (Issue #31)', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.fill('[data-testid="pin-input"]', '8008');
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
   });
@@ -72,8 +77,13 @@ test.describe('React Query Integration (Issue #31)', () => {
 
       // Wait for login again
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Page should show content quickly (from cache if available)
       const addTaskInput = page.locator('[data-testid="add-todo-input"]');
@@ -174,8 +184,13 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.reload();
 
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Task should still be visible (persisted to database)
       await expect(page.locator('text=Test cache invalidation')).toBeVisible({ timeout: 5000 });
@@ -275,8 +290,13 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.reload();
 
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Page should load even if data fetch fails
       const addTaskInput = page.locator('[data-testid="add-todo-input"]');

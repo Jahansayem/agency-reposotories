@@ -235,6 +235,7 @@ function TodoHeader({
                   onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search tasks..."
                   aria-label="Search tasks"
+                  data-testid="search-input"
                   className={`w-full h-10 pl-10 pr-9 text-sm rounded-lg border transition-colors ${
                     'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20'} focus:outline-none`}
                 />

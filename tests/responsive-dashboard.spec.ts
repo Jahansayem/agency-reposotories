@@ -12,8 +12,13 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       // Login as Derrick (manager)
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
-      await page.keyboard.type('8008');
-      await page.keyboard.press('Enter');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
@@ -88,8 +93,8 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await page.waitForTimeout(500);
 
       const longTaskName = 'A'.repeat(200) + Date.now();
-      await page.fill('[data-testid="task-input"]', longTaskName);
-      await page.click('[data-testid="add-task-button"]');
+      await page.fill('[data-testid="add-task-input"]', longTaskName);
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       // Go back to dashboard
@@ -113,8 +118,13 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
-      await page.keyboard.type('8008');
-      await page.keyboard.press('Enter');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     });
 
@@ -151,8 +161,13 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
-      await page.keyboard.type('8008');
-      await page.keyboard.press('Enter');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     });
 
@@ -181,8 +196,13 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
       await page.waitForTimeout(600);
-      await page.keyboard.type('8008');
-      await page.keyboard.press('Enter');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     });
 
@@ -233,8 +253,13 @@ test.describe('Dashboard Header - Responsive', () => {
         await page.goto('http://localhost:3000');
         await page.click('[data-testid="user-card-Derrick"]');
         await page.waitForTimeout(600);
-        await page.keyboard.type('8008');
-        await page.keyboard.press('Enter');
+        await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
         await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
         // All three metrics should be visible
@@ -250,8 +275,13 @@ test.describe('Dashboard Header - Responsive', () => {
         await page.goto('http://localhost:3000');
         await page.click('[data-testid="user-card-Derrick"]');
         await page.waitForTimeout(600);
-        await page.keyboard.type('8008');
-        await page.keyboard.press('Enter');
+        await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
         await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
         // Metric cards should be large enough for touch (min 44x44)

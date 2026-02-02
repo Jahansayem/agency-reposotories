@@ -20,8 +20,13 @@ test.describe('Design System - Core Functionality', () => {
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -58,7 +63,7 @@ test.describe('Design System - Core Functionality', () => {
     await page.waitForTimeout(500);
 
     // Create a task with special characters
-    const taskInput = page.locator('[data-testid="task-input"]').first();
+    const taskInput = page.locator('[data-testid="add-task-input"]').first();
     await taskInput.fill("Test task with apostrophe's and quotes\"");
     await page.keyboard.press('Enter');
     await page.waitForTimeout(1000);
@@ -80,8 +85,13 @@ test.describe('Design System - Chat Encoding Fix', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -119,8 +129,13 @@ test.describe('Design System - Board View Semantics', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -185,8 +200,13 @@ test.describe('Design System - Archive View Restructure', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -228,8 +248,13 @@ test.describe('Design System - Weekly Progress Modal', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -301,8 +326,13 @@ test.describe('Design System - Semantic Colors', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -317,7 +347,7 @@ test.describe('Design System - Semantic Colors', () => {
     yesterday.setDate(yesterday.getDate() - 1);
     const dueDateStr = yesterday.toISOString().split('T')[0];
 
-    const taskInput = page.locator('[data-testid="task-input"]').first();
+    const taskInput = page.locator('[data-testid="add-task-input"]').first();
     if (await taskInput.isVisible()) {
       await taskInput.fill(`Overdue test task due:${dueDateStr}`);
       await page.keyboard.press('Enter');
@@ -374,8 +404,13 @@ test.describe('Design System - Dark Mode Compatibility', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -420,8 +455,13 @@ test.describe('Design System - Regression Tests', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
 
@@ -453,7 +493,7 @@ test.describe('Design System - Regression Tests', () => {
     await page.waitForTimeout(500);
 
     // Create a test task
-    const taskInput = page.locator('[data-testid="task-input"]').first();
+    const taskInput = page.locator('[data-testid="add-task-input"]').first();
     if (await taskInput.isVisible()) {
       await taskInput.fill('Test task for editing');
       await page.keyboard.press('Enter');

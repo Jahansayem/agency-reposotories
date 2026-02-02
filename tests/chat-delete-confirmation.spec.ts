@@ -7,8 +7,13 @@ test.describe('Chat - Delete Message Confirmation', () => {
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
@@ -20,7 +25,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
   test('should show confirmation dialog when delete button is clicked', async ({ page }) => {
     // Send a test message
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -44,7 +49,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
   test('should have proper dialog labels and buttons', async ({ page }) => {
     // Send a test message
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -66,7 +71,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should cancel deletion when Cancel button is clicked', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -90,7 +95,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should delete message when Delete button is confirmed', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -115,7 +120,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should close dialog when X button is clicked', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -139,7 +144,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should close dialog when clicking outside (backdrop)', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -163,7 +168,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should support Escape key to close dialog', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -187,7 +192,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should auto-focus Cancel button when dialog opens', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -208,7 +213,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should support keyboard navigation (Tab)', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -238,7 +243,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
   test('should trap focus within dialog', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -271,7 +276,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
       // Send DM
       const testMessage = `DM test ${Date.now()}`;
-      const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+      const chatInput = page.locator('textarea[placeholder*="Message"]');
       await chatInput.fill(testMessage);
       await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
@@ -298,14 +303,14 @@ test.describe('Chat - Delete Message Confirmation', () => {
   test('should handle multiple delete attempts gracefully', async ({ page }) => {
     // Send first message
     const testMessage1 = `Test message 1 ${Date.now()}`;
-    let chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    let chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage1);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(300);
 
     // Send second message
     const testMessage2 = `Test message 2 ${Date.now()}`;
-    chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage2);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -343,8 +348,13 @@ test.describe('Chat Delete - Accessibility', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     await page.click('button[aria-label="Toggle chat panel"]');
     await page.waitForTimeout(500);
@@ -352,7 +362,7 @@ test.describe('Chat Delete - Accessibility', () => {
 
   test('should have proper ARIA attributes', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -372,7 +382,7 @@ test.describe('Chat Delete - Accessibility', () => {
 
   test('should have minimum touch target sizes (44x44px)', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
@@ -398,7 +408,7 @@ test.describe('Chat Delete - Accessibility', () => {
 
   test('should prevent body scroll when dialog is open', async ({ page }) => {
     const testMessage = `Test message ${Date.now()}`;
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);

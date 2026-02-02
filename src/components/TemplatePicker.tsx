@@ -175,6 +175,7 @@ export default function TemplatePicker({
           aria-haspopup="listbox"
           aria-label={compact ? 'My Templates' : undefined}
           title={compact ? 'My Templates - Create and use custom task templates' : undefined}
+          data-testid="template-picker-button"
           className={compact
             ? `flex items-center justify-center p-2 rounded-[var(--radius-lg)] transition-colors min-h-[36px] min-w-[36px] touch-manipulation ${
                 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`
@@ -199,11 +200,13 @@ export default function TemplatePicker({
 
           {/* Dropdown */}
           <div
+            data-testid="template-picker-dropdown"
             className={`absolute left-0 top-full mt-2 w-80 rounded-[var(--radius-xl)] shadow-xl border z-50 overflow-hidden ${
               'bg-[var(--surface)] border-[var(--border)]'}`}
           >
             {/* Header */}
             <div
+              data-testid="template-picker-header"
               className={`px-4 py-3 border-b flex items-center justify-between ${
                 'border-slate-200'}`}
             >
@@ -399,6 +402,9 @@ function TemplateItem({
   return (
     <button
       onClick={onSelect}
+      data-testid="template-item"
+      data-priority={template.default_priority}
+      data-assigned-to={template.default_assigned_to || ''}
       className={`w-full px-4 py-3 text-left transition-all flex items-start gap-3 group border border-dashed rounded-[var(--radius-lg)] opacity-75 hover:opacity-100 ${
         'border-slate-300/80 hover:bg-slate-50 hover:border-slate-400'}`}
     >
@@ -410,7 +416,7 @@ function TemplateItem({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`font-medium truncate ${'text-slate-900'}`}>
+          <span data-testid="template-name" className={`font-medium truncate ${'text-slate-900'}`}>
             {template.name}
           </span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${

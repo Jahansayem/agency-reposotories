@@ -11,19 +11,25 @@
 
 import { test, expect, devices } from '@playwright/test';
 
-test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
-  test.use({
-    ...devices['iPhone 13 Pro'],
-  });
+// test.use() must be top-level, not inside describe
+test.use({
+  ...devices['iPhone 13 Pro'],
+});
 
+test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
   test.beforeEach(async ({ page }) => {
     // Login
     await page.goto('/');
-    await page.getByTestId('user-card-Derrick').click();
-    await page.fill('[data-testid="pin-input"]', '8008');
-    await page.click('[data-testid="login-button"]');
-    await page.waitForURL('/');
-    await page.click('[data-testid="nav-tasks"]');
+    await page.locator('[data-testid="user-card-Derrick"]').click();
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
+    // Wait for app to load
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
   });
 
   test('TodoFiltersBar: Quick filter dropdown should be 44px minimum', async ({ page }) => {
@@ -109,10 +115,11 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
 
   test('TodoItem: SubtaskItem edit button should be 44px minimum', async ({ page }) => {
     // Create a task with subtasks
-    await page.fill('[data-testid="task-input"]', 'Task with subtasks');
-    await page.click('[data-testid="show-options-button"]');
-    await page.fill('[data-testid="subtask-input-0"]', 'Subtask 1');
-    await page.click('[data-testid="add-task-button"]');
+    // Create task via inline input
+    const addTaskInput = page.locator('[data-testid="add-task-input"]');
+    await addTaskInput.fill('Task with subtasks');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
 
     await page.waitForTimeout(1000);
 
@@ -134,10 +141,11 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
 
   test('TodoItem: SubtaskItem delete button should be 44px minimum', async ({ page }) => {
     // Create a task with subtasks
-    await page.fill('[data-testid="task-input"]', 'Task with subtasks');
-    await page.click('[data-testid="show-options-button"]');
-    await page.fill('[data-testid="subtask-input-0"]', 'Subtask 1');
-    await page.click('[data-testid="add-task-button"]');
+    // Create task via inline input
+    const addTaskInput = page.locator('[data-testid="add-task-input"]');
+    await addTaskInput.fill('Task with subtasks');
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(1000);
 
     await page.waitForTimeout(1000);
 

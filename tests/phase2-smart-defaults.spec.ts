@@ -16,10 +16,16 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     // Login as Derrick
     await page.goto('/');
     await page.getByTestId('user-card-Derrick').click();
-    await page.fill('[data-testid="pin-input"]', '8008');
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await page.waitForURL('/');
-    await expect(page.locator('[data-testid="main-app"]')).toBeVisible();
+    // Wait for app to load - check for add task input instead
+    await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible({ timeout: 10000 });
   });
 
   test('should fetch smart defaults on component mount', async ({ page }) => {
@@ -29,7 +35,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     );
 
     // Navigate to tasks view (triggers AddTodo mount)
-    await page.click('[data-testid="nav-tasks"]');
 
     // Wait for smart defaults API response
     const response = await defaultsRequest;
@@ -54,7 +59,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
 
   test('should pre-fill form fields with high-confidence suggestions (>= 0.5)', async ({ page }) => {
     // Create several tasks with consistent patterns to build confidence
-    await page.click('[data-testid="nav-tasks"]');
 
     const tasksToCreate = [
       { text: 'Review policy', assignedTo: 'Derrick', priority: 'high' },
@@ -63,10 +67,10 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     ];
 
     for (const task of tasksToCreate) {
-      await page.fill('[data-testid="task-input"]', task.text);
+      await page.fill('[data-testid="add-task-input"]', task.text);
       await page.selectOption('[data-testid="priority-select"]', task.priority);
       await page.selectOption('[data-testid="assigned-to-select"]', task.assignedTo);
-      await page.click('[data-testid="add-task-button"]');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500); // Wait for task creation
     }
 
@@ -75,7 +79,7 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     await page.waitForLoadState('networkidle');
 
     // Click on add task input to focus it
-    await page.click('[data-testid="task-input"]');
+    await page.click('[data-testid="add-task-input"]');
 
     // Check if assignedTo is pre-filled (suggestions with >= 0.5 confidence)
     const assignedToValue = await page.inputValue('[data-testid="assigned-to-select"]');
@@ -88,7 +92,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
 
   test('should NOT pre-fill form fields with low-confidence suggestions (< 0.5)', async ({ page }) => {
     // Navigate to tasks view
-    await page.click('[data-testid="nav-tasks"]');
 
     // For a new user with no task history, confidence should be 0
     // Form should remain empty
@@ -101,7 +104,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
   });
 
   test('should display suggestion metadata tooltip on hover', async ({ page }) => {
-    await page.click('[data-testid="nav-tasks"]');
 
     // Wait for smart defaults to load
     await page.waitForTimeout(1000);
@@ -120,7 +122,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
   });
 
   test('should cache suggestions client-side with SWR (5 minutes)', async ({ page }) => {
-    await page.click('[data-testid="nav-tasks"]');
 
     // First request should hit the API
     let apiCallCount = 0;
@@ -143,7 +144,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
   });
 
   test('should refresh suggestions after creating a new task', async ({ page }) => {
-    await page.click('[data-testid="nav-tasks"]');
 
     // Track API calls
     let refreshCallMade = false;
@@ -154,10 +154,10 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     });
 
     // Create a task
-    await page.fill('[data-testid="task-input"]', 'New task for pattern');
+    await page.fill('[data-testid="add-task-input"]', 'New task for pattern');
     await page.selectOption('[data-testid="priority-select"]', 'urgent');
     await page.selectOption('[data-testid="assigned-to-select"]', 'Derrick');
-    await page.click('[data-testid="add-task-button"]');
+    await page.keyboard.press('Enter');
 
     // Wait for task creation and potential refresh
     await page.waitForTimeout(2000);
@@ -168,7 +168,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
   });
 
   test('should use Redis cache on server-side (sub-100ms response)', async ({ page }) => {
-    await page.click('[data-testid="nav-tasks"]');
 
     // First request - may hit database
     const firstRequestStart = Date.now();
@@ -202,11 +201,9 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     // Intercept API request and force error
     await page.route('**/api/ai/suggest-defaults', route => route.abort());
 
-    await page.click('[data-testid="nav-tasks"]');
-
     // Form should still be usable with default values
-    await expect(page.locator('[data-testid="task-input"]')).toBeVisible();
-    await expect(page.locator('[data-testid="task-input"]')).toBeEnabled();
+    await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible();
+    await expect(page.locator('[data-testid="add-task-input"]')).toBeEnabled();
 
     // Priority should default to 'medium'
     const priorityValue = await page.inputValue('[data-testid="priority-select"]');
@@ -219,8 +216,6 @@ test.describe('Phase 2.1: Smart Defaults', () => {
       await page.waitForTimeout(2000); // 2 second delay
       return route.continue();
     });
-
-    await page.click('[data-testid="nav-tasks"]');
 
     // Check for loading indicator
     const loadingIndicator = page.locator('[data-testid="smart-defaults-loading"]');

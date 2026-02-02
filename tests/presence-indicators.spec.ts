@@ -24,8 +24,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should initialize presence channel on login', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -40,8 +45,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should track user location', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -55,8 +65,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Presence Indicator Component', () => {
     test('should render presence indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -73,8 +88,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should show online count', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -86,8 +106,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should display user avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -105,8 +130,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should update when user joins', async ({ page, context }) => {
       // Login first user
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -119,8 +149,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should update when user leaves', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -133,8 +168,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should sync across tabs', async ({ page, context }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -154,8 +194,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Location Tracking', () => {
     test('should track current view', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -176,8 +221,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should update location on navigation', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -200,8 +250,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Presence Badge', () => {
     test('should show online status', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -218,8 +273,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should show offline status for inactive users', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -233,8 +293,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Avatar Stack', () => {
     test('should limit displayed avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -251,8 +316,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should show +N indicator for overflow', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -266,8 +336,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Tooltip', () => {
     test('should show tooltip on hover', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -285,8 +360,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should display user details in tooltip', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -302,8 +382,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Performance', () => {
     test('should handle presence updates efficiently', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -327,8 +412,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should not leak memory', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -351,8 +441,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Edge Cases', () => {
     test('should handle network disconnection', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -364,8 +459,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should handle rapid location changes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -387,8 +487,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should handle duplicate presence tracking', async ({ page, context }) => {
       // Login in first tab
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -396,8 +501,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
       const page2 = await context.newPage();
       await page2.goto('http://localhost:3000');
       await page2.click('[data-testid="user-card-Derrick"]');
-      await page2.fill('[data-testid="pin-input"]', '8008');
-      await page2.click('[data-testid="login-button"]');
+      await page2.waitForTimeout(600);
+    const pinInputs2 = page2.locator('input[type="password"]');
+    await expect(pinInputs2.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs2.nth(i).fill('8008'[i]);
+      await page2.waitForTimeout(100);
+    }
 
       await page2.waitForTimeout(2000);
 
@@ -416,8 +526,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Accessibility', () => {
     test('should have proper ARIA labels', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -432,8 +547,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should support keyboard navigation', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 

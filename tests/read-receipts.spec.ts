@@ -25,8 +25,13 @@ test.describe('Read Receipts (Issue #39)', () => {
     test('should mark message as read', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -47,8 +52,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should store read receipts in database', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -60,8 +70,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle duplicate read receipts', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -73,8 +88,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should batch mark messages as read', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -88,8 +108,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Read Indicator Component', () => {
     test('should show single check when not read', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -105,8 +130,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should show double check when read', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -118,8 +148,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should animate read indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -137,8 +172,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Read Receipts Display', () => {
     test('should show avatar stack for read users', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -153,8 +193,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should limit avatars to 3 with overflow', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -166,8 +211,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should show detailed view with timestamps', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -181,8 +231,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should use user colors in avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -200,8 +255,13 @@ test.describe('Read Receipts (Issue #39)', () => {
     test('should update read status in real-time', async ({ page, context }) => {
       // Login first user
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -213,8 +273,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should broadcast read events', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -227,8 +292,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should sync read receipts across tabs', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -247,8 +317,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Read Count Badge', () => {
     test('should display read count', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -260,8 +335,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should hide badge when count is 0', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -272,8 +352,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should be clickable to show details', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -286,8 +371,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Edge Cases', () => {
     test('should exclude sender from read receipts', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -299,8 +389,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle deleted messages', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -312,8 +407,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle user who leaves agency', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -325,8 +425,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle rapid read/unread cycles', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -340,8 +445,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Performance', () => {
     test('should batch load read receipts efficiently', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -353,8 +463,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should use indexes for fast queries', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -366,8 +481,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle many readers without lag', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -381,8 +501,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('UI/UX', () => {
     test('should format read timestamps', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -394,8 +519,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should have tooltips on avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -410,8 +540,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should animate avatar entrance', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -429,8 +564,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Accessibility', () => {
     test('should have ARIA labels on read indicators', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -445,8 +585,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should announce read status changes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -458,8 +603,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should support keyboard navigation', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -475,8 +625,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Integration', () => {
     test('should work with chat messages', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -496,8 +651,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should work with task discussions', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -508,8 +668,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should work with DMs', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 

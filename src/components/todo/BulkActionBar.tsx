@@ -32,7 +32,7 @@ function BulkActionBar({
   const canDeleteTasks = usePermission('can_delete_tasks');
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
+    <div data-testid="bulk-action-bar" className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
       <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
         <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
           <div className="flex items-center justify-between gap-4">
@@ -47,7 +47,7 @@ function BulkActionBar({
                 <X className="w-4 h-4" />
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-[var(--foreground)]">{selectedCount}</span>
+                <span data-testid="selection-count" className="text-sm font-bold text-[var(--foreground)]">{selectedCount}</span>
                 <span className="text-sm text-[var(--text-muted)]">selected</span>
               </div>
               <div className="hidden sm:block w-px h-5 bg-[var(--border)]" />
@@ -58,6 +58,7 @@ function BulkActionBar({
               {/* Mark Complete */}
               <button
                 onClick={onBulkComplete}
+                data-testid="bulk-complete-button"
                 className="flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
               >
                 <Check className="w-4 h-4" />
@@ -65,33 +66,35 @@ function BulkActionBar({
               </button>
 
               {/* Reassign dropdown */}
-              <div className="relative">
+              <div className="relative" data-testid="bulk-assign-dropdown">
                 <select
                   onChange={(e) => { if (e.target.value) onBulkAssign(e.target.value); e.target.value = ''; }}
+                  data-testid="bulk-assign-button"
                   className="appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
                   aria-label="Reassign"
                 >
                   <option value="">Reassign</option>
                   {users.map((user) => (
-                    <option key={user} value={user}>{user}</option>
+                    <option key={user} value={user} data-testid={`assignee-option-${user}`}>{user}</option>
                   ))}
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
               </div>
 
               {/* Change Date dropdown */}
-              <div className="relative">
+              <div className="relative" data-testid="bulk-reschedule-options">
                 <select
                   onChange={(e) => {
                     if (e.target.value) onBulkReschedule(e.target.value);
                     e.target.value = '';
                   }}
+                  data-testid="bulk-reschedule-button"
                   className="appearance-none px-3 py-2 pr-7 rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
                   aria-label="Change Date"
                 >
                   <option value="">Change Date</option>
                   <option value={getDateOffset(0)}>Today</option>
-                  <option value={getDateOffset(1)}>Tomorrow</option>
+                  <option value={getDateOffset(1)} data-testid="reschedule-tomorrow">Tomorrow</option>
                   <option value={getDateOffset(7)}>Next Week</option>
                   <option value={getDateOffset(30)}>Next Month</option>
                 </select>
@@ -102,6 +105,7 @@ function BulkActionBar({
               {selectedCount >= 2 && (
                 <button
                   onClick={onInitiateMerge}
+                  data-testid="bulk-merge-button"
                   className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
                 >
                   <GitMerge className="w-4 h-4" />
@@ -113,6 +117,7 @@ function BulkActionBar({
               <button
                 onClick={onBulkDelete}
                 disabled={!canDeleteTasks}
+                data-testid="bulk-delete-button"
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] text-white transition-all text-sm font-medium whitespace-nowrap ${
                   canDeleteTasks
                     ? 'bg-[var(--danger)] hover:opacity-90'

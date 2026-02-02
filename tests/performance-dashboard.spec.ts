@@ -12,11 +12,13 @@ test.describe('Performance Dashboard', () => {
     // Login as Derrick
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.fill('[data-testid="pin-input-0"]', '8');
-    await page.fill('[data-testid="pin-input-1"]', '0');
-    await page.fill('[data-testid="pin-input-2"]', '0');
-    await page.fill('[data-testid="pin-input-3"]', '8');
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     // Wait for app to load
     await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
@@ -294,11 +296,13 @@ test.describe('Performance Badge', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.fill('[data-testid="pin-input-0"]', '8');
-    await page.fill('[data-testid="pin-input-1"]', '0');
-    await page.fill('[data-testid="pin-input-2"]', '0');
-    await page.fill('[data-testid="pin-input-3"]', '8');
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
   });
@@ -335,11 +339,13 @@ test.describe('useRenderMonitor Hook', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.fill('[data-testid="pin-input-0"]', '8');
-    await page.fill('[data-testid="pin-input-1"]', '0');
-    await page.fill('[data-testid="pin-input-2"]', '0');
-    await page.fill('[data-testid="pin-input-3"]', '8');
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
 

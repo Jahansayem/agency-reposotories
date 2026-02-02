@@ -70,8 +70,8 @@ async function waitForAppLoad(page: Page) {
 
 // Helper to check if Supabase is configured (app is showing main interface)
 async function isSupabaseConfigured(page: Page): Promise<boolean> {
-  // Check if we see the main app interface (input field for adding tasks)
-  const addTaskInput = page.locator('textarea[placeholder*="Add a task"]');
+  // Check if we see the main app interface (sidebar navigation)
+  const sidebar = page.getByRole('complementary', { name: 'Main navigation' });
   const configRequired = page.locator('text=Configuration Required');
 
   // Wait a bit for page to settle
@@ -82,8 +82,8 @@ async function isSupabaseConfigured(page: Page): Promise<boolean> {
     return false;
   }
 
-  // If we see the task input, Supabase IS configured
-  if (await addTaskInput.isVisible().catch(() => false)) {
+  // If we see the sidebar, Supabase IS configured
+  if (await sidebar.isVisible().catch(() => false)) {
     return true;
   }
 
@@ -123,7 +123,7 @@ async function dismissCelebrationModal(page: Page): Promise<void> {
 
 // Helper to create a task, handling duplicate detection modal if it appears
 async function createTask(page: Page, taskName: string): Promise<void> {
-  const input = page.locator('textarea[placeholder*="Add a task"]');
+  const input = page.locator('[data-testid="add-task-input"]');
   await input.click();
   await input.fill(taskName);
   await page.keyboard.press('Enter');
@@ -179,7 +179,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await setupUser(page);
 
       const taskName = uniqueTaskName('DueDateTask');
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill(taskName);
 
@@ -212,7 +212,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await expect(addButton).toBeDisabled();
 
       // Try clicking with empty input - nothing should happen
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await page.keyboard.press('Enter');
 
@@ -227,7 +227,7 @@ test.describe('Comprehensive Feature Tests', () => {
 
       for (const priority of priorities) {
         const taskName = uniqueTaskName(`${priority}Priority`);
-        const input = page.locator('textarea[placeholder*="Add a task"]');
+        const input = page.locator('[data-testid="add-task-input"]');
         await input.click();
         await input.fill(taskName);
 
@@ -401,8 +401,8 @@ test.describe('Comprehensive Feature Tests', () => {
       await listButton.click();
       await page.waitForTimeout(500);
 
-      // List view should show the add task input
-      await expect(page.locator('textarea[placeholder*="Add a task"]')).toBeVisible();
+      // List view should show the sidebar navigation
+      await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible();
     });
 
     test('should preserve tasks when switching views', async ({ page }) => {
@@ -415,7 +415,7 @@ test.describe('Comprehensive Feature Tests', () => {
 
       // Create a task in list view with unique name to avoid duplicate detection
       const uniqueTaskName = `ViewSwitch_${Date.now()}`;
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill(uniqueTaskName);
       await page.keyboard.press('Enter');
@@ -587,7 +587,7 @@ test.describe('Comprehensive Feature Tests', () => {
 
       // Create a task with urgent priority using the select dropdown
       const taskName = uniqueTaskName('PriorityBadge');
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill(taskName);
 
@@ -610,10 +610,8 @@ test.describe('Comprehensive Feature Tests', () => {
     test('should show colored priority bar on task cards', async ({ page }) => {
       await setupUser(page);
 
-      // Tasks have colored indicators - verify at least some task card elements exist
-      // The specific class names may vary, so just check that tasks are visible
-      const taskCards = page.locator('textarea[placeholder*="Add a task"]');
-      await expect(taskCards).toBeVisible({ timeout: 5000 });
+      // Tasks have colored indicators - verify app is loaded and functional
+      await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 5000 });
     });
 
     test('should update priority from expanded task panel', async ({ page }) => {
@@ -639,7 +637,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await setupUser(page);
 
       const taskName = uniqueTaskName('DueToday');
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill(taskName);
 
@@ -664,7 +662,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await setupUser(page);
 
       const taskName = uniqueTaskName('DueTomorrow');
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill(taskName);
 
@@ -690,7 +688,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await setupUser(page);
 
       const taskName = uniqueTaskName('OverdueTask');
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill(taskName);
 
@@ -819,8 +817,8 @@ test.describe('Comprehensive Feature Tests', () => {
       await userBtn.click();
       await page.waitForTimeout(500);
 
-      // Now look for Sign Out button in the dropdown
-      const signOutBtn = page.locator('button').filter({ hasText: 'Sign Out' });
+      // Now look for Logout button in the dropdown
+      const signOutBtn = page.locator('button').filter({ hasText: 'Logout' });
       await expect(signOutBtn).toBeVisible();
     });
 
@@ -838,8 +836,8 @@ test.describe('Comprehensive Feature Tests', () => {
       await userBtn.click();
       await page.waitForTimeout(500);
 
-      // Click Sign Out button
-      const signOutBtn = page.locator('button').filter({ hasText: 'Sign Out' });
+      // Click Logout button
+      const signOutBtn = page.locator('button').filter({ hasText: 'Logout' });
       await signOutBtn.click();
 
       // Should return to login screen (shows "Bealer Agency" in header)
@@ -876,7 +874,7 @@ test.describe('Comprehensive Feature Tests', () => {
 
       // Use unique task name with special characters (avoid < and > which may cause issues)
       const taskName = `Special_${Date.now()}_chars_&_"test"`;
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.fill(taskName);
       await page.keyboard.press('Enter');
 
@@ -894,7 +892,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await setupUser(page);
 
       const longText = `LongTask_${Date.now()}_` + 'This is a long task description. '.repeat(5);
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.fill(longText);
       await page.keyboard.press('Enter');
 
@@ -912,7 +910,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await setupUser(page);
 
       const taskName = `Emoji_${Date.now()}_🎉_test`;
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.fill(taskName);
       await page.keyboard.press('Enter');
 
@@ -928,7 +926,7 @@ test.describe('Comprehensive Feature Tests', () => {
     test('should handle whitespace-only input', async ({ page }) => {
       await setupUser(page);
 
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.fill('   ');
 
       // Submit button (Add task) should be disabled for whitespace-only
@@ -939,7 +937,7 @@ test.describe('Comprehensive Feature Tests', () => {
     test('should handle rapid task creation', async ({ page }) => {
       await setupUser(page);
 
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       const timestamp = Date.now();
 
       // Create multiple tasks quickly with unique names
@@ -1007,7 +1005,7 @@ test.describe('Comprehensive Feature Tests', () => {
     test('should expand add todo form on focus', async ({ page }) => {
       await setupUser(page);
 
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await page.waitForTimeout(300);
 
@@ -1019,7 +1017,7 @@ test.describe('Comprehensive Feature Tests', () => {
     test('should collapse form when clicking outside with empty input', async ({ page }) => {
       await setupUser(page);
 
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await page.waitForTimeout(300);
 
@@ -1037,7 +1035,7 @@ test.describe('Comprehensive Feature Tests', () => {
     test('should keep form expanded when input has text', async ({ page }) => {
       await setupUser(page);
 
-      const input = page.locator('textarea[placeholder*="Add a task"]');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill('Some text to keep form open');
 

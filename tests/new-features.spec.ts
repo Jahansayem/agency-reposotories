@@ -32,7 +32,7 @@ async function registerAndLogin(page: Page, userName: string = 'Test User', pin:
   await page.getByRole('button', { name: 'Create Account' }).click();
 
   // Wait for app to load (shows main header with Bealer Agency)
-  await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
 }
 
 // Helper to login with existing user - available for new tests
@@ -52,12 +52,12 @@ async function _loginExistingUser(page: Page, userName: string, pin: string = '1
   }
 
   // Wait for app to load
-  await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
 }
 
 // Helper to check if app is loaded (task input visible)
 async function isAppLoaded(page: Page): Promise<boolean> {
-  const taskInput = page.locator('textarea[placeholder="What needs to be done?"]');
+  const taskInput = page.getByRole('complementary', { name: 'Main navigation' });
   const configError = page.locator('text=Configuration Required');
 
   try {
@@ -93,7 +93,7 @@ test.describe('PIN Authentication', () => {
     const userName = uniqueUserName();
     await registerAndLogin(page, userName);
     // After login, should see the task input
-    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible();
   });
 });
 
@@ -109,7 +109,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
 
     // Create a task with unique name
     const taskName = `Celebration_${Date.now()}`;
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
     await input.click();
     await input.fill(taskName);
     await page.keyboard.press('Enter');
@@ -139,7 +139,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
 
     // Create a task with unique name
     const taskName = `AutoDismiss_${Date.now()}`;
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
     await input.click();
     await input.fill(taskName);
     await page.keyboard.press('Enter');
@@ -256,7 +256,7 @@ test.describe('Cloud Storage Integration', () => {
 
     // Create a task
     const uniqueTask = `Persistence_${Date.now()}`;
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
     await input.fill(uniqueTask);
     await page.keyboard.press('Enter');
     await expect(page.locator(`text=${uniqueTask}`)).toBeVisible({ timeout: 5000 });
@@ -265,7 +265,7 @@ test.describe('Cloud Storage Integration', () => {
     await page.reload();
 
     // Should still be logged in and see task
-    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator(`text=${uniqueTask}`)).toBeVisible({ timeout: 5000 });
   });
 
@@ -282,7 +282,7 @@ test.describe('Cloud Storage Integration', () => {
     await page.reload();
 
     // Should still be logged in (see task input, not login screen)
-    await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -372,7 +372,7 @@ test.describe('Stats Dashboard', () => {
     const initialCount = parseInt(await totalStat.textContent() || '0');
 
     // Add a task
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
     await input.fill('Stats test task');
     await page.keyboard.press('Enter');
     await expect(page.locator('text=Stats test task')).toBeVisible({ timeout: 5000 });
@@ -439,7 +439,7 @@ test.describe('Task Filters', () => {
     }
 
     // Create two tasks
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
 
     const activeTask = `Active_${Date.now()}`;
     await input.fill(activeTask);
@@ -474,7 +474,7 @@ test.describe('Task Filters', () => {
     }
 
     // Create and complete a task
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
     const taskName = `FilterComplete_${Date.now()}`;
     await input.fill(taskName);
     await page.keyboard.press('Enter');
@@ -503,7 +503,7 @@ test.describe('Task CRUD Operations', () => {
     }
 
     const taskName = `Create_${Date.now()}`;
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
     await input.fill(taskName);
     await page.keyboard.press('Enter');
 
@@ -521,7 +521,7 @@ test.describe('Task CRUD Operations', () => {
 
     // Create a task
     const taskName = `Delete_${Date.now()}`;
-    const input = page.locator('textarea[placeholder="What needs to be done?"]');
+    const input = page.locator('[data-testid="add-task-input"]');
     await input.fill(taskName);
     await page.keyboard.press('Enter');
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 5000 });

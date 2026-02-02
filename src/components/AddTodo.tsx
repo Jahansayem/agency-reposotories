@@ -733,6 +733,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                     setUsingSuggestedPriority(false);
                   }}
                   aria-label="Priority"
+                  data-testid="priority-select"
                   className="bg-transparent text-sm font-semibold cursor-pointer focus:outline-none appearance-none pr-1"
                   style={{ color: priorityConfig.color }}
                 >
@@ -778,6 +779,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                     setUsingSuggestedAssignee(false);
                   }}
                   aria-label="Assign to"
+                  data-testid="assigned-to-select"
                   className={`bg-transparent text-sm font-medium cursor-pointer focus:outline-none appearance-none pr-1 ${
                     assignedTo ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'
                   }`}

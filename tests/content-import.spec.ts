@@ -32,7 +32,7 @@ async function registerAndLogin(page: Page, userName: string = 'Test User', pin:
   await page.getByRole('button', { name: 'Create Account' }).click();
 
   // Wait for app to load
-  await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
 }
 
 // Generate unique test user name
@@ -49,8 +49,8 @@ test.describe('Content Import Feature', () => {
   test('should show Import Email/Voicemail button when task is expanded', async ({ page }) => {
     // Add a task
     const taskText = `Q1 Planning ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -65,8 +65,8 @@ test.describe('Content Import Feature', () => {
   test('should open import modal when clicking Import Email/Voicemail button', async ({ page }) => {
     // Add a task
     const taskText = `Project Review ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -88,8 +88,8 @@ test.describe('Content Import Feature', () => {
   test('should close modal when clicking X button', async ({ page }) => {
     // Add a task
     const taskText = `Meeting Notes ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear and expand
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -109,8 +109,8 @@ test.describe('Content Import Feature', () => {
   test('should switch between Email and Voicemail modes', async ({ page }) => {
     // Add a task
     const taskText = `Client Follow-up ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task and expand
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -149,8 +149,8 @@ test.describe('Content Import Feature', () => {
 
     // Add a task
     const taskText = `Q1 Product Launch ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task and expand
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -197,8 +197,8 @@ Michael`;
 
     // Add a task
     const taskText = `Team Meeting ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task and expand
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -240,8 +240,8 @@ Michael`;
 
     // Add a task
     const taskText = `Budget Review ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task and expand
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });

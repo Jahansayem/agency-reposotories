@@ -70,8 +70,10 @@ test.describe('Haptic Feedback API Integration', () => {
   test.describe('Task Completion Haptics', () => {
     test('should trigger success haptic on task completion', async ({ page }) => {
       // Create a test task
-      await page.fill('[data-testid="task-input"]', 'Test haptic feedback');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Test haptic feedback');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       // Monitor vibration calls
@@ -137,8 +139,10 @@ test.describe('Haptic Feedback API Integration', () => {
   test.describe('Task Deletion Haptics', () => {
     test('should trigger heavy haptic on task deletion', async ({ page }) => {
       // Create a test task
-      await page.fill('[data-testid="task-input"]', 'Task to delete');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Task to delete');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       // Open task menu
@@ -270,8 +274,10 @@ test.describe('Haptic Feedback API Integration', () => {
       test.skip(browserName !== 'webkit', 'Mobile gesture test - WebKit only');
 
       // Create a task
-      await page.fill('[data-testid="task-input"]', 'Long press task');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Long press task');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       // Monitor vibrations
@@ -456,8 +462,10 @@ test.describe('Haptic Feedback API Integration', () => {
   test.describe('Accessibility Considerations', () => {
     test('should not use haptics as sole indicator of actions', async ({ page }) => {
       // Create a task
-      await page.fill('[data-testid="task-input"]', 'Accessibility test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Accessibility test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       // Complete the task
@@ -481,8 +489,10 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       // Try to trigger haptics
-      await page.fill('[data-testid="task-input"]', 'OS settings test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'OS settings test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(300);
 
       const checkbox = page.locator('[data-testid="task-checkbox"]').first();
@@ -506,8 +516,10 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       // Try to complete a task
-      await page.fill('[data-testid="task-input"]', 'Failure test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Failure test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const checkbox = page.locator('[data-testid="task-checkbox"]').first();

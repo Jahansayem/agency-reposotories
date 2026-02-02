@@ -7,8 +7,13 @@ test.describe('UserSwitcher - Discoverability', () => {
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
@@ -73,7 +78,7 @@ test.describe('UserSwitcher - Discoverability', () => {
 
     // Dropdown should appear
     await expect(page.locator('text=Signed in')).toBeVisible();
-    await expect(page.locator('text=Sign Out')).toBeVisible();
+    await expect(page.locator('text=Logout')).toBeVisible();
   });
 
   test('should show current user in dropdown header', async ({ page }) => {
@@ -150,8 +155,13 @@ test.describe('UserSwitcher - User Switching Flow', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
 
@@ -196,8 +206,13 @@ test.describe('UserSwitcher - Sign Out Flow', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
 
@@ -233,8 +248,13 @@ test.describe('UserSwitcher - Mobile Responsiveness', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
 
@@ -297,8 +317,13 @@ test.describe('UserSwitcher - Keyboard Navigation', () => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
 

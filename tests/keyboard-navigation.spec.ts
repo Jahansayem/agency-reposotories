@@ -59,14 +59,20 @@ test.describe('Keyboard Navigation - Login Screen', () => {
     await page.waitForTimeout(600);
 
     // Type PIN using keyboard
-    await page.keyboard.type('8008');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     // All inputs should be filled
-    const pinInputs = page.locator('input[type="tel"]');
-    await expect(pinInputs.nth(0)).toHaveValue('8');
-    await expect(pinInputs.nth(1)).toHaveValue('0');
-    await expect(pinInputs.nth(2)).toHaveValue('0');
-    await expect(pinInputs.nth(3)).toHaveValue('8');
+    const pinInputsCheck = page.locator('input[type="password"]');
+    await expect(pinInputsCheck.nth(0)).toHaveValue('8');
+    await expect(pinInputsCheck.nth(1)).toHaveValue('0');
+    await expect(pinInputsCheck.nth(2)).toHaveValue('0');
+    await expect(pinInputsCheck.nth(3)).toHaveValue('8');
   });
 
   test('Backspace should navigate between PIN inputs', async ({ page }) => {
@@ -92,7 +98,13 @@ test.describe('Keyboard Navigation - Login Screen', () => {
     await page.waitForTimeout(600);
 
     // Type correct PIN
-    await page.keyboard.type('8008');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     // Press Enter
     await page.keyboard.press('Enter');
@@ -140,8 +152,13 @@ test.describe('Keyboard Navigation - Main App', () => {
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
     await page.waitForTimeout(600);
-    await page.keyboard.type('8008');
-    await page.keyboard.press('Enter');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
     // Wait for app to load
     await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 3000 });

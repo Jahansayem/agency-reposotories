@@ -29,11 +29,8 @@ test.describe('Smoke Test - App Loads Successfully', () => {
     // Navigate to app
     await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-    // Should show login screen - look for user cards or welcome text
-    const loginScreen = page.locator('[data-testid="user-card-Derrick"]')
-      .or(page.getByText('Welcome back'))
-      .or(page.getByText('Bealer Agency'));
-    await expect(loginScreen).toBeVisible({ timeout: 10000 });
+    // Should show login screen - look for the "Welcome back" heading
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible({ timeout: 10000 });
 
     // Should have no critical errors (filter out known benign errors)
     const criticalErrors = errors.filter(e =>
@@ -54,33 +51,26 @@ test.describe('Smoke Test - App Loads Successfully', () => {
     // Wait for login screen
     await page.waitForTimeout(1000);
 
-    // Find Derrick's user card (try multiple selectors)
-    const userCard = page.locator('[data-testid="user-card-Derrick"], button:has-text("Derrick"), div:has-text("Derrick")').first();
+    // Find Derrick's user card using data-testid (most reliable)
+    const userCard = page.locator('[data-testid="user-card-Derrick"]');
 
-    // Verify user card exists
-    const exists = await userCard.isVisible({ timeout: 5000 }).catch(() => false);
+    // Wait for user cards to load
+    await expect(userCard).toBeVisible({ timeout: 10000 });
+    await userCard.click();
+    await page.waitForTimeout(800);
 
-    if (exists) {
-      await userCard.click();
-      await page.waitForTimeout(800);
-
-      // Enter PIN - each digit in a separate password input
-      const pinInputs = page.locator('input[type="password"]');
-      await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
-      const pin = '8008';
-      for (let i = 0; i < 4; i++) {
-        await pinInputs.nth(i).fill(pin[i]);
-        await page.waitForTimeout(100);
-      }
-
-      // Wait for main app - sidebar navigation landmark
-      const appLoaded = await page.getByRole('complementary', { name: 'Main navigation' }).isVisible({ timeout: 15000 }).catch(() => false);
-
-      expect(appLoaded).toBeTruthy();
-      console.log('✅ Login successful, app loaded');
-    } else {
-      console.log('⚠️  User card not found - may need to check test selectors');
+    // Enter PIN - each digit in a separate password input
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    const pin = '8008';
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill(pin[i]);
+      await page.waitForTimeout(100);
     }
+
+    // Wait for main app - sidebar navigation landmark
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
+    console.log('✅ Login successful, app loaded');
   });
 
   test('should render without TypeScript errors', async ({ page }) => {

@@ -30,7 +30,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await page.waitForTimeout(500);
 
     // Send a message
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Test message for reactions');
     await page.keyboard.press('Enter');
 
@@ -55,7 +55,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Test message');
     await page.keyboard.press('Enter');
 
@@ -81,7 +81,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Long press test');
     await page.keyboard.press('Enter');
 
@@ -113,7 +113,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Visual hint test');
     await page.keyboard.press('Enter');
 
@@ -148,7 +148,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Cancel test');
     await page.keyboard.press('Enter');
 
@@ -179,7 +179,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Reaction test');
     await page.keyboard.press('Enter');
 
@@ -204,7 +204,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Accessibility test');
     await page.keyboard.press('Enter');
 
@@ -243,7 +243,7 @@ test.describe('Chat - Reaction Discoverability', () => {
         await userButton.click();
 
         // Send a DM
-        const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+        const chatInput = page.locator('textarea[placeholder*="Message"]');
         await chatInput.fill('DM reaction test');
         await page.keyboard.press('Enter');
 
@@ -282,7 +282,7 @@ test.describe('Chat Reactions - Accessibility', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('ARIA test');
     await page.keyboard.press('Enter');
 
@@ -302,7 +302,7 @@ test.describe('Chat Reactions - Accessibility', () => {
     await chatToggle.click();
     await page.waitForTimeout(500);
 
-    const chatInput = page.locator('textarea[placeholder*="Type a message"]');
+    const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Contrast test');
     await page.keyboard.press('Enter');
 

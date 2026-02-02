@@ -25,8 +25,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
     test('should initialize editing channel on login', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -40,8 +45,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should broadcast editing status when editing task', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -65,8 +75,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should auto-clear editing after timeout', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -78,8 +93,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should keep editing alive with heartbeat', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -93,8 +113,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Editing Indicator Component', () => {
     test('should display editing indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -111,8 +136,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show Edit3 icon when single user editing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -127,8 +157,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show AlertTriangle icon for conflicts', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -139,8 +174,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should display user avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -155,8 +195,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should limit avatars to 3 with overflow', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -169,8 +214,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Field-Specific Indicators', () => {
     test('should track editing by field', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -184,8 +234,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show field name in indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -197,8 +252,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should allow editing different fields simultaneously', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -213,8 +273,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
     test('should detect multiple users editing same task', async ({ page, context }) => {
       // Login first user
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -226,8 +291,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show conflict warning banner', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -241,8 +311,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should change indicator color on conflict', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -260,8 +335,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Real-Time Updates', () => {
     test('should update when user starts editing', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -272,8 +352,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should update when user stops editing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -284,8 +369,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should sync across tabs', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -302,8 +392,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should broadcast via Supabase Realtime', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -317,8 +412,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Performance', () => {
     test('should handle rapid edit start/stop', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -330,8 +430,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should cleanup stale editing states', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -347,8 +452,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should batch broadcasts efficiently', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -362,8 +472,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Edge Cases', () => {
     test('should exclude current user from indicators', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -375,8 +490,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should handle user disconnect', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -388,8 +508,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should handle network disconnection', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -400,8 +525,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should handle same user in multiple tabs', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -415,8 +545,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('UI/UX', () => {
     test('should animate indicator entrance', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -431,8 +566,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should use user colors in avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -447,8 +587,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should have tooltips on avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -465,8 +610,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Conflict Resolution', () => {
     test('should offer Cancel option', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -478,8 +628,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should offer Save Anyway option', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -493,8 +648,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Accessibility', () => {
     test('should have ARIA live region', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -509,8 +669,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should have descriptive aria-label', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -526,8 +691,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should announce editing status changes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 

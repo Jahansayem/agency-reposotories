@@ -38,11 +38,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
 
   test('should announce task creation to screen readers', async ({ page }) => {
     // Add a task
-    const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Test task for announcement');
 
-    const addButton = page.locator('button:has-text("Add")').first();
-    await addButton.click();
+    await page.keyboard.press('Enter');
 
     // Wait a moment for announcement
     await page.waitForTimeout(500);
@@ -57,11 +58,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
 
   test('should announce task completion to screen readers', async ({ page }) => {
     // Create a task first
-    const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Task to complete');
 
-    const addButton = page.locator('button:has-text("Add")').first();
-    await addButton.click();
+    await page.keyboard.press('Enter');
 
     await page.waitForTimeout(500);
 
@@ -109,11 +111,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
 
   test('should clear announcements after timeout', async ({ page }) => {
     // Create a task
-    const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Temporary announcement test');
 
-    const addButton = page.locator('button:has-text("Add")').first();
-    await addButton.click();
+    await page.keyboard.press('Enter');
 
     // Check announcement appears
     await page.waitForTimeout(200);
@@ -132,11 +135,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
 
   test('should announce task deletion', async ({ page }) => {
     // Create a task
-    const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Task to delete');
 
-    const addButton = page.locator('button:has-text("Add")').first();
-    await addButton.click();
+    await page.keyboard.press('Enter');
 
     await page.waitForTimeout(500);
 
@@ -167,11 +171,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
 
   test('should announce status changes', async ({ page }) => {
     // Create a task
-    const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Task for status change');
 
-    const addButton = page.locator('button:has-text("Add")').first();
-    await addButton.click();
+    await page.keyboard.press('Enter');
 
     await page.waitForTimeout(500);
 
@@ -204,12 +209,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
 
   test('should not spam announcements for multiple rapid actions', async ({ page }) => {
     // Rapidly create multiple tasks
-    const taskInput = page.locator('textarea[placeholder*="task"], input[placeholder*="task"]').first();
-    const addButton = page.locator('button:has-text("Add")').first();
-
+    await page.click('button:has-text("New Task")');
+    await page.waitForTimeout(300);
+    const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     for (let i = 0; i < 3; i++) {
       await taskInput.fill(`Rapid task ${i}`);
-      await addButton.click();
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(100);
     }
 

@@ -214,6 +214,7 @@ function TodoFiltersBar({
           <select
             value={quickFilter}
             onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
+            data-testid="quick-filter"
             className="appearance-none min-h-[44px] h-11 pl-3 pr-8 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             aria-label="Quick filter"
           >

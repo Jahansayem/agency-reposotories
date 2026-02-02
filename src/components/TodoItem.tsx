@@ -663,6 +663,7 @@ function TodoItemComponent({
   return (
     <div
       id={`todo-${todo.id}`}
+      data-testid="todo-item"
       role="listitem"
       className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${longPressTriggered ? 'ring-2 ring-[var(--accent)]/50' : ''}`}
       onTouchStart={handleTouchStart}
@@ -679,6 +680,7 @@ function TodoItemComponent({
               checked={selected}
               onChange={(e) => onSelect(todo.id, e.target.checked)}
               aria-label={`Select task: ${todo.text}`}
+              data-testid="todo-checkbox"
               className="w-4 h-4 rounded-[var(--radius-sm)] border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer"
             />
             {/* Visible checkmark overlay for selected state */}

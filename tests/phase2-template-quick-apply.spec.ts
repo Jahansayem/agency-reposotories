@@ -15,10 +15,14 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
     // Login as Derrick
     await page.goto('/');
     await page.getByTestId('user-card-Derrick').click();
-    await page.fill('[data-testid="pin-input"]', '8008');
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
     await page.waitForURL('/');
-    await page.click('[data-testid="nav-tasks"]');
   });
 
   test('should display TemplatePicker button in AddTodo form header', async ({ page }) => {
@@ -44,7 +48,7 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
 
   test('should toggle TemplatePicker with Cmd+T keyboard shortcut', async ({ page, browserName }) => {
     // Focus on task input field
-    await page.focus('[data-testid="task-input"]');
+    await page.focus('[data-testid="add-task-input"]');
 
     // Press Cmd+T (Mac) or Ctrl+T (Windows/Linux)
     const modifierKey = browserName === 'webkit' || process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -70,7 +74,7 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
     await firstTemplate.click();
 
     // Task input should be populated with template text
-    const taskInputValue = await page.inputValue('[data-testid="task-input"]');
+    const taskInputValue = await page.inputValue('[data-testid="add-task-input"]');
     expect(taskInputValue).toBeTruthy();
     expect(taskInputValue.length).toBeGreaterThan(0);
   });
@@ -161,7 +165,7 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
     await page.locator('[data-testid="template-item"]').first().click();
 
     // Task input should be focused
-    await expect(page.locator('[data-testid="task-input"]')).toBeFocused();
+    await expect(page.locator('[data-testid="add-task-input"]')).toBeFocused();
   });
 
   test('should expand options panel after applying template with subtasks', async ({ page }) => {
@@ -176,7 +180,7 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
 
   test('should prioritize template subtasks over suggested subtasks', async ({ page }) => {
     // First, trigger smart parse to get suggested subtasks
-    await page.fill('[data-testid="task-input"]', 'Call John about renewal: review policy, calculate premium, send quote');
+    await page.fill('[data-testid="add-task-input"]', 'Call John about renewal: review policy, calculate premium, send quote');
     await page.click('[data-testid="smart-parse-button"]');
 
     // Wait for suggested subtasks
@@ -204,7 +208,7 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
     await page.waitForTimeout(500);
 
     // Submit the form
-    await page.click('[data-testid="add-task-button"]');
+    await page.keyboard.press('Enter');
 
     // Wait for task creation
     await page.waitForTimeout(1000);

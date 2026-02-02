@@ -109,8 +109,13 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should show offline indicator component', async ({ page, context }) => {
       // Login first
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
@@ -133,14 +138,19 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should cache todos in IndexedDB', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(3000);
 
       // Create a test task
-      await page.fill('[data-testid="add-todo-input"]', 'Test caching in IndexedDB');
-      await page.press('[data-testid="add-todo-input"]', 'Enter');
+      await page.fill('[data-testid="add-task-input"]', 'Test caching in IndexedDB');
+      await page.press('[data-testid="add-task-input"]', 'Enter');
 
       await page.waitForTimeout(2000);
 
@@ -172,14 +182,19 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should load cached todos on page reload', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+      const pinInputs = page.locator('input[type="password"]');
+      await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+      for (let i = 0; i < 4; i++) {
+        await pinInputs.nth(i).fill('8008'[i]);
+        await page.waitForTimeout(100);
+      }
 
       await page.waitForTimeout(2000);
 
       // Create a task
-      await page.fill('[data-testid="add-todo-input"]', 'Reload test task');
-      await page.press('[data-testid="add-todo-input"]', 'Enter');
+      await page.fill('[data-testid="add-task-input"]', 'Reload test task');
+      await page.press('[data-testid="add-task-input"]', 'Enter');
 
       await page.waitForTimeout(2000);
 
@@ -188,8 +203,13 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
       // Login again
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+      const pinInputs2 = page.locator('input[type="password"]');
+      await expect(pinInputs2.first()).toBeVisible({ timeout: 5000 });
+      for (let i = 0; i < 4; i++) {
+        await pinInputs2.nth(i).fill('8008'[i]);
+        await page.waitForTimeout(100);
+      }
 
       await page.waitForTimeout(3000);
 
@@ -228,15 +248,20 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should persist todos across page reloads', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
       // Create unique task
       const uniqueTask = `Persistence test ${Date.now()}`;
-      await page.fill('[data-testid="add-todo-input"]', uniqueTask);
-      await page.press('[data-testid="add-todo-input"]', 'Enter');
+      await page.fill('[data-testid="add-task-input"]', uniqueTask);
+      await page.press('[data-testid="add-task-input"]', 'Enter');
 
       await page.waitForTimeout(2000);
 
@@ -246,8 +271,13 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
       // Reload
       await page.reload();
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+      const pinInputs3 = page.locator('input[type="password"]');
+      await expect(pinInputs3.first()).toBeVisible({ timeout: 5000 });
+      for (let i = 0; i < 4; i++) {
+        await pinInputs3.nth(i).fill('8008'[i]);
+        await page.waitForTimeout(100);
+      }
 
       await page.waitForTimeout(3000);
 
@@ -262,11 +292,16 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Wait for add task input to appear (indicates data loaded)
-      await page.waitForSelector('[data-testid="add-todo-input"]', { timeout: 5000 });
+      await page.waitForSelector('[data-testid="add-task-input"]', { timeout: 5000 });
 
       const loadTime = Date.now() - startTime;
 
@@ -321,11 +356,16 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should not crash if IndexedDB is unavailable', async ({ page }) => {
       // App should work even without IndexedDB (online mode)
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       // Should load successfully
-      await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -333,13 +373,18 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should maintain data structure in IndexedDB', async ({ page }) => {
       // Login and create task
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.fill('[data-testid="pin-input"]', '8008');
-      await page.click('[data-testid="login-button"]');
+      await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill('8008'[i]);
+      await page.waitForTimeout(100);
+    }
 
       await page.waitForTimeout(2000);
 
-      await page.fill('[data-testid="add-todo-input"]', 'Data integrity test');
-      await page.press('[data-testid="add-todo-input"]', 'Enter');
+      await page.fill('[data-testid="add-task-input"]', 'Data integrity test');
+      await page.press('[data-testid="add-task-input"]', 'Enter');
 
       await page.waitForTimeout(2000);
 

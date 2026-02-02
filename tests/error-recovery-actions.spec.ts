@@ -28,8 +28,10 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       // Try to create a task (will fail)
-      await page.fill('[data-testid="task-input"]', 'Test error toast');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Test error toast');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       // Error toast should appear
@@ -43,8 +45,10 @@ test.describe('Error Recovery Actions', () => {
     test('should have proper ARIA attributes', async ({ page }) => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
-      await page.fill('[data-testid="task-input"]', 'ARIA test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'ARIA test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -63,8 +67,10 @@ test.describe('Error Recovery Actions', () => {
     test('should auto-hide after duration', async ({ page }) => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
-      await page.fill('[data-testid="task-input"]', 'Auto-hide test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Auto-hide test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -78,8 +84,10 @@ test.describe('Error Recovery Actions', () => {
     test('should dismiss on close button click', async ({ page }) => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
-      await page.fill('[data-testid="task-input"]', 'Close test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Close test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -96,8 +104,10 @@ test.describe('Error Recovery Actions', () => {
     test('should dismiss on Escape key', async ({ page }) => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
-      await page.fill('[data-testid="task-input"]', 'Escape test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Escape test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -117,8 +127,10 @@ test.describe('Error Recovery Actions', () => {
       // Simulate network error
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Network error test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Network error test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -142,8 +154,10 @@ test.describe('Error Recovery Actions', () => {
         }
       });
 
-      await page.fill('[data-testid="task-input"]', 'Retry test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Retry test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -164,8 +178,10 @@ test.describe('Error Recovery Actions', () => {
     test('should show refresh icon in retry button', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Retry icon test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Retry icon test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -184,8 +200,10 @@ test.describe('Error Recovery Actions', () => {
       // This is a simulated test - actual validation depends on implementation
 
       // Try to create task with empty text (validation error)
-      await page.fill('[data-testid="task-input"]', '');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', '');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       // If validation error toast appears with "Edit" button
@@ -212,8 +230,10 @@ test.describe('Error Recovery Actions', () => {
         });
       });
 
-      await page.fill('[data-testid="task-input"]', 'Auth error test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Auth error test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -233,8 +253,10 @@ test.describe('Error Recovery Actions', () => {
         });
       });
 
-      await page.fill('[data-testid="task-input"]', 'Login redirect test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Login redirect test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -283,8 +305,10 @@ test.describe('Error Recovery Actions', () => {
     test('should navigate action buttons with Tab', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Keyboard nav test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Keyboard nav test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -306,8 +330,10 @@ test.describe('Error Recovery Actions', () => {
     test('should activate button with Enter key', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Enter key test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Enter key test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -328,8 +354,10 @@ test.describe('Error Recovery Actions', () => {
     test('should show focus indicators on buttons', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Focus indicator test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Focus indicator test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -354,8 +382,10 @@ test.describe('Error Recovery Actions', () => {
     test('should have error color scheme (red)', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Color test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Color test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -373,8 +403,10 @@ test.describe('Error Recovery Actions', () => {
     test('should show error icon (AlertCircle)', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Icon test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Icon test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -388,8 +420,10 @@ test.describe('Error Recovery Actions', () => {
     test('should have rounded corners and shadow', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Style test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Style test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -411,8 +445,10 @@ test.describe('Error Recovery Actions', () => {
       await page.setViewportSize({ width: 375, height: 667 });
 
       await page.route('**/api/todos', route => route.abort());
-      await page.fill('[data-testid="task-input"]', 'Mobile width test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Mobile width test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -428,8 +464,10 @@ test.describe('Error Recovery Actions', () => {
       await page.setViewportSize({ width: 1280, height: 800 });
 
       await page.route('**/api/todos', route => route.abort());
-      await page.fill('[data-testid="task-input"]', 'Desktop width test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Desktop width test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -445,8 +483,10 @@ test.describe('Error Recovery Actions', () => {
     test('should animate in from bottom', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Animation test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Animation test');
+      await page.keyboard.press('Enter');
 
       // Toast should not be visible initially
       const errorToast = page.locator('[role="alert"]');
@@ -460,8 +500,10 @@ test.describe('Error Recovery Actions', () => {
     test('should animate out on dismiss', async ({ page }) => {
       await page.route('**/api/todos', route => route.abort());
 
-      await page.fill('[data-testid="task-input"]', 'Dismiss animation test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Dismiss animation test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
@@ -489,8 +531,10 @@ test.describe('Error Recovery Actions', () => {
         });
       });
 
-      await page.fill('[data-testid="task-input"]', 'Dev mode test');
-      await page.click('[data-testid="add-task-button"]');
+      await page.click('button:has-text("New Task")');
+      await page.waitForTimeout(300);
+      await page.fill('[data-testid="add-task-input"]', 'Dev mode test');
+      await page.keyboard.press('Enter');
       await page.waitForTimeout(500);
 
       const errorToast = page.locator('[role="alert"]');
