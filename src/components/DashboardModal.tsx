@@ -41,6 +41,7 @@ import {
   generateDashboardAIData,
   NeglectedTask,
   ProductivityInsight,
+  InsightIconName,
 } from '@/lib/aiDashboardInsights';
 import {
   generateManagerDashboardData,
@@ -283,13 +284,24 @@ export default function DashboardModal({
     setDashboardAutoOpenDisabled(checked);
   };
 
-  const getInsightIcon = (type: ProductivityInsight['type']) => {
-    switch (type) {
-      case 'streak': return Flame;
-      case 'milestone': return Award;
-      case 'pattern': return TrendingUp;
-      case 'encouragement': return Sparkles;
-      case 'tip': return Lightbulb;
+  const getInsightIconComponent = (iconName: InsightIconName) => {
+    switch (iconName) {
+      case 'clock': return Clock;
+      case 'calendar': return CalendarDays;
+      case 'trophy': return Award;
+      case 'star': return Sparkles;
+      case 'trending-up': return TrendingUp;
+      case 'activity': return BarChart3;
+      case 'check-circle': return CheckCircle2;
+      case 'sunrise': return Sunrise;
+      case 'sun': return Sun;
+      case 'moon': return Moon;
+      case 'calendar-days': return CalendarDays;
+      case 'lightbulb': return Lightbulb;
+      case 'bar-chart': return BarChart3;
+      case 'sparkles': return Sparkles;
+      case 'target': return Target;
+      case 'zap': return Zap;
       default: return Brain;
     }
   };
@@ -519,14 +531,22 @@ export default function DashboardModal({
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           onClick={() => handleAction(onFilterOverdue)}
-                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--brand-blue)] text-white hover:bg-[var(--accent-hover)] transition-colors group"
+                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors group ${
+                            darkMode
+                              ? 'bg-red-500/15 border border-red-500/30 text-red-300 hover:bg-red-500/25'
+                              : 'bg-red-50 border border-red-200 text-red-700 hover:bg-red-100'
+                          }`}
                         >
-                          <AlertTriangle className="w-5 h-5" />
+                          <AlertTriangle className={`w-5 h-5 ${darkMode ? 'text-red-400' : 'text-red-500'}`} />
                           <div className="flex-1 text-left">
                             <span className="font-semibold">{stats.overdue} overdue</span>
-                            <span className="text-white/70 text-sm ml-2">need attention</span>
+                            <span className={`text-sm ml-2 ${darkMode ? 'text-red-400/70' : 'text-red-600/70'}`}>
+                              {stats.overdue === 1 ? 'needs' : 'need'} attention
+                            </span>
                           </div>
-                          <ArrowRight className="w-4 h-4 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                          <ArrowRight className={`w-4 h-4 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all ${
+                            darkMode ? 'text-red-400' : 'text-red-500'
+                          }`} />
                         </motion.button>
                       )}
 
@@ -787,7 +807,7 @@ export default function DashboardModal({
 
                           <div className="space-y-3">
                             {aiData.insights.map((insight, index) => {
-                              const _IconComponent = getInsightIcon(insight.type);
+                              const IconComponent = getInsightIconComponent(insight.icon);
                               return (
                                 <motion.div
                                   key={index}
@@ -798,7 +818,15 @@ export default function DashboardModal({
                                     darkMode ? 'bg-slate-700/30' : 'bg-slate-50'
                                   }`}
                                 >
-                                  <span className="text-xl flex-shrink-0">{insight.icon}</span>
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    insight.priority === 'high'
+                                      ? darkMode ? 'bg-red-500/15 text-red-400' : 'bg-red-50 text-red-500'
+                                      : insight.priority === 'medium'
+                                        ? darkMode ? 'bg-amber-500/15 text-amber-400' : 'bg-amber-50 text-amber-600'
+                                        : darkMode ? 'bg-blue-500/15 text-blue-400' : 'bg-blue-50 text-blue-500'
+                                  }`}>
+                                    <IconComponent className="w-4 h-4" />
+                                  </div>
                                   <div className="flex-1 min-w-0">
                                     <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                                       {insight.title}
@@ -848,7 +876,7 @@ export default function DashboardModal({
                           <h3 className={`text-xs font-semibold uppercase tracking-wide ${
                             darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'
                           }`}>
-                            Daily Tip
+                            Productivity Tip
                           </h3>
                         </div>
                         <p className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -909,7 +937,7 @@ export default function DashboardModal({
                             {managerData.teamOverview.topPerformer && (
                               <div className={`flex items-center gap-2 text-sm ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
                                 <Award className="w-4 h-4" />
-                                <span><strong>{managerData.teamOverview.topPerformer}</strong> is crushing it this week!</span>
+                                <span><strong>{managerData.teamOverview.topPerformer}</strong> — top performer this week</span>
                               </div>
                             )}
                             {managerData.teamOverview.needsAttention && (

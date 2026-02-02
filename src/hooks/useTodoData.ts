@@ -88,9 +88,14 @@ export function useTodoData(currentUser: AuthUser) {
       logger.error('Error fetching todos', todosResult.error, { component: 'useTodoData' });
       setError('Failed to connect to database. Please check your Supabase configuration.');
     } else {
-      const fetchedTodos = todosResult.data || [];
+      // Normalize todos to ensure subtasks and attachments are always arrays
+      const fetchedTodos = (todosResult.data || []).map((todo: any) => ({
+        ...todo,
+        subtasks: Array.isArray(todo.subtasks) ? todo.subtasks : [],
+        attachments: Array.isArray(todo.attachments) ? todo.attachments : [],
+      }));
       const totalCount = countResult.count || fetchedTodos.length;
-      
+
       setTodos(fetchedTodos);
       setTotalTodoCount(totalCount);
       setHasMoreTodos(fetchedTodos.length < totalCount);
@@ -164,6 +169,10 @@ export function useTodoData(currentUser: AuthUser) {
 
           if (payload.eventType === 'INSERT') {
             const newTodo = payload.new as Todo;
+            // Normalize subtasks and attachments
+            newTodo.subtasks = Array.isArray(newTodo.subtasks) ? newTodo.subtasks : [];
+            newTodo.attachments = Array.isArray(newTodo.attachments) ? newTodo.attachments : [];
+
             if (!isVisibleToUser(newTodo)) return;
             // Check if todo already exists (to avoid duplicates from optimistic updates)
             const store = useTodoStore.getState();
@@ -173,6 +182,9 @@ export function useTodoData(currentUser: AuthUser) {
             }
           } else if (payload.eventType === 'UPDATE') {
             const updatedTodo = payload.new as Todo;
+            // Normalize subtasks and attachments
+            updatedTodo.subtasks = Array.isArray(updatedTodo.subtasks) ? updatedTodo.subtasks : [];
+            updatedTodo.attachments = Array.isArray(updatedTodo.attachments) ? updatedTodo.attachments : [];
             // During reorder, suppress updates that only change display_order/updated_at
             // to prevent the list from reshuffling mid-drag
             if (_isReordering) {

@@ -18,9 +18,15 @@ export interface NeglectedTask {
   aiSuggestion: string;
 }
 
+export type InsightIconName =
+  | 'clock' | 'calendar' | 'trophy' | 'star' | 'trending-up'
+  | 'activity' | 'check-circle' | 'sunrise' | 'sun' | 'moon'
+  | 'calendar-days' | 'lightbulb' | 'bar-chart' | 'sparkles'
+  | 'target' | 'zap';
+
 export interface ProductivityInsight {
   type: 'streak' | 'pattern' | 'milestone' | 'encouragement' | 'tip';
-  icon: string;
+  icon: InsightIconName;
   title: string;
   message: string;
   priority: 'high' | 'medium' | 'low';
@@ -138,15 +144,15 @@ function generateTaskSuggestion(
     ],
     notice: [
       "This task could use some attention soon.",
-      "A few days since last activity. Keep the momentum going!",
-      "Don't let this slip—you've got this!",
+      "A few days since last activity — worth revisiting.",
+      "Consider reviewing this task to keep it on track.",
     ],
   };
 
   // Add priority-specific context
   if (todo.priority === 'urgent' || todo.priority === 'high') {
     if (urgency === 'critical') {
-      return "⚠️ High priority task neglected for 2+ weeks. This needs immediate attention!";
+      return "High priority task neglected for 2+ weeks. This needs immediate attention.";
     }
     if (urgency === 'warning') {
       return "This high-priority task deserves your focus today.";
@@ -245,11 +251,11 @@ export function generateProductivityInsights(
   if (overdue.length > 0) {
     insights.push({
       type: 'tip',
-      icon: '⏰',
+      icon: 'clock',
       title: overdue.length === 1 ? '1 Overdue Task' : `${overdue.length} Overdue Tasks`,
       message: overdue.length === 1
         ? `"${overdue[0].text.slice(0, 35)}${overdue[0].text.length > 35 ? '...' : ''}" needs your attention.`
-        : `Let's clear a few today and get back on track!`,
+        : `${overdue.length} tasks are past their due date. Consider prioritizing these first.`,
       priority: 'high',
     });
   }
@@ -258,7 +264,7 @@ export function generateProductivityInsights(
   if (dueToday.length > 0) {
     insights.push({
       type: 'pattern',
-      icon: '📅',
+      icon: 'calendar',
       title: dueToday.length === 1 ? '1 Task Due Today' : `${dueToday.length} Tasks Due Today`,
       message: dueToday.length === 1
         ? `"${dueToday[0].text.slice(0, 35)}${dueToday[0].text.length > 35 ? '...' : ''}" is due today.`
@@ -276,20 +282,20 @@ export function generateProductivityInsights(
   if (totalCompleted > 0 && totalCompleted % 10 === 0) {
     insights.push({
       type: 'milestone',
-      icon: '🏆',
-      title: 'Milestone Reached!',
-      message: `You've completed ${totalCompleted} tasks total. Incredible progress!`,
+      icon: 'trophy',
+      title: 'Milestone Reached',
+      message: `${totalCompleted} tasks completed total — strong cumulative progress.`,
       priority: 'high',
     });
   }
 
-  // 4. Today's progress celebration
+  // 4. Today's progress
   if (todayCompletions.length >= 3) {
     insights.push({
       type: 'milestone',
-      icon: '⭐',
-      title: 'Great Day So Far!',
-      message: `${todayCompletions.length} tasks completed today. You're crushing it!`,
+      icon: 'star',
+      title: 'Strong Day',
+      message: `${todayCompletions.length} tasks completed today — above average output.`,
       priority: 'medium',
     });
   }
@@ -298,28 +304,28 @@ export function generateProductivityInsights(
   if (recentCompletions.length >= 5) {
     insights.push({
       type: 'pattern',
-      icon: '📈',
-      title: 'Productive Week!',
-      message: `${recentCompletions.length} tasks completed in the past 7 days. You're on fire!`,
+      icon: 'trending-up',
+      title: 'High Weekly Output',
+      message: `${recentCompletions.length} tasks completed in the past 7 days — strong pace.`,
       priority: 'medium',
     });
   } else if (recentCompletions.length >= 3) {
     insights.push({
       type: 'encouragement',
-      icon: '💪',
-      title: 'Good Progress',
-      message: `${recentCompletions.length} tasks done this week. Keep pushing forward!`,
+      icon: 'activity',
+      title: 'Steady Progress',
+      message: `${recentCompletions.length} tasks completed this week. Maintaining momentum.`,
       priority: 'medium',
     });
   }
 
-  // 6. Empty inbox celebration
+  // 6. All tasks complete
   if (activeTasks.length === 0 && completedTasks.length > 0) {
     insights.push({
       type: 'milestone',
-      icon: '🎉',
-      title: 'Inbox Zero!',
-      message: "All tasks complete! Enjoy this moment of clarity.",
+      icon: 'check-circle',
+      title: 'All Clear',
+      message: "All tasks complete. Ready for new assignments.",
       priority: 'high',
     });
   }
@@ -341,9 +347,9 @@ export function generateProductivityInsights(
 
     insights.push({
       type: 'tip',
-      icon: '🌅',
+      icon: 'sunrise',
       title: 'Morning Focus',
-      message: `Start strong with "${suggestedTask.text.slice(0, 30)}${suggestedTask.text.length > 30 ? '...' : ''}"`,
+      message: `Recommended first task: "${suggestedTask.text.slice(0, 30)}${suggestedTask.text.length > 30 ? '...' : ''}"`,
       priority: 'medium',
     });
   }
@@ -353,9 +359,9 @@ export function generateProductivityInsights(
     if (todayCompletions.length === 0 && activeTasks.length > 0) {
       insights.push({
         type: 'encouragement',
-        icon: '☀️',
-        title: 'Afternoon Boost',
-        message: "Still time to make today count! Pick one task to complete before end of day.",
+        icon: 'sun',
+        title: 'Afternoon Check-in',
+        message: "No completions yet today. Consider tackling one task before end of day.",
         priority: 'medium',
       });
     }
@@ -366,17 +372,17 @@ export function generateProductivityInsights(
     if (todayCompletions.length > 0) {
       insights.push({
         type: 'encouragement',
-        icon: '🌙',
-        title: 'Day Well Spent',
-        message: `You completed ${todayCompletions.length} task${todayCompletions.length > 1 ? 's' : ''} today. Time to recharge!`,
+        icon: 'moon',
+        title: 'Day Summary',
+        message: `${todayCompletions.length} task${todayCompletions.length > 1 ? 's' : ''} completed today.`,
         priority: 'low',
       });
     } else if (activeTasks.length > 0) {
       insights.push({
         type: 'tip',
-        icon: '🌙',
-        title: 'Tomorrow\'s Plan',
-        message: "Review your tasks tonight so you can hit the ground running tomorrow.",
+        icon: 'moon',
+        title: 'Plan Ahead',
+        message: "Review tomorrow's priorities to start the day with a clear plan.",
         priority: 'low',
       });
     }
@@ -390,9 +396,9 @@ export function generateProductivityInsights(
   if (dueSoon.length > 0 && !dueToday.length && insights.length < 4) {
     insights.push({
       type: 'pattern',
-      icon: '📆',
+      icon: 'calendar-days',
       title: `${dueSoon.length} Task${dueSoon.length > 1 ? 's' : ''} Due Soon`,
-      message: `You have deadlines coming up in the next 3 days. Plan ahead!`,
+      message: `${dueSoon.length} deadline${dueSoon.length > 1 ? 's' : ''} within the next 3 days.`,
       priority: 'medium',
     });
   }
@@ -401,9 +407,9 @@ export function generateProductivityInsights(
   if (highPriorityActive > 5) {
     insights.push({
       type: 'tip',
-      icon: '💡',
+      icon: 'lightbulb',
       title: 'Priority Overload',
-      message: `${highPriorityActive} high-priority tasks active. Consider completing a few first.`,
+      message: `${highPriorityActive} high-priority tasks active. Consider resolving a few before taking on more.`,
       priority: 'medium',
     });
   }
@@ -416,31 +422,31 @@ export function generateProductivityInsights(
     if (urgentCount > 0 || highCount > 0) {
       insights.push({
         type: 'pattern',
-        icon: '📊',
+        icon: 'bar-chart',
         title: 'Current Workload',
         message: urgentCount > 0
-          ? `${urgentCount} urgent and ${highCount} high priority tasks need attention.`
+          ? `${urgentCount} urgent and ${highCount} high priority tasks require attention.`
           : `${highCount} high priority task${highCount > 1 ? 's' : ''} in your queue.`,
         priority: 'medium',
       });
     } else {
       insights.push({
         type: 'encouragement',
-        icon: '✨',
+        icon: 'sparkles',
         title: 'Balanced Workload',
-        message: `${activeTasks.length} active task${activeTasks.length > 1 ? 's' : ''}, no urgent priorities. Great time to make progress!`,
+        message: `${activeTasks.length} active task${activeTasks.length > 1 ? 's' : ''} with no urgent items. Good time to work ahead.`,
         priority: 'low',
       });
     }
   }
 
-  // 13. No tasks due today encouragement
+  // 13. No tasks due today
   if (dueToday.length === 0 && activeTasks.length > 0 && overdue.length === 0 && insights.length < 3) {
     insights.push({
       type: 'tip',
-      icon: '🎯',
-      title: 'Open Day',
-      message: "No deadlines today! Perfect time to tackle something you've been putting off.",
+      icon: 'target',
+      title: 'Open Schedule',
+      message: "No deadlines today. Good opportunity to address lower-priority backlog items.",
       priority: 'low',
     });
   }
@@ -454,9 +460,9 @@ export function generateProductivityInsights(
     if (quickWins.length > 0) {
       insights.push({
         type: 'tip',
-        icon: '⚡',
-        title: 'Quick Win Available',
-        message: `"${quickWins[0].text.slice(0, 30)}${quickWins[0].text.length > 30 ? '...' : ''}" looks like a quick one!`,
+        icon: 'zap',
+        title: 'Quick Win',
+        message: `"${quickWins[0].text.slice(0, 30)}${quickWins[0].text.length > 30 ? '...' : ''}" — low complexity, easy to close out.`,
         priority: 'low',
       });
     }
@@ -514,10 +520,10 @@ export function calculateStreak(
  * Gets streak message with emoji
  */
 export function getStreakMessage(streak: number): string | null {
-  if (streak >= 10) return `🔥🔥🔥 ${streak} tasks completed! You're unstoppable!`;
-  if (streak >= 7) return `🔥🔥 ${streak} tasks in a row! Amazing focus!`;
-  if (streak >= 5) return `🔥 ${streak} task streak! Keep the momentum!`;
-  if (streak >= 3) return `✨ ${streak} tasks done! You're on a roll!`;
+  if (streak >= 10) return `${streak}-task streak — exceptional focus session`;
+  if (streak >= 7) return `${streak} tasks in a row — strong momentum`;
+  if (streak >= 5) return `${streak}-task streak — solid productivity`;
+  if (streak >= 3) return `${streak} tasks completed consecutively`;
   return null;
 }
 
