@@ -702,10 +702,9 @@ function TodoItemComponent({
           </span>
         </button>
 
-        {/* Content - using semantic button for keyboard accessibility */}
-        <button
-          type="button"
-          className="flex-1 min-w-0 cursor-pointer text-left bg-transparent border-none p-0"
+        {/* Content - clickable div (not button) to avoid nesting buttons */}
+        <div
+          className="flex-1 min-w-0 cursor-pointer text-left"
           onClick={() => {
             if (onOpenDetail) {
               onOpenDetail(todo.id);
@@ -713,6 +712,18 @@ function TodoItemComponent({
               setExpanded(!expanded);
             }
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              if (onOpenDetail) {
+                onOpenDetail(todo.id);
+              } else {
+                setExpanded(!expanded);
+              }
+            }
+          }}
+          role="button"
+          tabIndex={0}
           aria-expanded={expanded}
           aria-label={`${todo.text}. Press Enter to ${onOpenDetail ? 'open details' : expanded ? 'collapse' : 'expand'} details`}
         >
@@ -947,7 +958,7 @@ function TodoItemComponent({
               </>
             )}
           </div>
-        </button>
+        </div>
 
           {/* Quick inline actions - visible on hover for incomplete tasks (hide when menu is open) */}
           {!todo.completed && !showActionsMenu && (
