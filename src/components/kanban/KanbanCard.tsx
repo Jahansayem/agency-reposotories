@@ -119,9 +119,11 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
   const overdue = todo.due_date && !todo.completed && isOverdue(todo.due_date);
   const hasNotes = todo.notes && todo.notes.trim().length > 0;
   const hasTranscription = todo.transcription && todo.transcription.trim().length > 0;
-  const subtaskCount = todo.subtasks?.length || 0;
-  const completedSubtasks = todo.subtasks?.filter(s => s.completed).length || 0;
-  const attachmentCount = todo.attachments?.length || 0;
+  const subtasks = Array.isArray(todo.subtasks) ? todo.subtasks : [];
+  const subtaskCount = subtasks.length;
+  const completedSubtasks = subtasks.filter(s => s.completed).length;
+  const attachments = Array.isArray(todo.attachments) ? todo.attachments : [];
+  const attachmentCount = attachments.length;
 
   // Handle click to open detail modal (not during drag)
   const handleCardClick = (e: React.MouseEvent) => {
@@ -248,7 +250,7 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
                 </span>
               )}
               {attachmentCount > 0 && (() => {
-                const hasAudio = todo.attachments?.some(a => a.file_type === 'audio');
+                const hasAudio = attachments.some(a => a.file_type === 'audio');
                 const AttachmentIcon = hasAudio ? Music : Paperclip;
                 const colorClass = hasAudio ? 'text-[var(--accent)]' : 'text-amber-500 dark:text-amber-400';
                 return (
