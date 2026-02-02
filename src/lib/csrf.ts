@@ -213,25 +213,69 @@ function getCookieValue(name: string): string | null {
   return null;
 }
 
+// Cached CSRF token (nonce:signature) from the server
+let cachedCsrfToken: string | null = null;
+let csrfTokenPromise: Promise<string | null> | null = null;
+
 /**
- * Client-side helper to build CSRF token for header
+ * Fetch CSRF token from the server endpoint.
+ * Caches the result so subsequent calls don't make extra requests.
+ */
+async function fetchCsrfTokenFromServer(): Promise<string | null> {
+  try {
+    const response = await fetch('/api/csrf', {
+      method: 'GET',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.token) {
+      cachedCsrfToken = data.token;
+      return data.token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get or fetch CSRF token for use in request headers.
+ * Returns cached token if available, otherwise fetches from server.
+ */
+async function ensureCsrfToken(): Promise<string | null> {
+  if (typeof document === 'undefined') return null;
+
+  // Check if nonce cookie exists (set by middleware)
+  const nonce = getCookieValue(CSRF_NONCE_COOKIE);
+  if (!nonce) return null;
+
+  // If we have a cached token and the nonce matches, use it
+  if (cachedCsrfToken && cachedCsrfToken.startsWith(nonce + ':')) {
+    return cachedCsrfToken;
+  }
+
+  // Nonce changed or no cache — fetch from server
+  // Deduplicate concurrent fetches
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetchCsrfTokenFromServer().finally(() => {
+      csrfTokenPromise = null;
+    });
+  }
+  return csrfTokenPromise;
+}
+
+/**
+ * Client-side helper to build CSRF token for header (sync version)
  *
- * Returns the token that should be set in the X-CSRF-Token header.
+ * Returns the cached token if available, null otherwise.
+ * For async usage, prefer ensureCsrfToken().
  */
 export function getClientCsrfToken(): string | null {
   if (typeof document === 'undefined') {
     return null;
   }
-
-  // The new pattern requires the server-provided signature via /api/csrf
-  // The client should call fetchCsrfToken() first, then use buildCsrfTokenWithSignature()
-  const nonce = getCookieValue(CSRF_NONCE_COOKIE);
-  if (nonce) {
-    // Nonce is available but signature must be fetched from server
-    // Return null to signal the caller should use buildCsrfTokenWithSignature instead
-  }
-
-  return null;
+  return cachedCsrfToken;
 }
 
 /**
@@ -294,7 +338,7 @@ export async function fetchWithCsrf(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const token = getClientCsrfToken();
+  const token = await ensureCsrfToken();
   const userName = getSessionUserName();
   const headers = new Headers(options.headers);
 
@@ -303,7 +347,7 @@ export async function fetchWithCsrf(
   } else {
     // Log warning in development only to help debug CSRF issues
     if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      console.warn('[CSRF] No token found in cookies. Available cookies:', document.cookie);
+      console.warn('[CSRF] No token available. Nonce cookie:', getCookieValue(CSRF_NONCE_COOKIE));
     }
   }
 
