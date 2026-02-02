@@ -1,24 +1,28 @@
 'use client';
 
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
-import { LayoutList, LayoutGrid, Bell, Search, X, Filter, RotateCcw, Plus, Sun, Moon } from 'lucide-react';
+import { LayoutList, LayoutGrid, Bell, Search, X, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AuthUser, ViewMode, ActivityLogEntry } from '@/types/todo';
-import UserSwitcher from '../UserSwitcher';
-import FocusModeToggle from '../FocusModeToggle';
 import NotificationModal from '../NotificationModal';
+import { UserMenu } from '../UserMenu';
 import { useTodoStore } from '@/store/todoStore';
 import { useAppShell } from '../layout/AppShell';
-import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// UNIFIED TODO HEADER - Single header row with integrated search
+// SIMPLIFIED TODO HEADER - UX Improvement (Feb 2026)
 // Layout:
-// - Left side: View toggle (List/Board), Search field, Focus mode toggle
-// - Right side: Filter toggle, Reset, Notifications bell, User switcher
+// - Left side: View toggle (List/Board), Search field (expanded)
+// - Right side: New Task (primary CTA), Notifications bell, User menu
 //
-// NOTE: Weekly Progress and Keyboard Shortcuts are now in NavigationSidebar
+// Removed clutter (moved to UserMenu or removed):
+// - Theme toggle → UserMenu
+// - Focus mode toggle → UserMenu
+// - Filter toggle → Removed (duplicates TodoFiltersBar)
+// - Reset button → Removed (duplicates TodoFiltersBar)
+//
+// Goal: Reduce from 11 actions to 5 actions for clearer hierarchy
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface TodoHeaderProps {
@@ -53,7 +57,6 @@ function TodoHeader({
 }: TodoHeaderProps) {
   const { focusMode } = useTodoStore((state) => state.ui);
   const { setActiveView } = useAppShell();
-  const { theme, toggleTheme } = useTheme();
 
   // ── Debounced search input ────────────────────────────────────────────
   // Local state gives instant keystroke feedback.
@@ -182,10 +185,10 @@ function TodoHeader({
       className={`sticky top-0 z-40 border-b ${
         'bg-[var(--surface)] border-[var(--border)]'}`}
     >
-      <div className="mx-auto px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 max-w-5xl xl:max-w-6xl 2xl:max-w-7xl">
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
-          {/* Left side: View toggle, Search & Focus mode toggle */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+      <div className="mx-auto px-4 max-w-7xl">
+        <div className="h-16 flex items-center justify-between gap-4">
+          {/* Left side: View toggle & Search (expanded) */}
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* View toggle - hidden in focus mode */}
             {!focusMode && (
               <div
@@ -219,68 +222,68 @@ function TodoHeader({
               </div>
             )}
 
-            {/* Integrated Search Field - hidden in focus mode */}
+            {/* Integrated Search Field - hidden in focus mode, expanded to use available space */}
             {/* Uses local state for instant keystroke feedback; store update is debounced */}
             {!focusMode && (
-              <div className="relative flex items-center flex-1 max-w-[240px]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-light)] pointer-events-none" />
+              <div className="relative flex items-center flex-1 max-w-xl">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-light)] pointer-events-none" />
                 <input
                   type="text"
                   value={localSearchInput}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search tasks..."
                   aria-label="Search tasks"
-                  className={`w-full pl-8 pr-7 py-1.5 text-xs rounded-[var(--radius-md)] border transition-colors ${
-                    'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:border-[var(--accent)]/50'} focus:outline-none`}
+                  className={`w-full h-10 pl-10 pr-9 text-sm rounded-lg border transition-colors ${
+                    'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-light)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20'} focus:outline-none`}
                 />
                 {localSearchInput && (
                   <button
                     onClick={handleSearchClear}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                     aria-label="Clear search"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
             )}
-
-            {/* Focus Mode Toggle - always visible */}
-            <FocusModeToggle />
           </div>
 
-          {/* Right side: Notifications, User switcher & Menu - hidden in focus mode */}
+          {/* Right side: New Task (primary), Notifications, User Menu - hidden in focus mode */}
           {!focusMode && (
-            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* New Task Button - Primary CTA with 3-tier hierarchy */}
               {onAddTask && (
                 <button
                   onClick={onAddTask}
-                  className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-xs sm:text-sm font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 active:scale-[0.98] transition-all shadow-sm"
-                  aria-label="Add a new task"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 active:scale-95 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
+                  aria-label="Create new task"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-5 h-5" />
                   <span className="hidden sm:inline">New Task</span>
                 </button>
               )}
 
-              {/* Notification Bell - Top right like Facebook/LinkedIn */}
+              {/* Notification Bell - Secondary action */}
               <div className="relative">
                 <button
                   ref={notificationButtonRef}
                   onClick={() => setNotificationModalOpen(!notificationModalOpen)}
                   className={`
-                    relative p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
+                    relative p-2.5 rounded-lg transition-colors
+                    focus:outline-none focus:ring-2 focus:ring-[var(--accent)]
                     ${notificationModalOpen
-                      ? 'bg-[var(--accent-light)] text-[var(--accent)]': 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
+                      ? 'bg-[var(--accent-light)] text-[var(--accent)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                   `}
                   aria-label={`Notifications${unreadNotifications > 0 ? ` (${unreadNotifications} unread)` : ''}`}
                 >
-                  <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Bell className="w-5 h-5" />
                   {unreadNotifications > 0 && (
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] flex items-center justify-center px-1 rounded-full text-[9px] font-bold bg-[var(--danger)] text-white"
+                      className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
                     >
                       {unreadNotifications > 99 ? '99+' : unreadNotifications}
                     </motion.span>
@@ -299,48 +302,11 @@ function TodoHeader({
                 />
               </div>
 
-              {/* Filter Toggle */}
-              <button
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className={`
-                  p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
-                  ${showAdvancedFilters
-                    ? 'bg-[var(--accent-light)] text-[var(--accent)]': 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
-                `}
-                aria-label={showAdvancedFilters ? 'Hide filters' : 'Show filters'}
-                aria-pressed={showAdvancedFilters}
-                title="Toggle Filters"
-              >
-                <Filter className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-
-              {/* Reset Filters */}
-              <button
-                onClick={onResetFilters}
-                className={`
-                  p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
-                  ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
-                `}
-                aria-label="Reset all filters"
-                title="Reset Filters"
-              >
-                <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-
-              {/* Theme toggle */}
-              <button
-                onClick={toggleTheme}
-                className={`
-                  p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
-                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-                `}
-                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-              >
-                {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
-              </button>
-
-              <UserSwitcher currentUser={currentUser} onUserChange={onUserChange} />
+              {/* User Menu - Replaces UserSwitcher, theme, and focus mode */}
+              <UserMenu
+                currentUser={currentUser}
+                onUserChange={onUserChange}
+              />
             </div>
           )}
         </div>
