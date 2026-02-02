@@ -831,7 +831,7 @@ function TodoItemComponent({
               <WaitingBadge todo={todo} />
 
               {/* "Has more" indicator - subtle dot when task has hidden content */}
-              {!expanded && (subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0) || todo.merged_from?.length) && (
+              {!expanded && (subtasks.length > 0 || todo.notes || todo.transcription || (Array.isArray(todo.attachments) && todo.attachments.length > 0) || todo.merged_from?.length) && (
                 <span
                   className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] opacity-40 group-hover:opacity-0 transition-opacity"
                   title="Hover for more details"
@@ -842,7 +842,7 @@ function TodoItemComponent({
             {/* SECONDARY ROW: Hidden by default, revealed on hover - Progressive Disclosure */}
             {/* Shows only when there's secondary metadata AND (hovered OR expanded OR overdue OR on mobile for non-completed) */}
             {/* Shows only when there's secondary metadata AND (hovered OR expanded) */}
-            {(subtasks.length > 0 || todo.notes || todo.transcription || (todo.attachments && todo.attachments.length > 0) || todo.recurrence || (todo.reminder_at && !todo.reminder_sent && !todo.completed) || todo.merged_from?.length) && (
+            {(subtasks.length > 0 || todo.notes || todo.transcription || (Array.isArray(todo.attachments) && todo.attachments.length > 0) || todo.recurrence || (todo.reminder_at && !todo.reminder_sent && !todo.completed) || todo.merged_from?.length) && (
               <>
                 {/* Separator - always show on mobile for non-completed, or on hover for desktop */}
                 <div className={`w-px h-4 bg-[var(--border)] mx-1 ${!todo.completed || isOverdue ? 'block sm:hidden sm:group-hover:block' : 'hidden group-hover:block'}`} />
@@ -941,7 +941,7 @@ function TodoItemComponent({
                   )}
 
                   {/* Attachments indicator */}
-                  {todo.attachments && todo.attachments.length > 0 && (() => {
+                  {Array.isArray(todo.attachments) && todo.attachments.length > 0 && (() => {
                     const hasAudio = todo.attachments.some(a => a.file_type === 'audio');
                     const AttachmentIcon = hasAudio ? Music : Paperclip;
                     return (
@@ -1347,7 +1347,7 @@ function TodoItemComponent({
       )}
 
       {/* Attachments display - separate toggle when not expanded */}
-      {!expanded && showAttachments && todo.attachments && todo.attachments.length > 0 && (
+      {!expanded && showAttachments && Array.isArray(todo.attachments) && todo.attachments.length > 0 && (
         <div className="mx-3 sm:mx-4 mb-3 p-3 bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] border border-[var(--accent-gold)]/10">
           <div className="flex items-center gap-2 mb-3">
             <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" />
@@ -1624,13 +1624,13 @@ function TodoItemComponent({
                 <div className="flex items-center gap-2">
                   <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" />
                   <span className="text-sm font-medium text-[var(--accent-gold)]">Attachments</span>
-                  {todo.attachments && todo.attachments.length > 0 && (
+                  {Array.isArray(todo.attachments) && todo.attachments.length > 0 && (
                     <span className="text-xs text-[var(--accent-gold)]/70">
                       ({todo.attachments.length}/{MAX_ATTACHMENTS_PER_TODO})
                     </span>
                   )}
                 </div>
-                {(todo.attachments?.length || 0) < MAX_ATTACHMENTS_PER_TODO && (
+                {(Array.isArray(todo.attachments) ? todo.attachments.length : 0) < MAX_ATTACHMENTS_PER_TODO && (
                   <button
                     onClick={() => setShowAttachmentUpload(true)}
                     className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium flex items-center gap-1.5 transition-colors"
@@ -1642,7 +1642,7 @@ function TodoItemComponent({
               </div>
 
               {/* Attachment list or drop zone */}
-              {todo.attachments && todo.attachments.length > 0 ? (
+              {Array.isArray(todo.attachments) && todo.attachments.length > 0 ? (
                 <AttachmentList
                   attachments={todo.attachments}
                   todoId={todo.id}

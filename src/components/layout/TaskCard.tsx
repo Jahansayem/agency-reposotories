@@ -149,7 +149,7 @@ export default function TaskCard({
   }, [task.due_date, task.completed]);
 
   // Check if task has additional context
-  const hasAttachments = task.attachments && task.attachments.length > 0;
+  const hasAttachments = Array.isArray(task.attachments) && task.attachments.length > 0;
   const hasNotes = task.notes && task.notes.trim().length > 0;
   const hasTranscription = task.transcription && task.transcription.trim().length > 0;
 
