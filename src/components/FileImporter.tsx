@@ -281,6 +281,10 @@ export default function FileImporter({
 
         if (!response.ok) {
           const errorData = await response.json();
+          // Check for session/auth errors
+          if (response.status === 401 || errorData.error?.includes('session')) {
+            throw new Error('Your session has expired. Please refresh the page and log in again.');
+          }
           throw new Error(errorData.error || 'Failed to transcribe audio');
         }
 
@@ -345,6 +349,10 @@ export default function FileImporter({
 
         if (!response.ok) {
           const errorData = await response.json();
+          // Check for session/auth errors
+          if (response.status === 401 || errorData.error?.includes('session')) {
+            throw new Error('Your session has expired. Please refresh the page and log in again.');
+          }
           throw new Error(errorData.error || 'Failed to process file');
         }
 
