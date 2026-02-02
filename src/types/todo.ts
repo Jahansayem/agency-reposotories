@@ -90,6 +90,7 @@ export interface Todo {
   reminder_sent?: boolean; // Whether simple reminder has been sent
   reminders?: TaskReminder[]; // Multiple reminders (from task_reminders table)
   agency_id?: string; // Multi-tenancy: which agency this task belongs to
+  display_order?: number; // Manual sort order for list view (lower numbers appear first)
   // Waiting for customer response tracking
   waiting_for_response?: boolean;
   waiting_since?: string;
@@ -400,7 +401,8 @@ export type ActivityAction =
   | 'reminder_sent'
   | 'marked_waiting'
   | 'customer_responded'
-  | 'follow_up_overdue';
+  | 'follow_up_overdue'
+  | 'task_reordered';
 
 export interface ActivityLogEntry {
   id: string;
