@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
-import { LayoutList, LayoutGrid, Bell, Search, X, Filter, RotateCcw, Plus } from 'lucide-react';
+import { LayoutList, LayoutGrid, Bell, Search, X, Filter, RotateCcw, Plus, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AuthUser, ViewMode, ActivityLogEntry } from '@/types/todo';
 import UserSwitcher from '../UserSwitcher';
@@ -9,6 +9,7 @@ import FocusModeToggle from '../FocusModeToggle';
 import NotificationModal from '../NotificationModal';
 import { useTodoStore } from '@/store/todoStore';
 import { useAppShell } from '../layout/AppShell';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabaseClient';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -52,6 +53,7 @@ function TodoHeader({
 }: TodoHeaderProps) {
   const { focusMode } = useTodoStore((state) => state.ui);
   const { setActiveView } = useAppShell();
+  const { theme, toggleTheme } = useTheme();
 
   // ── Debounced search input ────────────────────────────────────────────
   // Local state gives instant keystroke feedback.
@@ -323,6 +325,19 @@ function TodoHeader({
                 title="Reset Filters"
               >
                 <RotateCcw className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+
+              {/* Theme toggle */}
+              <button
+                onClick={toggleTheme}
+                className={`
+                  p-1.5 sm:p-2 rounded-[var(--radius-lg)] transition-colors
+                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
+                `}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
 
               <UserSwitcher currentUser={currentUser} onUserChange={onUserChange} />

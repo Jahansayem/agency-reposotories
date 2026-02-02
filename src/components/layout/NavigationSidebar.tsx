@@ -10,14 +10,11 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Moon,
-  Sun,
   Plus,
   Inbox,
   BarChart2,
   Keyboard,
 } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser, isOwner } from '@/types/todo';
 import { useAppShell, ActiveView } from './AppShell';
 import { useAgency } from '@/contexts/AgencyContext';
@@ -65,7 +62,6 @@ export default function NavigationSidebar({
   onShowWeeklyChart,
   onShowShortcuts,
 }: NavigationSidebarProps) {
-  const { theme, toggleTheme } = useTheme();
   const {
     activeView,
     setActiveView,
@@ -325,60 +321,20 @@ export default function NavigationSidebar({
         )}
       </nav>
 
-      {/* ─── Footer / User Section ─── */}
-      <div className="mt-auto border-t px-3 py-3 space-y-2 border-[var(--border)]">
-        {/* Theme toggle */}
+      {/* ─── Footer / Logout ─── */}
+      <div className="mt-auto border-t px-3 py-3 border-[var(--border)]">
         <button
-          onClick={toggleTheme}
+          onClick={handleLogout}
           className={`
             w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
             transition-colors
             text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
           `}
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label="Log out"
         >
-          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {isExpanded && <span className="text-sm">{theme === 'dark' ? 'Light' : 'Dark'}</span>}
+          <LogOut className="w-4 h-4" />
+          {isExpanded && <span className="text-sm">Log out</span>}
         </button>
-
-        {/* User profile */}
-        <div className={`
-          flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
-          transition-colors cursor-pointer
-          hover:bg-[var(--surface-2)]
-        `}>
-          {/* Avatar */}
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-            style={{ backgroundColor: currentUser.color }}
-          >
-            {currentUser.name[0]}
-          </div>
-
-          {isExpanded && (
-            <>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate text-[var(--foreground)]">
-                  {currentUser.name}
-                </p>
-                <p className="text-xs truncate text-[var(--text-muted)]">
-                  {currentUser.role === 'admin' ? 'Administrator' : 'Team Member'}
-                </p>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className={`
-                  p-1.5 rounded-[var(--radius-lg)] transition-colors
-                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-                `}
-                aria-label="Log out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </>
-          )}
-        </div>
       </div>
 
       {/* Create Agency Modal */}
