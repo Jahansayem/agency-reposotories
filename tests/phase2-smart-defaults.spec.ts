@@ -25,16 +25,19 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     }
     await page.waitForURL('/');
 
-    // Wait for dashboard to load
+    // Close welcome dashboard modal with Escape
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    // App should now be on tasks view by default
+    // Click "Add Task" button to open the AddTodo modal
+    await page.click('button:has-text("Add Task")');
     await page.waitForTimeout(1000);
 
-    // Navigate to "All" tasks view using sidebar navigation
-    // Look for navigation link/button in sidebar (not the tab)
-    await page.click('text=All Tasks');
-    await page.waitForTimeout(1000);
-
-    // The InlineAddTask component should now be visible with data-testid="add-task-input"
-    await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible({ timeout: 10000 });
+    // The AddTodo modal textarea should now be visible
+    // Note: InlineAddTask is not used in the app - AddTodo modal is the task creation interface
+    const taskTextarea = page.locator('textarea[placeholder*="What needs to be done"]');
+    await expect(taskTextarea).toBeVisible({ timeout: 10000 });
   });
 
   test('should fetch smart defaults on component mount', async ({ page }) => {
