@@ -127,7 +127,7 @@ function TodoListContent({
     })
   );
 
-  const isDragEnabled = !showBulkActions && sortOption === 'custom';
+  const isDragEnabled = !showBulkActions;
 
   // Determine empty state variant
   const getEmptyStateVariant = () => {

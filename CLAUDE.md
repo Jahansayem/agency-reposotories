@@ -26,6 +26,28 @@ This document provides comprehensive context for AI assistants (like Claude Code
 
 ---
 
+## 🏢 Multi-Tenancy Execution Plan (February 2026)
+
+**A 6-phase plan to enable 5,000+ Allstate agencies** with owner/manager/staff role hierarchy, invitation-based onboarding, and full data isolation. This is a multi-context-window effort.
+
+> **📋 Full Plan:** See [docs/MULTI_TENANCY_EXECUTION_PLAN.md](./docs/MULTI_TENANCY_EXECUTION_PLAN.md) for the complete execution plan with file inventories, SQL migrations, verification checklists, and the 42-route API audit.
+
+**Phases:**
+1. **Database & Type Foundation** -- Fix RLS conflicts, upgrade roles (`admin`→`manager`, `member`→`staff`), expand permissions to 20 flags
+2. **Auth Plumbing** -- Thread `agencyId` through session validator → login → API auth → frontend hooks
+3. **API Route Hardening** -- Close 14 unauthenticated routes, add `agency_id` filtering to all data routes
+4. **Frontend Permission Migration** -- Replace all `isOwner()`/`isAdmin()` with `usePermission()` hook and `PermissionGate` component
+5. **Onboarding & Invitations** -- Self-service agency creation, invitation-based team building, server-side registration
+6. **Polish & Email** -- Resend integration, error standardization, final verification
+
+**Key findings:**
+- RLS is neutralized (v3 `ELSE true` policies override agency policies)
+- `currentUser.current_agency_role` is NEVER populated → `isOwner()` always falls to `name === 'Derrick'`
+- 14 API routes have zero auth (including `todos/reorder`, all 7 AI routes, 2 debug endpoints)
+- `withAgencyAuth` wrapper exists but only 1 of 42 routes uses it
+
+---
+
 ## 🔒 Security Hardening Status (January 2026)
 
 **Allstate security compliance work completed.** The following has been implemented:
@@ -2130,5 +2152,6 @@ await logActivity({
 | [SETUP.md](./SETUP.md) | Installation instructions | New developers |
 | [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | Deploy process | DevOps |
 | [SECURITY_IMPROVEMENT_CHECKLIST.md](./SECURITY_IMPROVEMENT_CHECKLIST.md) | Security tasks | Security Reviewers |
+| [docs/MULTI_TENANCY_EXECUTION_PLAN.md](./docs/MULTI_TENANCY_EXECUTION_PLAN.md) | 6-phase multi-tenancy plan | All agents (multi-context) |
 
 For questions or issues, refer to this document first, then check the table above for specialized documentation.
