@@ -130,6 +130,29 @@ export async function validateSession(
         .single();
 
       if (sessionError || !session) {
+        // If table doesn't exist (code 42P01), fall back to header-based auth
+        if (sessionError?.code === '42P01' || sessionError?.message?.includes('does not exist')) {
+          logger.warn('[SESSION] user_sessions table does not exist, falling back to header-based auth. Please run migrations.', { component: 'SessionValidator' });
+          // Check if X-User-Name header is present (legacy fallback)
+          const userName = request.headers.get('X-User-Name');
+          if (userName) {
+            // Get user from database to validate
+            const { data: user } = await supabaseAdmin
+              .from('users')
+              .select('id, name, role')
+              .eq('name', userName)
+              .single();
+
+            if (user) {
+              return {
+                valid: true,
+                userId: user.id,
+                userName: user.name,
+                userRole: user.role || 'staff',
+              };
+            }
+          }
+        }
         return {
           valid: false,
           error: 'Invalid session token',
