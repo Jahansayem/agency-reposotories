@@ -139,8 +139,8 @@ export function SubtaskList({
 }: SubtaskListProps) {
   const [newSubtaskText, setNewSubtaskText] = useState('');
 
-  // Ensure safeSubtasks is always an array
-  const safeSubtasks = Array.isArray(safeSubtasks) ? safeSubtasks : [];
+  // Ensure subtasks is always an array
+  const safeSubtasks = Array.isArray(subtasks) ? subtasks : [];
   const completedSubtasks = safeSubtasks.filter(s => s.completed).length;
   const subtaskProgress = safeSubtasks.length > 0 ? Math.round((completedSubtasks / safeSubtasks.length) * 100) : 0;
 
