@@ -126,8 +126,9 @@ export default function EnhancedBottomNav() {
               onClick={() => handleTabPress(tab.id)}
               className={`
                 relative flex flex-col items-center justify-center
-                min-w-[64px] h-16 px-3
+                min-w-[64px] min-h-[48px] h-16 px-3
                 transition-all duration-200
+                touch-manipulation
                 ${isActive
                   ? 'scale-105'
                   : 'opacity-60 active:opacity-100 active:scale-95'

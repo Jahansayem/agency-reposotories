@@ -20,45 +20,50 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   interactive?: boolean;
 }
 
+/**
+ * Consistent badge variant styles
+ * All badges use the same pattern: light bg + darker text for better contrast
+ * Minimum contrast ratio: 4.5:1 for WCAG AA compliance
+ */
 const variantStyles = {
   default: {
-    bg: 'bg-[var(--surface-2)]',
-    text: 'text-[var(--text-muted)]',
-    border: 'border-[var(--border)]',
-    dot: 'var(--text-muted)',
+    bg: 'bg-slate-100 dark:bg-slate-800',
+    text: 'text-slate-700 dark:text-slate-300',
+    border: 'border-slate-200 dark:border-slate-700',
+    dot: '#64748b',
   },
   primary: {
-    bg: 'bg-[var(--accent-light)]',
-    text: 'text-[var(--accent)]',
-    border: 'border-[var(--accent)]/20',
-    dot: 'var(--accent)',
+    bg: 'bg-blue-50 dark:bg-blue-900/30',
+    text: 'text-blue-700 dark:text-blue-300',
+    border: 'border-blue-200 dark:border-blue-800',
+    dot: '#2563eb',
   },
   success: {
-    bg: 'bg-[var(--success-light)]',
-    text: 'text-[var(--success)]',
-    border: 'border-[var(--success)]/20',
-    dot: 'var(--success)',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/30',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    border: 'border-emerald-200 dark:border-emerald-800',
+    dot: '#059669',
   },
   warning: {
-    bg: 'bg-[var(--warning-light)]',
-    text: 'text-[var(--warning)]',
-    border: 'border-[var(--warning)]/20',
-    dot: 'var(--warning)',
+    bg: 'bg-amber-50 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-300',
+    border: 'border-amber-200 dark:border-amber-800',
+    dot: '#d97706',
   },
   danger: {
-    bg: 'bg-[var(--danger-light)]',
-    text: 'text-[var(--danger)]',
-    border: 'border-[var(--danger)]/20',
-    dot: 'var(--danger)',
+    bg: 'bg-red-50 dark:bg-red-900/30',
+    text: 'text-red-700 dark:text-red-300',
+    border: 'border-red-200 dark:border-red-800',
+    dot: '#dc2626',
   },
   info: {
-    bg: 'bg-[var(--accent-sky-light)]',
-    text: 'text-[var(--accent-sky)]',
-    border: 'border-[var(--accent-sky)]/20',
-    dot: 'var(--accent-sky)',
+    bg: 'bg-sky-50 dark:bg-sky-900/30',
+    text: 'text-sky-700 dark:text-sky-300',
+    border: 'border-sky-200 dark:border-sky-800',
+    dot: '#0284c7',
   },
   brand: {
-    bg: 'bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]',
+    bg: 'bg-gradient-to-r from-[#0033A0] to-[#0047CC]',
     text: 'text-white',
     border: 'border-transparent',
     dot: 'white',

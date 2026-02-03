@@ -37,9 +37,11 @@ import DailyDigestPanel from '@/components/dashboard/DailyDigestPanel';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
 import {
   generateDashboardAIData,
+  getScoreBreakdown,
   NeglectedTask,
   InsightIconName,
 } from '@/lib/aiDashboardInsights';
+import ScoreBreakdownTooltip from '@/components/dashboard/ScoreBreakdownTooltip';
 import {
   generateManagerDashboardData,
 } from '@/lib/managerDashboardInsights';
@@ -119,6 +121,11 @@ export default function DashboardPage({
   // Generate AI insights
   const aiData = useMemo(() => {
     return generateDashboardAIData(todos, activityLog, currentUser.name);
+  }, [todos, activityLog, currentUser.name]);
+
+  // Get score breakdown for tooltip
+  const scoreBreakdown = useMemo(() => {
+    return getScoreBreakdown(todos, activityLog, currentUser.name);
   }, [todos, activityLog, currentUser.name]);
 
   // Generate manager/team insights (only if user has team members)
@@ -359,13 +366,14 @@ export default function DashboardPage({
               </div>
             </div>
 
-            {/* Right: Productivity Score */}
+            {/* Right: Productivity Score with Tooltip */}
             <div className="flex flex-col items-center flex-shrink-0 ml-4">
               <AnimatedProgressRing
                 progress={aiData.productivityScore}
                 size={72}
                 strokeWidth={6}
                 gradientId="headerProgressGradient"
+                tooltip={<ScoreBreakdownTooltip breakdown={scoreBreakdown} />}
               >
                 <div className="flex flex-col items-center">
                   <span className={`text-xl font-bold ${
@@ -379,7 +387,10 @@ export default function DashboardPage({
                   </span>
                 </div>
               </AnimatedProgressRing>
-              <span className="text-white/40 text-badge mt-1">Score</span>
+              <span className="text-white/40 text-badge mt-1 flex items-center gap-1">
+                Score
+                <span className="text-white/30 text-badge">ⓘ</span>
+              </span>
             </div>
           </div>
         </div>
@@ -950,25 +961,7 @@ export default function DashboardPage({
                 );
               })()}
 
-              {/* Today's Focus (AI Suggested) — shown in AI tab too */}
-              {aiData.todaysFocus && (
-                <div className={`flex items-center gap-3 px-4 py-3 rounded-xl ${
-                  darkMode
-                    ? 'bg-[var(--accent)]/10 border border-[var(--accent)]/30'
-                    : 'bg-[var(--accent)]/5 border border-[var(--accent)]/20'
-                }`}>
-                  <Target className="w-5 h-5 text-[var(--accent)] flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      Suggested Focus
-                    </p>
-                    <p className={`text-sm font-medium ${darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'}`}>
-                      {aiData.todaysFocus}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {/* End Priority + Focus */}
+              {/* End Priority Breakdown */}
 
               {/* Empty state for insights */}
               {aiData.neglectedTasks.length === 0 && aiData.insights.length === 0 && (

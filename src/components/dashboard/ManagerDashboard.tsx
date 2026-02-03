@@ -375,7 +375,7 @@ export default function ManagerDashboard({
                 onClick={() => setShowAllTeamMembers(!showAllTeamMembers)}
                 aria-expanded={showAllTeamMembers}
                 aria-label={`${showAllTeamMembers ? 'Collapse' : 'Expand'} team workload list`}
-                className={`w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide mb-3 min-h-[44px] rounded-[var(--radius-lg)] px-2 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${'text-slate-500 hover:text-slate-700 focus-visible:ring-offset-white'}`}
+                className={`w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide mb-3 min-h-[48px] rounded-[var(--radius-lg)] px-2 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${'text-slate-500 hover:text-slate-700 focus-visible:ring-offset-white'}`}
               >
                 <span>Team Workload</span>
                 <ChevronDown className={`w-4 h-4 transition-transform ${showAllTeamMembers ? 'rotate-180' : ''}`} />
@@ -438,7 +438,7 @@ export default function ManagerDashboard({
               {managerData.memberStats.length > 5 && !showAllTeamMembers && (
                 <button
                   onClick={() => setShowAllTeamMembers(true)}
-                  className={`w-full text-center py-2 mt-2 text-xs font-medium min-h-[44px] rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
+                  className={`w-full text-center py-2 mt-2 text-xs font-medium min-h-[48px] rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
                     'text-[#0033A0] hover:text-[#0047CC] focus-visible:ring-offset-white'} hover:underline`}
                 >
                   Show all {managerData.memberStats.length} team members
@@ -558,7 +558,7 @@ export default function ManagerDashboard({
                     transition={prefersReducedMotion ? { duration: 0 } : { delay: index * 0.05 }}
                     onClick={() => handleTaskClick(task.id)}
                     aria-label={`Open task: ${task.text}`}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-all duration-200 group min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-all duration-200 group min-h-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
                       'hover:bg-slate-50 active:bg-slate-100 active:scale-[0.98] focus-visible:ring-offset-white'}`}
                   >
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 transition-transform group-hover:scale-110 ${

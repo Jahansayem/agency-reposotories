@@ -153,17 +153,20 @@ async function moveToPosition(
     .filter((u: any) => u.display_order !== u.oldOrder);
 
   // Don't touch updated_at — avoids triggering real-time content-change events
-  const updatedTasks = [];
-  for (const update of updates) {
-    const { data } = await supabase
+  // BUGFIX API-006: Use Promise.all for parallel updates instead of sequential N+1 queries
+  const updatePromises = updates.map((update: { id: string; display_order: number }) =>
+    supabase
       .from('todos')
       .update({ display_order: update.display_order })
       .eq('id', update.id)
       .select()
-      .single();
+      .single()
+  );
 
-    if (data) updatedTasks.push(data);
-  }
+  const results = await Promise.all(updatePromises);
+  const updatedTasks = results
+    .filter((r: { data: unknown }) => r.data)
+    .map((r: { data: unknown }) => r.data);
 
   return updatedTasks;
 }
@@ -210,17 +213,20 @@ async function moveUpOrDown(
     },
   ];
 
-  const updatedTasks = [];
-  for (const update of updates) {
-    const { data } = await supabase
+  // BUGFIX API-006: Use Promise.all for parallel updates
+  const updatePromises = updates.map((update) =>
+    supabase
       .from('todos')
       .update({ display_order: update.display_order })
       .eq('id', update.id)
       .select()
-      .single();
+      .single()
+  );
 
-    if (data) updatedTasks.push(data);
-  }
+  const results = await Promise.all(updatePromises);
+  const updatedTasks = results
+    .filter((r) => r.data)
+    .map((r) => r.data);
 
   return updatedTasks;
 }
@@ -252,17 +258,20 @@ async function swapTasks(supabase: any, todoId: string, targetTodoId: string, ag
     { id: task2.id, display_order: task1.display_order },
   ];
 
-  const updatedTasks = [];
-  for (const update of updates) {
-    const { data } = await supabase
+  // BUGFIX API-006: Use Promise.all for parallel updates
+  const updatePromises = updates.map((update) =>
+    supabase
       .from('todos')
       .update({ display_order: update.display_order })
       .eq('id', update.id)
       .select()
-      .single();
+      .single()
+  );
 
-    if (data) updatedTasks.push(data);
-  }
+  const results = await Promise.all(updatePromises);
+  const updatedTasks = results
+    .filter((r) => r.data)
+    .map((r) => r.data);
 
   return updatedTasks;
 }
@@ -304,17 +313,20 @@ async function setExplicitOrder(
     }
   });
 
-  const updatedTasks = [];
-  for (const update of updates) {
-    const { data } = await supabase
+  // BUGFIX API-006: Use Promise.all for parallel updates instead of sequential N+1 queries
+  const updatePromises = updates.map((update) =>
+    supabase
       .from('todos')
       .update({ display_order: update.display_order })
       .eq('id', update.id)
       .select()
-      .single();
+      .single()
+  );
 
-    if (data) updatedTasks.push(data);
-  }
+  const results = await Promise.all(updatePromises);
+  const updatedTasks = results
+    .filter((r) => r.data)
+    .map((r) => r.data);
 
   return updatedTasks;
 }

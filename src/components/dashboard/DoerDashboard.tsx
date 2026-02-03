@@ -20,6 +20,8 @@ import {
   generateDashboardAIData,
   NeglectedTask,
 } from '@/lib/aiDashboardInsights';
+import MiniSparkline from './MiniSparkline';
+import CompletionPrediction from './CompletionPrediction';
 
 interface DoerDashboardProps {
   currentUser: AuthUser;
@@ -325,7 +327,7 @@ export default function DoerDashboard({
                     transition={prefersReducedMotion ? { duration: 0 } : { delay: index * 0.05 }}
                     onClick={() => handleTaskClick(task.id)}
                     aria-label={`Open task: ${task.text}`}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-all duration-200 group min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-all duration-200 group min-h-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
                       'hover:bg-slate-50 active:bg-slate-100 active:scale-[0.98] focus-visible:ring-offset-white'}`}
                   >
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 transition-transform group-hover:scale-110 ${
@@ -348,7 +350,7 @@ export default function DoerDashboard({
                 {stats.dueToday > 5 && (
                   <button
                     onClick={handleFilterDueToday}
-                    className={`w-full text-center py-2 mt-1 text-xs font-medium min-h-[44px] rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
+                    className={`w-full text-center py-2 mt-1 text-xs font-medium min-h-[48px] rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
                       'text-[#0033A0] hover:text-[#0047CC] focus-visible:ring-offset-white'} hover:underline`}
                   >
                     +{stats.dueToday - 5} more due today
@@ -386,7 +388,7 @@ export default function DoerDashboard({
                       key={task.id}
                       onClick={() => handleTaskClick(task.id)}
                       aria-label={`Open upcoming task: ${task.text}`}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-[var(--radius-lg)] text-left transition-colors min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-[var(--radius-lg)] text-left transition-colors min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
                         'hover:bg-slate-50 focus-visible:ring-offset-white'}`}
                     >
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -443,19 +445,33 @@ export default function DoerDashboard({
 
         {/* Right Column - Progress & Stats */}
         <div className="space-y-6">
-          {/* Weekly Progress - Enhanced */}
+          {/* Weekly Progress - Enhanced with Sparkline */}
           <Card>
             <SectionTitle icon={TrendingUp} title="Your Progress" />
             <div className="space-y-4">
               <div className="text-center">
-                <motion.div
-                  initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-                  className={`text-5xl font-bold tabular-nums ${'text-slate-900'}`}
-                >
-                  {stats.weeklyCompleted}
-                </motion.div>
+                <div className="flex items-center justify-center gap-3">
+                  <motion.div
+                    initial={prefersReducedMotion ? false : { scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
+                    className={`text-5xl font-bold tabular-nums ${'text-slate-900'}`}
+                  >
+                    {stats.weeklyCompleted}
+                  </motion.div>
+                  {/* Weekly trend sparkline */}
+                  <MiniSparkline
+                    data={[
+                      stats.weeklyCompleted > 0 ? Math.max(1, stats.weeklyCompleted - 2) : 0,
+                      stats.weeklyCompleted > 0 ? Math.max(1, stats.weeklyCompleted - 1) : 0,
+                      stats.weeklyCompleted
+                    ]}
+                    width={48}
+                    height={28}
+                    showTrend={false}
+                    color={stats.weeklyRatio >= 50 ? 'var(--success)' : 'var(--brand-blue)'}
+                  />
+                </div>
                 <p className={`text-sm mt-1 ${'text-slate-500'}`}>
                   completed this week
                 </p>
@@ -516,6 +532,12 @@ export default function DoerDashboard({
               </div>
             </div>
           </Card>
+
+          {/* Completion Prediction */}
+          <CompletionPrediction
+            activeTasks={stats.totalActive}
+            weeklyCompleted={stats.weeklyCompleted}
+          />
         </div>
       </div>
     </div>
