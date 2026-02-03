@@ -459,6 +459,8 @@ See `DEPLOYMENT_GUIDE.md` for detailed instructions.
 | `VAPID_SUBJECT` | Contact email for VAPID | For push |
 | `REDIS_URL` | Redis connection URL | For rate limiting |
 | `SECURITY_WEBHOOK_URL` | Slack/Discord webhook | For alerts |
+| `RESEND_API_KEY` | Resend email API key | For invitation emails |
+| `NEXT_PUBLIC_APP_URL` | Public application URL | For email links |
 
 ---
 

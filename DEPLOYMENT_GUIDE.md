@@ -57,6 +57,12 @@ UPSTASH_REDIS_REST_TOKEN=...
 
 # Sentry (for error tracking)
 NEXT_PUBLIC_SENTRY_DSN=https://...
+
+# Email Service (optional - for invitation emails)
+RESEND_API_KEY=re_...  # Get from https://resend.com
+
+# Application URL (for email links)
+NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
 
 ---
