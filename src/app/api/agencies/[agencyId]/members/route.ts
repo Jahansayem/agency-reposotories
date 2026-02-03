@@ -285,6 +285,135 @@ export const POST = withAgencyAuth(
 );
 
 /**
+ * PATCH /api/agencies/[agencyId]/members
+ * Update member role (inline role editing)
+ *
+ * Access: Owner only (managers cannot change roles)
+ */
+export const PATCH = withAgencyAuth(
+  async (request: NextRequest, ctx: AgencyAuthContext) => {
+    try {
+      // Validate agency ID from URL matches context
+      const validation = await validateAgencyIdMatch(request, ctx);
+      if (!validation.valid) {
+        return validation.error!;
+      }
+
+      // Set RLS context for defense-in-depth
+      await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
+      const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+      const body = await request.json();
+      const { memberId, newRole } = body;
+
+      if (!memberId || !newRole) {
+        return apiErrorResponse('VALIDATION_ERROR', 'memberId and newRole are required');
+      }
+
+      // Validate role is valid
+      const validRoles: AgencyRole[] = ['owner', 'manager', 'staff'];
+      if (!validRoles.includes(newRole)) {
+        return apiErrorResponse('VALIDATION_ERROR', `Invalid role. Must be one of: ${validRoles.join(', ')}`);
+      }
+
+      // Get member to update - verify they belong to this agency
+      const { data: memberToUpdate } = await supabase
+        .from('agency_members')
+        .select('role, user_id, users!inner(name)')
+        .eq('id', memberId)
+        .eq('agency_id', agencyId)
+        .single();
+
+      if (!memberToUpdate) {
+        return apiErrorResponse('NOT_FOUND', 'Member not found in this agency', 404);
+      }
+
+      const memberUserName = (memberToUpdate as any).users.name;
+
+      // Cannot change your own role if you're the only owner
+      if (memberToUpdate.user_id === ctx.userId && memberToUpdate.role === 'owner') {
+        const { data: otherOwners } = await supabase
+          .from('agency_members')
+          .select('id')
+          .eq('agency_id', agencyId)
+          .eq('role', 'owner')
+          .neq('user_id', ctx.userId);
+
+        if (!otherOwners || otherOwners.length === 0) {
+          return apiErrorResponse('FORBIDDEN', 'Cannot change your role as the only owner. Promote another member first.', 403);
+        }
+      }
+
+      // Update role and permissions
+      const permissions = DEFAULT_PERMISSIONS[newRole as AgencyRole];
+
+      const { data: updatedMember, error: updateError } = await supabase
+        .from('agency_members')
+        .update({
+          role: newRole as AgencyRole,
+          permissions,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', memberId)
+        .eq('agency_id', agencyId) // Extra safety: verify agency_id
+        .select()
+        .single();
+
+      if (updateError) {
+        logger.error('Failed to update member role', updateError, { component: 'api/agencies/members', action: 'PATCH' });
+        return apiErrorResponse('UPDATE_FAILED', 'Failed to update member role', 500);
+      }
+
+      // Log activity with authenticated user info
+      try {
+        await supabase.from('activity_log').insert({
+          action: 'member_role_changed',
+          user_name: ctx.userName,
+          details: {
+            agency_id: agencyId,
+            updated_user: memberUserName,
+            updated_user_id: memberToUpdate.user_id,
+            old_role: memberToUpdate.role,
+            new_role: newRole,
+            updated_by_user_id: ctx.userId,
+          },
+        });
+      } catch (logError) {
+        logger.error('Failed to log activity', logError, { component: 'api/agencies/members', action: 'PATCH' });
+      }
+
+      // Log security event for audit
+      await securityMonitor.recordEvent({
+        type: SecurityEventType.SENSITIVE_DATA_ACCESS,
+        severity: memberToUpdate.role === 'owner' || newRole === 'owner' ? AlertSeverity.HIGH : AlertSeverity.MEDIUM,
+        userId: ctx.userId,
+        userName: ctx.userName,
+        endpoint: request.url,
+        details: {
+          action: 'member_role_changed',
+          agency_id: agencyId,
+          updated_user: memberUserName,
+          updated_user_id: memberToUpdate.user_id,
+          old_role: memberToUpdate.role,
+          new_role: newRole,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        member: updatedMember,
+        message: `${memberUserName}'s role changed to ${newRole}`,
+      });
+
+    } catch (error) {
+      logger.error('Error updating member role', error, { component: 'api/agencies/members', action: 'PATCH' });
+      return apiErrorResponse('INTERNAL_ERROR', 'Internal server error', 500);
+    }
+  },
+  { requiredRoles: ['owner'] } // Only owners can change roles
+);
+
+/**
  * DELETE /api/agencies/[agencyId]/members?memberId=xxx
  * Remove a user from an agency
  *

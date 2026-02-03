@@ -47,6 +47,7 @@ import {
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { usePermission } from '@/hooks/usePermission';
+import { useCurrentAgencyId } from '@/contexts/AgencyContext';
 
 interface StrategicDashboardProps {
   userName: string;
@@ -106,6 +107,9 @@ export default function StrategicDashboard({
     category_id: '',
   });
 
+  // Get current agency ID to refetch when it changes
+  const currentAgencyId = useCurrentAgencyId();
+
   const greeting = getGreeting();
 
   // Close on Escape key press
@@ -114,6 +118,10 @@ export default function StrategicDashboard({
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      // Clear old goals immediately to prevent showing stale data during agency switch
+      setGoals([]);
+      setCategories([]);
+
       const [categoriesRes, goalsRes] = await Promise.all([
         fetchWithCsrf(`/api/goals/categories?userName=${encodeURIComponent(userName)}`),
         fetchWithCsrf(`/api/goals?userName=${encodeURIComponent(userName)}`),
@@ -133,7 +141,7 @@ export default function StrategicDashboard({
     } finally {
       setLoading(false);
     }
-  }, [userName]);
+  }, [userName, currentAgencyId]);
 
   useEffect(() => {
     fetchData();

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
 import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
 import { ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton, DashboardModalSkeleton } from './LoadingSkeletons';
@@ -74,7 +75,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     closeShortcuts,
   } = useAppShell();
   const { theme } = useTheme();
-  const { currentAgencyId } = useAgency();
+  const { currentAgencyId, isSwitchingAgency, currentAgency, agencies } = useAgency();
 
   // Permission checks for restricted views
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
@@ -447,6 +448,12 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     );
   }
 
+  // Get the agency name being switched to
+  const switchingToAgencyName = useMemo(() => {
+    if (!isSwitchingAgency || !currentAgency) return '';
+    return currentAgency.name;
+  }, [isSwitchingAgency, currentAgency]);
+
   return (
     <>
       <SkipLink />
@@ -454,6 +461,45 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <main id="main-content" tabIndex={-1}>
         {activeViewContent}
       </main>
+
+      {/* Agency Switching Overlay */}
+      <AnimatePresence>
+        {isSwitchingAgency && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+            role="alert"
+            aria-live="polite"
+            aria-label="Switching agency"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+              className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4"
+            >
+              {/* Spinner */}
+              <div className="w-12 h-12 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+
+              {/* Text */}
+              <div className="text-center">
+                <p className="text-lg font-semibold text-[var(--foreground)] mb-1">
+                  Switching Agency
+                </p>
+                {switchingToAgencyName && (
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Loading {switchingToAgencyName}...
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Push notification permission banner */}
       <NotificationPermissionBanner currentUser={currentUser} />

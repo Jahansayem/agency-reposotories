@@ -77,6 +77,7 @@ export function AgencySwitcher({
     agencies,
     isLoading,
     isMultiTenancyEnabled,
+    isSwitchingAgency,
     switchAgency,
   } = useAgency();
 
@@ -129,7 +130,7 @@ export function AgencySwitcher({
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        disabled={isLoading}
+        disabled={isLoading || isSwitchingAgency}
         className={`
           flex items-center gap-2 rounded-[var(--radius-lg)]
           bg-[var(--surface)]
@@ -137,26 +138,32 @@ export function AgencySwitcher({
           hover:bg-[var(--surface-2)]
           transition-colors
           ${sizeClasses[size]}
-          ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
+          ${isLoading || isSwitchingAgency ? 'opacity-50 cursor-not-allowed' : ''}
         `}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        {/* Agency Icon */}
-        <div
-          className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
-          style={{ backgroundColor: currentAgency?.primary_color || '#0033A0' }}
-        >
-          {currentAgency?.name?.charAt(0) || <Building2 className="w-4 h-4" />}
-        </div>
+        {/* Agency Icon or Loading Spinner */}
+        {isSwitchingAgency ? (
+          <div className="w-6 h-6 rounded flex items-center justify-center">
+            <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div
+            className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
+            style={{ backgroundColor: currentAgency?.primary_color || '#0033A0' }}
+          >
+            {currentAgency?.name?.charAt(0) || <Building2 className="w-4 h-4" />}
+          </div>
+        )}
 
         {/* Agency Name */}
         <span className="font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
-          {isLoading ? 'Loading...' : (currentAgency?.name || 'Select Agency')}
+          {isSwitchingAgency ? 'Switching...' : (isLoading ? 'Loading...' : (currentAgency?.name || 'Select Agency'))}
         </span>
 
         {/* Role Badge */}
-        {showRole && currentRole && (
+        {showRole && currentRole && !isSwitchingAgency && (
           <span className={`flex items-center gap-1 ${getRoleColor(currentRole)}`}>
             {getRoleIcon(currentRole)}
           </span>

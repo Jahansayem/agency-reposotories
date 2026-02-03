@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Plus, Trash2, Crown, Briefcase, User as UserIcon, Loader2, AlertCircle, Check, Mail, Send } from 'lucide-react';
+import { X, Users, Plus, Trash2, Crown, Briefcase, User as UserIcon, Loader2, AlertCircle, Check, Mail, Send, Edit2, ChevronDown } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
 import type { AgencyRole } from '@/types/agency';
 import { InvitationForm } from '@/components/InvitationForm';
@@ -106,6 +106,10 @@ export function AgencyMembersModal({
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedRole, setSelectedRole] = useState<AgencyRole>('staff');
 
+  // Role editing state
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [isChangingRole, setIsChangingRole] = useState(false);
+
   // Check if current user can manage members
   const canManageMembers = currentRole === 'owner' || currentRole === 'manager';
 
@@ -116,6 +120,21 @@ export function AgencyMembersModal({
       loadAllUsers();
     }
   }, [isOpen, currentAgency]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-role-dropdown]')) {
+        setEditingMemberId(null);
+      }
+    };
+
+    if (editingMemberId) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [editingMemberId]);
 
   const loadMembers = async () => {
     if (!currentAgency) return;
@@ -219,9 +238,57 @@ export function AgencyMembersModal({
     }
   };
 
+  const handleChangeRole = async (memberId: string, memberName: string, currentRole: AgencyRole, newRole: AgencyRole) => {
+    if (!currentAgency) return;
+
+    // Confirm the change
+    const confirmMsg = `Change ${memberName}'s role from ${getRoleLabel(currentRole)} to ${getRoleLabel(newRole)}?`;
+    if (!confirm(confirmMsg)) return;
+
+    setIsChangingRole(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/agencies/${currentAgency.id}/members`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId,
+          newRole,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change role');
+      }
+
+      setSuccess(`${memberName}'s role changed to ${getRoleLabel(newRole)}`);
+      setEditingMemberId(null);
+      await loadMembers(); // Reload list
+
+    } catch (err) {
+      logger.error('Failed to change role', err as Error, {
+        component: 'AgencyMembersModal',
+        action: 'handleChangeRole',
+        agencyId: currentAgency?.id,
+        memberId,
+        memberName,
+        currentRole,
+        newRole
+      });
+      setError(err instanceof Error ? err.message : 'Failed to change role');
+    } finally {
+      setIsChangingRole(false);
+    }
+  };
+
   const handleClose = () => {
-    if (!isSubmitting) {
+    if (!isSubmitting && !isChangingRole) {
       setShowAddForm(false);
+      setEditingMemberId(null);
       setError(null);
       setSuccess(null);
       setActiveTab('members');
@@ -233,6 +300,13 @@ export function AgencyMembersModal({
   const availableUsers = allUsers.filter(
     u => !members.some(m => m.user_name === u.name)
   );
+
+  // Check if user is the only owner
+  const isOnlyOwner = (member: AgencyMember) => {
+    if (member.agency_role !== 'owner') return false;
+    const ownerCount = members.filter(m => m.agency_role === 'owner').length;
+    return ownerCount === 1;
+  };
 
   return (
     <AnimatePresence>
@@ -555,17 +629,93 @@ export function AgencyMembersModal({
                               </p>
                             </div>
 
-                            {/* Role Badge */}
-                            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${getRoleBadgeColor(member.agency_role)}`}>
-                              {getRoleIcon(member.agency_role)}
-                              <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
+                            {/* Role Badge with Edit */}
+                            <div className="relative" data-role-dropdown>
+                              {currentRole === 'owner' && !isOnlyOwner(member) ? (
+                                <>
+                                  <button
+                                    onClick={() => setEditingMemberId(editingMemberId === member.id ? null : member.id)}
+                                    disabled={isChangingRole || isSubmitting}
+                                    className={`
+                                      flex items-center gap-1.5 px-3 py-1 rounded-full
+                                      ${getRoleBadgeColor(member.agency_role)}
+                                      hover:opacity-80 transition-opacity
+                                      disabled:opacity-50 disabled:cursor-not-allowed
+                                    `}
+                                  >
+                                    {getRoleIcon(member.agency_role)}
+                                    <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
+                                    <Edit2 className="w-3 h-3 ml-0.5 opacity-60" />
+                                  </button>
+
+                                  {/* Role Dropdown */}
+                                  <AnimatePresence>
+                                    {editingMemberId === member.id && (
+                                      <motion.div
+                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="
+                                          absolute right-0 top-full mt-2 z-20
+                                          bg-white dark:bg-gray-800
+                                          border border-gray-200 dark:border-gray-700
+                                          rounded-lg shadow-xl
+                                          py-1 min-w-[140px]
+                                        "
+                                        data-role-dropdown
+                                      >
+                                        {(['staff', 'manager', 'owner'] as AgencyRole[]).map((role) => (
+                                          <button
+                                            key={role}
+                                            onClick={() => {
+                                              if (role !== member.agency_role) {
+                                                handleChangeRole(member.id, member.user_name, member.agency_role, role);
+                                              } else {
+                                                setEditingMemberId(null);
+                                              }
+                                            }}
+                                            disabled={isChangingRole}
+                                            className={`
+                                              w-full px-3 py-2 text-left
+                                              flex items-center gap-2
+                                              hover:bg-gray-100 dark:hover:bg-gray-700
+                                              transition-colors
+                                              disabled:opacity-50 disabled:cursor-not-allowed
+                                              ${role === member.agency_role ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                                            `}
+                                          >
+                                            <div className={getRoleColor(role)}>
+                                              {getRoleIcon(role)}
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                              {getRoleLabel(role)}
+                                            </span>
+                                            {role === member.agency_role && (
+                                              <Check className="w-4 h-4 ml-auto text-blue-600 dark:text-blue-400" />
+                                            )}
+                                          </button>
+                                        ))}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </>
+                              ) : (
+                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${getRoleBadgeColor(member.agency_role)}`}>
+                                  {getRoleIcon(member.agency_role)}
+                                  <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
+                                  {isOnlyOwner(member) && (
+                                    <span className="text-[10px] opacity-60">(only)</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             {/* Remove Button */}
                             {canManageMembers && member.user_name !== currentUserName && (
                               <button
                                 onClick={() => handleRemoveMember(member.id, member.user_name)}
-                                disabled={isSubmitting || (member.agency_role === 'owner' && currentRole !== 'owner')}
+                                disabled={isSubmitting || isChangingRole || (member.agency_role === 'owner' && currentRole !== 'owner')}
                                 className="
                                   p-2 rounded-lg
                                   text-red-600 dark:text-red-400

@@ -43,6 +43,8 @@ interface AgencyContextType {
   error: string | null;
   /** Whether multi-tenancy is enabled */
   isMultiTenancyEnabled: boolean;
+  /** Whether currently switching agencies */
+  isSwitchingAgency: boolean;
   /** Switch to a different agency */
   switchAgency: (agencyId: string) => Promise<void>;
   /** Refresh agencies list from server */
@@ -76,6 +78,7 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
   const [agencies, setAgencies] = useState<AgencyMembership[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSwitchingAgency, setIsSwitchingAgency] = useState(false);
 
   const isMultiTenancyEnabled = isFeatureEnabled('multi_tenancy');
 
@@ -217,6 +220,9 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
       return;
     }
 
+    // Set switching state
+    setIsSwitchingAgency(true);
+
     // Reset the Zustand store to clear stale cross-agency data (H7 fix).
     // This sets loading: true and empties todos, users, filters, bulk selections,
     // and custom order so no stale data is visible during the re-fetch.
@@ -224,12 +230,20 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
 
     try {
       await loadAgencyDetails(agencyId, membership);
+
+      // Show success toast
+      toast.success('Agency Switched', {
+        description: `Now viewing ${membership.agency_name}`,
+        duration: 3000,
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to switch agency';
       setError(errorMessage);
       toast.error('Agency Switch Failed', {
         description: errorMessage,
       });
+    } finally {
+      setIsSwitchingAgency(false);
     }
   }, [agencies, loadAgencyDetails, toast]);
 
@@ -313,6 +327,7 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
     isLoading,
     error,
     isMultiTenancyEnabled,
+    isSwitchingAgency,
     switchAgency,
     refreshAgencies,
     hasPermission,
