@@ -145,7 +145,7 @@ export function ChatPanelHeader({
               whileTap={{ scale: 0.95 }}
             >
               <Pin className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full text-[9px] flex items-center justify-center text-white font-bold">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full text-badge flex items-center justify-center text-white">
                 {pinnedMessages.length}
               </span>
             </motion.button>

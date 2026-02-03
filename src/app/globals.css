@@ -817,15 +817,19 @@ button:disabled:active {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Font Size Scale */
-  --font-size-xs: 0.75rem;      /* 12px - captions, badges */
-  --font-size-sm: 0.875rem;     /* 14px - body meta, timestamps */
-  --font-size-base: 1rem;       /* 16px - body text */
-  --font-size-lg: 1.125rem;     /* 18px - list items, labels */
-  --font-size-xl: 1.25rem;      /* 20px - card titles */
-  --font-size-2xl: 1.5rem;      /* 24px - section headings */
-  --font-size-3xl: 1.875rem;    /* 30px - page titles */
-  --font-size-4xl: 2.25rem;     /* 36px - hero headings */
+  /* Font Size Scale - 8pt grid with semantic naming
+     WCAG AA: 12px minimum for readable text, 10px only for decorative elements */
+  --font-size-micro: 0.625rem;  /* 10px - badges, notification counters (decorative only) */
+  --font-size-2xs: 0.6875rem;   /* 11px - tab labels, uppercase form labels */
+  --font-size-xs: 0.75rem;      /* 12px - captions, helper text (WCAG minimum) */
+  --font-size-sm: 0.8125rem;    /* 13px - metadata, secondary info */
+  --font-size-base: 0.875rem;   /* 14px - body text, default readable size */
+  --font-size-md: 0.9375rem;    /* 15px - task titles, emphasized body */
+  --font-size-lg: 1rem;         /* 16px - large body, input text */
+  --font-size-xl: 1.125rem;     /* 18px - card titles, small headings */
+  --font-size-2xl: 1.375rem;    /* 22px - page titles */
+  --font-size-3xl: 1.75rem;     /* 28px - hero headings */
+  --font-size-4xl: 2.25rem;     /* 36px - display headings */
 
   /* Line Height Scale */
   --line-height-tight: 1.2;     /* Headings */
@@ -919,6 +923,42 @@ button:disabled:active {
   line-height: var(--line-height-normal);
   letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
+}
+
+/* Additional semantic typography for UI components */
+.text-badge {
+  font-size: var(--font-size-micro);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.text-label {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.text-tab-label {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.text-metadata {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-snug);
+}
+
+.text-task-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+  letter-spacing: -0.005em;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

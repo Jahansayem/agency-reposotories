@@ -127,7 +127,7 @@ export function ReadReceipts({
             }}
             title={`Read by ${userName} ${getReadTime(userName)}`}
           >
-            <span className="text-[8px] text-white font-medium">
+            <span className="text-badge text-white">
               {userName.charAt(0).toUpperCase()}
             </span>
           </motion.div>
@@ -137,7 +137,7 @@ export function ReadReceipts({
             className="w-4 h-4 rounded-full border border-white dark:border-gray-900 bg-gray-400 dark:bg-gray-600 flex items-center justify-center"
             title={`+${othersRead.length - 3} more`}
           >
-            <span className="text-[8px] text-white font-medium">
+            <span className="text-badge text-white">
               +{othersRead.length - 3}
             </span>
           </div>

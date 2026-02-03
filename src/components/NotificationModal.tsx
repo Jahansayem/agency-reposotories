@@ -551,7 +551,7 @@ export function NotificationBell({ unreadCount, onClick, isActive }: Notificatio
         <motion.span
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
+          className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-badge bg-[var(--danger)] text-white"
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </motion.span>

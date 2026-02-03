@@ -379,7 +379,7 @@ export default function DashboardPage({
                   </span>
                 </div>
               </AnimatedProgressRing>
-              <span className="text-white/40 text-[10px] mt-1">Score</span>
+              <span className="text-white/40 text-badge mt-1">Score</span>
             </div>
           </div>
         </div>
@@ -668,7 +668,7 @@ export default function DashboardPage({
                         className="flex-1 flex flex-col items-center gap-1"
                       >
                         {day.completed > 0 && (
-                          <span className={`text-[10px] font-medium ${
+                          <span className={`text-badge font-medium ${
                             day.isToday ? 'text-[var(--brand-blue)]' : darkMode ? 'text-slate-400' : 'text-slate-500'
                           }`}>
                             {day.completed}
@@ -688,7 +688,7 @@ export default function DashboardPage({
                             }`}
                           />
                         </div>
-                        <span className={`text-[10px] ${
+                        <span className={`text-badge ${
                           day.isToday
                             ? 'text-[var(--brand-blue)] font-semibold'
                             : darkMode ? 'text-slate-500' : 'text-slate-400'
@@ -1132,12 +1132,12 @@ export default function DashboardPage({
                             {member.name}
                           </span>
                           {member.workloadLevel === 'overloaded' && (
-                            <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-red-500/20 text-red-500">
+                            <span className="px-1.5 py-0.5 text-badge font-semibold rounded bg-red-500/20 text-red-500">
                               OVERLOADED
                             </span>
                           )}
                           {member.workloadLevel === 'heavy' && (
-                            <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-500/20 text-amber-500">
+                            <span className="px-1.5 py-0.5 text-badge font-semibold rounded bg-amber-500/20 text-amber-500">
                               HEAVY
                             </span>
                           )}
@@ -1313,7 +1313,7 @@ export default function DashboardPage({
                           {task.text}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded ${
+                          <span className={`px-2 py-0.5 text-badge font-semibold rounded ${
                             analysis.estimatedComplexity === 'high'
                               ? 'bg-red-500/20 text-red-500'
                               : analysis.estimatedComplexity === 'medium'
@@ -1330,7 +1330,7 @@ export default function DashboardPage({
                           {analysis.suggestedSubtasks.slice(0, 4).map((subtask, idx) => (
                             <span
                               key={idx}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] ${
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-badge ${
                                 darkMode ? 'bg-slate-700/50 text-slate-300' : 'bg-slate-100 text-slate-600'
                               }`}
                             >
@@ -1376,7 +1376,7 @@ export default function DashboardPage({
                           {suggestion.suggestedAction}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] ${
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-badge ${
                             darkMode ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-100 text-cyan-700'
                           }`}>
                             <Brain className="w-3 h-3" />

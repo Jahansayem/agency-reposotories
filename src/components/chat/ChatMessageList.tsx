@@ -355,7 +355,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                 {/* Avatar */}
                 {!msg.isGrouped ? (
                   <div
-                    className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 shadow-lg ring-1 ring-white/10"
+                    className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-white text-badge flex-shrink-0 shadow-lg ring-1 ring-white/10"
                     style={{ backgroundColor: userColor }}
                   >
                     {getInitials(msg.created_by)}
@@ -592,7 +592,7 @@ export const ChatMessageList = memo(function ChatMessageList({
 
                     {/* Time on hover for grouped messages */}
                     {msg.isGrouped && isHovered && (
-                      <div className={`absolute top-1/2 -translate-y-1/2 text-[10px] text-[var(--chat-text-muted)] pointer-events-none whitespace-nowrap ${
+                      <div className={`absolute top-1/2 -translate-y-1/2 text-badge text-[var(--chat-text-muted)] pointer-events-none whitespace-nowrap ${
                         isOwn ? 'right-full mr-3' : 'left-full ml-3'
                       }`}>
                         {formatTime(msg.created_at)}
@@ -651,7 +651,7 @@ export const ChatMessageList = memo(function ChatMessageList({
                             <span key={reaction} className="flex items-center text-sm">
                               {TAPBACK_EMOJIS[reaction]}
                               {count > 1 && (
-                                <span className="text-[10px] ml-0.5 text-[var(--chat-text-secondary)] font-medium">
+                                <span className="text-badge ml-0.5 text-[var(--chat-text-secondary)]">
                                   {count}
                                 </span>
                               )}
@@ -677,7 +677,7 @@ export const ChatMessageList = memo(function ChatMessageList({
 
                   {/* Read receipts */}
                   {isOwn && isLastOwnMessage && (
-                    <div className={`flex items-center gap-1.5 mt-1.5 text-[10px] text-[var(--chat-text-secondary)] ${reactions.length > 0 ? 'mt-4' : ''}`}>
+                    <div className={`flex items-center gap-1.5 mt-1.5 text-badge text-[var(--chat-text-secondary)] ${reactions.length > 0 ? 'mt-4' : ''}`}>
                       {readBy.length === 0 ? (
                         <span className="flex items-center gap-1">
                           <Check className="w-3 h-3" />

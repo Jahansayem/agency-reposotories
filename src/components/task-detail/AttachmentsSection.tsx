@@ -56,11 +56,11 @@ export default function AttachmentsSection({
             <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
           )}
           <Paperclip className="w-4 h-4 text-[var(--accent)]" />
-          <span className="text-[13px] font-semibold">
+          <span className="text-metadata font-semibold">
             Attachments
           </span>
           {attachments.length > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-[var(--accent-light)] text-[var(--accent)]">
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-label rounded-full bg-[var(--accent-light)] text-[var(--accent)]">
               {attachments.length}
             </span>
           )}
@@ -105,10 +105,10 @@ export default function AttachmentsSection({
                   className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-xl cursor-pointer transition-colors border-2 border-dashed border-[var(--border)] text-[var(--text-muted)] bg-[var(--surface)] hover:border-[var(--accent)] hover:bg-[var(--accent-light)]"
                 >
                   <Paperclip className="w-6 h-6" />
-                  <span className="text-[13px]">
+                  <span className="text-metadata">
                     Drop files here or click to browse
                   </span>
-                  <span className="text-[11px] text-[var(--text-muted)]">
+                  <span className="text-label text-[var(--text-muted)]">
                     {maxAttachments - attachments.length} of {maxAttachments} slots available
                   </span>
                 </button>

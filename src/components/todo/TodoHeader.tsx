@@ -288,7 +288,7 @@ function TodoHeader({
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
+                      className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-badge bg-[var(--danger)] text-white"
                       aria-label={`${unreadNotifications} unread notifications`}
                     >
                       {unreadNotifications > 99 ? '99+' : unreadNotifications}

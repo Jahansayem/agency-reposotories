@@ -20,7 +20,7 @@ export default function WaitingRow({
 
   return (
     <div className="flex items-center py-2 gap-3">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] shrink-0">
+      <span className="text-label text-[var(--text-muted)] shrink-0">
         Customer Response
       </span>
       <WaitingStatusBadge

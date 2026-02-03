@@ -23,41 +23,83 @@ export type SpacingToken = keyof typeof SPACING;
 // TYPOGRAPHY SCALE
 // ============================================================================
 export const TYPOGRAPHY = {
+  // Hero/display text - for major headings
+  display: {
+    size: '28px',
+    weight: '700',
+    lineHeight: '1.2',
+    letterSpacing: '-0.02em',
+  },
+  // Page titles - main page headings
   pageTitle: {
     size: '22px',
     weight: '600',
     lineHeight: '1.3',
     letterSpacing: '-0.01em',
   },
+  // Section headers - uppercase labels
   sectionHeader: {
-    size: '14px',
-    weight: '500',
+    size: '12px',
+    weight: '600',
     lineHeight: '1.3',
-    letterSpacing: '0.02em',
+    letterSpacing: '0.05em',
     textTransform: 'uppercase' as const,
   },
+  // Task titles - primary item text
   taskTitle: {
-    size: '16px',
+    size: '15px',
     weight: '500',
     lineHeight: '1.4',
     letterSpacing: '-0.005em',
   },
+  // Body text - standard readable content
+  body: {
+    size: '14px',
+    weight: '400',
+    lineHeight: '1.5',
+    letterSpacing: '0',
+  },
+  // Metadata - secondary info like timestamps, assignees
   metadata: {
     size: '13px',
     weight: '400',
-    lineHeight: '1.3',
+    lineHeight: '1.4',
     letterSpacing: '0',
   },
+  // Helper text - form hints, supporting text
   helper: {
     size: '12px',
     weight: '400',
     lineHeight: '1.5',
     letterSpacing: '0',
   },
+  // Caption - smallest readable text (WCAG AA minimum)
   caption: {
-    size: '11px',
-    weight: '400',
+    size: '12px',
+    weight: '500',
     lineHeight: '1.4',
+    letterSpacing: '0.01em',
+  },
+  // Form labels - uppercase field labels
+  label: {
+    size: '11px',
+    weight: '600',
+    lineHeight: '1.3',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase' as const,
+  },
+  // Badge text - notification counters, status badges (decorative, not primary content)
+  badge: {
+    size: '10px',
+    weight: '700',
+    lineHeight: '1',
+    letterSpacing: '0',
+  },
+  // Tab labels - bottom navigation labels
+  tabLabel: {
+    size: '11px',
+    weight: '500',
+    lineHeight: '1.2',
     letterSpacing: '0.01em',
   },
 } as const;

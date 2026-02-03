@@ -240,7 +240,7 @@ export default function DoerDashboard({
           {title}
         </h2>
         {badge !== undefined && badge > 0 && (
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-500 text-white min-w-[20px] text-center">
+          <span className="px-2 py-0.5 rounded-full text-label bg-red-500 text-white min-w-[20px] text-center">
             {badge}
           </span>
         )}
@@ -426,7 +426,7 @@ export default function DoerDashboard({
                           ? 'bg-red-50 hover:bg-red-100 border-l-4 border-l-red-500 focus-visible:ring-offset-white': 'bg-slate-50 hover:bg-slate-100 focus-visible:ring-offset-white'} active:scale-[0.98]`}
                       onClick={() => handleTaskClick(item.todo.id)}
                     >
-                      <span className={`px-2 py-1 rounded-[var(--radius-md)] text-[10px] font-bold tabular-nums ${badge.bg} ${badge.text}`}>
+                      <span className={`px-2 py-1 rounded-[var(--radius-md)] text-badge tabular-nums ${badge.bg} ${badge.text}`}>
                         {item.daysSinceActivity}d
                       </span>
                       <span className={`flex-1 truncate text-sm font-medium ${'text-slate-800'}`}>
@@ -504,7 +504,7 @@ export default function DoerDashboard({
                 <p className={`text-2xl font-bold tabular-nums ${'text-slate-900'}`}>
                   {stats.totalActive}
                 </p>
-                <p className={`text-[10px] uppercase font-medium tracking-wide ${'text-slate-500'}`}>Active Tasks</p>
+                <p className={`text-label ${'text-slate-500'}`}>Active Tasks</p>
               </div>
               <div className={`text-center p-4 rounded-[var(--radius-xl)] transition-colors ${
                 stats.highPriority > 0
@@ -512,7 +512,7 @@ export default function DoerDashboard({
                 <p className={`text-2xl font-bold tabular-nums ${stats.highPriority > 0 ? 'text-orange-500' : 'text-slate-900'}`}>
                   {stats.highPriority}
                 </p>
-                <p className={`text-[10px] uppercase font-medium tracking-wide ${'text-slate-500'}`}>High Priority</p>
+                <p className={`text-label ${'text-slate-500'}`}>High Priority</p>
               </div>
             </div>
           </Card>

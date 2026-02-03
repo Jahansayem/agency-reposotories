@@ -216,7 +216,7 @@ export function CountBadge({
   const displayCount = count > max ? `${max}+` : count.toString();
 
   const sizeClasses = {
-    sm: 'min-w-[18px] h-[18px] text-[10px] px-1',
+    sm: 'min-w-[18px] h-[18px] text-badge px-1',
     md: 'min-w-[22px] h-[22px] text-xs px-1.5',
   };
 

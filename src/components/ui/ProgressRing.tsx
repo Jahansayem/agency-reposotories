@@ -187,7 +187,7 @@ export function GoalProgressRing({
             <span className="text-xs font-bold text-[var(--foreground)] leading-none">
               {current}
             </span>
-            <span className="text-[10px] text-[var(--text-muted)] leading-none">
+            <span className="text-badge text-[var(--text-muted)] leading-none">
               /{goal}
             </span>
           </>

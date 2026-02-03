@@ -87,7 +87,7 @@ export function ChatConversationList({
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1.5 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white shadow-lg border border-[var(--surface-dark)]"
+                    className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1.5 bg-red-500 rounded-full text-badge flex items-center justify-center text-white shadow-lg border border-[var(--surface-dark)]"
                   >
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </motion.span>

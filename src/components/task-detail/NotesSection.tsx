@@ -81,7 +81,7 @@ export default function NotesSection({
                   rows={4}
                   className="w-full px-3 py-2.5 text-sm leading-relaxed resize-none bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-lg)] text-[var(--foreground)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] placeholder:text-[var(--text-muted)]"
                 />
-                <span className="absolute bottom-2 right-3 text-[11px] text-[var(--text-muted)] pointer-events-none select-none">
+                <span className="absolute bottom-2 right-3 text-label text-[var(--text-muted)] pointer-events-none select-none">
                   {notes.length}
                 </span>
               </div>
@@ -89,7 +89,7 @@ export default function NotesSection({
               {transcription && (
                 <div className="bg-[var(--surface-2)] border border-[var(--border)] border-l-2 border-l-[var(--accent)] rounded-[var(--radius-md)] p-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1 flex items-center gap-1.5">
+                    <p className="text-label text-[var(--text-muted)] mb-1 flex items-center gap-1.5">
                       <Mic className="w-3.5 h-3.5 text-[var(--accent)]" />
                       Voicemail Transcription
                     </p>

@@ -77,7 +77,7 @@ const priorityConfig: Record<
 
 const sizeConfig = {
   sm: {
-    container: 'px-1.5 py-0.5 gap-1 text-[10px]',
+    container: 'px-1.5 py-0.5 gap-1 text-badge',
     icon: 'w-3 h-3',
   },
   md: {

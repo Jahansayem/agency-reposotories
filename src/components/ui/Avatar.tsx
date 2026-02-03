@@ -37,7 +37,7 @@ const sizeStyles: Record<AvatarSize, {
 }> = {
   xs: {
     container: 'w-6 h-6',
-    text: 'text-[10px]',
+    text: 'text-badge',
     status: 'w-2 h-2',
     statusOffset: '-right-0.5 -bottom-0.5',
   },

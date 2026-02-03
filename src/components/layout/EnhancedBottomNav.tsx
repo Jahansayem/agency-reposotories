@@ -160,7 +160,7 @@ export default function EnhancedBottomNav() {
                 {/* Badge */}
                 {tab.badge && tab.badge > 0 && (
                   <span
-                    className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
+                    className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-badge bg-[var(--danger)] text-white"
                   >
                     {tab.badge > 99 ? '99+' : tab.badge}
                   </span>
@@ -170,7 +170,7 @@ export default function EnhancedBottomNav() {
               {/* Label */}
               <span
                 className={`
-                  text-[10px] font-medium mt-1 transition-colors
+                  text-tab-label mt-1 transition-colors
                   ${isActive
                     ? 'text-[var(--accent)]'
                     : 'text-[var(--text-muted)]'}

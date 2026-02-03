@@ -142,7 +142,7 @@ export default function OverflowMenu({
                             onSnooze(option.days);
                             handleClose();
                           }}
-                          className="flex items-center w-full pl-11 pr-3 min-h-[36px] text-[12px] text-[var(--text-muted)] hover:bg-[var(--surface-2)] active:scale-[0.98] transition-all"
+                          className="flex items-center w-full pl-11 pr-3 min-h-[36px] text-xs text-[var(--text-muted)] hover:bg-[var(--surface-2)] active:scale-[0.98] transition-all"
                         >
                           {option.label}
                         </button>

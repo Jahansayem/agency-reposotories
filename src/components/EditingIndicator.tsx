@@ -68,7 +68,7 @@ export function EditingIndicator({
   };
 
   const avatarSizeClasses = {
-    sm: 'w-4 h-4 text-[8px]',
+    sm: 'w-4 h-4 text-badge',
     md: 'w-5 h-5 text-xs',
     lg: 'w-6 h-6 text-sm',
   };
@@ -193,7 +193,7 @@ export function FieldEditingIndicator({
           className="w-3 h-3 rounded-full flex items-center justify-center"
           style={{ backgroundColor: user.color }}
         >
-          <span className="text-[8px] text-white font-medium">
+          <span className="text-badge text-white">
             {user.user.charAt(0).toUpperCase()}
           </span>
         </div>
@@ -263,7 +263,7 @@ export function EditingConflictWarning({
                   className="w-4 h-4 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: user.color }}
                 >
-                  <span className="text-[8px] text-white font-medium">
+                  <span className="text-badge text-white">
                     {user.user.charAt(0).toUpperCase()}
                   </span>
                 </div>

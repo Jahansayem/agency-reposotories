@@ -119,7 +119,7 @@ export default function SubtasksSection({
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <span className="text-[11px] font-medium text-[var(--text-muted)] tabular-nums">
+                  <span className="text-label text-[var(--text-muted)] tabular-nums">
                     {Math.round(progress)}%
                   </span>
                 </div>

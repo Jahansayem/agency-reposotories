@@ -74,11 +74,20 @@ export default function NavigationSidebar({
   } = useAppShell();
 
   // Permission checks for gated nav items
+  // Note: These hooks must be called unconditionally at the top level
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
   const canViewArchive = usePermission('can_view_archive');
+
+  // Map permission keys to their resolved values for filtering
   const permissionMap: Record<string, boolean> = {
     can_view_strategic_goals: canViewStrategicGoals,
     can_view_archive: canViewArchive,
+  };
+
+  // Helper to check if user has permission for a nav item
+  const hasNavPermission = (item: NavItem): boolean => {
+    if (!item.permission) return true; // No permission required
+    return permissionMap[item.permission] === true;
   };
 
   // Multi-tenancy context
@@ -264,9 +273,9 @@ export default function NavigationSidebar({
           </p>
         )}
 
-        {/* Secondary Navigation */}
+        {/* Secondary Navigation - filtered by permission */}
         {secondaryNavItems
-          .filter(item => !item.permission || permissionMap[item.permission] !== false)
+          .filter(hasNavPermission)
           .map(item => {
             const Icon = item.icon;
             const isActive = activeView === item.id;

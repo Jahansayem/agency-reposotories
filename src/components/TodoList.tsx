@@ -2172,12 +2172,12 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
                             {new Date(todo.created_at).toLocaleDateString()}
                           </span>
                           {todo.attachments && todo.attachments.length > 0 && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                            <span className="px-1.5 py-0.5 rounded text-badge bg-amber-500/10 text-amber-600 dark:text-amber-400">
                               {todo.attachments.length} file{todo.attachments.length !== 1 ? 's' : ''}
                             </span>
                           )}
                           {todo.subtasks && todo.subtasks.length > 0 && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <span className="px-1.5 py-0.5 rounded text-badge bg-blue-500/10 text-blue-600 dark:text-blue-400">
                               {todo.subtasks.length} subtask{todo.subtasks.length !== 1 ? 's' : ''}
                             </span>
                           )}

@@ -45,7 +45,7 @@ const SNOOZE_OPTIONS = [
   { label: 'Next month', days: 30 },
 ];
 
-const labelClass = 'flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1';
+const labelClass = 'flex items-center gap-1.5 text-label text-[var(--text-muted)] mb-1';
 const selectClass = [
   'w-full rounded-lg px-2.5 py-[6px] text-sm font-medium',
   'bg-[var(--surface-2)] text-[var(--foreground)]',
@@ -161,13 +161,13 @@ export default function MetadataSection({
             <CalendarDays size={12} />
             Due Date
             {dueDateStatus === 'overdue' && !todo.completed && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[var(--danger-light)] text-[var(--danger)] ml-1">
-                <AlertTriangle size={9} />
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-badge uppercase bg-[var(--danger-light)] text-[var(--danger)] ml-1">
+                <AlertTriangle size={10} />
                 Overdue
               </span>
             )}
             {dueDateStatus === 'today' && !todo.completed && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 ml-1">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-badge uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 ml-1">
                 Today
               </span>
             )}
