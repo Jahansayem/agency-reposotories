@@ -19,6 +19,8 @@ import type {
 import { DEFAULT_PERMISSIONS } from '@/types/agency';
 import { useCurrentUser } from '@/contexts/UserContext';
 import { useTodoStore } from '@/store/todoStore';
+import { useToast } from '@/components/ui/Toast';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -68,6 +70,7 @@ interface AgencyProviderProps {
 
 export function AgencyProvider({ children, userId }: AgencyProviderProps) {
   const currentUserFromContext = useCurrentUser();
+  const toast = useToast();
   const [currentAgency, setCurrentAgency] = useState<Agency | null>(null);
   const [currentMembership, setCurrentMembership] = useState<AgencyMembership | null>(null);
   const [agencies, setAgencies] = useState<AgencyMembership[]>([]);
@@ -161,7 +164,7 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
 
       setAgencies(memberships);
     } catch (err) {
-      console.error('Failed to load agencies:', err);
+      logger.error('Failed to load agencies', err as Error, { component: 'AgencyContext', action: 'loadUserAgencies', userId: uid });
       setError('Failed to load agencies');
     } finally {
       setIsLoading(false);
@@ -191,10 +194,11 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
       setCurrentMembership(membership);
       localStorage.setItem(CURRENT_AGENCY_KEY, agencyId);
 
-      // Set cookie for server-side access
-      document.cookie = `current_agency_id=${agencyId}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+      // Set cookie for server-side access with Secure flag for HTTPS
+      const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      document.cookie = `current_agency_id=${agencyId}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax${isSecure ? '; Secure' : ''}`;
     } catch (err) {
-      console.error('Failed to load agency details:', err);
+      logger.error('Failed to load agency details', err as Error, { component: 'AgencyContext', action: 'loadAgencyDetails', agencyId });
       setError('Failed to load agency');
     }
   }, []);
@@ -205,7 +209,11 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
   const switchAgency = useCallback(async (agencyId: string) => {
     const membership = agencies.find(a => a.agency_id === agencyId);
     if (!membership) {
-      setError('You are not a member of this agency');
+      const errorMessage = 'You are not a member of this agency';
+      setError(errorMessage);
+      toast.error('Agency Switch Failed', {
+        description: errorMessage,
+      });
       return;
     }
 
@@ -214,8 +222,16 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
     // and custom order so no stale data is visible during the re-fetch.
     useTodoStore.getState().resetStore();
 
-    await loadAgencyDetails(agencyId, membership);
-  }, [agencies, loadAgencyDetails]);
+    try {
+      await loadAgencyDetails(agencyId, membership);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to switch agency';
+      setError(errorMessage);
+      toast.error('Agency Switch Failed', {
+        description: errorMessage,
+      });
+    }
+  }, [agencies, loadAgencyDetails, toast]);
 
   /**
    * Refresh agencies list

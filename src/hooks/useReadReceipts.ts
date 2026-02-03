@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 /**
  * useReadReceipts Hook
@@ -95,7 +96,7 @@ export function useReadReceipts(currentUser?: User) {
           });
         }
       } catch (error) {
-        console.error('Failed to mark message as read:', error);
+        logger.error('Failed to mark message as read', error as Error, { component: 'useReadReceipts', action: 'markAsRead', messageId });
       }
     },
     [currentUser, readReceipts]
@@ -169,7 +170,7 @@ export function useReadReceipts(currentUser?: User) {
           });
         }
       } catch (error) {
-        console.error('Failed to mark messages as read:', error);
+        logger.error('Failed to mark messages as read', error as Error, { component: 'useReadReceipts', action: 'markMultipleAsRead', messageCount: messageIds.length });
       }
     },
     [currentUser, readReceipts]
@@ -244,7 +245,7 @@ export function useReadReceipts(currentUser?: User) {
 
       setReadReceipts(grouped);
     } catch (error) {
-      console.error('Failed to load read receipts:', error);
+      logger.error('Failed to load read receipts', error as Error, { component: 'useReadReceipts', action: 'loadReadReceipts', messageCount: messageIds.length });
     }
   }, []);
 

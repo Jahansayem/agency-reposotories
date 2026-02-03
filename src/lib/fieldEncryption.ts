@@ -52,10 +52,7 @@ function getEncryptionKey(): Buffer | null {
         action: 'getKey',
       }
     );
-    console.error(
-      '\n⚠️  WARNING: FIELD_ENCRYPTION_KEY is not set! PII will be stored in PLAINTEXT.\n' +
-      '   Generate a key with: openssl rand -hex 32\n'
-    );
+    // Duplicate warning removed - logger.error already logs to console
     return null;
   }
 

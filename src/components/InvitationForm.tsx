@@ -5,6 +5,7 @@ import { Mail, Send, Copy, Check, Loader2, AlertCircle } from 'lucide-react';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -76,7 +77,7 @@ export function InvitationForm({
       setEmail('');
       onInvitationSent?.();
     } catch (err) {
-      console.error('Failed to send invitation:', err);
+      logger.error('Failed to send invitation', err as Error, { component: 'InvitationForm', action: 'handleInvite', agencyId });
       setError(err instanceof Error ? err.message : 'Failed to send invitation');
     } finally {
       setIsSubmitting(false);

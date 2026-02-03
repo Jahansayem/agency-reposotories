@@ -55,7 +55,7 @@ export function createMockAttachment(overrides?: Partial<Attachment>): Attachmen
   return {
     id: faker.string.uuid(),
     file_name: faker.system.fileName(),
-    file_type: 'pdf',
+    file_type: 'document', // Valid AttachmentCategory (PDF files are documents)
     file_size: faker.number.int({ min: 1024, max: 1024000 }),
     storage_path: `todos/${faker.string.uuid()}/${faker.system.fileName()}`,
     mime_type: 'application/pdf',

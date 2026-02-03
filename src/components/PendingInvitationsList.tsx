@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Mail, Clock, Trash2, Loader2, AlertCircle, Users } from 'lucide-react';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -61,7 +62,7 @@ export function PendingInvitationsList({
 
       setInvitations(data.invitations || []);
     } catch (err) {
-      console.error('Failed to load invitations:', err);
+      logger.error('Failed to load invitations', err as Error, { component: 'PendingInvitationsList', action: 'loadInvitations', agencyId });
       setError(err instanceof Error ? err.message : 'Failed to load invitations');
     } finally {
       setIsLoading(false);
@@ -95,7 +96,7 @@ export function PendingInvitationsList({
       // Remove from local list
       setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
     } catch (err) {
-      console.error('Failed to revoke invitation:', err);
+      logger.error('Failed to revoke invitation', err as Error, { component: 'PendingInvitationsList', action: 'handleRevoke', invitationId });
       setError(err instanceof Error ? err.message : 'Failed to revoke invitation');
     } finally {
       setRevokingId(null);

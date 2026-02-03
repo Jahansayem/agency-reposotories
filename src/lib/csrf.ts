@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'crypto';
+import { logger } from './logger';
 
 const CSRF_SECRET_COOKIE = 'csrf_secret';  // HttpOnly
 const CSRF_NONCE_COOKIE = 'csrf_nonce';    // Readable by JS
@@ -372,9 +373,9 @@ export async function fetchWithCsrf(
     credentials: 'same-origin', // Ensure cookies are sent with the request
   });
 
-  // Handle 401 Unauthorized responses - log to console instead of forcing reload
+  // Handle 401 Unauthorized responses - log instead of forcing reload
   if (response.status === 401 && url.startsWith('/api/')) {
-    console.error('[fetchWithCsrf] 401 Unauthorized:', url, { userName });
+    logger.warn('fetchWithCsrf: 401 Unauthorized', { component: 'csrf', action: 'fetchWithCsrf', url, userName });
     // Don't force reload - let the calling code handle the error
   }
 

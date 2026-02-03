@@ -15,6 +15,7 @@ import {
   markMessagesAsSyncedInIDB,
 } from './indexedDB';
 import type { Todo, ChatMessage as Message } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 /**
  * Offline Sync Manager
@@ -108,14 +109,14 @@ export async function syncOfflineData(): Promise<void> {
         await removeFromSyncQueue(item.id);
         console.log(`✓ Synced ${item.type} ${item.table}:`, item.id);
       } catch (error) {
-        console.error(`✗ Failed to sync ${item.type} ${item.table}:`, error);
+        logger.error(`Failed to sync ${item.type} ${item.table}`, error as Error, { component: 'offlineSync', action: 'syncOfflineData', itemId: item.id, itemType: item.type, itemTable: item.table });
 
         // Increment retry count
         await incrementSyncRetries(item.id);
 
         // If max retries reached, remove from queue (log error)
         if (item.retries >= MAX_RETRIES) {
-          console.error(`Max retries reached for ${item.id}, removing from queue`);
+          logger.warn(`Max retries reached for sync item, removing from queue`, { component: 'offlineSync', action: 'syncOfflineData', itemId: item.id });
           await removeFromSyncQueue(item.id);
         }
       }
@@ -126,7 +127,7 @@ export async function syncOfflineData(): Promise<void> {
 
     console.log('Sync complete');
   } catch (error) {
-    console.error('Sync error:', error);
+    logger.error('Sync error', error as Error, { component: 'offlineSync', action: 'syncOfflineData' });
   } finally {
     isSyncing = false;
   }
@@ -210,12 +211,12 @@ async function syncUnsyncedMessages(): Promise<void> {
       const { error } = await supabase.from('messages').insert(message);
 
       if (error) {
-        console.error('Failed to sync message:', error);
+        logger.error('Failed to sync message', error, { component: 'offlineSync', action: 'syncUnsyncedMessages', messageId: message.id });
       } else {
         syncedIds.push(message.id);
       }
     } catch (error) {
-      console.error('Failed to sync message:', error);
+      logger.error('Failed to sync message', error as Error, { component: 'offlineSync', action: 'syncUnsyncedMessages', messageId: message.id });
     }
   }
 
@@ -272,7 +273,7 @@ export async function fetchAndCacheData(): Promise<void> {
       console.log(`Cached ${users.length} users`);
     }
   } catch (error) {
-    console.error('Error fetching and caching data:', error);
+    logger.error('Error fetching and caching data', error as Error, { component: 'offlineSync', action: 'fetchAndCacheData' });
   }
 }
 

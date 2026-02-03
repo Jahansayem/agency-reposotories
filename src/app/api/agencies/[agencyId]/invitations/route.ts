@@ -215,9 +215,19 @@ export async function POST(
       // Non-critical
     }
 
-    // Fire-and-forget: send invitation email if recipient email is available
+    // BUGFIX SILENT-002: Properly log email send failures instead of fire-and-forget
     if (email) {
-      sendInvitationEmail(email, agency.name, inviteUrl, role).catch(console.error);
+      sendInvitationEmail(email, agency.name, inviteUrl, role).catch((emailError) => {
+        logger.error('Failed to send invitation email', emailError, {
+          component: 'invitations/route',
+          action: 'POST',
+          email,
+          agencyId,
+          invitationId: invitation.id,
+        });
+        // Could also update the invitation record to mark email failed
+        // for future retry or UI notification
+      });
     }
 
     logger.info('Invitation created', {

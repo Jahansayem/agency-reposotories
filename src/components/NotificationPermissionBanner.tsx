@@ -9,6 +9,7 @@ import {
   enablePushNotifications,
 } from '@/lib/webPushService';
 import type { AuthUser } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 interface NotificationPermissionBannerProps {
   currentUser: AuthUser;
@@ -77,7 +78,7 @@ export default function NotificationPermissionBanner({
       }
     } catch (err) {
       setError('An unexpected error occurred');
-      console.error('Error enabling notifications:', err);
+      logger.error('Error enabling notifications', err as Error, { component: 'NotificationPermissionBanner', action: 'handleEnable', userId: currentUser.id });
     } finally {
       setLoading(false);
     }

@@ -23,6 +23,7 @@ const categoryIcons: Record<AttachmentCategory, React.ElementType> = {
   audio: Music,
   video: Video,
   archive: Archive,
+  other: FileText, // Default to document icon for unknown types
 };
 
 const categoryColors: Record<AttachmentCategory, string> = {
@@ -31,6 +32,7 @@ const categoryColors: Record<AttachmentCategory, string> = {
   audio: 'text-[var(--accent)] bg-[var(--accent)]/10',
   video: 'text-pink-500 bg-pink-500/10',
   archive: 'text-amber-500 bg-amber-500/10',
+  other: 'text-gray-500 bg-gray-500/10', // Default color for unknown types
 };
 
 function formatFileSize(bytes: number): string {

@@ -6,6 +6,7 @@ import { Todo, PRIORITY_CONFIG, STATUS_CONFIG, Subtask } from '@/types/todo';
 import AttachmentList from './AttachmentList';
 import { generateSummary, copyToClipboard } from '@/lib/summaryGenerator';
 import { useEscapeKey, useFocusTrap } from '@/hooks';
+import { logger } from '@/lib/logger';
 
 interface ArchivedTaskModalProps {
   todo: Todo;
@@ -62,7 +63,7 @@ export default function ArchivedTaskModal({ todo, onClose }: ArchivedTaskModalPr
         throw new Error('Copy operation failed');
       }
     } catch (error) {
-      console.error('Failed to copy summary:', error);
+      logger.error('Failed to copy summary', error as Error, { component: 'ArchivedTaskModal', action: 'handleCopySummary', todoId: todo.id });
       setCopyState('error');
       // Auto-clear error state after 4 seconds
       timeoutRef.current = setTimeout(() => {

@@ -2,6 +2,7 @@
 
 import React, { Component, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -28,13 +29,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error to console in development
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-
-    // In production, you could send this to an error tracking service like Sentry
-    if (process.env.NODE_ENV === 'production') {
-      // TODO: Send to error tracking service
-    }
+    // Log error with structured logger (sends to Sentry in production)
+    logger.error('ErrorBoundary caught an error', error, {
+      component: 'ErrorBoundary',
+      action: 'componentDidCatch',
+      componentStack: errorInfo.componentStack
+    });
   }
 
   handleReset = () => {

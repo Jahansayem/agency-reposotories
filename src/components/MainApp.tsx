@@ -170,6 +170,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Add animated highlight class
         taskElement.classList.add('notification-highlight');
+        // BUGFIX REACT-001: Clear any existing highlight timer before creating new one
+        // This prevents orphaned timers if the callback runs during rapid clicks
+        if (taskLinkHighlightTimerRef.current) {
+          clearTimeout(taskLinkHighlightTimerRef.current);
+        }
         // Remove the class after animation completes
         taskLinkHighlightTimerRef.current = setTimeout(() => {
           taskElement.classList.remove('notification-highlight');

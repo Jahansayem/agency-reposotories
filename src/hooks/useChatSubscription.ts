@@ -162,10 +162,11 @@ export function useChatSubscription({
         if (payload.user !== currentUserName) {
           onTypingUpdateRef.current?.(payload.user, true);
 
-          // Clear any existing timeout for this user
+          // BUGFIX REALTIME-004: Clear and delete existing timeout properly
           const existingTimeout = typingTimeoutsRef.current.get(payload.user);
           if (existingTimeout) {
             clearTimeout(existingTimeout);
+            typingTimeoutsRef.current.delete(payload.user);
           }
 
           // Set new timeout and store reference

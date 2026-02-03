@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
+import { logger } from '@/lib/logger';
 
 /**
  * API: Send Push Notification
@@ -131,7 +132,7 @@ async function handleSendPush(request: NextRequest, ctx: AgencyAuthContext) {
           .eq('is_active', true);
 
         if (fetchError) {
-          console.error('Failed to fetch subscriptions:', fetchError);
+          logger.error('Failed to fetch subscriptions', fetchError, { component: 'push-notifications/send', action: 'fetchSubscriptions', userId: uid });
           results.push({ userId: uid, success: false, error: 'Failed to fetch subscriptions' });
           continue;
         }
@@ -192,7 +193,7 @@ async function handleSendPush(request: NextRequest, ctx: AgencyAuthContext) {
               .eq('id', sub.id);
 
           } catch (error: any) {
-            console.error('Failed to send to subscription:', error);
+            logger.error('Failed to send to subscription', error, { component: 'push-notifications/send', action: 'sendNotification', userId: uid, subscriptionId: sub.id });
             failedCount++;
 
             // If subscription is invalid/expired, mark as inactive
@@ -226,7 +227,7 @@ async function handleSendPush(request: NextRequest, ctx: AgencyAuthContext) {
         });
 
       } catch (error) {
-        console.error(`Error sending to user ${uid}:`, error);
+        logger.error('Error sending to user', error as Error, { component: 'push-notifications/send', action: 'sendToUser', userId: uid });
         results.push({
           userId: uid,
           success: false,
@@ -247,7 +248,7 @@ async function handleSendPush(request: NextRequest, ctx: AgencyAuthContext) {
     });
 
   } catch (error) {
-    console.error('Send push notification error:', error);
+    logger.error('Send push notification error', error as Error, { component: 'push-notifications/send', action: 'handleSendPush' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to send push notification' },
       { status: 500 }

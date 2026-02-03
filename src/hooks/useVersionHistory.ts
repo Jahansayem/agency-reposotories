@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { Todo } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 /**
  * useVersionHistory Hook
@@ -64,7 +65,7 @@ export function useVersionHistory(todoId?: string) {
 
       setVersions(data || []);
     } catch (err) {
-      console.error('Failed to load version history:', err);
+      logger.error('Failed to load version history', err as Error, { component: 'useVersionHistory', action: 'loadVersions', todoId: id });
       setError(err instanceof Error ? err.message : 'Failed to load versions');
     } finally {
       setLoading(false);
@@ -139,7 +140,7 @@ export function useVersionHistory(todoId?: string) {
 
       return true;
     } catch (err) {
-      console.error('Failed to restore version:', err);
+      logger.error('Failed to restore version', err as Error, { component: 'useVersionHistory', action: 'restoreVersion', versionId });
       setError(err instanceof Error ? err.message : 'Failed to restore version');
       return false;
     }

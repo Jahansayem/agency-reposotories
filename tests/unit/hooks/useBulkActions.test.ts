@@ -674,12 +674,12 @@ describe('useBulkActions', () => {
         createMockTodo({
           id: 'primary',
           text: 'Primary',
-          attachments: [{ id: 'a1', file_name: 'file1.pdf', file_type: 'pdf', file_size: 100, storage_path: 'path/file1.pdf', mime_type: 'application/pdf', uploaded_by: 'TestUser', uploaded_at: new Date().toISOString() }],
+          attachments: [{ id: 'a1', file_name: 'file1.pdf', file_type: 'document', file_size: 100, storage_path: 'path/file1.pdf', mime_type: 'application/pdf', uploaded_by: 'TestUser', uploaded_at: new Date().toISOString() }],
         }),
         createMockTodo({
           id: 'secondary',
           text: 'Secondary',
-          attachments: [{ id: 'a2', file_name: 'file2.pdf', file_type: 'pdf', file_size: 200, storage_path: 'path/file2.pdf', mime_type: 'application/pdf', uploaded_by: 'TestUser', uploaded_at: new Date().toISOString() }],
+          attachments: [{ id: 'a2', file_name: 'file2.pdf', file_type: 'document', file_size: 200, storage_path: 'path/file2.pdf', mime_type: 'application/pdf', uploaded_by: 'TestUser', uploaded_at: new Date().toISOString() }],
         }),
       ];
 

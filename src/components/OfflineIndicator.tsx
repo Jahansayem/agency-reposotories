@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { WifiOff, Wifi, RefreshCw, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getOfflineStatus, forceSyncNow } from '@/lib/db/offlineSync';
+import { logger } from '@/lib/logger';
 
 /**
  * OfflineIndicator Component
@@ -64,7 +65,7 @@ export function OfflineIndicator() {
       await forceSyncNow();
       setPendingSyncCount(0);
     } catch (error) {
-      console.error('Sync failed:', error);
+      logger.error('Sync failed', error as Error, { component: 'OfflineIndicator', action: 'handleSync' });
     } finally {
       setIsSyncing(false);
     }

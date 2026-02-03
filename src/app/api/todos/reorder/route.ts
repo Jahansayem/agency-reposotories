@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/todos/reorder
@@ -106,7 +107,7 @@ async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
       updatedTasks,
     });
   } catch (error) {
-    console.error('Error reordering tasks:', error);
+    logger.error('Error reordering tasks', error as Error, { component: 'todos/reorder', action: 'handleReorder' });
     return NextResponse.json(
       { error: 'Failed to reorder tasks' },
       { status: 500 }

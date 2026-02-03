@@ -855,7 +855,7 @@ describe('Selectors', () => {
       const todos: Todo[] = [
         createMockTodo({
           text: 'With attachment',
-          attachments: [{ id: 'a1', file_name: 'file.pdf', file_type: 'pdf', file_size: 100, storage_path: 'path', mime_type: 'application/pdf', uploaded_by: 'User', uploaded_at: new Date().toISOString() }]
+          attachments: [{ id: 'a1', file_name: 'file.pdf', file_type: 'document', file_size: 100, storage_path: 'path', mime_type: 'application/pdf', uploaded_by: 'User', uploaded_at: new Date().toISOString() }]
         }),
         createMockTodo({ text: 'Without attachment', attachments: [] }),
         createMockTodo({ text: 'No attachments field' }),
@@ -874,7 +874,7 @@ describe('Selectors', () => {
       const todos: Todo[] = [
         createMockTodo({
           text: 'With attachment',
-          attachments: [{ id: 'a1', file_name: 'file.pdf', file_type: 'pdf', file_size: 100, storage_path: 'path', mime_type: 'application/pdf', uploaded_by: 'User', uploaded_at: new Date().toISOString() }]
+          attachments: [{ id: 'a1', file_name: 'file.pdf', file_type: 'document', file_size: 100, storage_path: 'path', mime_type: 'application/pdf', uploaded_by: 'User', uploaded_at: new Date().toISOString() }]
         }),
         createMockTodo({ text: 'Without attachment', attachments: [] }),
         createMockTodo({ text: 'No attachments field' }),

@@ -18,6 +18,7 @@ import {
   FileX,
   Send,
 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { QuickTaskTemplate, TaskPattern, INSURANCE_QUICK_TASKS, TaskCategory } from '@/types/todo';
 import { CATEGORY_COMPLETION_RATES } from '@/lib/insurancePatterns';
 import { fetchWithCsrf } from '@/lib/csrf';
@@ -385,7 +386,7 @@ export function useTaskPatterns(): { patterns: TaskPattern[]; loading: boolean }
           setPatterns(allPatterns);
         }
       } catch (error) {
-        console.error('Failed to fetch task patterns:', error);
+        logger.error('Failed to fetch task patterns', error as Error, { component: 'QuickTaskButtons', action: 'fetchPatterns' });
       } finally {
         setLoading(false);
       }

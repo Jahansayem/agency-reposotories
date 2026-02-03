@@ -99,6 +99,31 @@ interface RateLimitState {
 
 const rateLimitStore = new Map<string, RateLimitState>();
 
+// BUGFIX UTIL-007: Cleanup interval to prevent memory leak from old entries
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+
+function startRateLimitCleanup() {
+  if (cleanupIntervalId) return; // Already running
+
+  // Clean up old entries every 5 minutes
+  cleanupIntervalId = setInterval(() => {
+    const now = Date.now();
+    const cutoff = now - CHAT_LIMITS.RATE_LIMIT_WINDOW_MS * 2; // Keep entries for 2x window
+
+    for (const [userId, state] of rateLimitStore.entries()) {
+      // Remove entries with no recent timestamps
+      if (state.timestamps.length === 0 || Math.max(...state.timestamps) < cutoff) {
+        rateLimitStore.delete(userId);
+      }
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
+// Start cleanup on module load (only in browser)
+if (typeof window !== 'undefined') {
+  startRateLimitCleanup();
+}
+
 /**
  * Checks if a user is rate limited for sending messages.
  *

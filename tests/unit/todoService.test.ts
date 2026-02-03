@@ -320,7 +320,7 @@ describe('TodoService with Normalized Schema', () => {
         attachments: [{
           id: 'att-1',
           file_name: 'test.pdf',
-          file_type: 'pdf',
+          file_type: 'document',
           file_size: 1024,
           storage_path: 'path/to/file',
           mime_type: 'application/pdf',
@@ -409,7 +409,7 @@ describe('TodoService with Normalized Schema', () => {
         { id: 'sub-1', text: 'Subtask', completed: false, priority: 'high', estimated_minutes: 30, display_order: 0 },
       ];
       const mockAttachments = [
-        { id: 'att-1', file_name: 'doc.pdf', file_type: 'pdf', file_size: 1024, storage_path: 'path', mime_type: 'application/pdf', uploaded_by_name: 'User', uploaded_at: '2025-01-01' },
+        { id: 'att-1', file_name: 'doc.pdf', file_type: 'document', file_size: 1024, storage_path: 'path', mime_type: 'application/pdf', uploaded_by_name: 'User', uploaded_at: '2025-01-01' },
       ];
 
       vi.mocked(supabase.from).mockImplementation((table: string) => {

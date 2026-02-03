@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { logger } from './logger';
 
 // Initialize Redis client
 let redis: Redis | null = null;
@@ -32,7 +33,7 @@ export async function getCache<T>(key: string): Promise<T | null> {
     const value = await client.get<T>(key);
     return value;
   } catch (error) {
-    console.error('Redis get error:', error);
+    logger.error('Redis get error', error as Error, { component: 'redis', action: 'getCache', key });
     return null;
   }
 }
@@ -48,7 +49,7 @@ export async function setCache<T>(key: string, value: T, ttlSeconds: number): Pr
     await client.setex(key, ttlSeconds, JSON.stringify(value));
     return true;
   } catch (error) {
-    console.error('Redis set error:', error);
+    logger.error('Redis set error', error as Error, { component: 'redis', action: 'setCache', key, ttlSeconds });
     return false;
   }
 }
@@ -64,7 +65,7 @@ export async function deleteCache(key: string): Promise<boolean> {
     await client.del(key);
     return true;
   } catch (error) {
-    console.error('Redis delete error:', error);
+    logger.error('Redis delete error', error as Error, { component: 'redis', action: 'deleteCache', key });
     return false;
   }
 }

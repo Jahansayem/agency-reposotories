@@ -7,6 +7,10 @@ export type RecurrencePattern = 'daily' | 'weekly' | 'monthly' | null;
 // Waiting for customer response types
 export type WaitingContactType = 'call' | 'email' | 'other';
 
+// Attachment category type (defined before Attachment interface for clarity)
+// Note: 'other' is a catch-all for unknown file types
+export type AttachmentCategory = 'document' | 'image' | 'audio' | 'video' | 'archive' | 'other';
+
 export interface Subtask {
   id: string;
   text: string;
@@ -18,7 +22,7 @@ export interface Subtask {
 export interface Attachment {
   id: string;
   file_name: string;
-  file_type: string;
+  file_type: AttachmentCategory;
   file_size: number;
   storage_path: string;
   mime_type: string;
@@ -61,7 +65,6 @@ export const ALLOWED_ATTACHMENT_TYPES = {
 } as const;
 
 export type AttachmentMimeType = keyof typeof ALLOWED_ATTACHMENT_TYPES;
-export type AttachmentCategory = 'document' | 'image' | 'audio' | 'video' | 'archive';
 
 // Max file size: 25MB
 export const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
@@ -311,27 +314,43 @@ export interface ChatAttachment {
   uploaded_at: string;
 }
 
-// Chat message types
+/**
+ * Chat message types
+ *
+ * Nullable pattern convention:
+ * - `field?: T` = Optional field, may not exist in payload
+ * - `field: T | null` = Required field that can be explicitly null (null has semantic meaning)
+ *
+ * For fields that may not exist in legacy data BUT where null is meaningful when present,
+ * we use `field?: T | null`. This is intentional to handle both cases.
+ */
 export interface ChatMessage {
+  // Required fields (always present)
   id: string;
   text: string;
   created_by: string;
   created_at: string;
+
+  // Truly optional fields (absence means "not applicable")
   related_todo_id?: string;
-  recipient?: string | null; // null = team chat, username = DM
-  reactions?: MessageReaction[]; // Tapback reactions
-  read_by?: string[]; // Users who have read this message
-  reply_to_id?: string | null; // ID of message being replied to
-  reply_to_text?: string | null; // Cached text of replied message
-  reply_to_user?: string | null; // Cached user of replied message
-  edited_at?: string | null; // Timestamp when message was edited
-  deleted_at?: string | null; // Timestamp when message was deleted (soft delete)
-  is_pinned?: boolean; // Whether message is pinned
-  pinned_by?: string | null; // User who pinned the message
-  pinned_at?: string | null; // When it was pinned
-  mentions?: string[]; // Array of mentioned usernames
-  agency_id?: string; // Multi-tenancy: which agency this message belongs to
-  attachments?: ChatAttachment[]; // Image/file attachments
+  reactions?: MessageReaction[];
+  read_by?: string[];
+  mentions?: string[];
+  agency_id?: string;
+  attachments?: ChatAttachment[];
+  is_pinned?: boolean;
+
+  // Nullable fields where null has semantic meaning:
+  // - null = explicit absence of value (e.g., no recipient = team chat)
+  // - undefined = field not in payload (legacy data)
+  recipient?: string | null;       // null = team chat, string = DM recipient
+  reply_to_id?: string | null;     // null = not a reply
+  reply_to_text?: string | null;   // null = not a reply
+  reply_to_user?: string | null;   // null = not a reply
+  edited_at?: string | null;       // null = never edited
+  deleted_at?: string | null;      // null = not deleted (soft delete)
+  pinned_by?: string | null;       // null = not pinned
+  pinned_at?: string | null;       // null = not pinned
 }
 
 // User presence status
@@ -347,7 +366,7 @@ export interface UserPresence {
 // Muted conversation settings
 export interface MutedConversation {
   conversation_key: string; // 'team' or username
-  muted_until?: string | null; // null = forever, date = until then
+  muted_until?: string | null; // null = muted forever, string = muted until date, undefined = not muted
 }
 
 // Chat conversation type

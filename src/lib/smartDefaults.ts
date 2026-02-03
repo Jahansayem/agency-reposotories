@@ -1,4 +1,4 @@
-import { Todo, TodoPriority } from '@/types/todo';
+import { TodoPriority } from '@/types/todo';
 import { supabase } from './supabaseClient';
 
 interface UserPattern {
@@ -26,19 +26,29 @@ interface SmartDefaults {
 
 /**
  * Analyze user's task creation patterns over the last 30 days
+ * @param userName - The user whose patterns to analyze
+ * @param agencyId - Optional agency ID to scope the query (for multi-tenancy)
  */
-export async function analyzeUserPatterns(userName: string): Promise<UserPattern> {
+export async function analyzeUserPatterns(userName: string, agencyId?: string): Promise<UserPattern> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Fetch user's recent tasks
-  const { data: recentTasks, error } = await supabase
+  // Build query with optional agency filter
+  let query = supabase
     .from('todos')
     .select('assigned_to, priority, due_date, created_at')
     .eq('created_by', userName)
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: false })
     .limit(100);
+
+  // Apply agency filter if provided (multi-tenancy support)
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  // Fetch user's recent tasks
+  const { data: recentTasks, error } = await query;
 
   if (error || !recentTasks || recentTasks.length === 0) {
     return {
@@ -96,19 +106,29 @@ export async function analyzeUserPatterns(userName: string): Promise<UserPattern
 
 /**
  * Generate smart default suggestions for a user
+ * @param userName - The user to generate defaults for
+ * @param agencyId - Optional agency ID to scope the query (for multi-tenancy)
  */
-export async function generateSmartDefaults(userName: string): Promise<SmartDefaults> {
+export async function generateSmartDefaults(userName: string, agencyId?: string): Promise<SmartDefaults> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Fetch user's recent tasks for analysis
-  const { data: recentTasks, error } = await supabase
+  // Build query with optional agency filter
+  let query = supabase
     .from('todos')
     .select('assigned_to, priority, due_date, created_at')
     .eq('created_by', userName)
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: false })
     .limit(100);
+
+  // Apply agency filter if provided (multi-tenancy support)
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  // Fetch user's recent tasks for analysis
+  const { data: recentTasks, error } = await query;
 
   if (error || !recentTasks || recentTasks.length === 0) {
     // No data - return neutral defaults

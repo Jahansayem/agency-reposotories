@@ -1672,7 +1672,7 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
 
         announce('Task reordered');
       } catch (error) {
-        console.error('Failed to persist task order:', error);
+        logger.error('Failed to persist task order', error as Error, { component: 'TodoList', action: 'handleDragEnd', taskId: active.id as string });
         // Rollback: restore the full snapshot
         setTodosInStore(snapshot);
         announce('Failed to reorder task. Please try again.');

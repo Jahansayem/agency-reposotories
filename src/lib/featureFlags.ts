@@ -59,8 +59,8 @@ const FEATURE_FLAGS: Record<FeatureFlag, () => FeatureFlagConfig> = {
   }),
 
   multi_tenancy: () => ({
-    enabled: process.env.NEXT_PUBLIC_ENABLE_MULTI_TENANCY === 'true',
-    description: 'Multi-tenant support for multiple Allstate agencies',
+    enabled: process.env.NEXT_PUBLIC_ENABLE_MULTI_TENANCY !== 'false', // Default to true
+    description: 'Multi-agency support',
   }),
 };
 

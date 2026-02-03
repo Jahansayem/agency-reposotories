@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Image as ImageIcon, X, Download, ZoomIn, Loader2, Paperclip } from 'lucide-react';
 import { ChatAttachment } from '@/types/todo';
 import { useChatAttachments } from '@/hooks/useChatAttachments';
+import { logger } from '@/lib/logger';
 
 /**
  * ChatAttachments Components
@@ -262,7 +263,7 @@ export function ImageLightbox({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download failed:', error);
+      logger.error('Download failed', error as Error, { component: 'ChatAttachments', action: 'handleDownload', fileName: attachment.file_name });
     }
   };
 

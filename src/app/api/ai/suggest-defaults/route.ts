@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateSmartDefaults } from '@/lib/smartDefaults';
 import { getCache, setCache, isRedisAvailable } from '@/lib/redis';
 import { logger } from '@/lib/logger';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,8 @@ export const dynamic = 'force-dynamic';
  *
  * Generate smart default suggestions for task creation based on user patterns.
  * Uses Redis caching with 5-minute TTL to reduce database queries.
+ *
+ * SECURITY: Uses withAgencyAuth to ensure users only see patterns from their own agency.
  *
  * Request body:
  * {
@@ -35,7 +38,10 @@ export const dynamic = 'force-dynamic';
  *   "cached": false
  * }
  */
-export async function POST(request: NextRequest) {
+async function handleSuggestDefaults(
+  request: NextRequest,
+  ctx: AgencyAuthContext
+): Promise<NextResponse> {
   try {
     const body = await request.json();
     const { userName } = body;
@@ -49,18 +55,21 @@ export async function POST(request: NextRequest) {
 
     logger.info('Generating smart defaults', {
       component: 'suggest-defaults-api',
-      userName,
+      // Note: userName intentionally omitted to comply with SEC-03 (No PII in logs)
+      agencyId: ctx.agencyId || 'none',
     });
 
-    // Check Redis cache first
-    const cacheKey = `smart-defaults:${userName}`;
-    const cached = await getCache<any>(cacheKey);
+    // Check Redis cache first - include agencyId in cache key for isolation
+    const cacheKey = ctx.agencyId
+      ? `smart-defaults:${ctx.agencyId}:${userName}`
+      : `smart-defaults:${userName}`;
+    const cached = await getCache<ReturnType<typeof generateSmartDefaults>>(cacheKey);
 
     if (cached) {
       logger.info('Returning cached smart defaults', {
         component: 'suggest-defaults-api',
-        userName,
         cached: true,
+        agencyId: ctx.agencyId || 'none',
       });
       return NextResponse.json({
         ...cached,
@@ -68,14 +77,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate new suggestions
-    const suggestions = await generateSmartDefaults(userName);
+    // Generate new suggestions - pass agencyId for multi-tenancy filtering
+    const suggestions = await generateSmartDefaults(userName, ctx.agencyId || undefined);
 
     logger.info('Generated smart defaults', {
       component: 'suggest-defaults-api',
-      userName,
       confidence: suggestions.confidence,
       basedOnTasks: suggestions.metadata.basedOnTasks,
+      agencyId: ctx.agencyId || 'none',
     });
 
     // Cache for 5 minutes (300 seconds)
@@ -98,3 +107,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withAgencyAuth(handleSuggestDefaults);

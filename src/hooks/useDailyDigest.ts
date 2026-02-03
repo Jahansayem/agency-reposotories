@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AuthUser } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 // Types based on the API response
 export interface DailyDigestTask {
@@ -136,7 +137,7 @@ export function useDailyDigest({
       setError(errorMessage);
       // Mark as fetched even on error to prevent infinite retry loop
       setLastFetched(new Date());
-      console.error('Error fetching daily digest:', err);
+      logger.error('Error fetching daily digest', err as Error, { component: 'useDailyDigest', action: 'fetchDigest', userName: currentUser?.name });
       return false;
     } finally {
       setLoading(false);
@@ -191,7 +192,7 @@ export function useDailyDigest({
       setError(errorMessage);
       // Mark as fetched even on error to prevent infinite retry loop
       setLastFetched(new Date());
-      console.error('Error generating daily digest:', err);
+      logger.error('Error generating daily digest', err as Error, { component: 'useDailyDigest', action: 'generateNow', userName: currentUser?.name });
     } finally {
       setGenerating(false);
     }

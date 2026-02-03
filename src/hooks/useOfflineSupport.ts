@@ -18,6 +18,7 @@ import {
   getOfflineStatus,
 } from '@/lib/db/offlineSync';
 import type { Todo, ChatMessage as Message } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 /**
  * useOfflineSupport Hook
@@ -70,7 +71,7 @@ export function useOfflineSupport() {
           }
         }
       } catch (error) {
-        console.error('Failed to initialize IndexedDB:', error);
+        logger.error('Failed to initialize IndexedDB', error as Error, { component: 'useOfflineSupport', action: 'initialize' });
       }
     }
 
@@ -97,7 +98,7 @@ export function useOfflineSupport() {
         setTodos(await getTodosFromIDB());
         setMessages(await getMessagesFromIDB());
       } catch (error) {
-        console.error('Failed to fetch data after coming online:', error);
+        logger.error('Failed to fetch data after coming online', error as Error, { component: 'useOfflineSupport', action: 'handleOnline' });
       }
 
       // Update sync status
@@ -251,7 +252,7 @@ export function useOfflineSupport() {
 
       updateSyncStatus();
     } catch (error) {
-      console.error('Failed to sync:', error);
+      logger.error('Failed to sync', error as Error, { component: 'useOfflineSupport', action: 'syncNow' });
       throw error;
     }
   }, [isOnline, updateSyncStatus]);

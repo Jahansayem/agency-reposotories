@@ -44,17 +44,49 @@ interface UpcomingTask {
 }
 
 /**
- * Memoized greeting component that handles its own time-based updates
- * This isolates the every-minute re-render to just this small component
- * instead of causing the entire Dashboard to re-render
+ * Memoized greeting component that handles its own time-based updates.
+ * Only re-renders at hour boundaries when the greeting actually changes:
+ * - 12:00 (morning -> afternoon)
+ * - 17:00 (afternoon -> evening)
+ * - 00:00 (evening -> morning)
+ * This reduces unnecessary re-renders from ~60/hour to 1/hour maximum.
  */
 const GreetingDisplay = memo(function GreetingDisplay() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    // Update every minute to potentially change greeting
-    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(interval);
+    // Calculate milliseconds until the next greeting change
+    // Greetings change at: 12:00 (morning -> afternoon), 17:00 (afternoon -> evening), 00:00 (evening -> morning)
+    const calculateMsUntilNextGreetingChange = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      const nextChangeHour = hour < 12 ? 12 : hour < 17 ? 17 : 24;
+
+      const nextChange = new Date(now);
+      if (nextChangeHour === 24) {
+        // Set to midnight of next day
+        nextChange.setDate(nextChange.getDate() + 1);
+        nextChange.setHours(0, 0, 0, 0);
+      } else {
+        nextChange.setHours(nextChangeHour, 0, 0, 0);
+      }
+
+      return nextChange.getTime() - now.getTime();
+    };
+
+    let timeoutId: NodeJS.Timeout;
+
+    const scheduleNextUpdate = () => {
+      const msUntilChange = calculateMsUntilNextGreetingChange();
+      timeoutId = setTimeout(() => {
+        setCurrentTime(new Date());
+        scheduleNextUpdate(); // Schedule the next hour boundary update
+      }, msUntilChange);
+    };
+
+    scheduleNextUpdate();
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const hour = currentTime.getHours();

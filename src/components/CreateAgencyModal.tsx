@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Building2, Loader2, Check, AlertCircle } from 'lucide-react';
 import { generateAgencySlug } from '@/types/agency';
 import type { Agency } from '@/types/agency';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -152,7 +153,7 @@ export function CreateAgencyModal({
       onClose();
 
     } catch (error) {
-      console.error('Failed to create agency:', error);
+      logger.error('Failed to create agency', error as Error, { component: 'CreateAgencyModal', action: 'handleSubmit' });
       setErrors({ general: 'Network error. Please try again.' });
     } finally {
       setIsSubmitting(false);

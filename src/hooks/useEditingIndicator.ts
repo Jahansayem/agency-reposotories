@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 /**
  * useEditingIndicator Hook
@@ -75,7 +76,7 @@ export function useEditingIndicator(
           },
         });
       } catch (error) {
-        console.error('Failed to broadcast editing status:', error);
+        logger.error('Failed to broadcast editing status', error as Error, { component: 'useEditingIndicator', action: 'broadcastEditing', task_id, editing });
       }
     },
     [] // No dependencies - uses ref for current user

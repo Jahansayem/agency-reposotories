@@ -9,6 +9,7 @@ import {
   disablePushNotifications,
   getServiceWorkerRegistration,
 } from '@/lib/webPushService';
+import { logger } from '@/lib/logger';
 
 /**
  * usePushNotifications Hook
@@ -79,7 +80,7 @@ export function usePushNotifications(currentUser?: User) {
         return false;
       }
     } catch (err) {
-      console.error('Subscription error:', err);
+      logger.error('Subscription error', err as Error, { component: 'usePushNotifications', action: 'subscribe', userId: currentUser?.id });
       setError(err instanceof Error ? err.message : 'Subscription failed');
       return false;
     } finally {
@@ -114,7 +115,7 @@ export function usePushNotifications(currentUser?: User) {
         return false;
       }
     } catch (err) {
-      console.error('Unsubscribe error:', err);
+      logger.error('Unsubscribe error', err as Error, { component: 'usePushNotifications', action: 'unsubscribe', userId: currentUser?.id });
       setError(err instanceof Error ? err.message : 'Unsubscribe failed');
       return false;
     } finally {

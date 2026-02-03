@@ -7,6 +7,7 @@ import { useAgency } from '@/contexts/AgencyContext';
 import type { AgencyRole } from '@/types/agency';
 import { InvitationForm } from '@/components/InvitationForm';
 import { PendingInvitationsList } from '@/components/PendingInvitationsList';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -132,7 +133,7 @@ export function AgencyMembersModal({
 
       setMembers(data.members || []);
     } catch (err) {
-      console.error('Failed to load members:', err);
+      logger.error('Failed to load members', err as Error, { component: 'AgencyMembersModal', action: 'loadMembers', agencyId: currentAgency?.id });
       setError(err instanceof Error ? err.message : 'Failed to load members');
     } finally {
       setIsLoading(false);
@@ -145,7 +146,7 @@ export function AgencyMembersModal({
       // For now, we'll just use the members list
       // TODO: Create /api/users endpoint to list all users
     } catch (err) {
-      console.error('Failed to load users:', err);
+      logger.error('Failed to load users', err as Error, { component: 'AgencyMembersModal', action: 'loadAllUsers' });
     }
   };
 
@@ -180,7 +181,7 @@ export function AgencyMembersModal({
       await loadMembers(); // Reload list
 
     } catch (err) {
-      console.error('Failed to add member:', err);
+      logger.error('Failed to add member', err as Error, { component: 'AgencyMembersModal', action: 'handleAddMember', agencyId: currentAgency?.id, selectedUser });
       setError(err instanceof Error ? err.message : 'Failed to add member');
     } finally {
       setIsSubmitting(false);
@@ -211,7 +212,7 @@ export function AgencyMembersModal({
       await loadMembers(); // Reload list
 
     } catch (err) {
-      console.error('Failed to remove member:', err);
+      logger.error('Failed to remove member', err as Error, { component: 'AgencyMembersModal', action: 'handleRemoveMember', agencyId: currentAgency?.id, memberId, memberName });
       setError(err instanceof Error ? err.message : 'Failed to remove member');
     } finally {
       setIsSubmitting(false);

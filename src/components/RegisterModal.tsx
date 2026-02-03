@@ -5,6 +5,7 @@ import { X, User, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { hashPin, getRandomUserColor, getUserInitials, isValidPin } from '@/lib/auth';
 import type { AuthUser } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -161,7 +162,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
         .single();
 
       if (createError) {
-        console.error('Registration error:', createError);
+        logger.error('Registration error', createError, { component: 'RegisterModal', action: 'handlePinSubmit', userName: name.trim() });
         if (createError.code === '23505') {
           // Unique constraint violation
           setError('This name is already taken. Please try a different name.');
@@ -183,7 +184,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
       onSuccess(newUser as AuthUser);
       onClose();
     } catch (err) {
-      console.error('Unexpected registration error:', err);
+      logger.error('Unexpected registration error', err as Error, { component: 'RegisterModal', action: 'handlePinSubmit', userName: name.trim() });
       setError('An unexpected error occurred. Please try again.');
       setIsSubmitting(false);
     }

@@ -8,6 +8,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { useAppShell } from './layout/AppShell';
 import { ChatPanelSkeleton } from './LoadingSkeletons';
 import { AuthUser, ChatConversation } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 const CHAT_STATE_KEY = 'floating_chat_last_conversation';
 
@@ -123,7 +124,7 @@ export default function FloatingChatButton({
 
         setUnreadCount(unread);
       } catch (err) {
-        console.error('Error fetching unread count:', err);
+        logger.error('Error fetching unread count', err as Error, { component: 'FloatingChatButton', action: 'fetchUnreadCount', userName: currentUser.name });
       }
     };
 

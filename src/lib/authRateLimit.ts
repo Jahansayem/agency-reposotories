@@ -12,6 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { logger } from './logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -90,7 +91,7 @@ export async function checkAuthRateLimit(
       .order('created_at', { ascending: false });
 
     if (ipError) {
-      console.error('Failed to check IP rate limit:', ipError);
+      logger.error('Failed to check IP rate limit', ipError, { component: 'authRateLimit', action: 'checkAuthRateLimit', ipAddress });
       // Fail open for database errors - but log it
       return {
         allowed: true,
@@ -162,7 +163,7 @@ export async function checkAuthRateLimit(
       totalAttempts,
     };
   } catch (error) {
-    console.error('Auth rate limit check error:', error);
+    logger.error('Auth rate limit check error', error as Error, { component: 'authRateLimit', action: 'checkAuthRateLimit', ipAddress, userName });
     // Fail open but log the error
     return {
       allowed: true,
@@ -195,7 +196,7 @@ export async function logFailedAuthAttempt(
     });
   } catch (error) {
     // Log error but don't throw - this is non-critical
-    console.error('Failed to log auth attempt:', error);
+    logger.error('Failed to log auth attempt', error as Error, { component: 'authRateLimit', action: 'logFailedAuthAttempt', ipAddress: entry.ipAddress, userName: entry.userName });
   }
 }
 
@@ -221,7 +222,7 @@ export async function logSuccessfulAuth(entry: AuthAttemptLogEntry): Promise<voi
     });
   } catch (error) {
     // Non-critical, don't throw
-    console.error('Failed to log successful auth:', error);
+    logger.error('Failed to log successful auth', error as Error, { component: 'authRateLimit', action: 'logSuccessfulAuth', ipAddress: entry.ipAddress, userName: entry.userName });
   }
 }
 
@@ -248,7 +249,7 @@ export async function clearAuthRateLimit(
       })
       .or(`ip_address.eq.${ipAddress},user_name.eq.${userName}`);
   } catch (error) {
-    console.error('Failed to clear rate limit:', error);
+    logger.error('Failed to clear rate limit', error as Error, { component: 'authRateLimit', action: 'clearAuthRateLimit', userName, ipAddress });
   }
 }
 

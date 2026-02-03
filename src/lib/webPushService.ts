@@ -8,6 +8,7 @@
  */
 
 import { fetchWithCsrf } from '@/lib/csrf';
+import { logger } from '@/lib/logger';
 
 // Get VAPID public key from environment
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -69,7 +70,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
     console.log('Service worker registered successfully');
     return registration;
   } catch (error) {
-    console.error('Service worker registration failed:', error);
+    logger.error('Service worker registration failed', error as Error, { component: 'webPushService', action: 'registerServiceWorker' });
     return null;
   }
 }
@@ -86,7 +87,7 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
     const registration = await navigator.serviceWorker.getRegistration();
     return registration || null;
   } catch (error) {
-    console.error('Failed to get service worker registration:', error);
+    logger.error('Failed to get service worker registration', error as Error, { component: 'webPushService', action: 'getServiceWorkerRegistration' });
     return null;
   }
 }
@@ -133,7 +134,7 @@ export async function unsubscribeFromPush(
     }
     return false;
   } catch (error) {
-    console.error('Failed to unsubscribe:', error);
+    logger.error('Failed to unsubscribe', error as Error, { component: 'webPushService', action: 'unsubscribeFromPush' });
     return false;
   }
 }
@@ -148,7 +149,7 @@ export async function getCurrentSubscription(): Promise<PushSubscription | null>
   try {
     return await registration.pushManager.getSubscription();
   } catch (error) {
-    console.error('Failed to get current subscription:', error);
+    logger.error('Failed to get current subscription', error as Error, { component: 'webPushService', action: 'getCurrentSubscription' });
     return null;
   }
 }
@@ -177,7 +178,7 @@ export async function saveSubscriptionToServer(
     const data = await response.json();
     return data.success === true;
   } catch (error) {
-    console.error('Failed to save subscription to server:', error);
+    logger.error('Failed to save subscription to server', error as Error, { component: 'webPushService', action: 'saveSubscriptionToServer', userId });
     return false;
   }
 }
@@ -206,7 +207,7 @@ export async function removeSubscriptionFromServer(
     const data = await response.json();
     return data.success === true;
   } catch (error) {
-    console.error('Failed to remove subscription from server:', error);
+    logger.error('Failed to remove subscription from server', error as Error, { component: 'webPushService', action: 'removeSubscriptionFromServer', userId });
     return false;
   }
 }
@@ -230,7 +231,7 @@ export async function enablePushNotifications(
       return { success: false, error: 'Notification permission was denied. Check your browser settings.' };
     }
   } catch (err) {
-    console.error('Permission request failed:', err);
+    logger.error('Permission request failed', err as Error, { component: 'webPushService', action: 'enablePushNotifications', userId });
     return { success: false, error: 'Failed to request notification permission' };
   }
 
@@ -271,7 +272,7 @@ export async function enablePushNotifications(
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error during push subscription';
-    console.error('Push subscription failed:', err);
+    logger.error('Push subscription failed', err as Error, { component: 'webPushService', action: 'enablePushNotifications', userId });
     return { success: false, error: message };
   }
 }

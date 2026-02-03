@@ -346,11 +346,17 @@ export default function ChatPanel({
   }, [conversation]);
 
   // Notification sound
+  // BUGFIX SILENT-001: Log audio playback errors instead of silently swallowing
   const playNotificationSound = useCallback(() => {
     if (isDndMode) return;
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch((error) => {
+        // Only log if it's not an AbortError (which happens when audio is interrupted by another play)
+        if (error.name !== 'AbortError') {
+          logger.warn('Failed to play notification sound', { component: 'ChatPanel', error: error.message });
+        }
+      });
     }
   }, [isDndMode]);
 
@@ -559,6 +565,7 @@ export default function ChatPanel({
   useEffect(() => { isDndModeRef.current = isDndMode; }, [isDndMode]);
 
   // Initialize audio
+  // BUGFIX REACT-002: Clear onerror handler to prevent closure memory leak
   useEffect(() => {
     const audio = new Audio(NOTIFICATION_SOUND_URL);
     audio.volume = 0.5;
@@ -569,6 +576,8 @@ export default function ChatPanel({
 
     return () => {
       if (audioRef.current) {
+        // Clear event handler to break closure reference
+        audioRef.current.onerror = null;
         audioRef.current.pause();
         audioRef.current.src = '';
         audioRef.current = null;

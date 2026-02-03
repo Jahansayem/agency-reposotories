@@ -7,7 +7,7 @@
 --           task_templates, device_tokens, goal_categories. Create new
 --           agency-scoped replacement policies.
 --   PART 2: Migrate roles from owner/admin/member to owner/manager/staff.
---           Update auth.is_admin() and public.is_agency_admin().
+--           Update public.is_admin() and public.is_agency_admin().
 --   PART 3: Expand agency_members.permissions JSONB to 20 flags per role.
 --   PART 4: Add current_agency_id to user_sessions and update
 --           validate_session_token RPC.
@@ -374,17 +374,18 @@ ALTER TABLE users ADD CONSTRAINT users_role_check
   CHECK (role IN ('owner', 'manager', 'staff'));
 
 -- -------------------------------------------------------
--- 2.5: Update auth.is_admin() to check ('owner', 'manager') (Finding M7)
+-- 2.5: Update public.is_admin() to check ('owner', 'manager') (Finding M7)
 --
 -- This function is defined in 20260114_security_improvements.sql and is
 -- used by hardening-era RLS policies on security_audit_log, auth_failure_log.
 -- After role migration, 'admin' no longer exists; managers need these privileges.
+-- Note: Changed from auth.is_admin to public.is_admin because auth schema is protected in Supabase.
 -- -------------------------------------------------------
 
-CREATE OR REPLACE FUNCTION auth.is_admin()
+CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
   SELECT COALESCE(
-    (SELECT role IN ('owner', 'manager') FROM users WHERE id = auth.user_id()),
+    (SELECT role IN ('owner', 'manager') FROM users WHERE id = public.get_current_user_id()),
     false
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
@@ -559,7 +560,7 @@ GRANT EXECUTE ON FUNCTION validate_session_token(TEXT) TO authenticated, anon;
 -- VERIFICATION COMMENTS
 -- ============================================================================
 
-COMMENT ON FUNCTION auth.is_admin() IS 'Check if current user is owner or manager (updated from owner/admin)';
+COMMENT ON FUNCTION public.is_admin() IS 'Check if current user is owner or manager (updated from owner/admin)';
 COMMENT ON FUNCTION public.is_agency_admin(UUID) IS 'Check if current user is owner or manager of specified agency (updated from owner/admin)';
 
 COMMIT;

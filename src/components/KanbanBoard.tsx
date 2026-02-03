@@ -41,7 +41,7 @@ import {
   Image,
   Video,
 } from 'lucide-react';
-import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask, RecurrencePattern, Attachment, WaitingContactType } from '@/types/todo';
+import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask, RecurrencePattern, Attachment, WaitingContactType, AttachmentCategory } from '@/types/todo';
 import Celebration from './Celebration';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 import { usePermission } from '@/hooks/usePermission';
@@ -221,12 +221,13 @@ function TaskDetailModal({
       const newAttachments: Attachment[] = [];
 
       for (const file of Array.from(files)) {
-        // Determine file type
-        let fileType: 'image' | 'document' | 'audio' | 'video' | 'other' = 'other';
+        // Determine file type using AttachmentCategory
+        let fileType: AttachmentCategory = 'other';
         if (file.type.startsWith('image/')) fileType = 'image';
         else if (file.type.startsWith('audio/')) fileType = 'audio';
         else if (file.type.startsWith('video/')) fileType = 'video';
         else if (file.type.includes('pdf') || file.type.includes('document') || file.type.includes('text')) fileType = 'document';
+        else if (file.type.includes('zip') || file.type.includes('rar') || file.type.includes('archive')) fileType = 'archive';
 
         // Create a temporary URL for the file (in real app, would upload to storage)
         const url = URL.createObjectURL(file);

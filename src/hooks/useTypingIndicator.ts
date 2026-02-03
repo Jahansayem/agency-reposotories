@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 /**
  * useTypingIndicator Hook
@@ -69,7 +70,7 @@ export function useTypingIndicator(
           },
         });
       } catch (error) {
-        console.error('Failed to broadcast typing status:', error);
+        logger.error('Failed to broadcast typing status', error as Error, { component: 'useTypingIndicator', action: 'broadcastTyping', channel, typing });
       }
     },
     [currentUser, channel]

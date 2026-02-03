@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/lib/supabaseClient';
 import { generateAgencySlug } from '@/types/agency';
 import { isFeatureEnabled } from '@/lib/featureFlags';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -222,7 +223,7 @@ export default function SignupPage() {
 
       setStep('complete');
     } catch (err) {
-      console.error('Signup error:', err);
+      logger.error('Signup error', err as Error, { component: 'SignupPage', action: 'handleSignup', userName: formData.userName, agencySlug: formData.agencySlug });
       setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       setIsLoading(false);

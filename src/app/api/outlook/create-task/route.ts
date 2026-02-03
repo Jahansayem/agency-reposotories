@@ -9,8 +9,45 @@ import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/o
 // Create Supabase client for server-side operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
+/**
+ * Get the default agency ID (Bealer Agency) for backward compatibility
+ * when no agency_id is provided in the request.
+ */
+async function getDefaultAgencyId(): Promise<string | null> {
+  const { data: agency, error } = await supabase
+    .from('agencies')
+    .select('id')
+    .eq('slug', 'bealer-agency')
+    .eq('is_active', true)
+    .single();
+
+  if (error || !agency) {
+    logger.warn('Default agency (bealer-agency) not found', {
+      component: 'OutlookCreateTaskAPI',
+      error: error?.message,
+    });
+    return null;
+  }
+
+  return agency.id;
+}
+
+/**
+ * Validate that the specified agency exists and is active
+ */
+async function validateAgency(agencyId: string): Promise<boolean> {
+  const { data: agency, error } = await supabase
+    .from('agencies')
+    .select('id')
+    .eq('id', agencyId)
+    .eq('is_active', true)
+    .single();
+
+  return !error && !!agency;
+}
 
 // Validate that createdBy is a valid user in the system
 async function validateCreator(createdBy: string): Promise<{ valid: boolean; userId?: string }> {
@@ -45,7 +82,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { text, assignedTo, priority, dueDate, createdBy } = await request.json();
+    const { text, assignedTo, priority, dueDate, createdBy, agency_id } = await request.json();
 
     // SECURITY: Validate that createdBy is a real user in the system
     // This prevents impersonation attacks
@@ -69,10 +106,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine target agency: use provided agency_id or fall back to default
+    let targetAgencyId: string | null = null;
+
+    if (agency_id) {
+      // Validate provided agency_id
+      const isValidAgency = await validateAgency(agency_id);
+      if (!isValidAgency) {
+        logger.security('Invalid agency_id in Outlook task creation', {
+          endpoint: '/api/outlook/create-task',
+          attemptedAgencyId: agency_id,
+          ip: request.headers.get('x-forwarded-for') || 'unknown',
+        });
+        return NextResponse.json(
+          { success: false, error: 'Invalid agency_id - agency does not exist or is inactive' },
+          { status: 400 }
+        );
+      }
+      targetAgencyId = agency_id;
+    } else {
+      // Use default Bealer Agency for backward compatibility
+      targetAgencyId = await getDefaultAgencyId();
+      if (!targetAgencyId) {
+        logger.error('No default agency found for Outlook task creation', undefined, {
+          component: 'OutlookCreateTaskAPI',
+        });
+        return NextResponse.json(
+          { success: false, error: 'No agency specified and default agency not found' },
+          { status: 400 }
+        );
+      }
+      logger.info('Using default agency for Outlook task creation', {
+        component: 'OutlookCreateTaskAPI',
+        agencyId: targetAgencyId,
+      });
+    }
+
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    // Build the task object
+    // Build the task object with agency scoping
     const task: Record<string, unknown> = {
       id: taskId,
       text: text.trim(),
@@ -80,6 +153,7 @@ export async function POST(request: NextRequest) {
       status: 'todo',
       created_at: now,
       created_by: createdBy || 'Outlook Add-in',
+      agency_id: targetAgencyId,
     };
 
     // Add optional fields
@@ -125,6 +199,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       taskId,
+      agencyId: targetAgencyId,
       message: 'Task created successfully',
     });
   } catch (error) {

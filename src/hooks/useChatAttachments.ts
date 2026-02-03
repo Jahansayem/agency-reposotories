@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { ChatAttachment } from '@/types/todo';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/lib/logger';
 
 /**
  * useChatAttachments Hook
@@ -125,13 +126,13 @@ async function uploadDataUrl(dataUrl: string, path: string): Promise<string | nu
       });
 
     if (error) {
-      console.error('Failed to upload thumbnail:', error);
+      logger.error('Failed to upload thumbnail', error, { component: 'useChatAttachments', action: 'uploadDataUrl', path });
       return null;
     }
 
     return data.path;
   } catch (error) {
-    console.error('Failed to upload thumbnail:', error);
+    logger.error('Failed to upload thumbnail', error as Error, { component: 'useChatAttachments', action: 'uploadDataUrl', path });
     return null;
   }
 }
@@ -179,7 +180,7 @@ export function useChatAttachments() {
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        logger.error('Upload error', uploadError, { component: 'useChatAttachments', action: 'uploadAttachment', fileName: file.name });
         setError('Failed to upload file');
         return null;
       }
@@ -221,7 +222,7 @@ export function useChatAttachments() {
 
       return attachment;
     } catch (err) {
-      console.error('Attachment upload error:', err);
+      logger.error('Attachment upload error', err as Error, { component: 'useChatAttachments', action: 'uploadAttachment', fileName: file.name });
       setError(err instanceof Error ? err.message : 'Unknown error');
       return null;
     } finally {
@@ -239,7 +240,7 @@ export function useChatAttachments() {
         .remove([storagePath]);
 
       if (error) {
-        console.error('Delete error:', error);
+        logger.error('Delete error', error, { component: 'useChatAttachments', action: 'deleteAttachment', storagePath });
         return false;
       }
 
@@ -251,7 +252,7 @@ export function useChatAttachments() {
 
       return true;
     } catch (err) {
-      console.error('Attachment delete error:', err);
+      logger.error('Attachment delete error', err as Error, { component: 'useChatAttachments', action: 'deleteAttachment', storagePath });
       return false;
     }
   }, []);

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Workbox } from 'workbox-window';
+import { logger } from '@/lib/logger';
 
 /**
  * Service Worker Registration Component
@@ -78,7 +79,7 @@ export function ServiceWorkerRegistration() {
           }, 60 * 60 * 1000);
         })
         .catch((error) => {
-          console.error('Service Worker registration failed:', error);
+          logger.error('Service Worker registration failed', error as Error, { component: 'ServiceWorkerRegistration', action: 'register' });
         });
 
       // Cleanup happens automatically when component unmounts

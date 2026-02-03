@@ -46,7 +46,7 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'chat-attachments'
-  AND owner = auth.uid()::text
+  AND owner = auth.uid()
 );
 
 -- Grant permissions

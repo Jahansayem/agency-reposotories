@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { isFeatureEnabled } from '@/lib/featureFlags';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // Types
@@ -90,7 +91,7 @@ export default function JoinInvitationPage({
 
       setStep('account');
     } catch (err) {
-      console.error('Error validating invitation:', err);
+      logger.error('Error validating invitation', err as Error, { component: 'JoinInvitationPage', action: 'validateInvitation', token });
       setStep('invalid');
       setError('Failed to load invitation');
     }
@@ -142,7 +143,7 @@ export default function JoinInvitationPage({
 
       setStep('complete');
     } catch (err) {
-      console.error('Error creating account:', err);
+      logger.error('Error creating account', err as Error, { component: 'JoinInvitationPage', action: 'handleCreateAccount', userName, token });
       setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       setIsLoading(false);
@@ -182,7 +183,7 @@ export default function JoinInvitationPage({
 
       setStep('complete');
     } catch (err) {
-      console.error('Error accepting invitation:', err);
+      logger.error('Error accepting invitation', err as Error, { component: 'JoinInvitationPage', action: 'handleExistingUserLogin', existingUserName, token });
       setError(err instanceof Error ? err.message : 'Failed to join agency');
     } finally {
       setIsLoading(false);
