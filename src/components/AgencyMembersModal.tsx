@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Plus, Trash2, Crown, Shield, User as UserIcon, Loader2, AlertCircle, Check, Mail, Send } from 'lucide-react';
+import { X, Users, Plus, Trash2, Crown, Briefcase, User as UserIcon, Loader2, AlertCircle, Check, Mail, Send } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
 import type { AgencyRole } from '@/types/agency';
 import { InvitationForm } from '@/components/InvitationForm';
@@ -39,9 +39,20 @@ const getRoleIcon = (role: AgencyRole) => {
     case 'owner':
       return <Crown className="w-4 h-4" />;
     case 'manager':
-      return <Shield className="w-4 h-4" />;
+      return <Briefcase className="w-4 h-4" />;
     default:
       return <UserIcon className="w-4 h-4" />;
+  }
+};
+
+const getRoleLabel = (role: AgencyRole): string => {
+  switch (role) {
+    case 'owner':
+      return 'Owner';
+    case 'manager':
+      return 'Manager';
+    default:
+      return 'Staff';
   }
 };
 
@@ -446,7 +457,7 @@ export function AgencyMembersModal({
                               >
                                 <div className="flex items-center gap-2 justify-center">
                                   {getRoleIcon(role)}
-                                  <span className="capitalize text-sm">{role}</span>
+                                  <span className="text-sm">{getRoleLabel(role)}</span>
                                 </div>
                               </button>
                             ))}
@@ -546,7 +557,7 @@ export function AgencyMembersModal({
                             {/* Role Badge */}
                             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${getRoleBadgeColor(member.agency_role)}`}>
                               {getRoleIcon(member.agency_role)}
-                              <span className="text-xs font-medium capitalize">{member.agency_role}</span>
+                              <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
                             </div>
 
                             {/* Remove Button */}
@@ -574,7 +585,7 @@ export function AgencyMembersModal({
                     {/* Info Text */}
                     {!canManageMembers && (
                       <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                        Only agency owners and admins can manage members
+                        Only agency owners and managers can manage members
                       </p>
                     )}
                   </>

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, ChevronDown, Check, Plus, Shield, Crown, User, Users } from 'lucide-react';
+import { Building2, ChevronDown, Check, Plus, Briefcase, Crown, User, Users } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
 import type { AgencyRole } from '@/types/agency';
 
@@ -32,7 +32,7 @@ const getRoleIcon = (role: AgencyRole) => {
     case 'owner':
       return <Crown className="w-3 h-3" />;
     case 'manager':
-      return <Shield className="w-3 h-3" />;
+      return <Briefcase className="w-3 h-3" />;
     default:
       return <User className="w-3 h-3" />;
   }
@@ -52,11 +52,11 @@ const getRoleLabel = (role: AgencyRole) => {
 const getRoleColor = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
-      return 'text-yellow-500';
+      return 'text-yellow-600 dark:text-yellow-500';
     case 'manager':
-      return 'text-blue-500';
+      return 'text-blue-600 dark:text-blue-500';
     default:
-      return 'text-gray-500 dark:text-gray-400';
+      return 'text-gray-600 dark:text-gray-400';
   }
 };
 
