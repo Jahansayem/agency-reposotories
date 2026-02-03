@@ -128,23 +128,38 @@ const SortableTodoItem = memo(function SortableTodoItem({
     zIndex: isDragging ? 1000 : 1,
   };
 
+  // When drag is disabled, render TodoItem directly without any wrapper complexity
+  if (!isDragEnabled) {
+    return <TodoItem todo={todo} {...props} />;
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative ${isDragging ? 'shadow-2xl' : ''}`}
+      className={`group/sortable relative flex ${isDragging ? 'shadow-2xl rounded-[var(--radius-xl)]' : ''}`}
     >
-      {isDragEnabled && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center cursor-grab active:cursor-grabbing z-10 text-[var(--text-light)] hover:text-[var(--foreground)]"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
-      )}
-      <div className={isDragEnabled ? 'pl-7' : ''}>
+      {/* Drag handle - integrated into the card flow, not floating */}
+      <div
+        {...attributes}
+        {...listeners}
+        className={`
+          flex-shrink-0 w-6 flex items-center justify-center
+          cursor-grab active:cursor-grabbing
+          text-[var(--text-muted)]
+          opacity-40 hover:opacity-100 group-hover/sortable:opacity-60
+          transition-opacity touch-manipulation
+          rounded-l-[var(--radius-xl)]
+          ${isDragging ? 'opacity-100' : ''}
+        `}
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
+      >
+        <GripVertical className="w-4 h-4" />
+      </div>
+
+      {/* TodoItem takes remaining space */}
+      <div className="flex-1 min-w-0">
         <TodoItem todo={todo} {...props} />
       </div>
     </div>

@@ -119,10 +119,15 @@ function TodoListContent({
   onOpenDetail,
 }: TodoListContentProps) {
   // DnD sensors for drag-and-drop reordering
+  // Use distance + delay to prevent accidental drags when clicking on inline controls
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        // Require 10px of movement OR 150ms delay to start dragging
+        // This prevents accidental drags when clicking quickly on other elements
+        distance: 10,
+        delay: 150,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {

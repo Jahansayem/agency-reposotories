@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2, GripVertical } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO, WaitingContactType } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
 import AttachmentList from './AttachmentList';
@@ -694,14 +694,6 @@ function TodoItemComponent({
             )}
           </div>
         )}
-
-        {/* Drag handle - for manual reordering */}
-        <div
-          className="drag-handle flex items-center justify-center w-8 h-8 -ml-1 opacity-0 group-hover:opacity-30 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0"
-          title="Drag to reorder"
-        >
-          <GripVertical className="w-4 h-4 text-[var(--text-light)]" />
-        </div>
 
         {/* Completion checkbox - prominent one-click complete with 44x44px touch target */}
         <button
@@ -1423,7 +1415,7 @@ function TodoItemComponent({
               {/* Status */}
               {onStatusChange && (
                 <div>
-                  <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Status</label>
+                  <label className="text-label text-[var(--text-muted)] mb-1 block">Status</label>
                   <select
                     value={status}
                     onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
@@ -1438,7 +1430,7 @@ function TodoItemComponent({
 
               {/* Priority */}
               <div>
-                <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Priority</label>
+                <label className="text-label text-[var(--text-muted)] mb-1 block">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
@@ -1453,12 +1445,12 @@ function TodoItemComponent({
 
               {/* Due date with overdue warning */}
               <div>
-                <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block flex items-center gap-1.5">
+                <label className="text-label text-[var(--text-muted)] mb-1 block flex items-center gap-1.5">
                   Due Date
                   {dueDateStatus === 'overdue' && !todo.completed && (
                     <span className="inline-flex items-center gap-0.5 text-red-500">
                       <AlertTriangle className="w-3 h-3" />
-                      <span className="text-[10px] font-semibold normal-case">Overdue</span>
+                      <span className="text-badge normal-case">Overdue</span>
                     </span>
                   )}
                 </label>
@@ -1474,7 +1466,7 @@ function TodoItemComponent({
 
               {/* Assign to */}
               <div>
-                <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Assigned To</label>
+                <label className="text-label text-[var(--text-muted)] mb-1 block">Assigned To</label>
                 <select
                   value={todo.assigned_to || ''}
                   onChange={(e) => onAssign(todo.id, e.target.value || null)}
@@ -1493,7 +1485,7 @@ function TodoItemComponent({
               {/* Recurrence - half width */}
               {onSetRecurrence && (
                 <div>
-                  <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Repeat</label>
+                  <label className="text-label text-[var(--text-muted)] mb-1 block">Repeat</label>
                   <select
                     value={todo.recurrence || ''}
                     onChange={(e) => onSetRecurrence(todo.id, (e.target.value || null) as RecurrencePattern)}
@@ -1510,7 +1502,7 @@ function TodoItemComponent({
               {/* Reminder - half width */}
               {onSetReminder && !todo.completed && (
                 <div>
-                  <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] mb-1 block">Reminder</label>
+                  <label className="text-label text-[var(--text-muted)] mb-1 block">Reminder</label>
                   <ReminderPicker
                     value={todo.reminder_at || undefined}
                     dueDate={todo.due_date || undefined}
@@ -1524,7 +1516,7 @@ function TodoItemComponent({
             {/* Waiting for Customer Response - inline */}
             {onMarkWaiting && onClearWaiting && !todo.completed && (
               <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-[var(--border-subtle)]">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)] shrink-0">Customer Response</span>
+                <span className="text-label text-[var(--text-muted)] shrink-0">Customer Response</span>
                 <WaitingStatusBadge
                   todo={todo}
                   onMarkWaiting={(contactType, followUpHours) => onMarkWaiting(todo.id, contactType, followUpHours)}
