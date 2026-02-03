@@ -16,6 +16,7 @@ interface WaitingStatusBadgeProps {
   onMarkWaiting: (contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
   onClearWaiting: () => Promise<void>;
   compact?: boolean;
+  disabled?: boolean; // Disable the badge when user cannot edit
 }
 
 export function WaitingStatusBadge({
@@ -23,6 +24,7 @@ export function WaitingStatusBadge({
   onMarkWaiting,
   onClearWaiting,
   compact = false,
+  disabled = false,
 }: WaitingStatusBadgeProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -125,8 +127,12 @@ export function WaitingStatusBadge({
           </div>
           <button
             onClick={handleClearWaiting}
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-colors disabled:opacity-50"
+            disabled={loading || disabled}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-white text-sm font-medium transition-colors ${
+              disabled
+                ? 'opacity-60 cursor-not-allowed bg-green-500'
+                : 'bg-green-500 hover:bg-green-600 disabled:opacity-50'
+            }`}
           >
             <CheckCircle className="w-4 h-4" />
             <span>Responded</span>
@@ -136,8 +142,13 @@ export function WaitingStatusBadge({
         // Not waiting - show buttons to mark as waiting
         <div className="relative">
           <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] text-sm font-medium transition-colors"
+            onClick={() => !disabled && setShowMenu(!showMenu)}
+            disabled={disabled}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm font-medium transition-colors ${
+              disabled
+                ? 'opacity-60 cursor-not-allowed bg-[var(--surface)]'
+                : 'bg-[var(--surface)] hover:bg-[var(--surface-hover)]'
+            }`}
           >
             <Clock className="w-4 h-4 text-purple-500" />
             <span>Mark Waiting</span>

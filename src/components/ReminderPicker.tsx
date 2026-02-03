@@ -12,6 +12,7 @@ interface ReminderPickerProps {
   onChange: (reminderTime: string | null, reminderType?: ReminderType) => void;
   compact?: boolean; // Compact mode for inline display
   className?: string;
+  disabled?: boolean; // Disable the picker when user cannot edit
 }
 
 interface QuickOption {
@@ -94,6 +95,7 @@ export default function ReminderPicker({
   onChange,
   compact = false,
   className = '',
+  disabled = false,
 }: ReminderPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showCustom, setShowCustom] = useState(false);
@@ -226,11 +228,14 @@ export default function ReminderPicker({
         <button
           ref={buttonRef}
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all hover:shadow-sm min-h-[44px] touch-manipulation ${
-            parsedValue
-              ? 'border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'
-              : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)] text-[var(--text-muted)]'
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          disabled={disabled}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all min-h-[44px] touch-manipulation ${
+            disabled
+              ? 'opacity-60 cursor-not-allowed border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-muted)]'
+              : parsedValue
+                ? 'border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:shadow-sm'
+                : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)] text-[var(--text-muted)] hover:shadow-sm'
           }`}
         >
           <Bell className={`w-3.5 h-3.5 flex-shrink-0 ${parsedValue ? 'text-amber-500' : 'text-[var(--text-muted)]'}`} />

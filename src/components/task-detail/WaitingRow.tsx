@@ -7,12 +7,15 @@ interface WaitingRowProps {
   todo: Todo;
   onMarkWaiting: (contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
   onClearWaiting: () => Promise<void>;
+  /** Whether user can edit the task (has permission or owns the task) */
+  canEdit?: boolean;
 }
 
 export default function WaitingRow({
   todo,
   onMarkWaiting,
   onClearWaiting,
+  canEdit = true,
 }: WaitingRowProps) {
   if (todo.completed) {
     return null;
@@ -27,6 +30,7 @@ export default function WaitingRow({
         todo={todo}
         onMarkWaiting={onMarkWaiting}
         onClearWaiting={onClearWaiting}
+        disabled={!canEdit}
       />
     </div>
   );

@@ -7,6 +7,8 @@ interface ReminderRowProps {
   dueDate?: string;
   completed: boolean;
   onSetReminder: (time: string | null) => void;
+  /** Whether user can edit the task (has permission or owns the task) */
+  canEdit?: boolean;
 }
 
 export default function ReminderRow({
@@ -14,6 +16,7 @@ export default function ReminderRow({
   dueDate,
   completed,
   onSetReminder,
+  canEdit = true,
 }: ReminderRowProps) {
   if (completed) {
     return null;
@@ -27,6 +30,7 @@ export default function ReminderRow({
         dueDate={dueDate}
         onChange={(time) => onSetReminder(time)}
         compact
+        disabled={!canEdit}
       />
     </div>
   );

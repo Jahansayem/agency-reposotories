@@ -187,6 +187,7 @@ export default function TaskDetailModal({
             dueDate={todo.due_date || undefined}
             completed={todo.completed}
             onSetReminder={detail.setReminder}
+            canEdit={canEdit}
           />
 
           {/* Waiting for response row */}
@@ -195,6 +196,7 @@ export default function TaskDetailModal({
               todo={todo}
               onMarkWaiting={detail.markWaiting}
               onClearWaiting={detail.clearWaiting}
+              canEdit={canEdit}
             />
           )}
 
@@ -273,6 +275,7 @@ export default function TaskDetailModal({
         completed={todo.completed}
         onToggleComplete={handleToggleComplete}
         onClose={handleClose}
+        canEdit={canEdit}
       />
     </Modal>
   );

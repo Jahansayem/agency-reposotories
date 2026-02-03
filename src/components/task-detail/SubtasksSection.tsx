@@ -148,11 +148,14 @@ export default function SubtasksSection({
                         type="button"
                         role="checkbox"
                         aria-checked={subtask.completed}
-                        onClick={() => onToggleSubtask(subtask.id)}
+                        onClick={() => canEdit && onToggleSubtask(subtask.id)}
+                        disabled={!canEdit}
                         className={`flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-[5px] border-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
-                          subtask.completed
-                            ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
-                            : 'border-[var(--border)] bg-transparent text-transparent hover:border-[var(--border-hover)]'
+                          !canEdit
+                            ? 'opacity-60 cursor-not-allowed border-[var(--border)] ' + (subtask.completed ? 'bg-[var(--accent)] text-white' : 'bg-transparent text-transparent')
+                            : subtask.completed
+                              ? 'border-[var(--accent)] bg-[var(--accent)] text-white'
+                              : 'border-[var(--border)] bg-transparent text-transparent hover:border-[var(--border-hover)]'
                         }`}
                       >
                         {subtask.completed && <Check className="w-3 h-3" />}
