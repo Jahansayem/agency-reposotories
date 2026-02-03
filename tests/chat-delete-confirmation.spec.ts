@@ -83,7 +83,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     await page.click('button:has-text("Delete")');
 
     // Click Cancel
-    await page.click('button:has-text("Cancel")').first();
+    await page.locator('button:has-text("Cancel")').first().click();
     await page.waitForTimeout(300);
 
     // Dialog should close
@@ -318,12 +318,12 @@ test.describe('Chat - Delete Message Confirmation', () => {
     // Delete first message
     let messageRow = page.locator(`text=${testMessage1}`).locator('..');
     await messageRow.hover();
-    await page.click('button[aria-label*="Message options"]').first();
-    await page.click('button:has-text("Delete")').first();
+    await page.locator('button[aria-label*="Message options"]').first().click();
+    await page.locator('button:has-text("Delete")').first().click();
     await page.waitForTimeout(200);
 
     // Confirm
-    await page.click('button:has-text("Delete")').last();
+    await page.locator('button:has-text("Delete")').last().click();
     await page.waitForTimeout(500);
 
     // Delete second message
@@ -334,7 +334,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     await page.waitForTimeout(200);
 
     // Confirm
-    await page.click('button:has-text("Delete")').last();
+    await page.locator('button:has-text("Delete")').last().click();
     await page.waitForTimeout(500);
 
     // Both messages should be deleted

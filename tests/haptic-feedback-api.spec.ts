@@ -83,11 +83,11 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       await page.evaluate(() => {
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = function(pattern: number | number[]): boolean {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           (window as any).trackVibration(pattern);
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Complete the task
@@ -117,13 +117,13 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       await page.evaluate(() => {
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = function(pattern: number | number[]): boolean {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           if (typeof pattern === 'number') {
             (window as any).trackButtonVibration(pattern);
           }
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Click a button (should trigger medium haptic: 20ms)
@@ -157,13 +157,13 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       await page.evaluate(() => {
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = function(pattern: number | number[]): boolean {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           if (typeof pattern === 'number') {
             (window as any).trackDeletionVibration(pattern);
           }
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Click delete
@@ -201,13 +201,13 @@ test.describe('Haptic Feedback API Integration', () => {
       });
 
       await page.evaluate(() => {
-        const originalVibrate = navigator.vibrate;
-        navigator.vibrate = function(pattern: number | number[]): boolean {
+        const originalVibrate = navigator.vibrate.bind(navigator);
+        navigator.vibrate = function(pattern: VibratePattern): boolean {
           if (Array.isArray(pattern)) {
             (window as any).trackSwipeVibration(pattern);
           }
-          return originalVibrate.call(navigator, pattern);
-        };
+          return originalVibrate(pattern);
+        } as typeof navigator.vibrate;
       });
 
       // Simulate swipe gesture (platform-dependent)

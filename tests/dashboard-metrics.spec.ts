@@ -96,9 +96,26 @@ test.describe('Dashboard Metrics - Completed Today', () => {
   });
 
   test('should update in real-time across tabs', async ({ browser }) => {
+    // Open first tab
+    const context1 = await browser.newContext();
+    const page1 = await context1.newPage();
+
+    // Login in first tab
+    await page1.goto('http://localhost:3000');
+    await page1.click('[data-testid="user-card-Derrick"]');
+    await page1.waitForTimeout(600);
+    await page1.waitForTimeout(600);
+    const pinInputs1 = page1.locator('input[type="password"]');
+    await expect(pinInputs1.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs1.nth(i).fill('8008'[i]);
+      await page1.waitForTimeout(100);
+    }
+    await expect(page1.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
+
     // Open second tab
-    const context = await browser.newContext();
-    const page2 = await context.newPage();
+    const context2 = await browser.newContext();
+    const page2 = await context2.newPage();
 
     // Login in second tab
     await page2.goto('http://localhost:3000');
@@ -114,7 +131,7 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     await expect(page2.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
     // Get initial count from both tabs
-    const doneToday1 = page.locator('text=Done Today').locator('..').locator('p').first();
+    const doneToday1 = page1.locator('text=Done Today').locator('..').locator('p').first();
     const doneToday2 = page2.locator('text=Done Today').locator('..').locator('p').first();
 
     const initialCount1 = parseInt(await doneToday1.textContent() || '0');
@@ -123,21 +140,21 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     expect(initialCount1).toBe(initialCount2);
 
     // Complete a task in tab 1
-    await page.click('button:has-text("Tasks")');
-    await page.waitForTimeout(500);
+    await page1.click('button:has-text("Tasks")');
+    await page1.waitForTimeout(500);
     const taskText = `Real-time test ${Date.now()}`;
-    await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
-    await page.fill('[data-testid="add-task-input"]', taskText);
-    await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
-    const taskCheckbox = page.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
+    await page1.click('button:has-text("New Task")');
+    await page1.waitForTimeout(300);
+    await page1.fill('[data-testid="add-task-input"]', taskText);
+    await page1.keyboard.press('Enter');
+    await page1.waitForTimeout(500);
+    const taskCheckbox = page1.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
     await taskCheckbox.click();
-    await page.waitForTimeout(1000); // Wait for real-time sync
+    await page1.waitForTimeout(1000); // Wait for real-time sync
 
     // Go to dashboard in tab 1
-    await page.click('button:has-text("Dashboard")');
-    await page.waitForTimeout(500);
+    await page1.click('button:has-text("Dashboard")');
+    await page1.waitForTimeout(500);
 
     // Check both tabs - should both show updated count
     const newCount1 = parseInt(await doneToday1.textContent() || '0');
@@ -146,7 +163,8 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     expect(newCount1).toBe(initialCount1 + 1);
     expect(newCount2).toBe(initialCount2 + 1);
 
-    await context.close();
+    await context1.close();
+    await context2.close();
   });
 
   test('should have accessible aria-label', async ({ page }) => {

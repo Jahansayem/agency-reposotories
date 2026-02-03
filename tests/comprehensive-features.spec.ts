@@ -152,9 +152,10 @@ test.describe('Comprehensive Feature Tests', () => {
     });
 
     test('should create task with priority selection', async ({ page }) => {
-      const input = await setupUser(page);
+      await setupUser(page);
 
       const taskName = uniqueTaskName('HighPriority');
+      const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
       await input.fill(taskName);
 

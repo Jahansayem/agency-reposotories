@@ -121,8 +121,8 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
       });
 
       // If roving tabindex is implemented, should be at last index (4 for 5 tasks)
-      if (focusedElement !== null) {
-        expect(parseInt(focusedElement)).toBeGreaterThanOrEqual(0);
+      if (focusedElement !== null && focusedElement !== undefined) {
+        expect(parseInt(focusedElement, 10)).toBeGreaterThanOrEqual(0);
       }
     });
   });

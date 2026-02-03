@@ -56,8 +56,6 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
 
   // Wait for main app to load
   await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
-
-  return todoInput;
 }
 
 test.describe('Insurance Patterns - Pattern Detection via UI', () => {

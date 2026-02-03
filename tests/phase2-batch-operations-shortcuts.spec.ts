@@ -71,8 +71,8 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await expect(selectionCount).toContainText(String(todoCount));
 
     // All checkboxes should be checked
-    const checkboxes = page.locator('[data-testid="todo-checkbox"]');
-    const checkedCount = await checkboxes.filter({ checked: true }).count();
+    const checkedCheckboxes = page.locator('[data-testid="todo-checkbox"]:checked');
+    const checkedCount = await checkedCheckboxes.count();
     expect(checkedCount).toBe(todoCount);
   });
 
@@ -128,8 +128,8 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await expect(page.locator('[data-testid="bulk-action-bar"]')).not.toBeVisible({ timeout: 2000 });
 
     // No checkboxes should be checked
-    const checkboxes = page.locator('[data-testid="todo-checkbox"]');
-    const checkedCount = await checkboxes.filter({ checked: true }).count();
+    const checkedCheckboxes = page.locator('[data-testid="todo-checkbox"]:checked');
+    const checkedCount = await checkedCheckboxes.count();
     expect(checkedCount).toBe(0);
   });
 
