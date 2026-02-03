@@ -18,10 +18,30 @@ export interface SuggestedDefaults {
   cached?: boolean;
 }
 
+// Helper to get CSRF token from the /api/csrf endpoint
+// The new HttpOnly pattern requires fetching the token from the server
+const fetchCsrfToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/csrf', { credentials: 'include' });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.token || null;
+  } catch {
+    return null;
+  }
+};
+
 const fetcher = async (url: string, userName: string): Promise<SuggestedDefaults> => {
+  // Fetch CSRF token first (required for protected endpoints)
+  const csrfToken = await fetchCsrfToken();
+
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // Important: include cookies for session
+    headers: {
+      'Content-Type': 'application/json',
+      ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
+    },
     body: JSON.stringify({ userName }),
   });
 

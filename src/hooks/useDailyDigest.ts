@@ -55,18 +55,18 @@ interface UseDailyDigestReturn {
   hasDigest: boolean;
 }
 
-// Helper to get CSRF token from cookie
-// Supports both new HttpOnly pattern and legacy pattern
-const getCsrfToken = (): string | null => {
-  if (typeof document === 'undefined') return null;
-
-  // Try legacy csrf_token first (backward compatibility)
-  const legacyMatch = document.cookie.match(/csrf_token=([^;]+)/);
-  if (legacyMatch) {
-    return legacyMatch[1];
+// Helper to get CSRF token from the /api/csrf endpoint
+// The new HttpOnly pattern requires fetching the token from the server
+// since the csrf_secret cookie is HttpOnly and cannot be read by JS
+const fetchCsrfToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/csrf', { credentials: 'include' });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.token || null; // Returns format: "nonce:signature"
+  } catch {
+    return null;
   }
-
-  return null;
 };
 
 export function useDailyDigest({
@@ -92,10 +92,13 @@ export function useDailyDigest({
     setError(null);
 
     try {
-      const csrfToken = getCsrfToken();
+      // Fetch CSRF token first (required for protected endpoints)
+      const csrfToken = await fetchCsrfToken();
+
       // Fetch from stored digests instead of generating on-demand
       const response = await fetch('/api/digest/latest', {
         method: 'GET',
+        credentials: 'include', // Important: include cookies for session
         headers: {
           'Content-Type': 'application/json',
           'X-User-Name': currentUser.name,
@@ -131,6 +134,8 @@ export function useDailyDigest({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
       setError(errorMessage);
+      // Mark as fetched even on error to prevent infinite retry loop
+      setLastFetched(new Date());
       console.error('Error fetching daily digest:', err);
       return false;
     } finally {
@@ -146,9 +151,12 @@ export function useDailyDigest({
     setError(null);
 
     try {
-      const csrfToken = getCsrfToken();
+      // Fetch CSRF token first (required for protected endpoints)
+      const csrfToken = await fetchCsrfToken();
+
       const response = await fetch('/api/ai/daily-digest', {
         method: 'POST',
+        credentials: 'include', // Important: include cookies for session
         headers: {
           'Content-Type': 'application/json',
           'X-User-Name': currentUser.name,
@@ -181,6 +189,8 @@ export function useDailyDigest({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate digest';
       setError(errorMessage);
+      // Mark as fetched even on error to prevent infinite retry loop
+      setLastFetched(new Date());
       console.error('Error generating daily digest:', err);
     } finally {
       setGenerating(false);
@@ -188,8 +198,9 @@ export function useDailyDigest({
   }, [currentUser?.name, enabled]);
 
   // Auto-fetch on mount if enabled, and auto-generate if no stored digest exists
+  // Note: error check prevents retry loops, lastFetched prevents initial re-triggers
   useEffect(() => {
-    if (autoFetch && enabled && !digest && !loading && !generating && !lastFetched) {
+    if (autoFetch && enabled && !digest && !loading && !generating && !lastFetched && !error) {
       fetchDigest().then((found) => {
         if (!found && !autoGenerateAttempted.current) {
           autoGenerateAttempted.current = true;
@@ -197,7 +208,7 @@ export function useDailyDigest({
         }
       });
     }
-  }, [autoFetch, enabled, digest, loading, generating, lastFetched, fetchDigest, generateNow]);
+  }, [autoFetch, enabled, digest, loading, generating, lastFetched, error, fetchDigest, generateNow]);
 
   return {
     digest,
