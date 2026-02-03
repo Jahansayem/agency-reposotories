@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger';
 import { AppShell, useAppShell } from './layout';
 import { useTodoStore } from '@/store/todoStore';
 import { useTodoData } from '@/hooks';
+import { usePermission } from '@/hooks/usePermission';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
@@ -74,6 +75,20 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   } = useAppShell();
   const { theme } = useTheme();
   const { currentAgencyId } = useAgency();
+
+  // Permission checks for restricted views
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canViewArchive = usePermission('can_view_archive');
+
+  // Redirect to tasks view if user navigates to a restricted view without permission
+  useEffect(() => {
+    if (activeView === 'goals' && !canViewStrategicGoals) {
+      setActiveView('tasks');
+    }
+    if (activeView === 'archive' && !canViewArchive) {
+      setActiveView('tasks');
+    }
+  }, [activeView, canViewStrategicGoals, canViewArchive, setActiveView]);
 
   // Agency key forces full remount of view components on agency switch (H7 fix)
   const agencyKey = currentAgencyId || 'default';
@@ -318,6 +333,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         );
 
       case 'goals':
+        // Strategic goals requires permission - redirect handled by useEffect
+        // This guard prevents any flash of content while redirecting
+        if (!canViewStrategicGoals) {
+          return null;
+        }
         // Strategic goals is handled by TodoList internally
         return (
           <TodoList
@@ -335,6 +355,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         );
 
       case 'archive':
+        // Archive requires permission - redirect handled by useEffect
+        // This guard prevents any flash of content while redirecting
+        if (!canViewArchive) {
+          return null;
+        }
         // Full-featured archive browser
         return (
           <ArchiveView
@@ -387,6 +412,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     initialFilter,
     showAddTask,
     selectedTaskId,
+    canViewStrategicGoals,
+    canViewArchive,
     handleNavigateToTasks,
     handleTaskLinkClick,
     handleSelectedTaskHandled,
