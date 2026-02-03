@@ -62,9 +62,8 @@ export default function CommandPalette({
 
   // Permission checks for gated commands
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
-  const permissionResults: Record<string, boolean> = {
-    can_view_strategic_goals: canViewStrategicGoals,
-  };
+  const canViewArchive = usePermission('can_view_archive');
+  const canManageTemplates = usePermission('can_manage_templates');
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -136,6 +135,7 @@ export default function CommandPalette({
       icon: Archive,
       category: 'navigation',
       action: () => { setActiveView('archive'); onClose(); },
+      permission: 'can_view_archive',
     },
 
     // Actions
@@ -199,9 +199,11 @@ export default function CommandPalette({
 
     return commands
       .filter(cmd => {
-        // Permission-gated commands
-        if (cmd.permission && permissionResults[cmd.permission] === false) {
-          return false;
+        // Permission-gated commands - inline checks for proper memoization
+        if (cmd.permission) {
+          if (cmd.permission === 'can_view_strategic_goals' && !canViewStrategicGoals) return false;
+          if (cmd.permission === 'can_view_archive' && !canViewArchive) return false;
+          if (cmd.permission === 'can_manage_templates' && !canManageTemplates) return false;
         }
 
         // Search filter
@@ -212,7 +214,7 @@ export default function CommandPalette({
           cmd.category.toLowerCase().includes(lowerQuery)
         );
       });
-  }, [commands, query, permissionResults]);
+  }, [commands, query, canViewStrategicGoals, canViewArchive, canManageTemplates]);
 
   // Group commands by category
   const groupedCommands = useMemo(() => {
