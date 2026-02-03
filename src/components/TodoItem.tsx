@@ -305,9 +305,16 @@ function TodoItemComponent({
   const [expanded, setExpanded] = useState(false);
 
   // Permission checks
-  const canDeleteTasks = usePermission('can_delete_tasks');
+  const canDeleteTasksPerm = usePermission('can_delete_tasks');
   const canEditAnyTask = usePermission('can_edit_any_task');
   const canAssignTasks = usePermission('can_assign_tasks');
+
+  // Ownership check - users can always modify their own tasks
+  const isOwner = todo.created_by === currentUserName;
+
+  // Derived permissions combining permission flags with ownership
+  const canEdit = canEditAnyTask || isOwner;
+  const canDeleteTasks = canDeleteTasksPerm || isOwner;
 
   // Auto-expand when triggered from external navigation (e.g., dashboard task click)
   useEffect(() => {
@@ -698,15 +705,18 @@ function TodoItemComponent({
         {/* Completion checkbox - prominent one-click complete with 44x44px touch target */}
         <button
           onClick={handleToggle}
-          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 hover:scale-110 active:scale-95`}
+          disabled={!canEdit}
+          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ${canEdit ? 'hover:scale-110 active:scale-95' : 'opacity-50 cursor-not-allowed'}`}
           style={{ touchAction: 'manipulation' }}
-          title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
+          title={!canEdit ? 'You do not have permission to modify this task' : todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
         >
           {/* Visual checkbox */}
           <span className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
             todo.completed
               ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
-              : 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
+              : canEdit
+                ? 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
+                : 'border-[var(--border)]'
           }`}>
             {todo.completed && <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
           </span>
@@ -992,13 +1002,15 @@ function TodoItemComponent({
                     if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
                     savedFieldTimerRef.current = setTimeout(() => setSavedField(null), 1500);
                   }}
-                  disabled={savingDate}
+                  disabled={savingDate || !canEdit}
                   className={`text-xs px-2 py-1 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none transition-all ${
-                    savingDate
-                      ? 'border-[var(--accent)] opacity-70 cursor-wait'
-                      : savedField === 'date'
-                        ? 'border-[var(--success)]'
-                        : 'border-[var(--border)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]'
+                    !canEdit
+                      ? 'opacity-60 cursor-not-allowed'
+                      : savingDate
+                        ? 'border-[var(--accent)] opacity-70 cursor-wait'
+                        : savedField === 'date'
+                          ? 'border-[var(--success)]'
+                          : 'border-[var(--border)] hover:border-[var(--accent)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]'
                   }`}
                   aria-label="Set due date"
                 />
@@ -1061,9 +1073,9 @@ function TodoItemComponent({
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => e.stopPropagation()}
-                  disabled={savingPriority}
+                  disabled={savingPriority || !canEdit}
                   className={`text-xs px-2 py-1 pr-5 rounded-[var(--radius-sm)] border bg-[var(--surface)] text-[var(--foreground)] outline-none transition-all ${
-                    savingPriority
+                    !canEdit ? 'opacity-60 cursor-not-allowed' : savingPriority
                       ? 'border-[var(--accent)] opacity-70 cursor-wait'
                       : savedField === 'priority'
                         ? 'border-[var(--success)]'
@@ -1134,7 +1146,7 @@ function TodoItemComponent({
                     onClick={(e) => e.stopPropagation()}
                   >
                     {/* Edit */}
-                    {onUpdateText && canEditAnyTask && (
+                    {onUpdateText && canEdit && (
                       <button
                         ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
                         role="menuitem"

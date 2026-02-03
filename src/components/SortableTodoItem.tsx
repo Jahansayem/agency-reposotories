@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import TodoItem from './TodoItem';
 import { Todo, TodoPriority, TodoStatus, RecurrencePattern, Subtask, Attachment, WaitingContactType } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 
 interface SortableTodoItemProps {
   todo: Todo;
@@ -112,6 +113,12 @@ const SortableTodoItem = memo(function SortableTodoItem({
   isDragEnabled = true,
   ...props
 }: SortableTodoItemProps) {
+  // Permission check for reordering - hide drag handle if user lacks permission
+  const canReorderTasks = usePermission('can_reorder_tasks');
+
+  // Effective drag enabled state: both prop-based and permission-based
+  const effectiveDragEnabled = isDragEnabled && canReorderTasks;
+
   const {
     attributes,
     listeners,
@@ -119,7 +126,7 @@ const SortableTodoItem = memo(function SortableTodoItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: todo.id, disabled: !isDragEnabled });
+  } = useSortable({ id: todo.id, disabled: !effectiveDragEnabled });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -128,8 +135,8 @@ const SortableTodoItem = memo(function SortableTodoItem({
     zIndex: isDragging ? 1000 : 1,
   };
 
-  // When drag is disabled, render TodoItem directly without any wrapper complexity
-  if (!isDragEnabled) {
+  // When drag is disabled (either by prop or permission), render TodoItem directly without drag handle
+  if (!effectiveDragEnabled) {
     return <TodoItem todo={todo} {...props} />;
   }
 
