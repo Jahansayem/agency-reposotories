@@ -9,6 +9,8 @@ interface NotesSectionProps {
   onNotesChange: (notes: string) => void;
   onSaveNotes: () => void;
   transcription?: string;
+  /** Whether user can edit the task (has permission or owns the task) */
+  canEdit?: boolean;
 }
 
 export default function NotesSection({
@@ -16,6 +18,7 @@ export default function NotesSection({
   onNotesChange,
   onSaveNotes,
   transcription,
+  canEdit = true,
 }: NotesSectionProps) {
   const [isOpen, setIsOpen] = useState(!!notes || !!transcription);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,13 +76,17 @@ export default function NotesSection({
                   ref={textareaRef}
                   value={notes}
                   onChange={(e) => {
-                    onNotesChange(e.target.value);
-                    autoResize();
+                    if (canEdit) {
+                      onNotesChange(e.target.value);
+                      autoResize();
+                    }
                   }}
                   onBlur={onSaveNotes}
-                  placeholder="Add notes or context..."
+                  placeholder={canEdit ? "Add notes or context..." : "No notes"}
                   rows={4}
-                  className="w-full px-3 py-2.5 text-sm leading-relaxed resize-none bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-lg)] text-[var(--foreground)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] placeholder:text-[var(--text-muted)]"
+                  className={`w-full px-3 py-2.5 text-sm leading-relaxed resize-none bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-lg)] text-[var(--foreground)] outline-none transition-shadow focus:ring-2 focus:ring-[var(--accent)] focus:border-[var(--accent)] placeholder:text-[var(--text-muted)] ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  disabled={!canEdit}
+                  readOnly={!canEdit}
                 />
                 <span className="absolute bottom-2 right-3 text-label text-[var(--text-muted)] pointer-events-none select-none">
                   {notes.length}

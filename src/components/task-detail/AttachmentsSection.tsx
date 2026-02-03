@@ -18,6 +18,8 @@ interface AttachmentsSectionProps {
     attachments: Attachment[],
     skipDbUpdate?: boolean,
   ) => void;
+  /** Whether user can edit the task (has permission or owns the task) */
+  canEdit?: boolean;
 }
 
 export default function AttachmentsSection({
@@ -26,6 +28,7 @@ export default function AttachmentsSection({
   currentUserName,
   maxAttachments,
   onUpdateAttachments,
+  canEdit = true,
 }: AttachmentsSectionProps) {
   const [isOpen, setIsOpen] = useState(attachments.length > 0);
   const [showUpload, setShowUpload] = useState(false);
@@ -66,7 +69,7 @@ export default function AttachmentsSection({
           )}
         </button>
 
-        {attachments.length > 0 && attachments.length < maxAttachments && (
+        {canEdit && attachments.length > 0 && attachments.length < maxAttachments && (
           <button
             type="button"
             onClick={() => {
@@ -96,9 +99,9 @@ export default function AttachmentsSection({
                   attachments={attachments}
                   todoId={todoId}
                   onRemove={handleRemoveAttachment}
-                  canRemove={true}
+                  canRemove={canEdit}
                 />
-              ) : (
+              ) : canEdit ? (
                 <button
                   type="button"
                   onClick={() => setShowUpload(true)}
@@ -112,6 +115,10 @@ export default function AttachmentsSection({
                     {maxAttachments - attachments.length} of {maxAttachments} slots available
                   </span>
                 </button>
+              ) : (
+                <div className="text-center py-6 text-[var(--text-muted)] text-sm">
+                  No attachments
+                </div>
               )}
             </div>
           </motion.div>

@@ -16,6 +16,10 @@ interface MetadataSectionProps {
   onAssignChange: (user: string | null) => void;
   onRecurrenceChange: (recurrence: RecurrencePattern) => void;
   onSnooze: (days: number) => void;
+  /** Whether user can edit the task (has permission or owns the task) */
+  canEdit?: boolean;
+  /** Whether user can assign tasks to others */
+  canAssign?: boolean;
 }
 
 const STATUS_OPTIONS: { value: TodoStatus; label: string; icon: typeof Circle; color: string }[] = [
@@ -83,6 +87,8 @@ export default function MetadataSection({
   onAssignChange,
   onRecurrenceChange,
   onSnooze,
+  canEdit = true,
+  canAssign = true,
 }: MetadataSectionProps) {
   const [snoozeOpen, setSnoozeOpen] = useState(false);
   const snoozeRef = useRef<HTMLDivElement>(null);
@@ -121,8 +127,9 @@ export default function MetadataSection({
           <select
             value={todo.status}
             onChange={(e) => onStatusChange(e.target.value as TodoStatus)}
-            className={selectClass}
+            className={`${selectClass} ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
             aria-label="Task status"
+            disabled={!canEdit}
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -144,8 +151,9 @@ export default function MetadataSection({
           <select
             value={todo.priority}
             onChange={(e) => onPriorityChange(e.target.value as TodoPriority)}
-            className={selectClass}
+            className={`${selectClass} ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
             aria-label="Task priority"
+            disabled={!canEdit}
           >
             {PRIORITY_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -177,17 +185,19 @@ export default function MetadataSection({
               type="date"
               value={todo.due_date ? new Date(todo.due_date).toISOString().split('T')[0] : ''}
               onChange={(e) => onDueDateChange(e.target.value || null)}
-              className={`${selectClass} flex-1`}
+              className={`${selectClass} flex-1 ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
               aria-label="Due date"
+              disabled={!canEdit}
             />
             {/* Snooze */}
             <div className="relative" ref={snoozeRef}>
               <button
                 type="button"
-                onClick={() => setSnoozeOpen(!snoozeOpen)}
-                className="flex items-center justify-center w-7 h-7 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-all duration-150"
+                onClick={() => canEdit && setSnoozeOpen(!snoozeOpen)}
+                className={`flex items-center justify-center w-7 h-7 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface)] transition-all duration-150 ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
                 title="Snooze"
                 aria-label="Snooze due date"
+                disabled={!canEdit}
               >
                 <Clock size={13} />
               </button>
@@ -217,26 +227,29 @@ export default function MetadataSection({
           </div>
         </motion.div>
 
-        {/* Assigned To */}
-        <motion.div {...stagger} transition={{ delay: 0.1 }}>
-          <div className={labelClass}>
-            <User size={12} />
-            Assigned To
-          </div>
-          <select
-            value={todo.assigned_to || ''}
-            onChange={(e) => onAssignChange(e.target.value || null)}
-            className={selectClass}
-            aria-label="Assigned to"
-          >
-            <option value="">Unassigned</option>
-            {users.map((user) => (
-              <option key={user} value={user}>
-                {user}
-              </option>
-            ))}
-          </select>
-        </motion.div>
+        {/* Assigned To - only show if user can assign tasks */}
+        {canAssign && (
+          <motion.div {...stagger} transition={{ delay: 0.1 }}>
+            <div className={labelClass}>
+              <User size={12} />
+              Assigned To
+            </div>
+            <select
+              value={todo.assigned_to || ''}
+              onChange={(e) => onAssignChange(e.target.value || null)}
+              className={`${selectClass} ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
+              aria-label="Assigned to"
+              disabled={!canEdit}
+            >
+              <option value="">Unassigned</option>
+              {users.map((user) => (
+                <option key={user} value={user}>
+                  {user}
+                </option>
+              ))}
+            </select>
+          </motion.div>
+        )}
 
         {/* Recurrence - spans full width */}
         <motion.div className="col-span-2" {...stagger} transition={{ delay: 0.12 }}>
@@ -249,8 +262,9 @@ export default function MetadataSection({
             onChange={(e) =>
               onRecurrenceChange((e.target.value || null) as RecurrencePattern)
             }
-            className={`${selectClass} max-w-[50%]`}
+            className={`${selectClass} max-w-[50%] ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
             aria-label="Recurrence"
+            disabled={!canEdit}
           >
             {RECURRENCE_OPTIONS.map((opt) => (
               <option key={opt.label} value={opt.value || ''}>

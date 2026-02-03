@@ -18,6 +18,8 @@ interface TaskDetailHeaderProps {
   onClose: () => void;
   onOverflowClick: () => void;
   todoText: string;
+  /** Whether user can edit the task (has permission or owns the task) */
+  canEdit?: boolean;
 }
 
 export default function TaskDetailHeader({
@@ -32,6 +34,7 @@ export default function TaskDetailHeader({
   onClose,
   onOverflowClick,
   todoText,
+  canEdit = true,
 }: TaskDetailHeaderProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -145,7 +148,7 @@ export default function TaskDetailHeader({
               </button>
             </div>
           </div>
-        ) : (
+        ) : canEdit ? (
           <motion.button
             onClick={onStartEditTitle}
             className="w-full text-left group rounded-lg -mx-2 px-2 py-1 hover:bg-[var(--surface-2)] transition-colors duration-150 flex items-start justify-between gap-3"
@@ -172,6 +175,21 @@ export default function TaskDetailHeader({
               className="text-[var(--text-muted)] opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1"
             />
           </motion.button>
+        ) : (
+          <motion.div
+            className="w-full text-left rounded-lg -mx-2 px-2 py-1"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08 }}
+          >
+            <h2
+              className={`text-lg font-semibold leading-snug text-[var(--foreground)] transition-opacity ${
+                completed ? 'line-through opacity-50' : ''
+              }`}
+            >
+              {title}
+            </h2>
+          </motion.div>
         )}
       </div>
     </div>

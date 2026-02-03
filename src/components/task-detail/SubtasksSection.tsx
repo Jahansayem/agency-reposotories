@@ -17,6 +17,8 @@ interface SubtasksSectionProps {
   onDeleteSubtask: (id: string) => void;
   onUpdateSubtaskText: (id: string, text: string) => void;
   onImportSubtasks: () => void;
+  /** Whether user can edit the task (has permission or owns the task) */
+  canEdit?: boolean;
 }
 
 export default function SubtasksSection({
@@ -30,6 +32,7 @@ export default function SubtasksSection({
   onDeleteSubtask,
   onUpdateSubtaskText,
   onImportSubtasks,
+  canEdit = true,
 }: SubtasksSectionProps) {
   const [isOpen, setIsOpen] = useState(subtasks.length > 0);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -90,14 +93,16 @@ export default function SubtasksSection({
           </span>
         </button>
 
-        <button
-          type="button"
-          onClick={onImportSubtasks}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-[var(--radius-md)] transition-colors text-[var(--accent)] bg-[var(--accent-light)] hover:brightness-95"
-        >
-          <Mail className="w-3 h-3" />
-          Import
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onImportSubtasks}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-[var(--radius-md)] transition-colors text-[var(--accent)] bg-[var(--accent-light)] hover:brightness-95"
+          >
+            <Mail className="w-3 h-3" />
+            Import
+          </button>
+        )}
       </div>
 
       <AnimatePresence initial={false}>
@@ -166,19 +171,19 @@ export default function SubtasksSection({
                         />
                       ) : (
                         <span
-                          className={`flex-1 text-sm cursor-pointer ${
+                          className={`flex-1 text-sm ${canEdit ? 'cursor-pointer' : ''} ${
                             subtask.completed
                               ? 'text-[var(--text-muted)] line-through opacity-60'
                               : 'text-[var(--foreground)]'
                           }`}
-                          onClick={() => startEditing(subtask)}
+                          onClick={() => canEdit && startEditing(subtask)}
                         >
                           {subtask.text}
                         </span>
                       )}
 
                       {/* Action buttons - always visible on mobile, hover on desktop */}
-                      {editingId !== subtask.id && (
+                      {editingId !== subtask.id && canEdit && (
                         <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           <button
                             type="button"
@@ -203,20 +208,22 @@ export default function SubtasksSection({
                 </AnimatePresence>
               </ul>
 
-              {/* Add subtask input */}
-              <div className="flex items-center gap-2 pt-1">
-                <Plus
-                  className="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]"
-                />
-                <input
-                  type="text"
-                  value={newSubtaskText}
-                  onChange={(e) => onNewSubtaskTextChange(e.target.value)}
-                  onKeyDown={handleAddKeyDown}
-                  placeholder="Add a subtask (press Enter)..."
-                  className="flex-1 text-sm px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-transparent text-[var(--foreground)] outline-none transition-colors hover:border-[var(--border)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)] placeholder:text-[var(--text-muted)]"
-                />
-              </div>
+              {/* Add subtask input - only show if canEdit */}
+              {canEdit && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Plus
+                    className="w-4 h-4 flex-shrink-0 text-[var(--text-muted)]"
+                  />
+                  <input
+                    type="text"
+                    value={newSubtaskText}
+                    onChange={(e) => onNewSubtaskTextChange(e.target.value)}
+                    onKeyDown={handleAddKeyDown}
+                    placeholder="Add a subtask (press Enter)..."
+                    className="flex-1 text-sm px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-transparent text-[var(--foreground)] outline-none transition-colors hover:border-[var(--border)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)] placeholder:text-[var(--text-muted)]"
+                  />
+                </div>
+              )}
             </div>
           </motion.div>
         )}

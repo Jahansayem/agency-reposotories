@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Modal } from '../ui/Modal';
 import type { Todo, AuthUser, WaitingContactType, Attachment } from '@/types/todo';
 import { MAX_ATTACHMENTS_PER_TODO } from '@/types/todo';
 import { useTaskDetail } from './useTaskDetail';
+import { usePermission } from '@/hooks/usePermission';
 import TaskDetailHeader from './TaskDetailHeader';
 import MetadataSection from './MetadataSection';
 import ReminderRow from './ReminderRow';
@@ -61,6 +62,20 @@ export default function TaskDetailModal({
   onUpdateAttachments,
 }: TaskDetailModalProps) {
   const [overflowOpen, setOverflowOpen] = useState(false);
+
+  // Permission checks
+  const canDeleteTasks = usePermission('can_delete_tasks');
+  const canEditAnyTask = usePermission('can_edit_any_task');
+  const canAssignTasks = usePermission('can_assign_tasks');
+  const canUseAiFeatures = usePermission('can_use_ai_features');
+
+  // Derived permission: user owns the task OR has the general permission
+  const isOwner = useMemo(() => {
+    return todo ? todo.created_by === currentUser?.name : false;
+  }, [todo, currentUser?.name]);
+
+  const canDelete = canDeleteTasks || isOwner;
+  const canEdit = canEditAnyTask || isOwner;
 
   const detail = useTaskDetail({
     todo: todo!,  // Assert non-null since parent guards with conditional render
@@ -128,6 +143,7 @@ export default function TaskDetailModal({
           onClose={handleClose}
           onOverflowClick={() => setOverflowOpen(!overflowOpen)}
           todoText={todo.text}
+          canEdit={canEdit}
         />
 
         {/* Overflow dropdown menu -- inside the relative header wrapper */}
@@ -137,9 +153,10 @@ export default function TaskDetailModal({
           onDelete={handleDelete}
           onDuplicate={detail.duplicate}
           onSaveAsTemplate={detail.saveAsTemplate}
-          onEmailCustomer={detail.emailCustomer}
+          onEmailCustomer={canUseAiFeatures ? detail.emailCustomer : undefined}
           onSnooze={detail.snooze}
           completed={todo.completed}
+          canDelete={canDelete}
         />
       </div>
 
@@ -160,6 +177,8 @@ export default function TaskDetailModal({
             onAssignChange={detail.setAssignedTo}
             onRecurrenceChange={detail.setRecurrence}
             onSnooze={detail.snooze}
+            canEdit={canEdit}
+            canAssign={canAssignTasks}
           />
 
           {/* Reminder row */}
@@ -195,6 +214,7 @@ export default function TaskDetailModal({
               onNotesChange={detail.setNotes}
               onSaveNotes={detail.saveNotes}
               transcription={todo.transcription}
+              canEdit={canEdit}
             />
           </motion.div>
 
@@ -217,6 +237,7 @@ export default function TaskDetailModal({
               onDeleteSubtask={detail.deleteSubtask}
               onUpdateSubtaskText={detail.updateSubtaskText}
               onImportSubtasks={handleImportSubtasks}
+              canEdit={canEdit}
             />
           </motion.div>
 
@@ -234,6 +255,7 @@ export default function TaskDetailModal({
               currentUserName={currentUser.name}
               maxAttachments={MAX_ATTACHMENTS_PER_TODO}
               onUpdateAttachments={detail.onUpdateAttachments}
+              canEdit={canEdit}
             />
           </motion.div>
         </div>

@@ -13,6 +13,8 @@ interface OverflowMenuProps {
   onEmailCustomer?: () => void;
   onSnooze?: (days: number) => void;
   completed: boolean;
+  /** Whether user can delete the task (has permission or owns the task) */
+  canDelete?: boolean;
 }
 
 const SNOOZE_OPTIONS = [
@@ -31,6 +33,7 @@ export default function OverflowMenu({
   onEmailCustomer,
   onSnooze,
   completed,
+  canDelete = true,
 }: OverflowMenuProps) {
   const [showSnoozeSubmenu, setShowSnoozeSubmenu] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -153,21 +156,26 @@ export default function OverflowMenu({
               </div>
             )}
 
-            {/* Divider */}
-            <div className="border-t border-[var(--border)] my-1" />
+            {/* Divider - only show if delete button is visible */}
+            {canDelete && (
+              <div className="border-t border-[var(--border)] my-1" />
+            )}
 
-            <button
-              role="menuitem"
-              onClick={handleDeleteClick}
-              className={`flex items-center gap-2.5 w-full px-3 min-h-[40px] text-sm font-medium active:scale-[0.98] transition-all ${
-                confirmingDelete
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'text-[var(--danger)] hover:bg-[var(--surface-2)]'
-              }`}
-            >
-              <Trash2 size={16} />
-              {confirmingDelete ? 'Confirm Delete?' : 'Delete Task'}
-            </button>
+            {/* Delete button - only show if user has permission or owns the task */}
+            {canDelete && (
+              <button
+                role="menuitem"
+                onClick={handleDeleteClick}
+                className={`flex items-center gap-2.5 w-full px-3 min-h-[40px] text-sm font-medium active:scale-[0.98] transition-all ${
+                  confirmingDelete
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'text-[var(--danger)] hover:bg-[var(--surface-2)]'
+                }`}
+              >
+                <Trash2 size={16} />
+                {confirmingDelete ? 'Confirm Delete?' : 'Delete Task'}
+              </button>
+            )}
           </motion.div>
         </>
       )}
