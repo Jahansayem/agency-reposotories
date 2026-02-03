@@ -41,7 +41,7 @@ interface TaskSectionsProps {
   onSetRecurrence: (id: string, pattern: RecurrencePattern | null) => void;
   onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void;
   onUpdateAttachments: (id: string, attachments: Attachment[]) => void;
-  onSaveAsTemplate: (todo: Todo) => void;
+  onSaveAsTemplate?: (todo: Todo) => void;
   onEmailCustomer: (todo: Todo) => void;
   isDragEnabled: boolean;
   renderTodoItem: (todo: Todo, index: number) => React.ReactNode;

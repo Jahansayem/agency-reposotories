@@ -72,7 +72,7 @@ interface TodoListContentProps {
   onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | 'monthly' | null) => void;
   onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void;
   onUpdateAttachments: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
-  onSaveAsTemplate: (todo: Todo) => void;
+  onSaveAsTemplate?: (todo: Todo) => void;
   onEmailCustomer: (todo: Todo) => void;
   onClearSearch: () => void;
   onAddTask: () => void;

@@ -81,6 +81,7 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
   const { theme } = useTheme();
   const canViewArchive = usePermission('can_view_archive');
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canManageTemplates = usePermission('can_manage_templates');
 
   // Get navigation state from AppShell context
   const { activeView, setActiveView } = useAppShell();
@@ -1852,7 +1853,7 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
           onSetRecurrence={setRecurrence}
           onUpdateSubtasks={updateSubtasks}
           onUpdateAttachments={updateAttachments}
-          onSaveAsTemplate={(t) => openTemplateModal(t)}
+          onSaveAsTemplate={canManageTemplates ? (t) => openTemplateModal(t) : undefined}
           onEmailCustomer={(todo) => openEmailModal([todo])}
           onOpenDetail={handleOpenDetail}
           onClearSearch={() => setSearchQuery('')}
@@ -1877,7 +1878,7 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
             onClearWaiting={clearWaiting}
             onSetReminder={setReminder}
             onDuplicate={duplicateTodo}
-            onSaveAsTemplate={(t) => openTemplateModal(t)}
+            onSaveAsTemplate={canManageTemplates ? (t) => openTemplateModal(t) : undefined}
             onEmailCustomer={(todo) => openEmailModal([todo])}
             onUpdateAttachments={updateAttachments}
           />

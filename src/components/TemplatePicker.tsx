@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useEscapeKey } from '@/hooks';
+import { usePermission } from '@/hooks/usePermission';
 import { FileText, Plus, Trash2, Share2, Lock, X, ChevronDown, Loader2 } from 'lucide-react';
 import { TaskTemplate, TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
 import { v4 as uuidv4 } from 'uuid';
@@ -32,6 +33,7 @@ export default function TemplatePicker({
   hideTrigger = false,
   onSelectTemplate,
 }: TemplatePickerProps) {
+  const canManageTemplates = usePermission('can_manage_templates');
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
@@ -213,18 +215,20 @@ export default function TemplatePicker({
               <h3 className={`font-semibold ${'text-slate-900'}`}>
                 Task Templates
               </h3>
-              <button
-                onClick={() => setShowCreateForm(!showCreateForm)}
-                aria-label={showCreateForm ? 'Cancel creating template' : 'Create new template'}
-                className={`p-2 rounded-[var(--radius-lg)] transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation ${
-                  'hover:bg-slate-100 text-slate-500'}`}
-              >
-                {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              </button>
+              {canManageTemplates && (
+                <button
+                  onClick={() => setShowCreateForm(!showCreateForm)}
+                  aria-label={showCreateForm ? 'Cancel creating template' : 'Create new template'}
+                  className={`p-2 rounded-[var(--radius-lg)] transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation ${
+                    'hover:bg-slate-100 text-slate-500'}`}
+                >
+                  {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </button>
+              )}
             </div>
 
-            {/* Create Form */}
-            {showCreateForm && (
+            {/* Create Form - only show if user has permission */}
+            {showCreateForm && canManageTemplates && (
               <form
                 onSubmit={handleCreateTemplate}
                 className={`p-4 border-b ${'border-slate-200'}`}
@@ -316,21 +320,24 @@ export default function TemplatePicker({
                     No templates yet
                   </p>
                   <p className={`text-xs mt-1.5 max-w-[180px] mx-auto ${'text-slate-500'}`}>
-                    Save time by creating reusable task templates
+                    {canManageTemplates
+                      ? 'Save time by creating reusable task templates'
+                      : 'No templates available'}
                   </p>
-                  <button
-                    onClick={() => {
-                      setIsOpen(false);
-                      // Trigger create template action - users can create from task menu
-                    }}
-                    className={`mt-4 px-4 py-2 text-xs font-medium rounded-[var(--radius-lg)] transition-colors ${
-                      'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Plus className="w-3.5 h-3.5" />
-                      Create your first template
-                    </span>
-                  </button>
+                  {canManageTemplates && (
+                    <button
+                      onClick={() => {
+                        setShowCreateForm(true);
+                      }}
+                      className={`mt-4 px-4 py-2 text-xs font-medium rounded-[var(--radius-lg)] transition-colors ${
+                        'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5" />
+                        Create your first template
+                      </span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
@@ -348,6 +355,7 @@ export default function TemplatePicker({
                           key={template.id}
                           template={template}
                           isTemplateCreator={true}
+                          canDelete={canManageTemplates}
                           onSelect={() => handleSelectTemplate(template)}
                           onDelete={(e) => handleDeleteTemplate(template, e)}
                         />
@@ -369,6 +377,7 @@ export default function TemplatePicker({
                           key={template.id}
                           template={template}
                           isTemplateCreator={false}
+                          canDelete={false}
                           onSelect={() => handleSelectTemplate(template)}
                           onDelete={() => {}}
                         />
@@ -389,11 +398,14 @@ export default function TemplatePicker({
 function TemplateItem({
   template,
   isTemplateCreator,
+  canDelete = false,
   onSelect,
   onDelete,
 }: {
   template: TaskTemplate;
   isTemplateCreator: boolean;
+  /** Whether the user has permission to delete templates */
+  canDelete?: boolean;
   onSelect: () => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
@@ -453,7 +465,8 @@ function TemplateItem({
           )}
         </div>
       </div>
-      {isTemplateCreator && (
+      {/* Delete button - only show if user created the template AND has permission */}
+      {isTemplateCreator && canDelete && (
         <button
           onClick={onDelete}
           aria-label={`Delete template: ${template.name}`}
