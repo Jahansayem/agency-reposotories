@@ -199,26 +199,26 @@ function TodoHeader({
               >
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 ${
+                  className={`flex items-center gap-1 min-h-[44px] px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 touch-manipulation ${
                     viewMode === 'list'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'list'}
                   aria-label="Switch to list view"
                 >
-                  <LayoutList className="w-3.5 h-3.5" aria-hidden="true" />
+                  <LayoutList className="w-4 h-4" aria-hidden="true" />
                   <span className="hidden sm:inline">List</span>
                 </button>
                 <button
                   onClick={() => setViewMode('kanban')}
-                  className={`flex items-center gap-1 px-2 py-1 sm:py-1.5 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 ${
+                  className={`flex items-center gap-1 min-h-[44px] px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 touch-manipulation ${
                     viewMode === 'kanban'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
                       : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'kanban'}
                   aria-label="Switch to board view"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
+                  <LayoutGrid className="w-4 h-4" aria-hidden="true" />
                   <span className="hidden sm:inline">Board</span>
                 </button>
               </div>
@@ -242,8 +242,8 @@ function TodoHeader({
                 {localSearchInput && (
                   <button
                     onClick={handleSearchClear}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                    aria-label="Clear search"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] touch-manipulation"
+                    aria-label="Clear search (press Escape)"
                   >
                     <X className="w-4 h-4" />
                   </button>

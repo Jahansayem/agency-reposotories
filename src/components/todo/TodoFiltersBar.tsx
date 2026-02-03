@@ -1,14 +1,17 @@
 'use client';
 
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUpDown, AlertTriangle, CheckSquare, ChevronDown,
-  Filter, RotateCcw, Check, FileText, MoreHorizontal, Layers, X
+  Filter, RotateCcw, Check, FileText, MoreHorizontal, Layers, X, Flame
 } from 'lucide-react';
 import { prefersReducedMotion, DURATION } from '@/lib/animations';
 import { QuickFilter, SortOption, TodoStatus } from '@/types/todo';
 import TemplatePicker from '../TemplatePicker';
+import { FilterBottomSheet } from '../ui/FilterBottomSheet';
+import { FilterChip, FilterChipOverflow } from '../ui/FilterChip';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface DateRange {
   start: string;
@@ -73,6 +76,13 @@ interface TodoFiltersBarProps {
 
   // Theme
   userName: string;
+
+  // Result count for live feedback
+  filteredCount?: number;
+  totalCount?: number;
+
+  // Ref for search input focus (keyboard shortcut)
+  searchInputRef?: React.RefObject<HTMLInputElement>;
 }
 
 function TodoFiltersBar({
@@ -112,19 +122,84 @@ function TodoFiltersBar({
   uniqueCustomers,
   onAddFromTemplate,
   userName,
+  filteredCount,
+  totalCount,
+  searchInputRef,
 }: TodoFiltersBarProps) {
-  // Global ESC key handler for closing advanced filters drawer
+  const isMobile = useIsMobile();
+  const filtersBarRef = useRef<HTMLDivElement>(null);
+  // Global keyboard shortcuts for filters
+  // / = Focus search, f = Toggle filters panel, m/t/o/a = Quick filters, Escape = Close
   useEffect(() => {
-    const handleEscKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showAdvancedFilters) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input (except Escape)
+      const target = e.target as HTMLElement;
+      const isTyping = target instanceof HTMLInputElement ||
+                       target instanceof HTMLTextAreaElement ||
+                       target.isContentEditable;
+
+      if (isTyping) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          target.blur();
+          if (searchQuery) setSearchQuery('');
+          if (showAdvancedFilters) setShowAdvancedFilters(false);
+        }
+        return;
+      }
+
+      // Focus search with /
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        setShowAdvancedFilters(false);
+        searchInputRef?.current?.focus();
+      }
+
+      // Toggle advanced filters with f
+      if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setShowAdvancedFilters(!showAdvancedFilters);
+      }
+
+      // Quick filter shortcuts
+      if (e.key === 'm' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setQuickFilter(quickFilter === 'my_tasks' ? 'all' : 'my_tasks');
+      }
+      if (e.key === 't' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setQuickFilter(quickFilter === 'due_today' ? 'all' : 'due_today');
+      }
+      if (e.key === 'o' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setQuickFilter(quickFilter === 'overdue' ? 'all' : 'overdue');
+      }
+      if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setQuickFilter('all');
+      }
+
+      // Toggle high priority with p
+      if (e.key === 'p' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setHighPriorityOnly(!highPriorityOnly);
+      }
+
+      // Escape to close panels
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (showAdvancedFilters) {
+          setShowAdvancedFilters(false);
+        } else if (showMoreDropdown) {
+          setShowMoreDropdown(false);
+        }
       }
     };
 
-    document.addEventListener('keydown', handleEscKey);
-    return () => document.removeEventListener('keydown', handleEscKey);
-  }, [showAdvancedFilters, setShowAdvancedFilters]);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showAdvancedFilters, setShowAdvancedFilters, searchQuery, setSearchQuery,
+      quickFilter, setQuickFilter, highPriorityOnly, setHighPriorityOnly,
+      showMoreDropdown, setShowMoreDropdown, searchInputRef]);
 
   const hasActiveFilters = quickFilter !== 'all' ||
     highPriorityOnly ||
@@ -244,26 +319,55 @@ function TodoFiltersBar({
           <ArrowUpDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" />
         </div>
 
+        {/* High Priority Quick Toggle - Promoted from advanced panel for easy access */}
+        <button
+          type="button"
+          onClick={() => setHighPriorityOnly(!highPriorityOnly)}
+          className={`flex items-center gap-1.5 min-h-[44px] h-11 px-3 text-sm font-medium rounded-lg transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] touch-manipulation ${
+            highPriorityOnly
+              ? 'bg-[var(--danger)] text-white shadow-md'
+              : 'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)]'
+          }`}
+          aria-pressed={highPriorityOnly}
+          aria-label={highPriorityOnly ? 'Remove high priority filter' : 'Show only high priority tasks'}
+          title="Press 'p' to toggle"
+        >
+          <Flame className="w-4 h-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Urgent</span>
+        </button>
+
         {/* Advanced Filters button with count badge - 44px minimum touch target (WCAG 2.5.5) */}
         <button
           type="button"
           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className={`flex items-center gap-2 min-h-[44px] h-11 px-3 text-sm font-medium rounded-lg transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
+          className={`flex items-center gap-2 min-h-[44px] h-11 px-3 text-sm font-medium rounded-lg transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] touch-manipulation ${
             showAdvancedFilters || advancedFilterCount > 0
               ? 'bg-[var(--accent)] text-white shadow-md'
               : 'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--surface-3)]'
           }`}
           aria-expanded={showAdvancedFilters}
           aria-label={`Advanced filters${advancedFilterCount > 0 ? ` (${advancedFilterCount} active)` : ''}`}
+          title="Press 'f' to toggle"
         >
           <Filter className="w-4 h-4" />
-          <span>Filters</span>
+          <span className="hidden sm:inline">Filters</span>
           {advancedFilterCount > 0 && (
-            <span className="min-w-[20px] h-5 flex items-center justify-center px-1.5 text-xs rounded-full bg-white/25 font-bold">
+            <span className="min-w-[20px] h-5 flex items-center justify-center px-1.5 text-xs rounded-full bg-white/30 font-bold">
               {advancedFilterCount}
             </span>
           )}
         </button>
+
+        {/* Live Result Count - Shows immediate feedback */}
+        {filteredCount !== undefined && totalCount !== undefined && (
+          <span className="hidden sm:flex items-center text-sm text-[var(--text-muted)] flex-shrink-0" aria-live="polite">
+            {filteredCount === totalCount ? (
+              <span>{totalCount} tasks</span>
+            ) : (
+              <span>{filteredCount} of {totalCount}</span>
+            )}
+          </span>
+        )}
 
         {/* More dropdown - moved to right side - 44px minimum touch target (WCAG 2.5.5) */}
         <div className="relative ml-auto flex-shrink-0">
@@ -367,48 +471,60 @@ function TodoFiltersBar({
       </div>
 
       {/* Active Filter Chips - Shows what's currently filtered */}
-      {activeFilterChips.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2" role="region" aria-label="Active filters">
-          <span className="text-xs font-medium text-[var(--text-muted)]" id="active-filters-label">
-            Active:
-          </span>
-          {activeFilterChips.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={chip.onClear}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  chip.onClear();
-                }
-              }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1"
-              aria-label={`Remove filter: ${chip.label}`}
-            >
-              <span>{chip.label}</span>
-              <X className="w-3.5 h-3.5" aria-hidden="true" />
-            </button>
-          ))}
-          {activeFilterChips.length > 1 && (
-            <button
-              type="button"
-              onClick={clearAllFilters}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  clearAllFilters();
-                }
-              }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1"
-              aria-label="Clear all active filters"
-            >
-              <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Clear All</span>
-            </button>
-          )}
-        </div>
-      )}
+      {/* Mobile: Show max 2 chips + overflow, Desktop: Show all */}
+      <AnimatePresence mode="popLayout">
+        {activeFilterChips.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="mt-3 flex flex-wrap items-center gap-2"
+            role="region"
+            aria-label="Active filters"
+          >
+            <span className="text-xs font-semibold text-[var(--foreground)] uppercase tracking-wide" id="active-filters-label">
+              Active:
+            </span>
+
+            {/* Render chips with mobile overflow handling */}
+            <AnimatePresence mode="popLayout">
+              {(isMobile ? activeFilterChips.slice(0, 2) : activeFilterChips).map((chip) => (
+                <FilterChip
+                  key={chip.label}
+                  label={chip.label}
+                  onClear={chip.onClear}
+                  variant={chip.label.includes('High Priority') ? 'danger' : 'default'}
+                />
+              ))}
+            </AnimatePresence>
+
+            {/* Mobile overflow indicator */}
+            {isMobile && activeFilterChips.length > 2 && (
+              <FilterChipOverflow
+                count={activeFilterChips.length - 2}
+                onClick={() => setShowAdvancedFilters(true)}
+              />
+            )}
+
+            {/* Clear All button - 44px touch target */}
+            {activeFilterChips.length > 1 && (
+              <motion.button
+                type="button"
+                onClick={clearAllFilters}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="inline-flex items-center gap-2 min-h-[44px] px-3 py-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 touch-manipulation"
+                aria-label="Clear all active filters"
+              >
+                <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                <span>Clear All</span>
+              </motion.button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Selection mode hint */}
       {showBulkActions && (
@@ -417,239 +533,250 @@ function TodoFiltersBar({
         </div>
       )}
 
-      {/* Advanced Filters Drawer - expandable panel */}
-      <AnimatePresence>
-        {showAdvancedFilters && (
-          <motion.div
-            initial={prefersReducedMotion() ? false : { opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: DURATION.normal }}
-            className="overflow-hidden"
-          >
-            <div
-              className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]"
-              role="region"
-              aria-labelledby="advanced-filters-title"
-              tabIndex={-1}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setShowAdvancedFilters(false);
-                }
-              }}
-            >
-              {/* Header with close button */}
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2" id="advanced-filters-title">
-                  <Filter className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
-                  Advanced Filters
-                </h3>
+      {/* Advanced Filters Content - shared between desktop panel and mobile bottom sheet */}
+      {(() => {
+        const advancedFiltersContent = (
+          <>
+            {/* Filters Grid - responsive layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Task Properties Section */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.05em] bg-[var(--surface-3)] px-2 py-1 rounded-md inline-block">
+                  Task Properties
+                </h4>
+
+                {/* Status filter */}
+                <div>
+                  <label className="block text-xs font-medium text-[var(--foreground)] mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as TodoStatus | 'all')}
+                    className="w-full min-h-[44px] text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="done">Done</option>
+                  </select>
+                </div>
+
+                {/* Priority toggles */}
+                <div>
+                  <label className="block text-xs font-medium text-[var(--foreground)] mb-2">
+                    Visibility
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCompleted(!showCompleted)}
+                      className={`flex items-center justify-between min-h-[44px] px-3 py-2 text-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] touch-manipulation ${
+                        showCompleted
+                          ? 'bg-[var(--success)] text-white'
+                          : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)]'
+                      }`}
+                      role="switch"
+                      aria-checked={showCompleted}
+                      aria-label="Show completed tasks"
+                    >
+                      <span className="flex items-center gap-2">
+                        <CheckSquare className="w-4 h-4" aria-hidden="true" />
+                        Show Completed
+                      </span>
+                      {showCompleted && <Check className="w-4 h-4" aria-hidden="true" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assignment Section */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.05em] bg-[var(--surface-3)] px-2 py-1 rounded-md inline-block">
+                  Assignment
+                </h4>
+
+                {/* Assigned to filter */}
+                <div>
+                  <label className="block text-xs font-medium text-[var(--foreground)] mb-2">
+                    Assigned To
+                  </label>
+                  <select
+                    value={assignedToFilter}
+                    onChange={(e) => setAssignedToFilter(e.target.value)}
+                    className="w-full min-h-[44px] text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  >
+                    <option value="all">Anyone</option>
+                    <option value="unassigned">Unassigned</option>
+                    {users.map((user) => (
+                      <option key={user} value={user}>{user}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Customer filter */}
+                <div>
+                  <label className="block text-xs font-medium text-[var(--foreground)] mb-2">
+                    Customer
+                  </label>
+                  <select
+                    value={customerFilter}
+                    onChange={(e) => setCustomerFilter(e.target.value)}
+                    className="w-full min-h-[44px] text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  >
+                    <option value="all">All Customers{uniqueCustomers.length > 0 ? ` (${uniqueCustomers.length})` : ''}</option>
+                    {uniqueCustomers.length === 0 && (
+                      <option disabled>No customer names detected</option>
+                    )}
+                    {uniqueCustomers.map((customer) => (
+                      <option key={customer} value={customer}>{customer}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Attachments Section */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.05em] bg-[var(--surface-3)] px-2 py-1 rounded-md inline-block">
+                  Attachments
+                </h4>
+
+                <div>
+                  <label className="block text-xs font-medium text-[var(--foreground)] mb-2">
+                    Has Attachments
+                  </label>
+                  <select
+                    value={hasAttachmentsFilter === null ? 'all' : hasAttachmentsFilter ? 'yes' : 'no'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setHasAttachmentsFilter(val === 'all' ? null : val === 'yes');
+                    }}
+                    className="w-full min-h-[44px] text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                  >
+                    <option value="all">Any</option>
+                    <option value="yes">With Attachments</option>
+                    <option value="no">Without Attachments</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Date Range Section */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.05em] bg-[var(--surface-3)] px-2 py-1 rounded-md inline-block">
+                  Due Date
+                </h4>
+
+                <div>
+                  <label className="block text-xs font-medium text-[var(--foreground)] mb-2">
+                    Date Range
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="date"
+                      value={dateRangeFilter.start}
+                      onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
+                      aria-label="Start date"
+                      className="w-full min-h-[44px] text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    />
+                    <input
+                      type="date"
+                      value={dateRangeFilter.end}
+                      onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
+                      aria-label="End date"
+                      className="w-full min-h-[44px] text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer with actions */}
+            {(advancedFilterCount > 0 || hasActiveFilters) && (
+              <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] flex items-center justify-between">
+                <span className="text-sm text-[var(--text-muted)]">
+                  {activeFilterChips.length} {activeFilterChips.length === 1 ? 'filter' : 'filters'} active
+                </span>
                 <button
                   type="button"
-                  onClick={() => setShowAdvancedFilters(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      e.preventDefault();
-                      setShowAdvancedFilters(false);
-                    }
-                  }}
-                  className="p-2 rounded min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                  aria-label="Close advanced filters panel"
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-2 min-h-[44px] px-3 py-2 text-sm text-[var(--accent)] hover:text-[var(--accent)]/80 font-medium transition-colors touch-manipulation focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 >
-                  <X className="w-4 h-4" aria-hidden="true" />
+                  <RotateCcw className="w-4 h-4" />
+                  Clear All Filters
                 </button>
               </div>
+            )}
 
-              {/* Filters Grid - responsive layout */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Task Properties Section */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                    Task Properties
-                  </h4>
-
-                  {/* Status filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
-                      Status
-                    </label>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as TodoStatus | 'all')}
-                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="todo">To Do</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="done">Done</option>
-                    </select>
-                  </div>
-
-                  {/* Priority toggles */}
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
-                      Priority
-                    </label>
-                    <div className="flex flex-col gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setHighPriorityOnly(!highPriorityOnly)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
-                          highPriorityOnly
-                            ? 'bg-[var(--danger)] text-white'
-                            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)]'
-                        }`}
-                        role="switch"
-                        aria-checked={highPriorityOnly}
-                        aria-label="Show only high priority tasks"
-                      >
-                        <span className="flex items-center gap-2">
-                          <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-                          High Priority Only
-                        </span>
-                        {highPriorityOnly && <Check className="w-4 h-4" aria-hidden="true" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowCompleted(!showCompleted)}
-                        className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] ${
-                          showCompleted
-                            ? 'bg-[var(--success)] text-white'
-                            : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--accent)]'
-                        }`}
-                        role="switch"
-                        aria-checked={showCompleted}
-                        aria-label="Show completed tasks"
-                      >
-                        <span className="flex items-center gap-2">
-                          <CheckSquare className="w-4 h-4" aria-hidden="true" />
-                          Show Completed
-                        </span>
-                        {showCompleted && <Check className="w-4 h-4" aria-hidden="true" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Assignment Section */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                    Assignment
-                  </h4>
-
-                  {/* Assigned to filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
-                      Assigned To
-                    </label>
-                    <select
-                      value={assignedToFilter}
-                      onChange={(e) => setAssignedToFilter(e.target.value)}
-                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                    >
-                      <option value="all">Anyone</option>
-                      <option value="unassigned">Unassigned</option>
-                      {users.map((user) => (
-                        <option key={user} value={user}>{user}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Customer filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
-                      Customer
-                    </label>
-                    <select
-                      value={customerFilter}
-                      onChange={(e) => setCustomerFilter(e.target.value)}
-                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                    >
-                      <option value="all">All Customers</option>
-                      {uniqueCustomers.map((customer) => (
-                        <option key={customer} value={customer}>{customer}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Attachments Section */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                    Attachments
-                  </h4>
-
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
-                      Has Attachments
-                    </label>
-                    <select
-                      value={hasAttachmentsFilter === null ? 'all' : hasAttachmentsFilter ? 'yes' : 'no'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setHasAttachmentsFilter(val === 'all' ? null : val === 'yes');
-                      }}
-                      className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:border-[var(--accent)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                    >
-                      <option value="all">Any</option>
-                      <option value="yes">With Attachments</option>
-                      <option value="no">Without Attachments</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Date Range Section */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                    Due Date
-                  </h4>
-
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--foreground)] mb-1.5">
-                      Date Range
-                    </label>
-                    <div className="space-y-2">
-                      <input
-                        type="date"
-                        value={dateRangeFilter.start}
-                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
-                        placeholder="Start date"
-                        className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                      />
-                      <input
-                        type="date"
-                        value={dateRangeFilter.end}
-                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
-                        placeholder="End date"
-                        className="w-full text-sm py-2 px-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer with actions */}
-              {advancedFilterCount > 0 && (
-                <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] flex items-center justify-between">
-                  <span className="text-xs text-[var(--text-muted)]">
-                    {advancedFilterCount} {advancedFilterCount === 1 ? 'filter' : 'filters'} active
-                  </span>
-                  <button
-                    type="button"
-                    onClick={clearAllFilters}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--accent)] hover:text-[var(--accent-dark)] font-medium transition-colors"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Clear All Filters
-                  </button>
-                </div>
-              )}
+            {/* Keyboard shortcuts hint */}
+            <div className="mt-4 pt-3 border-t border-[var(--border-subtle)]">
+              <p className="text-xs text-[var(--text-muted)]">
+                <span className="font-medium">Keyboard:</span>{' '}
+                <kbd className="px-1.5 py-0.5 bg-[var(--surface-3)] rounded text-[10px] font-mono">/</kbd> search{' '}
+                <kbd className="px-1.5 py-0.5 bg-[var(--surface-3)] rounded text-[10px] font-mono">m</kbd> mine{' '}
+                <kbd className="px-1.5 py-0.5 bg-[var(--surface-3)] rounded text-[10px] font-mono">t</kbd> today{' '}
+                <kbd className="px-1.5 py-0.5 bg-[var(--surface-3)] rounded text-[10px] font-mono">p</kbd> priority{' '}
+                <kbd className="px-1.5 py-0.5 bg-[var(--surface-3)] rounded text-[10px] font-mono">esc</kbd> close
+              </p>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </>
+        );
+
+        return (
+          <>
+            {/* Mobile: Bottom Sheet */}
+            {isMobile && (
+              <FilterBottomSheet
+                isOpen={showAdvancedFilters}
+                onClose={() => setShowAdvancedFilters(false)}
+                title="Advanced Filters"
+              >
+                {advancedFiltersContent}
+              </FilterBottomSheet>
+            )}
+
+            {/* Desktop: Inline Panel */}
+            {!isMobile && (
+              <AnimatePresence>
+                {showAdvancedFilters && (
+                  <motion.div
+                    initial={prefersReducedMotion() ? false : { opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: DURATION.normal }}
+                    className="overflow-hidden"
+                  >
+                    <div
+                      ref={filtersBarRef}
+                      className="mt-4 p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]"
+                      role="region"
+                      aria-labelledby="advanced-filters-title"
+                      tabIndex={-1}
+                    >
+                      {/* Header with close button */}
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2" id="advanced-filters-title">
+                          <Filter className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
+                          Advanced Filters
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => setShowAdvancedFilters(false)}
+                          className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                          aria-label="Close advanced filters panel"
+                        >
+                          <X className="w-4 h-4" aria-hidden="true" />
+                        </button>
+                      </div>
+
+                      {advancedFiltersContent}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
