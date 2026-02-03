@@ -33,6 +33,10 @@ function BulkActionBar({
   const canEditAnyTask = usePermission('can_edit_any_task');
   const canAssignTasks = usePermission('can_assign_tasks');
 
+  // Check if user has ANY bulk action permissions
+  // Bulk operations require explicit permissions (no ownership override since bulk can include other users' tasks)
+  const hasAnyBulkPermission = canDeleteTasks || canEditAnyTask || canAssignTasks;
+
   return (
     <div data-testid="bulk-action-bar" className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
       <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
@@ -57,6 +61,13 @@ function BulkActionBar({
 
             {/* Action buttons - horizontal inline */}
             <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
+              {/* Show message if user has no bulk action permissions */}
+              {!hasAnyBulkPermission && (
+                <span className="text-sm text-[var(--text-muted)] italic">
+                  You don&apos;t have permission to perform bulk actions
+                </span>
+              )}
+
               {/* Mark Complete */}
               <button
                 onClick={onBulkComplete}
@@ -115,12 +126,18 @@ function BulkActionBar({
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
               </div>
 
-              {/* Merge - only show when 2+ selected */}
+              {/* Merge - only show when 2+ selected, requires can_edit_any_task */}
               {selectedCount >= 2 && (
                 <button
                   onClick={onInitiateMerge}
+                  disabled={!canEditAnyTask}
                   data-testid="bulk-merge-button"
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
+                  className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-lg)] text-white transition-all text-sm font-medium whitespace-nowrap ${
+                    canEditAnyTask
+                      ? 'bg-[var(--brand-blue)] hover:opacity-90'
+                      : 'bg-[var(--brand-blue)] opacity-40 cursor-not-allowed'
+                  }`}
+                  title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
                 >
                   <GitMerge className="w-4 h-4" />
                   Merge
