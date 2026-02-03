@@ -37,10 +37,17 @@ export function getStoredSession(): StoredSession | null {
     const session: StoredSession = JSON.parse(raw);
 
     // Check 8-hour expiry
+    // BUGFIX UTIL-001: Handle invalid timestamps and use >= for exact boundary
     if (session.loginAt) {
       const loginTime = new Date(session.loginAt).getTime();
+      // Check for invalid timestamp (NaN)
+      if (isNaN(loginTime)) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
       const eightHours = 8 * 60 * 60 * 1000;
-      if (Date.now() - loginTime > eightHours) {
+      // Use >= to ensure exact expiry time is also considered expired
+      if (Date.now() - loginTime >= eightHours) {
         localStorage.removeItem(SESSION_KEY);
         return null;
       }

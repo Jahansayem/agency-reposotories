@@ -46,21 +46,28 @@ export function useEditingIndicator(
   const channelRef = useRef<any>(null);
   const currentEditingRef = useRef<{ task_id: string; field?: string } | null>(null);
 
+  // Store currentUser in a ref to avoid stale closures in cleanup
+  const currentUserRef = useRef<User | undefined>(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
   /**
    * Broadcast editing status
    */
   const broadcastEditing = useCallback(
     async (task_id: string, field: string | undefined, editing: boolean) => {
-      if (!currentUser || !channelRef.current) return;
+      const user = currentUserRef.current;
+      if (!user || !channelRef.current) return;
 
       try {
         await channelRef.current.send({
           type: 'broadcast',
           event: 'task_editing',
           payload: {
-            user: currentUser.name,
-            userId: currentUser.id,
-            color: currentUser.color,
+            user: user.name,
+            userId: user.id,
+            color: user.color,
             task_id,
             field,
             editing,
@@ -71,7 +78,7 @@ export function useEditingIndicator(
         console.error('Failed to broadcast editing status:', error);
       }
     },
-    [currentUser]
+    [] // No dependencies - uses ref for current user
   );
 
   /**
@@ -81,7 +88,7 @@ export function useEditingIndicator(
    */
   const setEditing = useCallback(
     (task_id: string, field?: string, editing: boolean = true) => {
-      if (!currentUser) return;
+      if (!currentUserRef.current) return;
 
       // Clear previous activity timer
       if (activityTimerRef.current) {
@@ -95,7 +102,8 @@ export function useEditingIndicator(
 
         // Auto-clear after timeout
         activityTimerRef.current = setTimeout(() => {
-          setEditing(task_id, field, false);
+          currentEditingRef.current = null;
+          broadcastEditing(task_id, field, false);
         }, timeoutMs);
       } else {
         // Stop editing
@@ -103,7 +111,7 @@ export function useEditingIndicator(
         broadcastEditing(task_id, field, false);
       }
     },
-    [currentUser, broadcastEditing, timeoutMs]
+    [broadcastEditing, timeoutMs]
   );
 
   /**
@@ -275,7 +283,9 @@ export function useEditingIndicator(
       supabase.removeChannel(editingChannel);
       channelRef.current = null;
     };
-  }, [currentUser, timeoutMs, broadcastEditing]);
+  // BUGFIX: Use currentUser?.id instead of entire object/callbacks to prevent infinite re-subscriptions
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, timeoutMs]);
 
   return {
     /**

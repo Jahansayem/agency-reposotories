@@ -78,12 +78,24 @@ export async function POST(
       return apiErrorResponse('VALIDATION_ERROR', 'user_name, role, and requested_by are required');
     }
 
-    // Verify requesting user has permission (owner or admin)
+    // BUGFIX API-001: Separate queries to prevent race condition
+    // First, get the requester's user ID
+    const { data: requesterUser, error: requesterUserError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('name', requested_by)
+      .single();
+
+    if (requesterUserError || !requesterUser) {
+      return apiErrorResponse('FORBIDDEN', 'Requesting user not found', 403);
+    }
+
+    // Then verify they have permission (owner or manager)
     const { data: requester } = await supabase
       .from('agency_members')
       .select('role')
       .eq('agency_id', agencyId)
-      .eq('user_id', (await supabase.from('users').select('id').eq('name', requested_by).single()).data?.id)
+      .eq('user_id', requesterUser.id)
       .single();
 
     if (!requester || (requester.role !== 'owner' && requester.role !== 'manager')) {
@@ -181,12 +193,24 @@ export async function DELETE(
       return apiErrorResponse('VALIDATION_ERROR', 'memberId and requested_by are required');
     }
 
-    // Verify requesting user has permission
+    // BUGFIX API-002: Separate queries to prevent race condition
+    // First, get the requester's user ID
+    const { data: requesterUser, error: requesterUserError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('name', requestedBy)
+      .single();
+
+    if (requesterUserError || !requesterUser) {
+      return apiErrorResponse('FORBIDDEN', 'Requesting user not found', 403);
+    }
+
+    // Then verify they have permission
     const { data: requester } = await supabase
       .from('agency_members')
       .select('role')
       .eq('agency_id', agencyId)
-      .eq('user_id', (await supabase.from('users').select('id').eq('name', requestedBy).single()).data?.id)
+      .eq('user_id', requesterUser.id)
       .single();
 
     if (!requester || (requester.role !== 'owner' && requester.role !== 'manager')) {

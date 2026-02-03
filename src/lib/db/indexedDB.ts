@@ -2,6 +2,23 @@ import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import type { Todo, ChatMessage as Message, User } from '@/types/todo';
 
 /**
+ * BUGFIX TYPE-003: Discriminated union for sync queue data
+ * Provides type safety for offline sync operations
+ */
+export type SyncQueueData =
+  | { table: 'todos'; data: Partial<Todo> & { id: string } }
+  | { table: 'messages'; data: Partial<Message> & { id: string } };
+
+export interface SyncQueueItem {
+  id: string;
+  type: 'create' | 'update' | 'delete';
+  table: 'todos' | 'messages';
+  data: Partial<Todo> | Partial<Message>;
+  timestamp: number;
+  retries: number;
+}
+
+/**
  * IndexedDB Schema for Offline Support
  * Sprint 3 Issue #35: Offline Mode with IndexedDB
  *
@@ -38,14 +55,7 @@ interface BealerTasksDB extends DBSchema {
   };
   syncQueue: {
     key: string;
-    value: {
-      id: string;
-      type: 'create' | 'update' | 'delete';
-      table: 'todos' | 'messages';
-      data: any;
-      timestamp: number;
-      retries: number;
-    };
+    value: SyncQueueItem;
     indexes: {
       'by-timestamp': number;
       'by-table': string;
@@ -288,11 +298,12 @@ export async function getUserByNameFromIDB(name: string): Promise<User | undefin
 
 /**
  * Add operation to sync queue
+ * BUGFIX TYPE-003: Uses proper typed data instead of any
  */
-export async function addToSyncQueue(
+export async function addToSyncQueue<T extends 'todos' | 'messages'>(
   type: 'create' | 'update' | 'delete',
-  table: 'todos' | 'messages',
-  data: any
+  table: T,
+  data: T extends 'todos' ? (Partial<Todo> & { id: string }) : (Partial<Message> & { id: string })
 ): Promise<void> {
   const db = await getDB();
   const id = `${table}-${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -309,17 +320,9 @@ export async function addToSyncQueue(
 
 /**
  * Get all items from sync queue
+ * BUGFIX TYPE-003: Returns properly typed items
  */
-export async function getSyncQueueFromIDB(): Promise<
-  Array<{
-    id: string;
-    type: 'create' | 'update' | 'delete';
-    table: 'todos' | 'messages';
-    data: any;
-    timestamp: number;
-    retries: number;
-  }>
-> {
+export async function getSyncQueueFromIDB(): Promise<SyncQueueItem[]> {
   const db = await getDB();
   return await db.getAllFromIndex('syncQueue', 'by-timestamp');
 }

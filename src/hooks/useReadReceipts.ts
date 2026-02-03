@@ -330,7 +330,9 @@ export function useReadReceipts(currentUser?: User) {
       supabase.removeChannel(readReceiptsChannel);
       channelRef.current = null;
     };
-  }, [currentUser]);
+  // BUGFIX: Use currentUser?.id instead of entire object to prevent infinite re-subscriptions
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
 
   return {
     /**

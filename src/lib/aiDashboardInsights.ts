@@ -616,6 +616,84 @@ export function calculateProductivityScore(
   return Math.max(0, Math.min(100, score));
 }
 
+/**
+ * Score breakdown for tooltip display
+ */
+export interface ScoreBreakdown {
+  baseScore: number;
+  completionBonus: number;
+  completionsCount: number;
+  overdueePenalty: number;
+  overdueCount: number;
+  backlogBonus: number;
+  activeTaskCount: number;
+  priorityBonus: number;
+  highPriorityCompleted: number;
+  finalScore: number;
+}
+
+/**
+ * Returns a detailed breakdown of how the productivity score was calculated
+ */
+export function getScoreBreakdown(
+  todos: Todo[],
+  activityLog: ActivityLogEntry[],
+  currentUser: string
+): ScoreBreakdown {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const userTasks = todos.filter(t => t.assigned_to === currentUser);
+  const activeTasks = userTasks.filter(t => !t.completed);
+  const completedTasks = userTasks.filter(t => t.completed);
+
+  // Recent completions
+  const recentCompletions = completedTasks.filter(t => {
+    const completedDate = t.updated_at ? new Date(t.updated_at) : null;
+    return completedDate && completedDate >= weekAgo;
+  });
+
+  // Overdue count
+  const overdue = activeTasks.filter(t => {
+    if (!t.due_date) return false;
+    const dueDate = new Date(t.due_date);
+    dueDate.setHours(23, 59, 59, 999);
+    return dueDate < today;
+  });
+
+  // Calculate components
+  const baseScore = 50;
+  const completionBonus = Math.min(recentCompletions.length * 5, 30);
+  const overdueePenalty = Math.min(overdue.length * 4, 20);
+
+  let backlogBonus = 0;
+  if (activeTasks.length <= 5) backlogBonus = 10;
+  else if (activeTasks.length <= 10) backlogBonus = 5;
+
+  const highPriorityCompleted = recentCompletions.filter(
+    t => t.priority === 'urgent' || t.priority === 'high'
+  ).length;
+  const priorityBonus = Math.min(highPriorityCompleted * 3, 10);
+
+  const rawScore = baseScore + completionBonus - overdueePenalty + backlogBonus + priorityBonus;
+  const finalScore = Math.max(0, Math.min(100, rawScore));
+
+  return {
+    baseScore,
+    completionBonus,
+    completionsCount: recentCompletions.length,
+    overdueePenalty,
+    overdueCount: overdue.length,
+    backlogBonus,
+    activeTaskCount: activeTasks.length,
+    priorityBonus,
+    highPriorityCompleted,
+    finalScore,
+  };
+}
+
 // ============================================================================
 // TODAY'S FOCUS SUGGESTION
 // ============================================================================

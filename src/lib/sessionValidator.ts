@@ -168,17 +168,38 @@ export async function validateSession(
       }
 
       // Check idle timeout
+      // BUGFIX UTIL-002: Handle corrupted timestamps and use atomic update
       if (session.last_activity) {
         const lastActivity = new Date(session.last_activity);
-        const idleTime = Date.now() - lastActivity.getTime();
+        const lastActivityMs = lastActivity.getTime();
+
+        // Check for corrupted timestamp
+        if (isNaN(lastActivityMs)) {
+          logger.warn('[SESSION] Corrupted last_activity timestamp detected', { component: 'SessionValidator', tokenHash: tokenHash.slice(0, 8) });
+          // Invalidate session with corrupted data using atomic condition
+          await supabaseAdmin
+            .from('user_sessions')
+            .update({ is_valid: false })
+            .eq('token_hash', tokenHash)
+            .eq('is_valid', true); // Atomic: only update if still valid
+
+          return {
+            valid: false,
+            error: 'Session data corrupted',
+          };
+        }
+
+        const idleTime = Date.now() - lastActivityMs;
         const idleTimeoutMs = IDLE_TIMEOUT_MINUTES * 60 * 1000;
 
         if (idleTime > idleTimeoutMs) {
           // Invalidate the session due to idle timeout
+          // Use atomic update with condition to prevent race with concurrent requests
           await supabaseAdmin
             .from('user_sessions')
             .update({ is_valid: false })
-            .eq('token_hash', tokenHash);
+            .eq('token_hash', tokenHash)
+            .eq('is_valid', true); // Atomic: only update if still valid
 
           return {
             valid: false,

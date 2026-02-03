@@ -18,6 +18,7 @@ import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 import { createAutoReminders, updateAutoReminders } from '@/lib/reminderService';
 import { useAgency } from '@/contexts/AgencyContext';
+import { parseTodo } from '@/lib/validators';
 
 // Number of todos to fetch per page
 const TODOS_PER_PAGE = 200;
@@ -168,10 +169,12 @@ export function useTodoData(currentUser: AuthUser) {
             canViewAllTasks || todo.created_by === userName || todo.assigned_to === userName;
 
           if (payload.eventType === 'INSERT') {
-            const newTodo = payload.new as Todo;
-            // Normalize subtasks and attachments
-            newTodo.subtasks = Array.isArray(newTodo.subtasks) ? newTodo.subtasks : [];
-            newTodo.attachments = Array.isArray(newTodo.attachments) ? newTodo.attachments : [];
+            // BUGFIX TYPE-001: Validate payload instead of dangerous cast
+            const newTodo = parseTodo(payload.new);
+            if (!newTodo) {
+              logger.warn('Invalid todo payload received in INSERT', { payload: payload.new, component: 'useTodoData' });
+              return;
+            }
 
             if (!isVisibleToUser(newTodo)) return;
             // Check if todo already exists (to avoid duplicates from optimistic updates)
@@ -181,10 +184,12 @@ export function useTodoData(currentUser: AuthUser) {
               addTodoToStore(newTodo);
             }
           } else if (payload.eventType === 'UPDATE') {
-            const updatedTodo = payload.new as Todo;
-            // Normalize subtasks and attachments
-            updatedTodo.subtasks = Array.isArray(updatedTodo.subtasks) ? updatedTodo.subtasks : [];
-            updatedTodo.attachments = Array.isArray(updatedTodo.attachments) ? updatedTodo.attachments : [];
+            // BUGFIX TYPE-001: Validate payload instead of dangerous cast
+            const updatedTodo = parseTodo(payload.new);
+            if (!updatedTodo) {
+              logger.warn('Invalid todo payload received in UPDATE', { payload: payload.new, component: 'useTodoData' });
+              return;
+            }
             // During reorder, suppress updates that only change display_order/updated_at
             // to prevent the list from reshuffling mid-drag
             if (_isReordering) {

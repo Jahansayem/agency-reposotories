@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { ChatMessage, PresenceStatus } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { parseChatMessage } from '@/lib/validators';
 
 interface UseChatSubscriptionOptions {
   currentUserName: string;
@@ -134,7 +135,12 @@ export function useChatSubscription({
         { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            const newMsg = payload.new as ChatMessage;
+            // BUGFIX TYPE-002: Validate payload instead of dangerous cast
+            const newMsg = parseChatMessage(payload.new);
+            if (!newMsg) {
+              logger.warn('Invalid chat message payload received', { payload: payload.new, component: 'useChatSubscription' });
+              return;
+            }
             onNewMessageRef.current?.(newMsg);
 
             // Clear typing indicator for sender
