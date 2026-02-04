@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useCurrentUser } from '@/contexts/UserContext';
 import { useAgency } from '@/contexts/AgencyContext';
 import { logger } from '@/lib/logger';
+import { logActivity } from '@/lib/activityLogger';
 import type { PolicyType } from '@/types/todo';
 
 // ============================================
@@ -143,25 +144,46 @@ export function LogSaleModal({ isOpen, onClose, onSaleLogged }: LogSaleModalProp
       const policyTypeLabel = POLICY_TYPES.find((p) => p.value === formData.policyType)?.label || formData.policyType;
 
       // Create a completed quote task to represent the sale
-      const { error: insertError } = await supabase.from('todos').insert({
-        text: `${policyTypeLabel} policy sold - ${formData.customerName}`,
-        completed: true,
-        status: 'done',
-        priority: 'medium',
-        category: 'quote',
-        premium_amount: premiumAmount,
-        customer_name: formData.customerName.trim(),
-        policy_type: formData.policyType,
-        created_by: currentUser.name,
-        assigned_to: currentUser.name,
-        agency_id: currentAgencyId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
+      const todoText = `${policyTypeLabel} policy sold - ${formData.customerName}`;
+      const { data: newTodo, error: insertError } = await supabase
+        .from('todos')
+        .insert({
+          text: todoText,
+          completed: true,
+          status: 'done',
+          priority: 'medium',
+          category: 'quote',
+          premium_amount: premiumAmount,
+          customer_name: formData.customerName.trim(),
+          policy_type: formData.policyType,
+          created_by: currentUser.name,
+          assigned_to: currentUser.name,
+          agency_id: currentAgencyId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
       if (insertError) {
         throw insertError;
       }
+
+      // Log activity for audit trail (critical project requirement)
+      await logActivity({
+        action: 'task_created',
+        userName: currentUser.name,
+        todoId: newTodo?.id,
+        todoText,
+        details: {
+          category: 'quote',
+          premium_amount: premiumAmount,
+          customer_name: formData.customerName.trim(),
+          policy_type: formData.policyType,
+          completed: true,
+          source: 'log_sale_modal',
+        },
+      });
 
       // Show success animation briefly
       setShowSuccess(true);
