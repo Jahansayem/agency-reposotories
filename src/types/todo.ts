@@ -234,7 +234,22 @@ export interface User {
   last_login?: string;
 }
 
+/**
+ * User role within an agency context.
+ * Aligned with AgencyRole from agency.ts.
+ *
+ * - `owner`: Agency owner with full permissions
+ * - `manager`: Team manager with oversight capabilities
+ * - `staff`: Regular team member with limited permissions
+ */
 export type UserRole = 'owner' | 'manager' | 'staff';
+
+/**
+ * Global platform role (cross-agency).
+ *
+ * - `user`: Standard user (most users)
+ * - `super_admin`: Platform administrator with cross-agency access
+ */
 export type GlobalRole = 'user' | 'super_admin';
 
 // Import agency types for re-export

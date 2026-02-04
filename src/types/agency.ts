@@ -30,45 +30,106 @@ export interface Agency {
 // Agency Membership Types
 // ============================================
 
+/**
+ * Role within an agency.
+ * - `owner`: Full access to all features, can manage billing and agency settings
+ * - `manager`: Team oversight, can manage team members but not agency settings
+ * - `staff`: Limited access, can manage own tasks and use basic features
+ */
 export type AgencyRole = 'owner' | 'manager' | 'staff';
 
+/**
+ * Status of a member within an agency.
+ * - `active`: Currently active member
+ * - `invited`: Invitation sent but not yet accepted
+ * - `suspended`: Temporarily disabled access
+ */
 export type MemberStatus = 'active' | 'invited' | 'suspended';
 
+/**
+ * Granular permissions for agency members.
+ * Total: 20 permission flags organized by category.
+ *
+ * These permissions can be customized per user beyond the role defaults.
+ */
 export interface AgencyPermissions {
-  // Task Management
+  // ---- Task Permissions (8) ----
+  /** Can create new tasks */
   can_create_tasks: boolean;
-  can_edit_any_task: boolean;
-  can_delete_tasks: boolean;
+  /** Can edit tasks they created */
+  can_edit_own_tasks: boolean;
+  /** Can edit any task in the agency */
+  can_edit_all_tasks: boolean;
+  /** Can delete tasks they created */
+  can_delete_own_tasks: boolean;
+  /** Can delete any task in the agency */
+  can_delete_all_tasks: boolean;
+  /** Can assign tasks to other team members */
   can_assign_tasks: boolean;
-  can_reorder_tasks: boolean;
+  /** Can view all tasks (not just assigned to them) */
   can_view_all_tasks: boolean;
+  /** Can reorder tasks in the list view */
+  can_reorder_tasks: boolean;
 
-  // Strategic Goals
-  can_view_strategic_goals: boolean;
-  can_manage_strategic_goals: boolean;
+  // ---- Team Permissions (3) ----
+  /** Can view tasks assigned to team members */
+  can_view_team_tasks: boolean;
+  /** Can view team statistics and performance metrics */
+  can_view_team_stats: boolean;
+  /** Can invite/remove users and change roles */
+  can_manage_team: boolean;
 
-  // Team Management
-  can_invite_users: boolean;
-  can_remove_users: boolean;
-  can_change_roles: boolean;
-
-  // Templates & Content
-  can_manage_templates: boolean;
-  can_use_ai_features: boolean;
-
-  // Chat & Communication
+  // ---- Chat Permissions (4) ----
+  /** Can use team chat and DMs */
+  can_use_chat: boolean;
+  /** Can delete their own messages */
+  can_delete_own_messages: boolean;
+  /** Can delete any message in the agency */
+  can_delete_all_messages: boolean;
+  /** Can pin messages in chat */
   can_pin_messages: boolean;
+
+  // ---- Feature Permissions (6) ----
+  /** Can view strategic goals dashboard */
+  can_view_strategic_goals: boolean;
+  /** Can create and edit strategic goals */
+  can_edit_strategic_goals: boolean;
+  /** Can view archived tasks */
+  can_view_archive: boolean;
+  /** Can use AI-powered features (smart parse, email generation, etc.) */
+  can_use_ai_features: boolean;
+  /** Can create and manage task templates */
+  can_manage_templates: boolean;
+  /** Can view the activity log */
+  can_view_activity_log: boolean;
+
+  // ---- Legacy Permission Aliases ----
+  // These are deprecated but maintained for backwards compatibility.
+  // They map to the newer, more granular permissions above.
+
+  /**
+   * @deprecated Use `can_edit_all_tasks` instead
+   * Alias for can_edit_all_tasks - can edit any task in the agency
+   */
+  can_edit_any_task: boolean;
+
+  /**
+   * @deprecated Use `can_delete_all_tasks` instead
+   * Alias for can_delete_all_tasks - can delete any task
+   */
+  can_delete_tasks: boolean;
+
+  /**
+   * @deprecated Use `can_delete_all_messages` instead
+   * Alias for can_delete_all_messages - can delete any message
+   */
   can_delete_any_message: boolean;
 
-  // Reporting & Analytics
-  can_view_activity_feed: boolean;
-  can_view_dashboard: boolean;
-  can_view_archive: boolean;
-
-  // Agency Administration
-  can_manage_agency_settings: boolean;
-  can_view_security_events: boolean;
-  can_manage_billing: boolean;
+  /**
+   * @deprecated Use `can_edit_strategic_goals` instead
+   * Alias for can_edit_strategic_goals - can manage strategic goals
+   */
+  can_manage_strategic_goals: boolean;
 }
 
 export interface AgencyMember {
@@ -173,75 +234,111 @@ export interface UpdateMemberRequest {
 // Default Permissions by Role
 // ============================================
 
+/**
+ * Default permission sets for each agency role.
+ *
+ * - **Owner**: Full access to all permissions
+ * - **Manager**: Most permissions except strategic goals edit and team management
+ * - **Staff**: Limited permissions - can manage own tasks, use chat, use AI features
+ *
+ * Individual users can have permissions customized beyond these defaults.
+ */
 export const DEFAULT_PERMISSIONS: Record<AgencyRole, AgencyPermissions> = {
   owner: {
+    // Task permissions - all true
     can_create_tasks: true,
+    can_edit_own_tasks: true,
+    can_edit_all_tasks: true,
+    can_delete_own_tasks: true,
+    can_delete_all_tasks: true,
+    can_assign_tasks: true,
+    can_view_all_tasks: true,
+    can_reorder_tasks: true,
+    // Team permissions - all true
+    can_view_team_tasks: true,
+    can_view_team_stats: true,
+    can_manage_team: true,
+    // Chat permissions - all true
+    can_use_chat: true,
+    can_delete_own_messages: true,
+    can_delete_all_messages: true,
+    can_pin_messages: true,
+    // Feature permissions - all true
+    can_view_strategic_goals: true,
+    can_edit_strategic_goals: true,
+    can_view_archive: true,
+    can_use_ai_features: true,
+    can_manage_templates: true,
+    can_view_activity_log: true,
+    // Legacy aliases (mirror the new permission values)
     can_edit_any_task: true,
     can_delete_tasks: true,
-    can_assign_tasks: true,
-    can_reorder_tasks: true,
-    can_view_all_tasks: true,
-    can_view_strategic_goals: true,
-    can_manage_strategic_goals: true,
-    can_invite_users: true,
-    can_remove_users: true,
-    can_change_roles: true,
-    can_manage_templates: true,
-    can_use_ai_features: true,
-    can_pin_messages: true,
     can_delete_any_message: true,
-    can_view_activity_feed: true,
-    can_view_dashboard: true,
-    can_view_archive: true,
-    can_manage_agency_settings: true,
-    can_view_security_events: true,
-    can_manage_billing: true,
+    can_manage_strategic_goals: true,
   },
   manager: {
+    // Task permissions - most true
     can_create_tasks: true,
-    can_edit_any_task: true,
-    can_delete_tasks: true,
+    can_edit_own_tasks: true,
+    can_edit_all_tasks: true,
+    can_delete_own_tasks: true,
+    can_delete_all_tasks: false, // Cannot delete all tasks
     can_assign_tasks: true,
-    can_reorder_tasks: true,
     can_view_all_tasks: true,
-    can_view_strategic_goals: true,
-    can_manage_strategic_goals: false,
-    can_invite_users: true,
-    can_remove_users: true,
-    can_change_roles: false,
-    can_manage_templates: true,
-    can_use_ai_features: true,
+    can_reorder_tasks: true,
+    // Team permissions - can view but not manage
+    can_view_team_tasks: true,
+    can_view_team_stats: true,
+    can_manage_team: false, // Cannot manage team
+    // Chat permissions - most true
+    can_use_chat: true,
+    can_delete_own_messages: true,
+    can_delete_all_messages: false, // Cannot delete all messages
     can_pin_messages: true,
-    can_delete_any_message: true,
-    can_view_activity_feed: true,
-    can_view_dashboard: true,
+    // Feature permissions - limited strategic goals
+    can_view_strategic_goals: true,
+    can_edit_strategic_goals: false, // Cannot edit strategic goals
     can_view_archive: true,
-    can_manage_agency_settings: false,
-    can_view_security_events: true,
-    can_manage_billing: false,
+    can_use_ai_features: true,
+    can_manage_templates: true,
+    can_view_activity_log: true,
+    // Legacy aliases (mirror the new permission values)
+    can_edit_any_task: true,
+    can_delete_tasks: false,
+    can_delete_any_message: false,
+    can_manage_strategic_goals: false,
   },
   staff: {
+    // Task permissions - only own tasks
     can_create_tasks: true,
+    can_edit_own_tasks: true,
+    can_edit_all_tasks: false,
+    can_delete_own_tasks: true,
+    can_delete_all_tasks: false,
+    can_assign_tasks: false, // Cannot assign tasks
+    can_view_all_tasks: false, // Only their own tasks
+    can_reorder_tasks: false,
+    // Team permissions - none
+    can_view_team_tasks: false,
+    can_view_team_stats: false,
+    can_manage_team: false,
+    // Chat permissions - basic
+    can_use_chat: true,
+    can_delete_own_messages: true,
+    can_delete_all_messages: false,
+    can_pin_messages: false, // Cannot pin messages
+    // Feature permissions - limited
+    can_view_strategic_goals: false, // Cannot view strategic goals
+    can_edit_strategic_goals: false,
+    can_view_archive: false, // Cannot view archive
+    can_use_ai_features: true,
+    can_manage_templates: false, // Cannot manage templates
+    can_view_activity_log: true,
+    // Legacy aliases (mirror the new permission values)
     can_edit_any_task: false,
     can_delete_tasks: false,
-    can_assign_tasks: false,
-    can_reorder_tasks: false,
-    can_view_all_tasks: false,
-    can_view_strategic_goals: false,
-    can_manage_strategic_goals: false,
-    can_invite_users: false,
-    can_remove_users: false,
-    can_change_roles: false,
-    can_manage_templates: false,
-    can_use_ai_features: true,
-    can_pin_messages: false,
     can_delete_any_message: false,
-    can_view_activity_feed: true,
-    can_view_dashboard: true,
-    can_view_archive: false,
-    can_manage_agency_settings: false,
-    can_view_security_events: false,
-    can_manage_billing: false,
+    can_manage_strategic_goals: false,
   },
 };
 
@@ -297,13 +394,13 @@ export function canViewGoals(membership: AgencyMembership | AgencyMember | null 
 }
 
 /**
- * Check if user can invite other users
+ * Check if user can invite other users (requires can_manage_team permission)
  */
 export function canInviteUsers(membership: AgencyMembership | AgencyMember | null | undefined): boolean {
   if (!membership) return false;
   if (isAgencyAdmin(membership)) return true;
   const permissions = 'permissions' in membership ? membership.permissions : null;
-  return hasPermission(permissions, 'can_invite_users');
+  return hasPermission(permissions, 'can_manage_team');
 }
 
 /**
