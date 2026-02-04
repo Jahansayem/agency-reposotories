@@ -8,6 +8,8 @@
 export type FeatureFlag =
   | 'new_auth_system'
   | 'oauth_login'
+  | 'clerk_auth'
+  | 'pin_auth'
   | 'normalized_schema'
   | 'refactored_components'
   | 'new_state_management'
@@ -33,6 +35,18 @@ const FEATURE_FLAGS: Record<FeatureFlag, () => FeatureFlagConfig> = {
   oauth_login: () => ({
     enabled: process.env.NEXT_PUBLIC_ENABLE_OAUTH === 'true' || process.env.NEXT_PUBLIC_USE_OAUTH === 'true',
     description: 'OAuth 2.0 login (Google/Apple)',
+  }),
+
+  clerk_auth: () => ({
+    enabled: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY !== undefined &&
+             process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY !== '',
+    description: 'Clerk authentication (SSO/SAML support)',
+  }),
+
+  pin_auth: () => ({
+    // PIN auth is enabled by default, can be disabled once Clerk is fully rolled out
+    enabled: process.env.NEXT_PUBLIC_DISABLE_PIN_AUTH !== 'true',
+    description: 'Legacy PIN-based authentication',
   }),
 
   normalized_schema: () => ({
@@ -121,3 +135,24 @@ function simpleHash(str: string): number {
 export function useFeatureFlag(flag: FeatureFlag, userId?: string): boolean {
   return isFeatureEnabled(flag, userId);
 }
+
+/**
+ * Auth-specific helpers for dual-auth mode
+ */
+export const AUTH_CONFIG = {
+  get clerkEnabled(): boolean {
+    return isFeatureEnabled('clerk_auth');
+  },
+  get pinEnabled(): boolean {
+    return isFeatureEnabled('pin_auth');
+  },
+  get isDualAuthMode(): boolean {
+    return this.clerkEnabled && this.pinEnabled;
+  },
+  get isClerkOnly(): boolean {
+    return this.clerkEnabled && !this.pinEnabled;
+  },
+  get isPinOnly(): boolean {
+    return !this.clerkEnabled && this.pinEnabled;
+  },
+};

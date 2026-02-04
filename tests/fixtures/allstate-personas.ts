@@ -11,7 +11,8 @@
  * - Tier 4: Specialists (Financial Specialist)
  */
 
-import type { User, AgencyMember, Todo } from '@/types';
+import type { User, Todo } from '@/types/todo';
+import type { AgencyMember } from '@/types/agency';
 
 // ============================================================================
 // PERSONA TYPES
@@ -712,7 +713,7 @@ export function generateSeedUser(persona: AllstatePersona): Partial<User> {
     name: persona.name,
     email: persona.email,
     color: persona.color,
-    role: persona.role,
+    // Note: role is stored in agency_members, not users
   };
 }
 
@@ -723,7 +724,7 @@ export function generateSeedMember(persona: AllstatePersona, agencyId: string): 
   return {
     agency_id: agencyId,
     role: persona.role,
-    permissions: persona.permissions,
+    // Permissions are derived from role, not stored individually
     status: 'active',
   };
 }
