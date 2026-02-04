@@ -34,7 +34,9 @@ import AnimatedProgressRing from '@/components/dashboard/AnimatedProgressRing';
 import StatCard from '@/components/dashboard/StatCard';
 import QuickActions from '@/components/dashboard/QuickActions';
 import DailyDigestPanel from '@/components/dashboard/DailyDigestPanel';
-import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
+import ManagerDashboard from '@/components/dashboard/ManagerDashboard';
+import DoerDashboard from '@/components/dashboard/DoerDashboard';
+import { Todo, AuthUser, ActivityLogEntry, User } from '@/types/todo';
 import {
   generateDashboardAIData,
   getScoreBreakdown,
@@ -55,12 +57,18 @@ interface DashboardPageProps {
   todos: Todo[];
   activityLog?: ActivityLogEntry[];
   users?: string[];
+  allUsers?: User[];
   onNavigateToTasks?: () => void;
   onAddTask?: () => void;
   onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;
+  onFilterByCategory?: (category: string) => void;
+  onFilterByUser?: (userName: string) => void;
+  onRefreshTodos?: () => void;
   onOpenChat?: () => void;
+  /** Use new role-based dashboards instead of legacy dashboard */
+  useNewDashboards?: boolean;
 }
 
 /** Map insight types/titles to a click action */
@@ -99,19 +107,63 @@ export default function DashboardPage({
   todos,
   activityLog = [],
   users = [],
+  allUsers,
   onNavigateToTasks,
   onAddTask,
   onTaskClick,
   onFilterOverdue,
   onFilterDueToday,
+  onFilterByCategory,
+  onFilterByUser,
+  onRefreshTodos,
   onOpenChat,
+  useNewDashboards = true, // Default to new dashboards
 }: DashboardPageProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'team'>('overview');
   const darkMode = true; // Always dark mode in this app's context
 
-  // Check if user has team members (is a manager)
+  // Check if user has team members (is a manager/owner)
   const hasTeam = users.length > 1;
+
+  // Determine if user is owner/manager based on role or name
+  const isOwnerOrManager = currentUser.role === 'owner' || currentUser.role === 'manager' || currentUser.name === 'Derrick';
+
+  // Use new role-based dashboards
+  if (useNewDashboards) {
+    if (isOwnerOrManager && hasTeam) {
+      return (
+        <ManagerDashboard
+          currentUser={currentUser}
+          todos={todos}
+          activityLog={activityLog}
+          users={users}
+          allUsers={allUsers}
+          onNavigateToTasks={onNavigateToTasks}
+          onTaskClick={onTaskClick}
+          onFilterOverdue={onFilterOverdue}
+          onFilterDueToday={onFilterDueToday}
+          onFilterByCategory={onFilterByCategory}
+          onFilterByUser={onFilterByUser}
+          onRefreshTodos={onRefreshTodos}
+        />
+      );
+    } else {
+      return (
+        <DoerDashboard
+          currentUser={currentUser}
+          todos={todos}
+          activityLog={activityLog}
+          onNavigateToTasks={onNavigateToTasks}
+          onTaskClick={onTaskClick}
+          onFilterOverdue={onFilterOverdue}
+          onFilterDueToday={onFilterDueToday}
+        />
+      );
+    }
+  }
+
+  // Legacy dashboard below (kept for backwards compatibility)
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);

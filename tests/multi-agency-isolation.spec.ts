@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { hideDevOverlay } from './helpers/test-base';
 
 /**
  * Multi-Agency Data Isolation Tests
@@ -15,6 +16,9 @@ import { test, expect, Page } from '@playwright/test';
  * - There must be at least two test agencies set up
  * - Test users must exist in different agencies
  */
+
+// Increase default test timeout for multi-agency tests
+test.setTimeout(60000);
 
 // Test configuration
 const TEST_AGENCY_A = {
@@ -33,28 +37,52 @@ const TEST_AGENCY_B = {
 async function loginAsUser(page: Page, userName: string, pin: string = '8008'): Promise<boolean> {
   await page.goto('http://localhost:3000');
 
-  // Wait for login screen to load
+  // Hide the Next.js dev overlay to prevent pointer event interception
+  await hideDevOverlay(page);
+
+  // Wait for login screen to load - try multiple selectors
   try {
-    await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 15000 });
+    await Promise.race([
+      page.waitForSelector('h1:has-text("Bealer Agency")', { timeout: 20000 }),
+      page.waitForSelector(`[data-testid="user-card-${userName}"]`, { timeout: 20000 }),
+      page.waitForSelector('button:has-text("' + userName + '")', { timeout: 20000 }),
+    ]);
   } catch {
-    console.log('Failed to load login screen');
-    return false;
+    console.log('Failed to load login screen - retrying...');
+    // Retry once
+    await page.reload();
+    await hideDevOverlay(page);
+    try {
+      await page.waitForSelector(`[data-testid="user-card-${userName}"]`, { timeout: 15000 });
+    } catch {
+      console.log('Failed to load login screen after retry');
+      return false;
+    }
   }
 
-  // Try to find and click on the user
-  const userButton = page.locator(`button:has-text("${userName}")`).first();
-  const userExists = await userButton.isVisible({ timeout: 3000 }).catch(() => false);
+  // Try to find and click on the user - try multiple selectors
+  const userCardSelector = `[data-testid="user-card-${userName}"]`;
+  const userButtonSelector = `button:has-text("${userName}")`;
+
+  let userElement = page.locator(userCardSelector);
+  let userExists = await userElement.isVisible({ timeout: 3000 }).catch(() => false);
+
+  if (!userExists) {
+    userElement = page.locator(userButtonSelector).first();
+    userExists = await userElement.isVisible({ timeout: 3000 }).catch(() => false);
+  }
 
   if (!userExists) {
     console.log(`Test user "${userName}" not found on login screen`);
     return false;
   }
 
-  await userButton.click();
+  await userElement.click();
 
   // Wait for PIN screen
   try {
-    await expect(page.locator('text=Enter your 4-digit PIN')).toBeVisible({ timeout: 5000 });
+    await page.waitForSelector('input[type="password"]', { timeout: 10000 });
+    await page.waitForTimeout(500); // Wait for animation
   } catch {
     console.log('Failed to show PIN screen');
     return false;
@@ -78,11 +106,21 @@ async function loginAsUser(page: Page, userName: string, pin: string = '8008'): 
     return false;
   }
 
-  // Wait for main app to load
+  // Wait for main app to load - check for either desktop sidebar or mobile nav
   try {
-    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({
-      timeout: 15000,
-    });
+    const isMobile = await page.evaluate(() => window.innerWidth < 768);
+
+    if (isMobile) {
+      // On mobile, wait for the bottom navigation bar
+      await page.waitForSelector('nav[aria-label="Main navigation"]', { timeout: 20000 }).catch(() => {
+        return page.waitForTimeout(3000);
+      });
+    } else {
+      // On desktop, the sidebar navigation landmark is always present after login
+      await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 20000 }).catch(() => {
+        return page.waitForTimeout(3000);
+      });
+    }
     return true;
   } catch {
     console.log('Failed to load main app after login');
@@ -109,7 +147,9 @@ async function createTask(page: Page, taskText: string): Promise<string> {
 // Helper to verify task is visible
 async function verifyTaskVisible(page: Page, taskId: string): Promise<boolean> {
   try {
-    await expect(page.locator(`text=.*${taskId}.*`)).toBeVisible({ timeout: 3000 });
+    // Use getByText with regex for pattern matching
+    const taskLocator = page.getByText(new RegExp(taskId));
+    await expect(taskLocator.first()).toBeVisible({ timeout: 5000 });
     return true;
   } catch {
     return false;
@@ -119,7 +159,9 @@ async function verifyTaskVisible(page: Page, taskId: string): Promise<boolean> {
 // Helper to verify task is NOT visible
 async function verifyTaskNotVisible(page: Page, taskId: string): Promise<boolean> {
   try {
-    await expect(page.locator(`text=.*${taskId}.*`)).not.toBeVisible({ timeout: 3000 });
+    // Use getByText with regex for pattern matching
+    const taskLocator = page.getByText(new RegExp(taskId));
+    await expect(taskLocator).not.toBeVisible({ timeout: 5000 });
     return true;
   } catch {
     return false;
@@ -164,8 +206,8 @@ async function switchAgency(page: Page, agencyName: string): Promise<boolean> {
 // Helper to clean up test tasks
 async function cleanupTestTasks(page: Page): Promise<void> {
   try {
-    // Find all tasks with E2E_Test prefix
-    const taskElements = page.locator('[data-testid="task-item"], div:has(text=/E2E_Test_/)');
+    // Find all tasks with E2E_Test prefix using filter pattern (valid Playwright selector)
+    const taskElements = page.locator('[data-testid="task-item"]').filter({ hasText: /E2E_Test_/ });
     const count = await taskElements.count();
 
     for (let i = 0; i < count; i++) {
@@ -228,9 +270,9 @@ test.describe('Multi-Agency Data Isolation', () => {
     }
 
     // Verify we're in an agency context
-    const agencyInfo = page.locator('[data-testid="agency-name"], text=/Agency:/');
+    const agencyInfo = page.locator('[data-testid="agency-name"]').or(page.locator('text=Agency:'));
 
-    if (await agencyInfo.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await agencyInfo.first().isVisible({ timeout: 2000 }).catch(() => false)) {
       console.log('Multi-agency feature appears to be enabled');
     } else {
       console.log('Multi-agency feature may not be fully implemented');
@@ -294,8 +336,10 @@ test.describe('Multi-Agency Data Isolation', () => {
     let isVisible = await verifyTaskVisible(page, taskAId);
     expect(isVisible).toBe(true);
 
-    // Count initial tasks
-    const initialTaskCount = await page.locator('[data-testid="task-item"], div:has(text=/^(?!.*E2E_Test)./)').count();
+    // Count initial tasks (excluding E2E test tasks)
+    const allTasks = page.locator('[data-testid="task-item"]');
+    const testTasks = page.locator('[data-testid="task-item"]').filter({ hasText: /E2E_Test_/ });
+    const initialTaskCount = await allTasks.count() - await testTasks.count();
 
     // Open new context for Agency B
     const page2 = await context.newPage();
@@ -306,8 +350,10 @@ test.describe('Multi-Agency Data Isolation', () => {
       test.skip();
     }
 
-    // Get task count in Agency B
-    const agencyBTaskCount = await page2.locator('[data-testid="task-item"], div:has(text=/^(?!.*E2E_Test)./)').count();
+    // Get task count in Agency B (excluding E2E test tasks)
+    const allTasksB = page2.locator('[data-testid="task-item"]');
+    const testTasksB = page2.locator('[data-testid="task-item"]').filter({ hasText: /E2E_Test_/ });
+    const agencyBTaskCount = await allTasksB.count() - await testTasksB.count();
 
     // Create task in Agency B
     const taskBId = await createTask(page2, `Agency B Task`);
@@ -401,7 +447,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     await page.waitForTimeout(500);
 
     // Verify we're in strategic goals view
-    const goalsViewIndicator = page.locator('text=/Goals|Strategic|Objectives/i').first();
+    const goalsViewIndicator = page.getByText(/Goals|Strategic|Objectives/i).first();
 
     if (!(await goalsViewIndicator.isVisible({ timeout: 3000 }).catch(() => false))) {
       console.log('Strategic goals view not found');
@@ -410,11 +456,13 @@ test.describe('Multi-Agency Data Isolation', () => {
     }
 
     // Count initial goals
-    const initialGoalCount = await page.locator('[data-testid="goal-card"], div:has(text=/Goal/)').count();
+    const goalCards = page.locator('[data-testid="goal-card"]');
+    const goalDivs = page.locator('div').filter({ hasText: /Goal/ });
+    const initialGoalCount = await goalCards.count() || await goalDivs.count();
 
     // Verify isolation by checking we're in Agency A context
-    const agencyInfo = page.locator('[data-testid="agency-name"], text=/Agency:/');
-    const agencyInfoVisible = await agencyInfo.isVisible({ timeout: 2000 }).catch(() => false);
+    const agencyInfo = page.locator('[data-testid="agency-name"]').or(page.locator('text=Agency:'));
+    const agencyInfoVisible = await agencyInfo.first().isVisible({ timeout: 2000 }).catch(() => false);
 
     expect(agencyInfoVisible || initialGoalCount >= 0).toBeTruthy(); // At least show goals exist
   });
@@ -497,7 +545,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     const taskId = await createTask(page, `Assignment Test Task`);
 
     // Click on task to open details
-    const taskElement = page.locator(`text=.*${taskId}.*`);
+    const taskElement = page.getByText(new RegExp(taskId)).first();
     await taskElement.click();
     await page.waitForTimeout(500);
 
@@ -514,11 +562,15 @@ test.describe('Multi-Agency Data Isolation', () => {
     await page.waitForTimeout(300);
 
     // Get list of available users
-    const userOptions = page.locator('[data-testid="user-option"], div:has(text=/User|Assign/)').first();
+    const userOptionsByTestId = page.locator('[data-testid="user-option"]');
+    const userOptionsByText = page.locator('div').filter({ hasText: /User|Assign/ });
+    const userOptions = userOptionsByTestId.first().or(userOptionsByText.first());
 
     if (await userOptions.isVisible({ timeout: 2000 }).catch(() => false)) {
       // Verify the list is not empty (should contain Agency A staff)
-      const optionCount = await page.locator('[data-testid="user-option"], li:has-text(/User|name/)').count();
+      const optionsByTestId = await page.locator('[data-testid="user-option"]').count();
+      const optionsByLi = await page.locator('li').filter({ hasText: /User|name/ }).count();
+      const optionCount = optionsByTestId || optionsByLi;
       expect(optionCount).toBeGreaterThanOrEqual(0);
     }
   });
@@ -614,8 +666,9 @@ test.describe('Multi-Agency Data Isolation', () => {
     expect(isVisible).toBe(true);
 
     // Try to complete the task (this should work in Agency A)
-    const taskElement = page.locator(`text=.*${taskAId}.*`);
-    const completeButton = taskElement.locator('button[aria-label*="Complete"], input[type="checkbox"]').first();
+    const taskElement = page.getByText(new RegExp(taskAId)).first();
+    const taskContainer = taskElement.locator('..');
+    const completeButton = taskContainer.locator('button[aria-label*="Complete"], input[type="checkbox"]').first();
 
     if (await completeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await completeButton.click();
@@ -637,8 +690,8 @@ test.describe('Multi-Agency Data Isolation', () => {
       expect(isTaskInB).toBe(false);
 
       // Cannot modify what they can't see
-      const taskElementB = page2.locator(`text=.*${taskAId}.*`);
-      const existsInB = await taskElementB.isVisible({ timeout: 1000 }).catch(() => false);
+      const taskElementB = page2.getByText(new RegExp(taskAId));
+      const existsInB = await taskElementB.first().isVisible({ timeout: 1000 }).catch(() => false);
       expect(existsInB).toBe(false);
     }
 

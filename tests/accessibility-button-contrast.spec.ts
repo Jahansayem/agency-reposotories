@@ -1,25 +1,11 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { loginAsUser } from './helpers/auth';
 
 test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:3000');
-
-    // Login as Derrick
-    await expect(page.locator('text=Welcome back')).toBeVisible({ timeout: 5000 });
-    const derrickCard = page.locator('[data-testid="user-card-Derrick"]');
-    await expect(derrickCard).toBeVisible();
-    await derrickCard.click();
-
-    // Enter PIN
-    const pinInputs = page.locator('input[data-testid^="pin-"]');
-    await pinInputs.nth(0).fill('8');
-    await pinInputs.nth(1).fill('0');
-    await pinInputs.nth(2).fill('0');
-    await pinInputs.nth(3).fill('8');
-
-    // Wait for dashboard to load
-    await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
+    // Use the robust login helper with proper timeout handling
+    await loginAsUser(page, 'Derrick', '8008');
   });
 
   test.describe('Default Button State', () => {

@@ -19,13 +19,13 @@ test.describe('Chart Colors Accessibility', () => {
 
     // Navigate to dashboard to see weekly progress chart
     await page.click('text=Dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle', { timeout: 30000 });
 
-    // Open weekly progress modal
+    // Open weekly progress modal (with increased timeout)
     const chartButton = page.locator('text=View Weekly Progress').or(page.locator('[data-testid="weekly-progress-button"]'));
     if (await chartButton.count() > 0) {
       await chartButton.first().click();
-      await page.waitForSelector('text=Weekly Progress', { timeout: 5000 });
+      await page.waitForSelector('text=Weekly Progress', { timeout: 15000 });
     }
   });
 

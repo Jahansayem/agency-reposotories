@@ -116,7 +116,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
           id,
           name,
           color,
-          role as global_role
+          global_role
         )
       `)
       .eq('agency_id', agencyId)
