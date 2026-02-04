@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useCallback, useState } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   CheckCircle2,
@@ -40,6 +41,86 @@ import PipelineHealthPanel from './PipelineHealthPanel';
 import RenewalsCalendarPanel from './RenewalsCalendarPanel';
 import TeamProductionPanel from './TeamProductionPanel';
 import CalendarView from '../calendar/CalendarView';
+
+type CardProps = {
+  children: ReactNode;
+  className?: string;
+  hoverable?: boolean;
+  onClick?: () => void;
+  ariaLabel?: string;
+};
+
+function Card({
+  children,
+  className = '',
+  hoverable = false,
+  onClick,
+  ariaLabel,
+}: CardProps) {
+  return (
+    <div
+      className={`rounded-[var(--radius-2xl)] p-5 transition-all duration-200 ${
+        'bg-[var(--surface)] border border-[var(--border)] shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)]'} ${hoverable ? (
+        'hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:border-[var(--border-hover)] cursor-pointer') : ''} ${onClick ? 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2' : ''} ${className}`}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={ariaLabel}
+    >
+      {children}
+    </div>
+  );
+}
+
+type SectionTitleProps = {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  badge?: number;
+  action?: { label: string; onClick: () => void };
+};
+
+function SectionTitle({
+  icon: Icon,
+  title,
+  badge,
+  action,
+}: SectionTitleProps) {
+  return (
+    <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center ${
+          'bg-[#0033A0]/8'}`}>
+          <Icon className={`w-4 h-4 ${
+            'text-[#0033A0]'}`} />
+        </div>
+        <h2 className={`text-sm font-semibold ${
+          'text-slate-700'}`}>
+          {title}
+        </h2>
+        {badge !== undefined && badge > 0 && (
+          <span className="px-2 py-0.5 rounded-full text-label bg-red-500 text-white min-w-[20px] text-center">
+            {badge}
+          </span>
+        )}
+      </div>
+      {action && (
+        <button
+          onClick={action.onClick}
+          className={`text-xs font-medium px-3 py-2 -my-1 rounded-[var(--radius-lg)] min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
+            'text-[#0033A0] hover:text-[#0047CC] hover:bg-slate-50 focus-visible:ring-offset-white'}`}
+        >
+          {action.label}
+        </button>
+      )}
+    </div>
+  );
+}
 
 interface ManagerDashboardProps {
   currentUser: AuthUser;
@@ -258,80 +339,6 @@ export default function ManagerDashboard({
       case 'notice': return { bg: 'bg-[var(--accent-vivid)]', text: 'text-white' };
     }
   };
-
-  // Enhanced Card component with proper elevation system and accessibility
-  const Card = ({
-    children,
-    className = '',
-    hoverable = false,
-    onClick,
-    ariaLabel
-  }: {
-    children: React.ReactNode;
-    className?: string;
-    hoverable?: boolean;
-    onClick?: () => void;
-    ariaLabel?: string;
-  }) => (
-    <div
-      className={`rounded-[var(--radius-2xl)] p-5 transition-all duration-200 ${
-        'bg-[var(--surface)] border border-[var(--border)] shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.04)]'} ${hoverable ? (
-        'hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:border-[var(--border-hover)] cursor-pointer') : ''} ${onClick ? 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2' : ''} ${className}`}
-      onClick={onClick}
-      onKeyDown={onClick ? (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      } : undefined}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      aria-label={ariaLabel}
-    >
-      {children}
-    </div>
-  );
-
-  // Enhanced SectionTitle with icon container and better hierarchy
-  const SectionTitle = ({
-    icon: Icon,
-    title,
-    badge,
-    action
-  }: {
-    icon: React.ComponentType<{ className?: string }>;
-    title: string;
-    badge?: number;
-    action?: { label: string; onClick: () => void };
-  }) => (
-    <div className="flex items-center justify-between mb-5">
-      <div className="flex items-center gap-2.5">
-        <div className={`w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center ${
-          'bg-[#0033A0]/8'}`}>
-          <Icon className={`w-4 h-4 ${
-            'text-[#0033A0]'}`} />
-        </div>
-        <h2 className={`text-sm font-semibold ${
-          'text-slate-700'}`}>
-          {title}
-        </h2>
-        {badge !== undefined && badge > 0 && (
-          <span className="px-2 py-0.5 rounded-full text-label bg-red-500 text-white min-w-[20px] text-center">
-            {badge}
-          </span>
-        )}
-      </div>
-      {action && (
-        <button
-          onClick={action.onClick}
-          className={`text-xs font-medium px-3 py-2 -my-1 rounded-[var(--radius-lg)] min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
-            'text-[#0033A0] hover:text-[#0047CC] hover:bg-slate-50 focus-visible:ring-offset-white'}`}
-        >
-          {action.label}
-        </button>
-      )}
-    </div>
-  );
 
   // Get members who need attention (overdue or overloaded)
   const membersNeedingAttention = managerData.memberStats.filter(

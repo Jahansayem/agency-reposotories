@@ -60,7 +60,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
 
     // Test keyboard navigation
     await page.keyboard.press('Tab');
-    let focusedElement = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
+    const focusedElement = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
     console.log(`First Tab focuses: ${focusedElement || 'unknown'}`);
 
     // Check if focused element has visible focus ring

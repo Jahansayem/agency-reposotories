@@ -223,11 +223,13 @@ export function QuickStatsBar({ userName, todos, onSaleLogged }: QuickStatsBarPr
       </div>
 
       {/* Log Sale Modal */}
-      <LogSaleModal
-        isOpen={isLogSaleOpen}
-        onClose={() => setIsLogSaleOpen(false)}
-        onSaleLogged={handleSaleLogged}
-      />
+      {isLogSaleOpen && (
+        <LogSaleModal
+          isOpen={isLogSaleOpen}
+          onClose={() => setIsLogSaleOpen(false)}
+          onSaleLogged={handleSaleLogged}
+        />
+      )}
     </>
   );
 }

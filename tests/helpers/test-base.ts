@@ -78,7 +78,7 @@ const REMOVE_DEV_OVERLAY_SCRIPT = `
  * Extended test fixture that automatically hides the Next.js dev overlay.
  */
 export const test = base.extend({
-  page: async ({ page }, use) => {
+  page: async ({ page }, useFixture) => {
     // Inject the CSS to hide dev overlay before any navigation
     await page.addStyleTag({ content: HIDE_DEV_OVERLAY_CSS });
 
@@ -97,7 +97,7 @@ export const test = base.extend({
     });
 
     // Use the page as normal
-    await use(page);
+    await useFixture(page);
   },
 });
 

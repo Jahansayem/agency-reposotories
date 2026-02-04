@@ -181,6 +181,16 @@ vi.mock('@/lib/reminderService', () => ({
   updateAutoReminders: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+// Mock toast hook (useTodoData requires ToastProvider at runtime)
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    warning: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
+
 // Import after mocking
 import { useTodoData } from '@/hooks/useTodoData';
 import { logActivity } from '@/lib/activityLogger';

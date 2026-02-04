@@ -5,8 +5,7 @@
  * These provide visual feedback while the actual components are being loaded.
  */
 
-interface SkeletonProps {
-}
+type SkeletonProps = Record<string, never>;
 
 /**
  * Loading skeleton for ChatPanel

@@ -59,18 +59,19 @@ const AnimatedTodoItem = memo(function AnimatedTodoItem({
 }: AnimatedTodoItemProps) {
   const [isExiting, setIsExiting] = useState(false);
   const reducedMotion = prefersReducedMotion();
+  const { onDelete } = props;
 
   // Enhanced delete handler with exit animation
   const handleDelete = useCallback((id: string) => {
     if (reducedMotion) {
-      props.onDelete(id);
+      onDelete(id);
       return;
     }
 
     // Trigger exit animation, then call actual delete
     setIsExiting(true);
     // The actual delete will be called via onAnimationComplete
-  }, [reducedMotion, props.onDelete]);
+  }, [reducedMotion, onDelete]);
 
   // Animation variants based on variant prop
   const getVariants = () => {
@@ -116,7 +117,7 @@ const AnimatedTodoItem = memo(function AnimatedTodoItem({
       onAnimationComplete={(definition) => {
         // If exit animation completed, trigger actual delete
         if (definition === 'exit' && isExiting) {
-          props.onDelete(todo.id);
+          onDelete(todo.id);
         }
       }}
       className="relative"

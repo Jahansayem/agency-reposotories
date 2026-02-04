@@ -82,6 +82,15 @@ export function useOfflineSupport() {
     };
   }, []);
 
+  // Update sync status periodically
+  const updateSyncStatus = useCallback(async () => {
+    const status = await getOfflineStatus();
+    setSyncStatus({
+      pendingSyncCount: status.pendingSyncCount,
+      unsyncedMessagesCount: status.unsyncedMessagesCount,
+    });
+  }, []);
+
   // Monitor online/offline status
   useEffect(() => {
     const handleOnline = async () => {
@@ -130,16 +139,7 @@ export function useOfflineSupport() {
       window.removeEventListener('offline', handleOffline);
       stopPeriodicSync();
     };
-  }, []);
-
-  // Update sync status periodically
-  const updateSyncStatus = useCallback(async () => {
-    const status = await getOfflineStatus();
-    setSyncStatus({
-      pendingSyncCount: status.pendingSyncCount,
-      unsyncedMessagesCount: status.unsyncedMessagesCount,
-    });
-  }, []);
+  }, [updateSyncStatus]);
 
   // Update sync status every 5 seconds
   useEffect(() => {

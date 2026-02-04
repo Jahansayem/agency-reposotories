@@ -490,7 +490,7 @@ describe('TodoService with Normalized Schema', () => {
         createMockTodo({ id: 'todo-2', text: 'Todo 2' }),
       ];
 
-      let callCount = 0;
+      const callCount = 0;
       vi.mocked(supabase.from).mockImplementation((table: string) => {
         if (table === 'todos') {
           return {
