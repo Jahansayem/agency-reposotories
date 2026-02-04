@@ -273,7 +273,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
             <form onSubmit={handleNameSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                  What's your name?
+                  What&apos;s your name?
                 </label>
                 <input
                   ref={nameInputRef}
@@ -370,7 +370,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
               )}
 
               <p className="text-xs text-center text-[var(--text-muted)]">
-                You'll use this PIN to sign in
+                You&apos;ll use this PIN to sign in
               </p>
 
               <button

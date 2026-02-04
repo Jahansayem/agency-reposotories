@@ -90,7 +90,7 @@ export function PushNotificationSettings({
               Push Notifications Not Supported
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Your browser doesn't support push notifications. Try using a modern browser like Chrome, Firefox, or Edge.
+              Your browser doesn&apos;t support push notifications. Try using a modern browser like Chrome, Firefox, or Edge.
             </p>
           </div>
         </div>
@@ -109,7 +109,7 @@ export function PushNotificationSettings({
               Notifications Blocked
             </h4>
             <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-              You've blocked notifications for this site. To enable them, go to your browser settings and allow notifications for this website.
+              You&apos;ve blocked notifications for this site. To enable them, go to your browser settings and allow notifications for this website.
             </p>
           </div>
         </div>
@@ -216,7 +216,7 @@ export function PushNotificationSettings({
       {isSubscribed && (
         <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
           <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-            You'll receive notifications for:
+            You&apos;ll receive notifications for:
           </h5>
           <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
             <li className="flex items-center gap-2">
@@ -243,7 +243,7 @@ export function PushNotificationSettings({
       {permission === 'default' && !isSubscribed && (
         <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            💡 Enabling notifications will ask for browser permission. Make sure to click "Allow" when prompted.
+            💡 Enabling notifications will ask for browser permission. Make sure to click &quot;Allow&quot; when prompted.
           </p>
         </div>
       )}

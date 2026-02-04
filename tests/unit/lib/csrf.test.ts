@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { createHmac } from 'crypto';
 import {
   generateCsrfToken,
   validateCsrfToken,
@@ -14,6 +15,7 @@ import {
   addCsrfHeader,
   csrfMiddleware,
   fetchWithCsrf,
+  __resetCsrfClientCacheForTests,
 } from '@/lib/csrf';
 
 // Helper to create mock NextRequest
@@ -39,12 +41,13 @@ function createMockRequest(
         return value ? { value } : undefined;
       },
     },
-  } as unknown as Parameters<typeof validateCsrfToken>[0];
+  } as any;
 }
 
 describe('CSRF Protection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetCsrfClientCacheForTests();
   });
 
   afterEach(() => {
@@ -121,7 +124,7 @@ describe('CSRF Protection', () => {
 
     it('should return false when no header token', () => {
       const request = createMockRequest('POST', '/api/todos', {
-        cookies: { csrf_token: 'some-token' },
+        cookies: { csrf_secret: 'some-secret', csrf_nonce: 'some-nonce' },
       });
 
       const result = validateCsrfToken(request);
@@ -129,10 +132,13 @@ describe('CSRF Protection', () => {
     });
 
     it('should return true when tokens match', () => {
-      const token = 'valid-csrf-token';
+      const secret = 'test-secret';
+      const nonce = 'test-nonce';
+      const signature = createHmac('sha256', secret).update(nonce).digest('hex').slice(0, 32);
+      const headerToken = `${nonce}:${signature}`;
       const request = createMockRequest('POST', '/api/todos', {
-        cookies: { csrf_token: token },
-        headers: { 'X-CSRF-Token': token },
+        cookies: { csrf_secret: secret, csrf_nonce: nonce },
+        headers: { 'X-CSRF-Token': headerToken },
       });
 
       const result = validateCsrfToken(request);
@@ -141,8 +147,8 @@ describe('CSRF Protection', () => {
 
     it('should return false when tokens do not match', () => {
       const request = createMockRequest('POST', '/api/todos', {
-        cookies: { csrf_token: 'cookie-token' },
-        headers: { 'X-CSRF-Token': 'different-header-token' },
+        cookies: { csrf_secret: 'secret', csrf_nonce: 'nonce' },
+        headers: { 'X-CSRF-Token': 'nonce:different-signature' },
       });
 
       const result = validateCsrfToken(request);
@@ -153,11 +159,11 @@ describe('CSRF Protection', () => {
   describe('getOrCreateCsrfToken', () => {
     it('should return existing token from cookie', () => {
       const request = createMockRequest('GET', '/', {
-        cookies: { csrf_token: 'existing-token' },
+        cookies: { csrf_secret: 'existing-secret' },
       });
 
       const token = getOrCreateCsrfToken(request);
-      expect(token).toBe('existing-token');
+      expect(token).toBe('existing-secret');
     });
 
     it('should generate new token if none exists', () => {
@@ -192,22 +198,13 @@ describe('CSRF Protection', () => {
         expect(result).toBeNull();
       });
 
-      it('should parse token from document.cookie', () => {
+      it('should return null when no cached token exists', () => {
         vi.stubGlobal('document', {
-          cookie: 'csrf_token=test-token; other=value',
+          cookie: 'csrf_nonce=test-nonce; other=value',
         });
 
         const result = getClientCsrfToken();
-        expect(result).toBe('test-token');
-      });
-
-      it('should handle URL-encoded cookie values', () => {
-        vi.stubGlobal('document', {
-          cookie: 'csrf_token=test%20token%2B123',
-        });
-
-        const result = getClientCsrfToken();
-        expect(result).toBe('test token+123');
+        expect(result).toBeNull();
       });
 
       it('should return null when token not found', () => {
@@ -230,20 +227,20 @@ describe('CSRF Protection', () => {
 
       it('should handle cookie at start of string', () => {
         vi.stubGlobal('document', {
-          cookie: 'csrf_token=first-token',
+          cookie: 'csrf_nonce=first-nonce',
         });
 
         const result = getClientCsrfToken();
-        expect(result).toBe('first-token');
+        expect(result).toBeNull();
       });
 
       it('should handle cookie at end of string', () => {
         vi.stubGlobal('document', {
-          cookie: 'other=value; csrf_token=last-token',
+          cookie: 'other=value; csrf_nonce=last-nonce',
         });
 
         const result = getClientCsrfToken();
-        expect(result).toBe('last-token');
+        expect(result).toBeNull();
       });
     });
 
@@ -254,41 +251,85 @@ describe('CSRF Protection', () => {
         expect(result).toEqual(headers);
       });
 
-      it('should add CSRF header when token exists', () => {
+      it('should add CSRF header when token exists', async () => {
+        const nonce = 'test-nonce';
+        const token = `${nonce}:test-signature`;
         vi.stubGlobal('document', {
-          cookie: 'csrf_token=my-token',
+          cookie: `csrf_nonce=${nonce}`,
         });
+        vi.stubGlobal('localStorage', {
+          getItem: vi.fn().mockReturnValue(null),
+        });
+        vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+          if (url === '/api/csrf') {
+            return new Response(JSON.stringify({ token }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          return new Response();
+        }));
+
+        await fetchWithCsrf('/api/test');
 
         const headers = { 'Content-Type': 'application/json' };
         const result = addCsrfHeader(headers);
 
         expect(result).toEqual({
           'Content-Type': 'application/json',
-          'X-CSRF-Token': 'my-token',
+          'X-CSRF-Token': token,
         });
       });
 
-      it('should work with empty headers object', () => {
-        vi.stubGlobal('document', {
-          cookie: 'csrf_token=token123',
+      it('should work with empty headers object', async () => {
+        const nonce = 'test-nonce';
+        const token = `${nonce}:test-signature`;
+        vi.stubGlobal('document', { cookie: `csrf_nonce=${nonce}` });
+        vi.stubGlobal('localStorage', {
+          getItem: vi.fn().mockReturnValue(null),
         });
+        vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+          if (url === '/api/csrf') {
+            return new Response(JSON.stringify({ token }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          return new Response();
+        }));
+
+        await fetchWithCsrf('/api/test');
 
         const result = addCsrfHeader({});
 
         expect(result).toEqual({
-          'X-CSRF-Token': 'token123',
+          'X-CSRF-Token': token,
         });
       });
 
-      it('should work with undefined headers', () => {
-        vi.stubGlobal('document', {
-          cookie: 'csrf_token=token456',
+      it('should work with undefined headers', async () => {
+        const nonce = 'test-nonce';
+        const token = `${nonce}:test-signature`;
+        vi.stubGlobal('document', { cookie: `csrf_nonce=${nonce}` });
+        vi.stubGlobal('localStorage', {
+          getItem: vi.fn().mockReturnValue(null),
         });
+        vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+          if (url === '/api/csrf') {
+            return new Response(JSON.stringify({ token }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          return new Response();
+        }));
+
+        await fetchWithCsrf('/api/test');
 
         const result = addCsrfHeader();
 
         expect(result).toEqual({
-          'X-CSRF-Token': 'token456',
+          'X-CSRF-Token': token,
         });
       });
     });
@@ -317,9 +358,12 @@ describe('CSRF Protection', () => {
     });
 
     it('should return null when CSRF validation passes', () => {
-      const token = 'valid-token';
+      const secret = 'test-secret';
+      const nonce = 'test-nonce';
+      const signature = createHmac('sha256', secret).update(nonce).digest('hex').slice(0, 32);
+      const token = `${nonce}:${signature}`;
       const request = createMockRequest('POST', '/api/todos', {
-        cookies: { csrf_token: token },
+        cookies: { csrf_secret: secret, csrf_nonce: nonce },
         headers: { 'X-CSRF-Token': token },
       });
       const result = csrfMiddleware(request);
@@ -327,38 +371,28 @@ describe('CSRF Protection', () => {
     });
   });
 
-  describe('getClientCsrfToken edge cases', () => {
-    it('should handle cookie with malformed URL encoding', () => {
-      vi.stubGlobal('document', {
-        cookie: 'csrf_token=%E0%A4%A',  // Invalid UTF-8 sequence
-      });
-
-      // Should return raw value when decodeURIComponent fails
-      const result = getClientCsrfToken();
-      expect(result).toBe('%E0%A4%A');
-    });
-
-    it('should handle cookie without equals sign', () => {
-      vi.stubGlobal('document', {
-        cookie: 'malformed-cookie; csrf_token=valid-token',
-      });
-
-      const result = getClientCsrfToken();
-      expect(result).toBe('valid-token');
-    });
-  });
-
   describe('fetchWithCsrf', () => {
     beforeEach(() => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response()));
+      vi.stubGlobal('fetch', vi.fn());
     });
 
     it('should include CSRF token in headers when available', async () => {
+      const nonce = 'fetch-nonce';
+      const token = `${nonce}:fetch-test-signature`;
       vi.stubGlobal('document', {
-        cookie: 'csrf_token=fetch-test-token',
+        cookie: `csrf_nonce=${nonce}`,
       });
       vi.stubGlobal('localStorage', {
         getItem: vi.fn().mockReturnValue(null),
+      });
+      vi.mocked(fetch).mockImplementation(async (url: string) => {
+        if (url === '/api/csrf') {
+          return new Response(JSON.stringify({ token }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response();
       });
 
       await fetchWithCsrf('/api/test');
@@ -370,23 +404,35 @@ describe('CSRF Protection', () => {
         })
       );
 
-      const callArgs = vi.mocked(fetch).mock.calls[0];
-      const headers = callArgs[1]?.headers as Headers;
-      expect(headers.get('X-CSRF-Token')).toBe('fetch-test-token');
+      const requestArgs = vi.mocked(fetch).mock.calls.find((c) => c[0] === '/api/test');
+      expect(requestArgs).toBeDefined();
+      const requestHeaders = requestArgs?.[1]?.headers as Headers;
+      expect(requestHeaders.get('X-CSRF-Token')).toBe(token);
     });
 
     it('should include user name header when session exists', async () => {
+      const nonce = 'test-nonce';
+      const token = `${nonce}:test-signature`;
       vi.stubGlobal('document', {
-        cookie: 'csrf_token=test-token',
+        cookie: `csrf_nonce=${nonce}`,
       });
       vi.stubGlobal('localStorage', {
         getItem: vi.fn().mockReturnValue(JSON.stringify({ userName: 'TestUser' })),
       });
+      vi.mocked(fetch).mockImplementation(async (url: string) => {
+        if (url === '/api/csrf') {
+          return new Response(JSON.stringify({ token }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response();
+      });
 
       await fetchWithCsrf('/api/test');
 
-      const callArgs = vi.mocked(fetch).mock.calls[0];
-      const headers = callArgs[1]?.headers as Headers;
+      const requestArgs = vi.mocked(fetch).mock.calls.find((c) => c[0] === '/api/test');
+      const headers = requestArgs?.[1]?.headers as Headers;
       expect(headers.get('X-User-Name')).toBe('TestUser');
     });
 
@@ -397,6 +443,7 @@ describe('CSRF Protection', () => {
       vi.stubGlobal('localStorage', {
         getItem: vi.fn().mockReturnValue(null),
       });
+      vi.mocked(fetch).mockResolvedValue(new Response());
 
       await fetchWithCsrf('/api/test');
 
@@ -404,29 +451,76 @@ describe('CSRF Protection', () => {
     });
 
     it('should handle localStorage parse errors gracefully', async () => {
+      const nonce = 'test-nonce';
+      const token = `${nonce}:test-signature`;
       vi.stubGlobal('document', {
-        cookie: 'csrf_token=test-token',
+        cookie: `csrf_nonce=${nonce}`,
       });
       vi.stubGlobal('localStorage', {
         getItem: vi.fn().mockReturnValue('invalid-json'),
+      });
+      vi.mocked(fetch).mockImplementation(async (url: string) => {
+        if (url === '/api/csrf') {
+          return new Response(JSON.stringify({ token }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response();
       });
 
       await expect(fetchWithCsrf('/api/test')).resolves.toBeDefined();
     });
 
     it('should handle missing userName in session', async () => {
+      const nonce = 'test-nonce';
+      const token = `${nonce}:test-signature`;
       vi.stubGlobal('document', {
-        cookie: 'csrf_token=test-token',
+        cookie: `csrf_nonce=${nonce}`,
       });
       vi.stubGlobal('localStorage', {
         getItem: vi.fn().mockReturnValue(JSON.stringify({})),
       });
+      vi.mocked(fetch).mockImplementation(async (url: string) => {
+        if (url === '/api/csrf') {
+          return new Response(JSON.stringify({ token }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response();
+      });
 
       await fetchWithCsrf('/api/test');
 
-      const callArgs = vi.mocked(fetch).mock.calls[0];
-      const headers = callArgs[1]?.headers as Headers;
+      const requestArgs = vi.mocked(fetch).mock.calls.find((c) => c[0] === '/api/test');
+      const headers = requestArgs?.[1]?.headers as Headers;
       expect(headers.get('X-User-Name')).toBeNull();
+    });
+
+    it('should handle malformed cookie entries when reading nonce', async () => {
+      const nonce = 'test-nonce';
+      const token = `${nonce}:test-signature`;
+      vi.stubGlobal('document', {
+        cookie: `malformed-cookie; csrf_nonce=${nonce}`,
+      });
+      vi.stubGlobal('localStorage', {
+        getItem: vi.fn().mockReturnValue(null),
+      });
+      vi.mocked(fetch).mockImplementation(async (url: string) => {
+        if (url === '/api/csrf') {
+          return new Response(JSON.stringify({ token }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response();
+      });
+
+      await fetchWithCsrf('/api/test');
+      const requestArgs = vi.mocked(fetch).mock.calls.find((c) => c[0] === '/api/test');
+      const headers = requestArgs?.[1]?.headers as Headers;
+      expect(headers.get('X-CSRF-Token')).toBe(token);
     });
   });
 });

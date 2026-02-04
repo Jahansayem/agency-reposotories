@@ -47,7 +47,7 @@ test.describe('Haptic Feedback API Integration', () => {
     test('should not throw errors when vibration is unsupported', async ({ page }) => {
       // Mock navigator.vibrate as undefined
       await page.evaluate(() => {
-        // @ts-ignore - Testing unsupported scenario
+        // @ts-expect-error - Testing unsupported scenario
         if ('vibrate' in navigator) {
           delete (navigator as any).vibrate;
         }
