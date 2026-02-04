@@ -169,11 +169,15 @@ export function LogSaleModal({ isOpen, onClose, onSaleLogged }: LogSaleModalProp
         throw insertError;
       }
 
+      if (!newTodo) {
+        throw new Error('Failed to create sale record: no data returned');
+      }
+
       // Log activity for audit trail (critical project requirement)
       await logActivity({
         action: 'task_created',
         userName: currentUser.name,
-        todoId: newTodo?.id,
+        todoId: newTodo.id,
         todoText,
         details: {
           category: 'quote',

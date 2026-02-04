@@ -11,6 +11,20 @@ export type WaitingContactType = 'call' | 'email' | 'other';
 // Note: 'other' is a catch-all for unknown file types
 export type AttachmentCategory = 'document' | 'image' | 'audio' | 'video' | 'archive' | 'other';
 
+// ============================================
+// Dashboard-Related Insurance Workflow Types
+// ============================================
+
+// Task categories for insurance workflows (dashboard view)
+// Note: This is separate from TaskCategory which is used for pattern analysis
+export type DashboardTaskCategory = 'quote' | 'renewal' | 'claim' | 'service' | 'follow-up' | 'prospecting' | 'other';
+
+// Policy types
+export type PolicyType = 'auto' | 'home' | 'life' | 'commercial' | 'bundle';
+
+// Renewal status tracking
+export type RenewalStatus = 'pending' | 'contacted' | 'confirmed' | 'at-risk';
+
 export interface Subtask {
   id: string;
   text: string;
@@ -99,6 +113,12 @@ export interface Todo {
   waiting_since?: string;
   waiting_contact_type?: WaitingContactType;
   follow_up_after_hours?: number; // Default 48 hours
+  // Dashboard-related insurance workflow fields
+  category?: DashboardTaskCategory;
+  premium_amount?: number;
+  customer_name?: string;
+  policy_type?: PolicyType;
+  renewal_status?: RenewalStatus;
 }
 
 // ============================================
@@ -497,6 +517,20 @@ export interface GoalMilestone {
   target_date?: string;
   display_order: number;
   created_at: string;
+}
+
+// Agency metrics for dashboard
+export interface AgencyMetrics {
+  id: string;
+  agency_id: string;
+  month: string;
+  retention_rate?: number;
+  premium_goal?: number;
+  premium_actual?: number;
+  policies_goal?: number;
+  policies_actual?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const GOAL_STATUS_CONFIG: Record<GoalStatus, { label: string; color: string; bgColor: string; icon: string }> = {
