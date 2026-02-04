@@ -7,7 +7,7 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /** Badge variant determines color scheme */
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'brand';
   /** Badge size */
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   /** Add pulsing animation for attention */
   pulse?: boolean;
   /** Add dot indicator before text */
@@ -71,6 +71,13 @@ const variantStyles = {
 };
 
 const sizeStyles = {
+  xs: {
+    padding: 'px-1.5 py-0.5',
+    text: 'text-[10px]',
+    dot: 'w-1 h-1',
+    icon: 'w-2.5 h-2.5',
+    gap: 'gap-0.5',
+  },
   sm: {
     padding: 'px-2 py-0.5',
     text: 'text-xs',

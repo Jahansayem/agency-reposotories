@@ -800,19 +800,23 @@ function TodoItemComponent({
           )}
 
           {/* Meta row - Progressive Disclosure: Essential info always visible */}
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
+          {/* On narrow screens (<400px), use compact layout with smaller gaps and hidden secondary info */}
+          <div className="flex items-center gap-1 sm:gap-2 mt-2 flex-wrap min-w-0">
             {/* PRIMARY ROW: Priority + Due Date + Assignee (always visible for quick scanning) */}
-            <div className="flex items-center gap-2">
-              {/* Priority badge */}
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-wrap">
+              {/* Priority badge - compact on narrow screens */}
               <Badge
                 variant={PRIORITY_TO_BADGE_VARIANT[priority]}
                 size="sm"
-                icon={<Flag className="w-3 h-3" />}
+                icon={<Flag className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                className="flex-shrink-0"
               >
-                {priorityConfig.label}
+                <span className="hidden sm:inline">{priorityConfig.label}</span>
+                <span className="sm:hidden">{priorityConfig.label.charAt(0)}</span>
               </Badge>
 
               {/* Due date - critical for decision-making */}
+              {/* On narrow screens, hide overdue day count to save space */}
               {todo.due_date && dueDateStatus && (() => {
                 const daysOverdue = dueDateStatus === 'overdue' ? getDaysOverdue(todo.due_date) : 0;
                 const dueDateVariant = todo.completed
@@ -825,8 +829,8 @@ function TodoItemComponent({
                         ? 'warning'
                         : 'default';
                 const dueDateIcon = dueDateStatus === 'overdue' && !todo.completed
-                  ? <AlertTriangle className="w-3 h-3" />
-                  : <Calendar className="w-3 h-3" />;
+                  ? <AlertTriangle className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  : <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />;
                 const overdueText = dueDateStatus === 'overdue' && !todo.completed
                   ? ` (${daysOverdue === 1 ? '1 day' : `${daysOverdue} days`})`
                   : '';
@@ -836,20 +840,26 @@ function TodoItemComponent({
                     size="sm"
                     icon={dueDateIcon}
                     pulse={dueDateStatus === 'overdue' && !todo.completed}
+                    className="max-w-[120px] sm:max-w-none truncate"
                   >
-                    {formatDueDate(todo.due_date)}{overdueText}
+                    <span className="truncate">
+                      {formatDueDate(todo.due_date)}
+                      <span className="hidden sm:inline">{overdueText}</span>
+                    </span>
                   </Badge>
                 );
               })()}
 
               {/* Assignee - always visible as it's key for knowing who owns the task */}
+              {/* On narrow screens, show only first name initial + surname first 3 chars */}
               {todo.assigned_to && (
                 <Badge
                   variant="brand"
                   size="sm"
-                  icon={<User className="w-3 h-3" />}
+                  icon={<User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                  className="flex-shrink-0 max-w-[80px] sm:max-w-none"
                 >
-                  {todo.assigned_to}
+                  <span className="truncate">{todo.assigned_to}</span>
                 </Badge>
               )}
 
@@ -866,20 +876,18 @@ function TodoItemComponent({
             </div>
 
             {/* SECONDARY ROW: Hidden by default, revealed on hover - Progressive Disclosure */}
-            {/* Shows only when there's secondary metadata AND (hovered OR expanded OR overdue OR on mobile for non-completed) */}
+            {/* On very narrow screens (<640px), hide completely unless expanded to reduce clutter */}
             {/* Shows only when there's secondary metadata AND (hovered OR expanded) */}
             {(subtasks.length > 0 || todo.notes || todo.transcription || (Array.isArray(todo.attachments) && todo.attachments.length > 0) || todo.recurrence || (todo.reminder_at && !todo.reminder_sent && !todo.completed) || todo.merged_from?.length) && (
               <>
-                {/* Separator - always show on mobile for non-completed, or on hover for desktop */}
-                <div className={`w-px h-4 bg-[var(--border)] mx-1 ${!todo.completed || isOverdue ? 'block sm:hidden sm:group-hover:block' : 'hidden group-hover:block'}`} />
+                {/* Separator - hidden on narrow screens, show on hover for desktop */}
+                <div className={`w-px h-4 bg-[var(--border)] mx-1 hidden sm:block ${expanded || isOverdue ? 'sm:block' : 'sm:hidden sm:group-hover:block'}`} />
 
-                {/* Secondary metadata - always visible on mobile for non-completed tasks, on hover for desktop, always for overdue */}
-                <div className={`flex items-center gap-2 transition-opacity duration-200 ${
-                  expanded || isOverdue
-                    ? 'opacity-100'
-                    : !todo.completed
-                      ? 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100'
-                      : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
+                {/* Secondary metadata - hidden on narrow screens unless expanded, show on hover for desktop */}
+                <div className={`items-center gap-1 sm:gap-2 transition-opacity duration-200 ${
+                  expanded
+                    ? 'flex opacity-100'
+                    : 'hidden sm:flex opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
                 }`}>
                   {/* Recurrence - indicates recurring task */}
                   {todo.recurrence && (
