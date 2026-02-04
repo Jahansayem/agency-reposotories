@@ -15,7 +15,6 @@ interface InsightCardProps {
     label: string;
     onClick: () => void;
   };
-  darkMode?: boolean;
   delay?: number;
 }
 
@@ -63,7 +62,6 @@ export default function InsightCard({
   title,
   description,
   action,
-  darkMode = false,
   delay = 0,
 }: InsightCardProps) {
   const styles = typeStyles[type];
@@ -74,32 +72,29 @@ export default function InsightCard({
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
       className={`
-        relative p-4 rounded-lg border-l-4
+        relative p-4 rounded-[var(--radius-lg)] border-l-4
         ${styles.borderColor}
-        ${darkMode
-          ? 'bg-[var(--surface-2)] border border-white/5'
-          : 'bg-white border border-[var(--border)]'
-        }
+        ${'bg-[var(--surface)] border border-[var(--border)]'}
         shadow-sm
       `}
     >
       <div className="flex gap-3">
         <div className={`
-          flex-shrink-0 p-2 rounded-lg
-          ${darkMode ? styles.iconBg.replace('dark:', '') : styles.iconBg.split(' ')[0]}
+          flex-shrink-0 p-2 rounded-[var(--radius-lg)]
+          ${styles.iconBg}
         `}>
-          <Icon className={`w-5 h-5 ${darkMode ? styles.iconColor.split(' ')[1]?.replace('dark:', '') : styles.iconColor.split(' ')[0]}`} />
+          <Icon className={`w-5 h-5 ${styles.iconColor}`} />
         </div>
         <div className="flex-1 min-w-0">
           <h4 className={`
             font-medium text-sm mb-1
-            ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
+            ${'text-[var(--foreground)]'}
           `}>
             {title}
           </h4>
           <div className={`
             text-sm leading-relaxed
-            ${darkMode ? 'text-white/70' : 'text-[var(--text-muted)]'}
+            ${'text-[var(--text-muted)]'}
           `}>
             {description}
           </div>
@@ -108,10 +103,7 @@ export default function InsightCard({
               onClick={action.onClick}
               className={`
                 mt-3 text-sm font-medium
-                ${darkMode
-                  ? 'text-[var(--accent)] hover:text-[var(--accent)]/80'
-                  : 'text-[var(--accent)] hover:text-[var(--accent)]/80'
-                }
+                ${'text-[var(--accent)] hover:text-[var(--accent)]/80'}
                 transition-colors
               `}
             >

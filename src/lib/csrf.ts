@@ -1,13 +1,24 @@
 /**
  * CSRF Protection Utility
  *
- * Implements double-submit cookie pattern for CSRF protection.
+ * Implements a secure CSRF protection pattern using HttpOnly cookies.
+ *
+ * Security approach:
+ * - csrf_secret: HttpOnly cookie that cannot be read by JavaScript (prevents XSS theft)
+ * - csrf_nonce: Non-HttpOnly cookie that JS can read
+ * - X-CSRF-Token header: Contains "nonce:signature" where signature = hash(secret + nonce)
+ *
+ * This ensures that even if an attacker can execute XSS, they cannot construct
+ * a valid CSRF token because they cannot read the HttpOnly secret.
+ *
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes, createHmac } from 'crypto';
+import { logger } from './logger';
 
-const CSRF_COOKIE_NAME = 'csrf_token';
+const CSRF_SECRET_COOKIE = 'csrf_secret';  // HttpOnly
+const CSRF_NONCE_COOKIE = 'csrf_nonce';    // Readable by JS
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 const CSRF_TOKEN_LENGTH = 32;
 
@@ -19,66 +30,103 @@ export function generateCsrfToken(): string {
 }
 
 /**
- * Hash a CSRF token for comparison (prevents timing attacks)
+ * Constant-time string comparison to prevent timing attacks.
  */
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+function constantTimeCompare(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  let result = a.length ^ b.length; // Length difference contributes to mismatch
+  for (let i = 0; i < maxLen; i++) {
+    const charA = i < a.length ? a.charCodeAt(i) : 0;
+    const charB = i < b.length ? b.charCodeAt(i) : 0;
+    result |= charA ^ charB;
+  }
+  return result === 0;
 }
 
 /**
  * Validate CSRF token from request
  *
- * Compares the token from the header/body with the token in the cookie.
- * Uses constant-time comparison to prevent timing attacks.
+ * Uses the HttpOnly cookie pattern with constant-time comparison to prevent timing attacks.
  */
 export function validateCsrfToken(request: NextRequest): boolean {
-  // Get token from cookie
-  const cookieToken = request.cookies.get(CSRF_COOKIE_NAME)?.value;
-  if (!cookieToken) {
-    return false;
-  }
-
+  // Get the secret from HttpOnly cookie
+  const secretCookie = request.cookies.get(CSRF_SECRET_COOKIE)?.value;
   // Get token from header
   const headerToken = request.headers.get(CSRF_HEADER_NAME);
 
-  // If not in header, try form data (for form submissions)
-  // Note: We can't easily read form data in middleware, so header is preferred
-
-  if (!headerToken) {
+  if (!headerToken || !secretCookie) {
     return false;
   }
 
-  // Constant-time comparison using hashes
-  const cookieHash = hashToken(cookieToken);
-  const headerHash = hashToken(headerToken);
+  const nonceCookie = request.cookies.get(CSRF_NONCE_COOKIE)?.value;
+  if (!nonceCookie) {
+    return false;
+  }
 
-  return cookieHash === headerHash;
+  // Validate the nonce:signature format
+  const parts = headerToken.split(':');
+  if (parts.length !== 2) {
+    return false;
+  }
+
+  const [nonce, signature] = parts;
+  if (nonce !== nonceCookie) {
+    return false;
+  }
+
+  // Compute expected signature: HMAC-SHA256(secret, nonce) truncated to 32 hex chars.
+  // Must match src/middleware.ts and src/app/api/csrf/route.ts.
+  const expectedSignature = createHmac('sha256', secretCookie)
+    .update(nonce)
+    .digest('hex')
+    .slice(0, 32);
+
+  return constantTimeCompare(signature, expectedSignature);
 }
 
 /**
- * Set CSRF token cookie on response
+ * Set CSRF cookies on response (new HttpOnly pattern)
+ *
+ * Sets up the secure CSRF protection with:
+ * - HttpOnly secret cookie (cannot be stolen via XSS)
+ * - Public nonce cookie (JS reads this to build header token)
  */
-export function setCsrfCookie(response: NextResponse, token?: string): string {
-  const csrfToken = token || generateCsrfToken();
+export function setCsrfCookies(
+  response: NextResponse,
+  secret?: string,
+  nonce?: string
+): { secret: string; nonce: string } {
+  const csrfSecret = secret || generateCsrfToken();
+  const csrfNonce = nonce || randomBytes(16).toString('base64url');
 
-  response.cookies.set(CSRF_COOKIE_NAME, csrfToken, {
-    httpOnly: false, // Must be readable by JavaScript
+  // HttpOnly secret - JavaScript cannot read this
+  response.cookies.set(CSRF_SECRET_COOKIE, csrfSecret, {
+    httpOnly: true,  // SECURITY: Prevents XSS from stealing the secret
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
     path: '/',
     maxAge: 60 * 60 * 24, // 24 hours
   });
 
-  return csrfToken;
+  // Public nonce - JavaScript reads this to build the token
+  response.cookies.set(CSRF_NONCE_COOKIE, csrfNonce, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 60 * 60 * 24, // 24 hours
+  });
+
+  return { secret: csrfSecret, nonce: csrfNonce };
 }
 
 /**
  * Get or create CSRF token from request
  */
 export function getOrCreateCsrfToken(request: NextRequest): string {
-  const existingToken = request.cookies.get(CSRF_COOKIE_NAME)?.value;
-  if (existingToken) {
-    return existingToken;
+  const existingSecret = request.cookies.get(CSRF_SECRET_COOKIE)?.value;
+  if (existingSecret) {
+    return existingSecret;
   }
   return generateCsrfToken();
 }
@@ -145,9 +193,9 @@ export function csrfMiddleware(request: NextRequest): NextResponse | null {
 }
 
 /**
- * Client-side helper to get CSRF token from cookie
+ * Parse a cookie value from document.cookie
  */
-export function getClientCsrfToken(): string | null {
+function getCookieValue(name: string): string | null {
   if (typeof document === 'undefined') {
     return null;
   }
@@ -158,11 +206,10 @@ export function getClientCsrfToken(): string | null {
     const equalIndex = trimmed.indexOf('=');
     if (equalIndex === -1) continue;
 
-    const name = trimmed.substring(0, equalIndex);
+    const cookieName = trimmed.substring(0, equalIndex);
     const value = trimmed.substring(equalIndex + 1);
 
-    if (name === CSRF_COOKIE_NAME) {
-      // Decode the value in case it was URL-encoded
+    if (cookieName === name) {
       try {
         return decodeURIComponent(value);
       } catch {
@@ -171,6 +218,93 @@ export function getClientCsrfToken(): string | null {
     }
   }
   return null;
+}
+
+// Cached CSRF token (nonce:signature) from the server
+let cachedCsrfToken: string | null = null;
+let csrfTokenPromise: Promise<string | null> | null = null;
+
+export function __resetCsrfClientCacheForTests(): void {
+  cachedCsrfToken = null;
+  csrfTokenPromise = null;
+}
+
+/**
+ * Fetch CSRF token from the server endpoint.
+ * Caches the result so subsequent calls don't make extra requests.
+ */
+async function fetchCsrfTokenFromServer(): Promise<string | null> {
+  try {
+    const response = await fetch('/api/csrf', {
+      method: 'GET',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.token) {
+      cachedCsrfToken = data.token;
+      return data.token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get or fetch CSRF token for use in request headers.
+ * Returns cached token if available, otherwise fetches from server.
+ */
+async function ensureCsrfToken(): Promise<string | null> {
+  if (typeof document === 'undefined') return null;
+
+  // Check if nonce cookie exists (set by middleware)
+  const nonce = getCookieValue(CSRF_NONCE_COOKIE);
+  if (!nonce) return null;
+
+  // If we have a cached token and the nonce matches, use it
+  if (cachedCsrfToken && cachedCsrfToken.startsWith(nonce + ':')) {
+    return cachedCsrfToken;
+  }
+
+  // Nonce changed or no cache — fetch from server
+  // Deduplicate concurrent fetches
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetchCsrfTokenFromServer().finally(() => {
+      csrfTokenPromise = null;
+    });
+  }
+  return csrfTokenPromise;
+}
+
+/**
+ * Client-side helper to build CSRF token for header (sync version)
+ *
+ * Returns the cached token if available, null otherwise.
+ * For async usage, prefer ensureCsrfToken().
+ */
+export function getClientCsrfToken(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  return cachedCsrfToken;
+}
+
+/**
+ * Client-side helper to build CSRF token with signature
+ *
+ * This is used with the new HttpOnly pattern where the server
+ * provides the signature via an API endpoint.
+ *
+ * @param signature - The signature provided by the server
+ * @returns The formatted token for the X-CSRF-Token header
+ */
+export function buildCsrfTokenWithSignature(signature: string): string | null {
+  const nonce = getCookieValue(CSRF_NONCE_COOKIE);
+  if (!nonce || !signature) {
+    return null;
+  }
+  return `${nonce}:${signature}`;
 }
 
 /**
@@ -207,6 +341,16 @@ function getSessionUserName(): string | null {
 }
 
 /**
+ * Check if session cookie exists
+ */
+function hasSessionCookie(): boolean {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  return getCookieValue('session_token') !== null;
+}
+
+/**
  * Fetch wrapper that automatically includes CSRF token and auth headers
  *
  * Works with both JSON and FormData requests.
@@ -216,7 +360,7 @@ export async function fetchWithCsrf(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  const token = getClientCsrfToken();
+  const token = await ensureCsrfToken();
   const userName = getSessionUserName();
   const headers = new Headers(options.headers);
 
@@ -225,7 +369,7 @@ export async function fetchWithCsrf(
   } else {
     // Log warning in development only to help debug CSRF issues
     if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      console.warn('[CSRF] No token found in cookies. Available cookies:', document.cookie);
+      console.warn('[CSRF] No token available. Nonce cookie:', getCookieValue(CSRF_NONCE_COOKIE));
     }
   }
 
@@ -234,9 +378,17 @@ export async function fetchWithCsrf(
     headers.set('X-User-Name', userName);
   }
 
-  return fetch(url, {
+  const response = await fetch(url, {
     ...options,
     headers,
     credentials: 'same-origin', // Ensure cookies are sent with the request
   });
+
+  // Handle 401 Unauthorized responses - log instead of forcing reload
+  if (response.status === 401 && url.startsWith('/api/')) {
+    logger.warn('fetchWithCsrf: 401 Unauthorized', { component: 'csrf', action: 'fetchWithCsrf', url, userName });
+    // Don't force reload - let the calling code handle the error
+  }
+
+  return response;
 }

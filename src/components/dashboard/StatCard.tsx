@@ -16,7 +16,6 @@ interface StatCardProps {
     isPositive: boolean;
   };
   suffix?: string;
-  darkMode?: boolean;
   delay?: number;
 }
 
@@ -60,7 +59,6 @@ export default function StatCard({
   variant = 'default',
   trend,
   suffix = '',
-  darkMode = false,
   delay = 0,
 }: StatCardProps) {
   const styles = variantStyles[variant];
@@ -72,11 +70,8 @@ export default function StatCard({
       transition={{ duration: 0.4, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
       className={`
-        relative p-4 rounded-xl
-        ${darkMode
-          ? 'bg-[var(--surface-2)] border border-white/5'
-          : 'bg-white border border-[var(--border)]'
-        }
+        relative p-4 rounded-[var(--radius-xl)]
+        ${'bg-[var(--surface)] border border-[var(--border)]'}
         shadow-sm hover:shadow-md
         transition-shadow duration-200
       `}
@@ -85,21 +80,21 @@ export default function StatCard({
         <div className="flex-1">
           <p className={`
             text-sm font-medium mb-1
-            ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}
+            ${'text-[var(--text-muted)]'}
           `}>
             {label}
           </p>
           <div className="flex items-baseline gap-1">
             <span className={`
               text-3xl font-bold tracking-tight
-              ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
+              ${'text-[var(--foreground)]'}
             `}>
               <CountUp end={value} duration={800} />
             </span>
             {suffix && (
               <span className={`
                 text-lg font-medium
-                ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}
+                ${'text-[var(--text-muted)]'}
               `}>
                 {suffix}
               </span>
@@ -120,10 +115,10 @@ export default function StatCard({
           )}
         </div>
         <div className={`
-          p-2.5 rounded-lg
-          ${darkMode ? styles.iconBg.replace('dark:', '') : styles.iconBg.split(' ')[0]}
+          p-2.5 rounded-[var(--radius-lg)]
+          ${styles.iconBg}
         `}>
-          <Icon className={`w-5 h-5 ${darkMode ? styles.iconColor.split(' ')[1]?.replace('dark:', '') : styles.iconColor.split(' ')[0]}`} />
+          <Icon className={`w-5 h-5 ${styles.iconColor}`} />
         </div>
       </div>
     </motion.div>

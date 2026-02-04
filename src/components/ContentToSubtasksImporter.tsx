@@ -387,7 +387,7 @@ export default function ContentToSubtasksImporter({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-4 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -401,7 +401,8 @@ export default function ContentToSubtasksImporter({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Close importer"
+            className="p-2 hover:bg-slate-100 rounded-[var(--radius-lg)] transition-colors"
           >
             <X className="w-5 h-5 text-slate-500" />
           </button>
@@ -410,7 +411,7 @@ export default function ContentToSubtasksImporter({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
           {/* Parent task context */}
-          <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+          <div className="mb-4 p-3 bg-slate-50 rounded-[var(--radius-lg)]">
             <p className="text-xs text-slate-500 mb-1">Adding subtasks to:</p>
             <p className="text-sm font-medium text-slate-700 truncate">{parentTaskText}</p>
           </div>
@@ -420,7 +421,7 @@ export default function ContentToSubtasksImporter({
             <div className="grid grid-cols-3 gap-4">
               <button
                 onClick={() => setMode('email')}
-                className="p-6 border-2 border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group"
+                className="p-6 border-2 border-slate-200 rounded-[var(--radius-xl)] hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group"
               >
                 <Mail className="w-10 h-10 text-slate-400 group-hover:text-indigo-500 mx-auto mb-3 transition-colors" />
                 <p className="font-medium text-slate-700 group-hover:text-indigo-700">Paste Email</p>
@@ -428,7 +429,7 @@ export default function ContentToSubtasksImporter({
               </button>
               <button
                 onClick={() => setMode('voicemail')}
-                className="p-6 border-2 border-slate-200 rounded-xl hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 transition-all group"
+                className="p-6 border-2 border-slate-200 rounded-[var(--radius-xl)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 transition-all group"
               >
                 <FileAudio className="w-10 h-10 text-slate-400 group-hover:text-[var(--accent)] mx-auto mb-3 transition-colors" />
                 <p className="font-medium text-slate-700 group-hover:text-[var(--brand-navy)]">Upload Audio</p>
@@ -436,7 +437,7 @@ export default function ContentToSubtasksImporter({
               </button>
               <button
                 onClick={() => setMode('live-mic')}
-                className="p-6 border-2 border-slate-200 rounded-xl hover:border-red-300 hover:bg-red-50/50 transition-all group"
+                className="p-6 border-2 border-slate-200 rounded-[var(--radius-xl)] hover:border-red-300 hover:bg-red-50/50 transition-all group"
               >
                 <Mic className="w-10 h-10 text-slate-400 group-hover:text-red-500 mx-auto mb-3 transition-colors" />
                 <p className="font-medium text-slate-700 group-hover:text-red-700">Live Mic</p>
@@ -465,7 +466,7 @@ export default function ContentToSubtasksImporter({
                   value={emailContent}
                   onChange={(e) => setEmailContent(e.target.value)}
                   placeholder="Paste the full email or message here..."
-                  className="w-full h-48 px-4 py-3 border border-slate-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 text-sm"
+                  className="w-full h-48 px-4 py-3 border border-slate-200 rounded-[var(--radius-xl)] resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 text-sm"
                   disabled={status === 'parsing'}
                 />
                 <p className="text-xs text-slate-400 mt-1">
@@ -474,7 +475,7 @@ export default function ContentToSubtasksImporter({
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-[var(--radius-lg)] text-red-600 text-sm">
                   {error}
                 </div>
               )}
@@ -482,7 +483,7 @@ export default function ContentToSubtasksImporter({
               <button
                 onClick={handleEmailParse}
                 disabled={!emailContent.trim() || status === 'parsing'}
-                className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-[var(--radius-xl)] font-medium transition-colors flex items-center justify-center gap-2"
               >
                 {status === 'parsing' ? (
                   <>
@@ -514,7 +515,7 @@ export default function ContentToSubtasksImporter({
               {status === 'idle' && (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
+                  className="border-2 border-dashed border-slate-300 rounded-[var(--radius-xl)] p-8 text-center hover:border-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors cursor-pointer"
                 >
                   <Upload className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                   <p className="font-medium text-slate-600">Click to upload audio file</p>
@@ -530,7 +531,7 @@ export default function ContentToSubtasksImporter({
               )}
 
               {(status === 'transcribing' || status === 'parsing') && (
-                <div className="p-6 bg-slate-50 rounded-xl text-center">
+                <div className="p-6 bg-slate-50 rounded-[var(--radius-xl)] text-center">
                   <Loader2 className="w-8 h-8 text-[var(--accent)] animate-spin mx-auto mb-3" />
                   <p className="font-medium text-slate-700">
                     {status === 'transcribing' ? 'Transcribing audio...' : 'Extracting action items...'}
@@ -540,14 +541,14 @@ export default function ContentToSubtasksImporter({
               )}
 
               {transcription && (
-                <div className="p-3 bg-slate-50 rounded-lg">
+                <div className="p-3 bg-slate-50 rounded-[var(--radius-lg)]">
                   <p className="text-xs text-slate-500 mb-1">Transcription:</p>
                   <p className="text-sm text-slate-600 italic line-clamp-3">&ldquo;{transcription}&rdquo;</p>
                 </div>
               )}
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-[var(--radius-lg)] text-red-600 text-sm">
                   {error}
                 </div>
               )}
@@ -567,7 +568,7 @@ export default function ContentToSubtasksImporter({
               </div>
 
               {/* Recording controls */}
-              <div className="p-6 bg-slate-50 rounded-xl text-center">
+              <div className="p-6 bg-slate-50 rounded-[var(--radius-xl)] text-center">
                 <button
                   onClick={toggleRecording}
                   disabled={status === 'parsing'}
@@ -593,7 +594,7 @@ export default function ContentToSubtasksImporter({
 
               {/* Live transcript display */}
               {liveTranscript && (
-                <div className="p-4 bg-white border border-slate-200 rounded-xl">
+                <div className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-xl)]">
                   <p className="text-xs text-slate-500 mb-2">Live Transcript:</p>
                   <p className="text-sm text-slate-700">{liveTranscript}</p>
                 </div>
@@ -601,7 +602,7 @@ export default function ContentToSubtasksImporter({
 
               {/* Processing indicator */}
               {status === 'parsing' && (
-                <div className="p-4 bg-indigo-50 rounded-xl text-center">
+                <div className="p-4 bg-indigo-50 rounded-[var(--radius-xl)] text-center">
                   <Loader2 className="w-6 h-6 text-indigo-500 animate-spin mx-auto mb-2" />
                   <p className="text-sm text-indigo-700">Extracting action items...</p>
                 </div>
@@ -611,7 +612,7 @@ export default function ContentToSubtasksImporter({
               {liveTranscript && !isRecording && status !== 'parsing' && (
                 <button
                   onClick={handleLiveMicParse}
-                  className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-[var(--radius-xl)] font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <Sparkles className="w-4 h-4" />
                   Extract Subtasks
@@ -619,7 +620,7 @@ export default function ContentToSubtasksImporter({
               )}
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-[var(--radius-lg)] text-red-600 text-sm">
                   {error}
                 </div>
               )}
@@ -642,7 +643,7 @@ export default function ContentToSubtasksImporter({
               </div>
 
               {summary && (
-                <div className="p-3 bg-indigo-50 rounded-lg">
+                <div className="p-3 bg-indigo-50 rounded-[var(--radius-lg)]">
                   <p className="text-sm text-indigo-700">{summary}</p>
                 </div>
               )}
@@ -652,7 +653,7 @@ export default function ContentToSubtasksImporter({
                 {subtasks.map((subtask, index) => (
                   <div
                     key={index}
-                    className={`p-3 rounded-lg border transition-colors ${
+                    className={`p-3 rounded-[var(--radius-lg)] border transition-colors ${
                       subtask.selected
                         ? 'border-indigo-200 bg-indigo-50/50'
                         : 'border-slate-200 bg-slate-50 opacity-60'
@@ -677,7 +678,7 @@ export default function ContentToSubtasksImporter({
                           type="text"
                           value={subtask.text}
                           onChange={(e) => updateSubtask(index, { text: e.target.value })}
-                          className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
+                          className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400"
                         />
 
                         {/* Options row */}
@@ -687,7 +688,7 @@ export default function ContentToSubtasksImporter({
                             <select
                               value={subtask.priority}
                               onChange={(e) => updateSubtask(index, { priority: e.target.value as TodoPriority })}
-                              className="text-xs px-2 py-1 rounded border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                              className="text-xs px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-indigo-200"
                             >
                               <option value="low">Low</option>
                               <option value="medium">Medium</option>
@@ -718,7 +719,7 @@ export default function ContentToSubtasksImporter({
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-[var(--radius-lg)] text-red-600 text-sm">
                   {error}
                 </div>
               )}
@@ -749,14 +750,14 @@ export default function ContentToSubtasksImporter({
             <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-[var(--radius-lg)] font-medium transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddSelected}
                 disabled={totalSelected === 0}
-                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-lg font-medium transition-colors disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-[var(--radius-lg)] font-medium transition-colors disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Check className="w-4 h-4" />
                 Add {totalSelected} Subtask{totalSelected !== 1 ? 's' : ''}

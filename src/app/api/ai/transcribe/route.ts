@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
+import { withAiAuth } from '@/lib/agencyAuth';
 
 // Audio file transcription endpoint using OpenAI Whisper + Claude for task parsing
 // Supports three modes:
@@ -29,10 +30,39 @@ const SUPPORTED_MIME_TYPES = [
 
 type ProcessingMode = 'transcribe' | 'tasks' | 'subtasks';
 
-export async function POST(request: NextRequest) {
+async function handleTranscribe(request: NextRequest): Promise<NextResponse> {
   try {
     const formData = await request.formData();
-    const audioFile = formData.get('audio') as File | null;
+    const audioFileRaw = formData.get('audio');
+
+    // SECURITY: Validate that audio is actually a File object (not a string or null)
+    // FormData.get() can return string | File | null, so we need runtime validation
+    if (!audioFileRaw) {
+      return NextResponse.json(
+        { success: false, error: 'No audio file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Check if it's actually a File object (not a string value)
+    if (typeof audioFileRaw === 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid audio file: expected file upload, received string' },
+        { status: 400 }
+      );
+    }
+
+    // At this point, TypeScript knows audioFileRaw is File
+    const audioFile: File = audioFileRaw;
+
+    // Validate file has required properties
+    if (!audioFile.name || typeof audioFile.size !== 'number') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid audio file: missing required properties' },
+        { status: 400 }
+      );
+    }
+
     const usersJson = formData.get('users') as string | null;
     let users: string[] = [];
     if (usersJson) {
@@ -52,13 +82,6 @@ export async function POST(request: NextRequest) {
       mode = 'subtasks';
     } else if (users.length > 0 || formData.has('parseTasks')) {
       mode = 'tasks';
-    }
-
-    if (!audioFile) {
-      return NextResponse.json(
-        { success: false, error: 'No audio file provided' },
-        { status: 400 }
-      );
     }
 
     logger.debug('Received audio file', {
@@ -124,8 +147,8 @@ export async function POST(request: NextRequest) {
       logger.error('Whisper API error', undefined, { component: 'TranscribeAPI', status: whisperResponse.status, errorData });
       return NextResponse.json({
         success: false,
-        error: errorData?.error?.message || 'Failed to transcribe audio',
-      }, { status: whisperResponse.status });
+        error: 'Failed to transcribe audio',
+      }, { status: 500 });
     }
 
     const transcription = await whisperResponse.text();
@@ -403,3 +426,8 @@ Rules:
     );
   }
 }
+
+// Export wrapped handler with session auth and AI-specific error handling
+export const POST = withAiAuth('TranscribeAPI', async (request) => {
+  return handleTranscribe(request);
+});

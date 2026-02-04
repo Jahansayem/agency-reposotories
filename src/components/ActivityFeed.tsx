@@ -9,10 +9,10 @@ import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAgency } from '@/contexts/AgencyContext';
 
 interface ActivityFeedProps {
   currentUserName: string;
-  darkMode?: boolean;
   onClose?: () => void;
 }
 
@@ -45,28 +45,37 @@ function saveNotificationSettings(settings: ActivityNotificationSettings): void 
   localStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
 }
 
+/**
+ * Action configuration using semantic color tokens from design system.
+ * Colors use CSS variables for consistent light/dark mode support.
+ * @see src/lib/design-tokens.ts for ACTION_COLORS definitions
+ */
 const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: string; color: string }> = {
-  task_created: { icon: Circle, label: 'created task', color: '#10b981' },
-  task_updated: { icon: RefreshCw, label: 'updated task', color: '#3b82f6' },
-  task_deleted: { icon: Trash2, label: 'deleted task', color: '#ef4444' },
-  task_completed: { icon: CheckCircle2, label: 'completed task', color: '#10b981' },
-  task_reopened: { icon: Circle, label: 'reopened task', color: '#f59e0b' },
-  status_changed: { icon: ArrowRight, label: 'changed status', color: '#8b5cf6' },
-  priority_changed: { icon: Flag, label: 'changed priority', color: '#f59e0b' },
-  assigned_to_changed: { icon: User, label: 'reassigned task', color: '#3b82f6' },
-  due_date_changed: { icon: Calendar, label: 'updated due date', color: '#3b82f6' },
-  subtask_added: { icon: ListTodo, label: 'added subtask', color: '#10b981' },
-  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: '#10b981' },
-  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: '#ef4444' },
-  notes_updated: { icon: StickyNote, label: 'updated notes', color: '#8b5cf6' },
-  template_created: { icon: FileText, label: 'created template', color: '#10b981' },
-  template_used: { icon: FileText, label: 'used template', color: '#3b82f6' },
-  attachment_added: { icon: Paperclip, label: 'added attachment', color: '#10b981' },
-  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: '#ef4444' },
-  tasks_merged: { icon: GitMerge, label: 'merged tasks', color: '#0033A0' },
-  reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6' },
-  reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444' },
-  reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981' },
+  task_created: { icon: Circle, label: 'created task', color: 'var(--success-vivid)' },
+  task_updated: { icon: RefreshCw, label: 'updated task', color: 'var(--accent-vivid)' },
+  task_deleted: { icon: Trash2, label: 'deleted task', color: 'var(--danger)' },
+  task_completed: { icon: CheckCircle2, label: 'completed task', color: 'var(--success-vivid)' },
+  task_reopened: { icon: Circle, label: 'reopened task', color: 'var(--warning)' },
+  status_changed: { icon: ArrowRight, label: 'changed status', color: 'var(--state-info)' },
+  priority_changed: { icon: Flag, label: 'changed priority', color: 'var(--warning)' },
+  assigned_to_changed: { icon: User, label: 'reassigned task', color: 'var(--accent-vivid)' },
+  due_date_changed: { icon: Calendar, label: 'updated due date', color: 'var(--accent-vivid)' },
+  subtask_added: { icon: ListTodo, label: 'added subtask', color: 'var(--success-vivid)' },
+  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: 'var(--success-vivid)' },
+  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: 'var(--danger)' },
+  notes_updated: { icon: StickyNote, label: 'updated notes', color: 'var(--state-info)' },
+  template_created: { icon: FileText, label: 'created template', color: 'var(--success-vivid)' },
+  template_used: { icon: FileText, label: 'used template', color: 'var(--accent-vivid)' },
+  attachment_added: { icon: Paperclip, label: 'added attachment', color: 'var(--success-vivid)' },
+  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: 'var(--danger)' },
+  tasks_merged: { icon: GitMerge, label: 'merged tasks', color: 'var(--accent)' },
+  reminder_added: { icon: Bell, label: 'added reminder', color: 'var(--state-info)' },
+  reminder_removed: { icon: BellOff, label: 'removed reminder', color: 'var(--danger)' },
+  reminder_sent: { icon: BellRing, label: 'sent reminder', color: 'var(--success-vivid)' },
+  marked_waiting: { icon: Clock, label: 'marked waiting for response', color: 'var(--state-info)' },
+  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)' },
+  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)' },
+  task_reordered: { icon: ArrowRight, label: 'reordered task', color: 'var(--accent-vivid)' },
 };
 
 // Activity type filter options
@@ -80,10 +89,9 @@ const FILTER_OPTIONS: { value: ActivityFilterType; label: string; actions: Activ
   { value: 'templates', label: 'Templates', actions: ['template_created', 'template_used'] },
 ];
 
-export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, onClose }: ActivityFeedProps) {
-  // Use theme context if darkMode prop not explicitly provided
+export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedProps) {
   const { theme } = useTheme();
-  const darkMode = darkModeProp ?? theme === 'dark';
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
 
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,6 +103,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
   const [filterType, setFilterType] = useState<ActivityFilterType>('all');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const lastActivityIdRef = useRef<string | null>(null);
+  const activitiesLengthRef = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape key press
@@ -217,7 +226,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
     setError(null);
 
     try {
-      const offset = reset ? 0 : activities.length;
+      const offset = reset ? 0 : activitiesLengthRef.current;
       const limit = reset ? INITIAL_LOAD_LIMIT : LOAD_MORE_LIMIT;
       const response = await fetchWithCsrf(
         `/api/activity?userName=${encodeURIComponent(currentUserName)}&limit=${limit}&offset=${offset}`
@@ -227,8 +236,13 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
 
         if (reset) {
           setActivities(data);
+          activitiesLengthRef.current = data.length;
         } else {
-          setActivities(prev => [...prev, ...data]);
+          setActivities(prev => {
+            const updated = [...prev, ...data];
+            activitiesLengthRef.current = updated.length;
+            return updated;
+          });
         }
 
         // Check if we have more to load
@@ -247,7 +261,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [currentUserName, activities.length]);
+  }, [currentUserName]);
 
   const loadMore = useCallback(() => {
     if (!isLoadingMore && hasMore) {
@@ -262,17 +276,47 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
 
   // Subscribe to real-time updates with notifications
   useEffect(() => {
+    // Build channel name and filter based on multi-tenancy status
+    const channelName = isMultiTenancyEnabled && currentAgencyId
+      ? `activity-${currentAgencyId}`
+      : 'activity-all';
+
+    const subscriptionConfig: {
+      event: 'INSERT';
+      schema: 'public';
+      table: 'activity_log';
+      filter?: string;
+    } = {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'activity_log',
+    };
+
+    // Add agency filter if multi-tenancy is enabled
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const channel = supabase
-      .channel('activity-feed')
+      .channel(channelName)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activity_log',
-        },
+        subscriptionConfig,
         (payload) => {
-          const newActivity = payload.new as ActivityLogEntry;
+          const newActivity = payload.new as ActivityLogEntry & { agency_id?: string };
+
+          // Validate agency_id matches current agency (defense in depth)
+          // This prevents data leakage if the server-side filter doesn't work
+          if (isMultiTenancyEnabled && currentAgencyId) {
+            if (newActivity.agency_id && newActivity.agency_id !== currentAgencyId) {
+              logger.warn('Received activity for different agency, ignoring', {
+                component: 'ActivityFeed',
+                receivedAgencyId: newActivity.agency_id,
+                currentAgencyId,
+              });
+              return;
+            }
+          }
 
           // Check if this is from another user
           const isOtherUser = newActivity.user_name !== currentUserName;
@@ -288,7 +332,9 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
           setActivities((prev) => {
             const updated = [newActivity, ...prev];
             // Trim to max size to prevent memory issues
-            return updated.slice(0, MAX_ACTIVITIES_IN_MEMORY);
+            const trimmed = updated.slice(0, MAX_ACTIVITIES_IN_MEMORY);
+            activitiesLengthRef.current = trimmed.length;
+            return trimmed;
           });
 
           // Log for debugging
@@ -302,7 +348,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserName, notificationSettings.enabled, notificationSettings.notifyOwnActions, playNotificationSound, showBrowserNotification]);
+  }, [currentUserName, notificationSettings.enabled, notificationSettings.notifyOwnActions, playNotificationSound, showBrowserNotification, currentAgencyId, isMultiTenancyEnabled]);
 
   // Filter activities based on selected filter type
   const filteredActivities = useMemo(() => {
@@ -336,25 +382,23 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
   };
 
   return (
-    <div className={`h-full flex flex-col ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
+    <div className="h-full flex flex-col bg-[var(--surface)]">
       {/* Toolbar - Controls for filtering and settings */}
-      <div className={`px-4 py-2.5 border-b flex items-center justify-between ${darkMode ? 'border-[var(--border)]' : 'border-[var(--border)]'}`}>
+      <div className="px-4 py-2.5 border-b flex items-center justify-between border-[var(--border)]">
         <div className="flex items-center gap-3">
           {/* Activity count badge */}
-          <span className={`text-sm font-medium ${darkMode ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'}`}>
+          <span className="text-sm font-medium text-[var(--text-muted)]">
             {filteredActivities.length}{hasMore ? '+' : ''} activities
           </span>
-          
+
           {/* Filter dropdown */}
           <div className="relative">
             <button
               onClick={() => setShowFilterMenu(!showFilterMenu)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-[var(--radius-md)] transition-colors ${
                 filterType !== 'all'
                   ? 'text-[var(--accent)] bg-[var(--accent)]/10'
-                  : darkMode 
-                    ? 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]' 
-                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
+                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
               }`}
               title="Filter activities"
             >
@@ -363,9 +407,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
               <ChevronDown className="w-3 h-3" />
             </button>
             {showFilterMenu && (
-              <div className={`absolute left-0 top-full mt-1 z-10 w-44 rounded-lg border shadow-lg ${
-                darkMode ? 'bg-[var(--surface)] border-[var(--border)]' : 'bg-white border-[var(--border)]'
-              }`}>
+              <div className="absolute left-0 top-full mt-1 z-10 w-44 rounded-[var(--radius-lg)] border shadow-lg bg-[var(--surface)] border-[var(--border)]">
                 {FILTER_OPTIONS.map(option => (
                   <button
                     key={option.value}
@@ -373,7 +415,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
                     className={`w-full px-3 py-2 text-left text-sm transition-colors first:rounded-t-lg last:rounded-b-lg ${
                       filterType === option.value
                         ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                        : darkMode ? 'hover:bg-[var(--surface-2)] text-white' : 'hover:bg-[var(--surface-2)] text-[var(--foreground)]'
+                        : 'hover:bg-[var(--surface-2)] text-[var(--foreground)]'
                     }`}
                   >
                     {option.label}
@@ -383,12 +425,12 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-1">
           {/* Notification toggle button */}
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-[var(--surface-2)]' : 'hover:bg-[var(--surface-2)]'} ${
+            className={`p-2 rounded-[var(--radius-lg)] transition-colors hover:bg-[var(--surface-2)] ${
               notificationSettings.enabled
                 ? 'text-[var(--accent)]'
                 : 'text-[var(--text-muted)]'
@@ -402,8 +444,8 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
 
       {/* Notification Settings Panel */}
       {showSettings && (
-        <div className={`px-4 py-3 border-b ${darkMode ? 'border-[var(--border)] bg-[var(--surface-2)]/50' : 'border-[var(--border)] bg-[var(--surface-2)]'}`}>
-          <p className={`text-xs font-medium uppercase tracking-wide mb-3 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+        <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-2)]">
+          <p className="text-xs font-medium uppercase tracking-wide mb-3 text-[var(--text-muted)]">
             Notification Settings
           </p>
           <div className="space-y-3">
@@ -411,11 +453,11 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
             <label className="flex items-center justify-between cursor-pointer">
               <div className="flex items-center gap-2">
                 {notificationSettings.enabled ? (
-                  <Bell className={`w-4 h-4 ${darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'}`} />
+                  <Bell className="w-4 h-4 text-[var(--accent)]" />
                 ) : (
-                  <BellOff className={`w-4 h-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                  <BellOff className="w-4 h-4 text-[var(--text-muted)]" />
                 )}
-                <span className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <span className="text-sm text-[var(--foreground)]">
                   Enable notifications
                 </span>
               </div>
@@ -423,7 +465,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
                 type="checkbox"
                 checked={notificationSettings.enabled}
                 onChange={(e) => handleNotificationSettingsChange('enabled', e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-[#0033A0] focus:ring-[#72B5E8]"
+                className="w-4 h-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent-sky)]"
               />
             </label>
 
@@ -431,11 +473,11 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
             <label className={`flex items-center justify-between cursor-pointer ${!notificationSettings.enabled ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-2">
                 {notificationSettings.soundEnabled ? (
-                  <Volume2 className={`w-4 h-4 ${darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]'}`} />
+                  <Volume2 className="w-4 h-4 text-[var(--accent)]" />
                 ) : (
-                  <VolumeX className={`w-4 h-4 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                  <VolumeX className="w-4 h-4 text-[var(--text-muted)]" />
                 )}
-                <span className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <span className="text-sm text-[var(--foreground)]">
                   Sound alerts
                 </span>
               </div>
@@ -444,33 +486,33 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
                 checked={notificationSettings.soundEnabled}
                 onChange={(e) => handleNotificationSettingsChange('soundEnabled', e.target.checked)}
                 disabled={!notificationSettings.enabled}
-                className="w-4 h-4 rounded border-slate-300 text-[#0033A0] focus:ring-[#72B5E8] disabled:opacity-50"
+                className="w-4 h-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent-sky)] disabled:opacity-50"
               />
             </label>
 
             {/* Browser notifications */}
             <label className={`flex items-center justify-between cursor-pointer ${!notificationSettings.enabled ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-2">
-                <Bell className={`w-4 h-4 ${notificationSettings.browserNotificationsEnabled ? (darkMode ? 'text-green-400' : 'text-green-600') : (darkMode ? 'text-slate-500' : 'text-slate-400')}`} />
-                <span className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <Bell className={`w-4 h-4 ${notificationSettings.browserNotificationsEnabled ? 'text-green-500' : 'text-[var(--text-muted)]'}`} />
+                <span className="text-sm text-[var(--foreground)]">
                   Browser notifications
                 </span>
               </div>
               {typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied' ? (
-                <span className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-500'}`}>Blocked</span>
+                <span className="text-xs text-red-500">Blocked</span>
               ) : notificationSettings.browserNotificationsEnabled ? (
                 <input
                   type="checkbox"
                   checked={true}
                   onChange={() => handleNotificationSettingsChange('browserNotificationsEnabled', false)}
                   disabled={!notificationSettings.enabled}
-                  className="w-4 h-4 rounded border-slate-300 text-[#0033A0] focus:ring-[#72B5E8] disabled:opacity-50"
+                  className="w-4 h-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent-sky)] disabled:opacity-50"
                 />
               ) : (
                 <button
                   onClick={requestBrowserNotificationPermission}
                   disabled={!notificationSettings.enabled}
-                  className={`text-xs px-2 py-1 rounded ${darkMode ? 'bg-[#0033A0] text-white hover:bg-[#00205B]' : 'bg-[#72B5E8]/20 text-[#0033A0] hover:bg-[#72B5E8]/30'} disabled:opacity-50`}
+                  className="text-xs px-2 py-1 rounded bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50"
                 >
                   Enable
                 </button>
@@ -480,8 +522,8 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
             {/* Notify own actions (for testing) */}
             <label className={`flex items-center justify-between cursor-pointer ${!notificationSettings.enabled ? 'opacity-50' : ''}`}>
               <div className="flex items-center gap-2">
-                <User className={`w-4 h-4 ${notificationSettings.notifyOwnActions ? (darkMode ? 'text-[#72B5E8]' : 'text-[#0033A0]') : (darkMode ? 'text-slate-500' : 'text-slate-400')}`} />
-                <span className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                <User className={`w-4 h-4 ${notificationSettings.notifyOwnActions ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
+                <span className="text-sm text-[var(--foreground)]">
                   Notify my own actions
                 </span>
               </div>
@@ -490,7 +532,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
                 checked={notificationSettings.notifyOwnActions}
                 onChange={(e) => handleNotificationSettingsChange('notifyOwnActions', e.target.checked)}
                 disabled={!notificationSettings.enabled}
-                className="w-4 h-4 rounded border-slate-300 text-[#0033A0] focus:ring-[#72B5E8] disabled:opacity-50"
+                className="w-4 h-4 rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent-sky)] disabled:opacity-50"
               />
             </label>
           </div>
@@ -510,28 +552,24 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
             <p className="font-medium text-red-400">{error}</p>
             <button
               onClick={() => fetchActivities(true)}
-              className="mt-3 px-4 py-2 text-sm rounded-lg transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]"
+              className="mt-3 px-4 py-2 text-sm rounded-[var(--radius-lg)] transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]"
             >
               Try Again
             </button>
           </div>
         ) : filteredActivities.length === 0 ? (
           <div className="p-10 text-center">
-            <div
-              className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
-                darkMode ? 'bg-white/5 border border-white/10' : 'bg-[var(--surface-2)] border border-[var(--border)]'
-              }`}
-            >
+            <div className="w-16 h-16 mx-auto mb-4 rounded-[var(--radius-2xl)] flex items-center justify-center bg-[var(--surface-2)] border border-[var(--border)]">
               {filterType !== 'all' ? (
-                <Filter className={`w-8 h-8 ${darkMode ? 'text-white/30' : 'text-[var(--text-muted)]'}`} />
+                <Filter className="w-8 h-8 text-[var(--text-muted)]" />
               ) : (
-                <Activity className={`w-8 h-8 ${darkMode ? 'text-white/30' : 'text-[var(--text-muted)]'}`} />
+                <Activity className="w-8 h-8 text-[var(--text-muted)]" />
               )}
             </div>
-            <p className={`font-semibold text-base ${darkMode ? 'text-white/80' : 'text-[var(--foreground)]'}`}>
+            <p className="font-semibold text-base text-[var(--foreground)]">
               {filterType !== 'all' ? 'No matching activity' : 'No activity yet'}
             </p>
-            <p className={`text-sm mt-2 max-w-[200px] mx-auto ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+            <p className="text-sm mt-2 max-w-[200px] mx-auto text-[var(--text-muted)]">
               {filterType !== 'all'
                 ? 'Try selecting a different filter to see more activity'
                 : 'When you or your team make changes to tasks, they will appear here'}
@@ -539,11 +577,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
             {filterType !== 'all' && (
               <button
                 onClick={() => setFilterType('all')}
-                className={`mt-5 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  darkMode
-                    ? 'bg-white/10 hover:bg-white/15 text-white'
-                    : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]'
-                }`}
+                className="mt-5 px-4 py-2 text-sm font-medium rounded-[var(--radius-lg)] transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]"
               >
                 Show all activity
               </button>
@@ -554,16 +588,14 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
             {Object.entries(groupedActivities).map(([date, dayActivities]) => (
               <div key={date}>
                 {/* Date Header */}
-                <div className={`px-4 py-2 text-xs font-medium uppercase tracking-wide sticky top-0 backdrop-blur-sm ${
-                  darkMode ? 'bg-[var(--surface)]/80 text-[var(--text-muted)]' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                }`}>
+                <div className="px-4 py-2 text-xs font-medium uppercase tracking-wide sticky top-0 backdrop-blur-sm bg-[var(--surface)]/80 text-[var(--text-muted)]">
                   {formatDate(date)}
                 </div>
 
                 {/* Activities for this date */}
                 <div className="divide-y divide-[var(--border)]/30">
                   {dayActivities.map((activity) => (
-                    <ActivityItem key={activity.id} activity={activity} darkMode={darkMode} />
+                    <ActivityItem key={activity.id} activity={activity} />
                   ))}
                 </div>
               </div>
@@ -575,7 +607,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
                 <button
                   onClick={loadMore}
                   disabled={isLoadingMore}
-                  className="px-4 py-2 text-sm rounded-lg transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] disabled:opacity-50"
+                  className="px-4 py-2 text-sm rounded-[var(--radius-lg)] transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] disabled:opacity-50"
                 >
                   {isLoadingMore ? (
                     <span className="flex items-center gap-2">
@@ -602,7 +634,7 @@ export default function ActivityFeed({ currentUserName, darkMode: darkModeProp, 
   );
 }
 
-function ActivityItem({ activity, darkMode }: { activity: ActivityLogEntry; darkMode: boolean }) {
+function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
   const config = ACTION_CONFIG[activity.action];
   const Icon = config.icon;
   const details = activity.details as Record<string, string | number | undefined>;

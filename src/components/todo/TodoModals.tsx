@@ -8,22 +8,26 @@ import CelebrationEffect from '../CelebrationEffect';
 import ProgressSummary from '../ProgressSummary';
 import WelcomeBackNotification from '../WelcomeBackNotification';
 import ConfirmDialog from '../ConfirmDialog';
-import KeyboardShortcutsModal from '../KeyboardShortcutsModal';
 import AddTaskModal from '../AddTaskModal';
 import SaveTemplateModal from '../SaveTemplateModal';
-import ArchivedTaskModal from '../ArchivedTaskModal';
-import DuplicateDetectionModal from '../DuplicateDetectionModal';
-import CustomerEmailModal from '../CustomerEmailModal';
 import { CompletionCelebration } from '../CompletionCelebration';
 import { TaskCompletionSummary } from '../TaskCompletionSummary';
-import {
-  WeeklyProgressChartSkeleton,
-} from '../LoadingSkeletons';
+import { usePermission } from '@/hooks/usePermission';
 
-// Lazy load WeeklyProgressChart
-const WeeklyProgressChart = dynamic(() => import('../WeeklyProgressChart'), {
+// Lazy load heavy modal components (only loaded when opened)
+// ArchivedTaskModal: 372 lines
+const ArchivedTaskModal = dynamic(() => import('../ArchivedTaskModal'), {
   ssr: false,
-  loading: () => <WeeklyProgressChartSkeleton />,
+});
+
+// DuplicateDetectionModal: 254 lines
+const DuplicateDetectionModal = dynamic(() => import('../DuplicateDetectionModal'), {
+  ssr: false,
+});
+
+// CustomerEmailModal: 865 lines - largest modal component
+const CustomerEmailModal = dynamic(() => import('../CustomerEmailModal'), {
+  ssr: false,
 });
 
 interface ConfirmDialogState {
@@ -49,11 +53,9 @@ interface TodoModalsProps {
   onUserChange: (user: AuthUser | null) => void;
 
   // Theme
-  darkMode: boolean;
 
   // Todos for various modals
   todos: Todo[];
-  visibleTodos: Todo[];
   users: string[];
 
   // Celebration
@@ -71,17 +73,9 @@ interface TodoModalsProps {
   closeWelcomeBack: () => void;
   openProgressSummary: () => void;
 
-  // Weekly Chart
-  showWeeklyChart: boolean;
-  closeWeeklyChart: () => void;
-
   // Confirm Dialog
   confirmDialog: ConfirmDialogState;
   closeConfirmDialog: () => void;
-
-  // Shortcuts
-  showShortcuts: boolean;
-  closeShortcuts: () => void;
 
   // Add Task Modal
   showAddTaskModal: boolean;
@@ -91,10 +85,12 @@ interface TodoModalsProps {
     priority: 'low' | 'medium' | 'high' | 'urgent',
     dueDate?: string,
     assignedTo?: string,
-    subtasks?: { id: string; text: string; completed: boolean }[],
+    subtasks?: Subtask[],
     transcription?: string,
     sourceFile?: File,
-    reminderAt?: string
+    reminderAt?: string,
+    notes?: string,
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null
   ) => void;
 
   // Template
@@ -133,9 +129,7 @@ interface TodoModalsProps {
 function TodoModals({
   currentUser,
   onUserChange,
-  darkMode,
   todos,
-  visibleTodos,
   users,
   showCelebration,
   celebrationText,
@@ -148,12 +142,8 @@ function TodoModals({
   showWelcomeBack,
   closeWelcomeBack,
   openProgressSummary,
-  showWeeklyChart,
-  closeWeeklyChart,
   confirmDialog,
   closeConfirmDialog,
-  showShortcuts,
-  closeShortcuts,
   showAddTaskModal,
   setShowAddTaskModal,
   onAddTodo,
@@ -178,6 +168,8 @@ function TodoModals({
   selectArchivedTodo,
   onNextTaskClick,
 }: TodoModalsProps) {
+  const canManageTemplates = usePermission('can_manage_templates');
+
   return (
     <>
       <CelebrationEffect
@@ -212,37 +204,19 @@ function TodoModals({
         onCancel={closeConfirmDialog}
       />
 
-      {/* Only render when shown to prevent skeleton flash during dynamic import */}
-      {showWeeklyChart && (
-        <WeeklyProgressChart
-          todos={visibleTodos}
-          darkMode={darkMode}
-          show={showWeeklyChart}
-          onClose={closeWeeklyChart}
-        />
-      )}
-
-      <KeyboardShortcutsModal
-        show={showShortcuts}
-        onClose={closeShortcuts}
-        darkMode={darkMode}
-      />
-
       {/* Add Task Modal */}
       <AddTaskModal
         isOpen={showAddTaskModal}
         onClose={() => setShowAddTaskModal(false)}
         onAdd={onAddTodo}
         users={users}
-        darkMode={darkMode}
         currentUserId={currentUser.id}
       />
 
-      {/* Save Template Modal */}
-      {templateTodo && (
+      {/* Save Template Modal - gated on can_manage_templates permission */}
+      {templateTodo && canManageTemplates && (
         <SaveTemplateModal
           todo={templateTodo}
-          darkMode={darkMode}
           onClose={closeTemplateModal}
           onSave={onSaveAsTemplate}
         />
@@ -252,7 +226,6 @@ function TodoModals({
       {showDuplicateModal && pendingTask && (
         <DuplicateDetectionModal
           isOpen={showDuplicateModal}
-          darkMode={darkMode}
           newTaskText={pendingTask.text}
           newTaskPriority={pendingTask.priority}
           newTaskDueDate={pendingTask.dueDate}
@@ -273,7 +246,6 @@ function TodoModals({
           todos={emailTargetTodos}
           currentUser={currentUser}
           onClose={closeEmailModal}
-          darkMode={darkMode}
         />
       )}
 

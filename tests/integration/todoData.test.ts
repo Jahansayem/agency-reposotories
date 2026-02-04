@@ -20,15 +20,35 @@ const mockChannel = vi.fn();
 const mockOn = vi.fn();
 const mockSubscribe = vi.fn();
 
+// Helper to create a chainable query result that supports .eq(), .or(), .limit(), etc.
+const createChainableResult = (resolveValue: unknown) => {
+  const chainable: Record<string, unknown> = {};
+  const resolve = () => Promise.resolve(resolveValue);
+  chainable.eq = () => chainable;
+  chainable.or = () => chainable;
+  chainable.limit = () => chainable;
+  chainable.order = () => chainable;
+  chainable.then = (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+    resolve().then(onFulfilled, onRejected);
+  chainable.catch = (onRejected: (e: unknown) => unknown) => resolve().catch(onRejected);
+  chainable.finally = (onFinally: () => void) => resolve().finally(onFinally);
+  return chainable;
+};
+
 // Mock Supabase with controllable responses - using supabaseClient path
 vi.mock('@/lib/supabaseClient', () => ({
   supabase: {
     from: vi.fn((table: string) => ({
-      select: (columns?: string) => {
+      select: (columns?: string, opts?: Record<string, unknown>) => {
         mockSelect(table, columns);
-        return {
-          order: (column: string, options?: { ascending: boolean }) => {
-            mockOrder(column, options);
+        // count query: select('*', { count: 'exact', head: true })
+        if (opts && opts.head) {
+          return createChainableResult({ count: 1, data: null, error: null });
+        }
+        const orderResult = {
+          eq: () => orderResult,
+          or: () => orderResult,
+          limit: (_n: number) => {
             if (table === 'todos') {
               return Promise.resolve({
                 data: [
@@ -49,10 +69,38 @@ vi.mock('@/lib/supabaseClient', () => ({
             return Promise.resolve({ data: [], error: null });
           },
         };
+        // Create a chainable eq result that supports .single()
+        const createEqChain = () => {
+          const eqChain: Record<string, unknown> = {};
+          eqChain.eq = () => eqChain;
+          eqChain.single = () => Promise.resolve({ data: { id: 'user-1' }, error: null });
+          eqChain.order = (column: string, options?: { ascending: boolean }) => {
+            mockOrder(column, options);
+            return orderResult;
+          };
+          return eqChain;
+        };
+        return {
+          order: (column: string, options?: { ascending: boolean }) => {
+            mockOrder(column, options);
+            return orderResult;
+          },
+          eq: () => createEqChain(),
+          or: () => ({
+            order: (column: string, options?: { ascending: boolean }) => {
+              mockOrder(column, options);
+              return orderResult;
+            },
+          }),
+        };
       },
       insert: (data: unknown) => {
         mockInsert(table, data);
-        return Promise.resolve({ data: null, error: null });
+        return {
+          select: () => Promise.resolve({ data: null, error: null }),
+          then: (onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) =>
+            Promise.resolve({ data: null, error: null }).then(onFulfilled, onRejected),
+        };
       },
       update: (data: unknown) => {
         mockUpdate(table, data);
@@ -103,6 +151,46 @@ vi.mock('@/components/WelcomeBackNotification', () => ({
   shouldShowWelcomeNotification: () => false,
 }));
 
+// Mock AgencyContext (added during multi-tenancy migration)
+vi.mock('@/contexts/AgencyContext', () => ({
+  useAgency: () => ({
+    currentAgencyId: null,
+    isMultiTenancyEnabled: false,
+    hasPermission: () => true,
+  }),
+}));
+
+// Mock logger to avoid Sentry/console issues
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
+// Mock task notifications (added during multi-tenancy migration)
+vi.mock('@/lib/taskNotifications', () => ({
+  sendTaskAssignmentNotification: vi.fn(),
+}));
+
+// Mock reminder service
+vi.mock('@/lib/reminderService', () => ({
+  createAutoReminders: vi.fn().mockResolvedValue({ success: true }),
+  updateAutoReminders: vi.fn().mockResolvedValue({ success: true }),
+}));
+
+// Mock toast hook (useTodoData requires ToastProvider at runtime)
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    warning: vi.fn(),
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
+
 // Import after mocking
 import { useTodoData } from '@/hooks/useTodoData';
 import { logActivity } from '@/lib/activityLogger';
@@ -112,7 +200,7 @@ describe('useTodoData Integration Tests', () => {
     id: 'user-1',
     name: 'TestUser',
     color: '#0033A0',
-    role: 'member' as const,
+    role: 'staff' as const,
     created_at: new Date().toISOString(),
   };
 
@@ -147,7 +235,7 @@ describe('useTodoData Integration Tests', () => {
       renderHook(() => useTodoData(mockUser));
 
       await waitFor(() => {
-        expect(mockChannel).toHaveBeenCalledWith('todos-channel');
+        expect(mockChannel).toHaveBeenCalledWith('todos-all');
         expect(mockOn).toHaveBeenCalled();
         expect(mockSubscribe).toHaveBeenCalled();
       });
@@ -459,7 +547,7 @@ describe('useTodoData Error Handling', () => {
     id: 'user-1',
     name: 'TestUser',
     color: '#0033A0',
-    role: 'member' as const,
+    role: 'staff' as const,
     created_at: new Date().toISOString(),
   };
 
@@ -494,7 +582,7 @@ describe('useTodoData Edge Cases', () => {
     id: 'user-1',
     name: 'TestUser',
     color: '#0033A0',
-    role: 'member' as const,
+    role: 'staff' as const,
     created_at: new Date().toISOString(),
   };
 
@@ -556,7 +644,7 @@ describe('useTodoData Rollback on Error', () => {
     id: 'user-1',
     name: 'TestUser',
     color: '#0033A0',
-    role: 'member' as const,
+    role: 'staff' as const,
     created_at: new Date().toISOString(),
   };
 
@@ -643,7 +731,7 @@ describe('useTodoData Create with Transcription', () => {
     id: 'user-1',
     name: 'TestUser',
     color: '#0033A0',
-    role: 'member' as const,
+    role: 'staff' as const,
     created_at: new Date().toISOString(),
   };
 
@@ -742,7 +830,7 @@ describe('useTodoData Real-time Events', () => {
     id: 'user-1',
     name: 'TestUser',
     color: '#0033A0',
-    role: 'member' as const,
+    role: 'staff' as const,
     created_at: new Date().toISOString(),
   };
 

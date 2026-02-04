@@ -1,31 +1,47 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { OWNER_USERNAME } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Verify owner access
-function isOwner(userName: string | null): boolean {
-  return userName === OWNER_USERNAME;
+/**
+ * Verify that a goal belongs to the given agency.
+ * Returns the goal record or null.
+ */
+async function verifyGoalAgency(goalId: string, agencyId: string) {
+  const { data, error } = await supabase
+    .from('strategic_goals')
+    .select('id')
+    .eq('id', goalId)
+    .eq('agency_id', agencyId)
+    .single();
+
+  if (error || !data) return null;
+  return data;
 }
 
 // GET - Fetch milestones for a goal
-export async function GET(request: Request) {
+export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const { searchParams } = new URL(request.url);
-    const userName = searchParams.get('userName');
     const goalId = searchParams.get('goalId');
 
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (goalId) {
+      // Verify the goal belongs to this agency
+      const goal = await verifyGoalAgency(goalId, ctx.agencyId);
+      if (!goal) {
+        return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
+      }
     }
 
+    // Fetch milestones, filtering to only those belonging to goals in this agency
     let query = supabase
       .from('goal_milestones')
-      .select('*')
+      .select('*, strategic_goals!inner(agency_id)')
+      .eq('strategic_goals.agency_id', ctx.agencyId)
       .order('display_order', { ascending: true });
 
     if (goalId) {
@@ -36,25 +52,30 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json(data || []);
+    // Strip the joined strategic_goals data from the response
+    const milestones = (data || []).map(({ strategic_goals: _sg, ...milestone }) => milestone);
+
+    return NextResponse.json(milestones);
   } catch (error) {
     logger.error('Error fetching milestones', error, { component: 'api/goals/milestones', action: 'GET' });
     return NextResponse.json({ error: 'Failed to fetch milestones' }, { status: 500 });
   }
-}
+});
 
 // POST - Create a new milestone
-export async function POST(request: Request) {
+export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
-    const { goal_id, title, target_date, userName } = body;
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+    const { goal_id, title, target_date } = body;
 
     if (!goal_id || !title) {
       return NextResponse.json({ error: 'goal_id and title are required' }, { status: 400 });
+    }
+
+    // Verify the goal belongs to this agency
+    const goal = await verifyGoalAgency(goal_id, ctx.agencyId);
+    if (!goal) {
+      return NextResponse.json({ error: 'Goal not found' }, { status: 404 });
     }
 
     // Get max display_order for this goal
@@ -89,20 +110,28 @@ export async function POST(request: Request) {
     logger.error('Error creating milestone', error, { component: 'api/goals/milestones', action: 'POST' });
     return NextResponse.json({ error: 'Failed to create milestone' }, { status: 500 });
   }
-}
+});
 
 // PUT - Update a milestone
-export async function PUT(request: Request) {
+export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
-    const { id, title, completed, target_date, display_order, userName } = body;
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+    const { id, title, completed, target_date, display_order } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
+    }
+
+    // Verify the milestone belongs to a goal in this agency
+    const { data: milestoneCheck } = await supabase
+      .from('goal_milestones')
+      .select('goal_id, strategic_goals!inner(agency_id)')
+      .eq('id', id)
+      .eq('strategic_goals.agency_id', ctx.agencyId)
+      .single();
+
+    if (!milestoneCheck) {
+      return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
     }
 
     const updateData: Record<string, unknown> = {};
@@ -130,29 +159,29 @@ export async function PUT(request: Request) {
     logger.error('Error updating milestone', error, { component: 'api/goals/milestones', action: 'PUT' });
     return NextResponse.json({ error: 'Failed to update milestone' }, { status: 500 });
   }
-}
+});
 
 // DELETE - Delete a milestone
-export async function DELETE(request: Request) {
+export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userName = searchParams.get('userName');
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    // Get goal_id before deleting
+    // Verify the milestone belongs to a goal in this agency and get goal_id
     const { data: milestone } = await supabase
       .from('goal_milestones')
-      .select('goal_id')
+      .select('goal_id, strategic_goals!inner(agency_id)')
       .eq('id', id)
+      .eq('strategic_goals.agency_id', ctx.agencyId)
       .single();
+
+    if (!milestone) {
+      return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
+    }
 
     const { error } = await supabase
       .from('goal_milestones')
@@ -162,16 +191,14 @@ export async function DELETE(request: Request) {
     if (error) throw error;
 
     // Update goal progress
-    if (milestone) {
-      await updateGoalProgress(milestone.goal_id);
-    }
+    await updateGoalProgress(milestone.goal_id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('Error deleting milestone', error, { component: 'api/goals/milestones', action: 'DELETE' });
     return NextResponse.json({ error: 'Failed to delete milestone' }, { status: 500 });
   }
-}
+});
 
 // Helper function to update goal progress based on milestones
 async function updateGoalProgress(goalId: string) {

@@ -5,7 +5,7 @@
  * Encapsulates all Supabase interactions for todos.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { useTodoStore } from '@/store/todoStore';
 import { Todo, TodoPriority, Subtask } from '@/types/todo';
@@ -17,8 +17,25 @@ import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 import { createAutoReminders, updateAutoReminders } from '@/lib/reminderService';
+import { useAgency } from '@/contexts/AgencyContext';
+import { parseTodo } from '@/lib/validators';
+import { useToast } from '@/components/ui/Toast';
+
+// Number of todos to fetch per page
+const TODOS_PER_PAGE = 200;
+
+// REACT-007: Legacy module-level flag - kept for backward compatibility
+// but new code should use the ref returned from useTodoData
+let _isReordering = false;
+export function setReorderingFlag(value: boolean) {
+  _isReordering = value;
+}
 
 export function useTodoData(currentUser: AuthUser) {
+  // REACT-007: Reorder guard as ref - scoped per component instance
+  // When true, real-time UPDATE events that only change display_order
+  // are suppressed to prevent snap-back during drag-and-drop.
+  const isReorderingRef = useRef(false);
   const {
     setTodos,
     addTodo: addTodoToStore,
@@ -30,12 +47,20 @@ export function useTodoData(currentUser: AuthUser) {
     setConnected,
     setError,
     setShowWelcomeBack,
-    todos,
+    setTotalTodoCount,
+    setHasMoreTodos,
+    setLoadingMore,
+    appendTodos,
   } = useTodoStore();
 
+  const { currentAgencyId, isMultiTenancyEnabled, hasPermission } = useAgency();
+
+  // UX-008: Toast for rollback notifications on optimistic update failures
+  const toast = useToast();
+  const canViewAllTasks = hasPermission('can_view_all_tasks');
   const userName = currentUser.name;
 
-  // Fetch todos and users
+  // Fetch todos and users with pagination
   const fetchTodos = useCallback(async () => {
     if (!isSupabaseConfigured()) {
       setError('Supabase is not configured. Please check your environment variables.');
@@ -43,8 +68,31 @@ export function useTodoData(currentUser: AuthUser) {
       return;
     }
 
-    const [todosResult, usersResult] = await Promise.all([
-      supabase.from('todos').select('*').order('created_at', { ascending: false }),
+    // Build query with agency filter if multi-tenancy is enabled
+    let countQuery = supabase.from('todos').select('*', { count: 'exact', head: true });
+    // Order by created_at descending (display_order ordering happens in useFilters for custom sort)
+    let todosQuery = supabase.from('todos').select('*').order('created_at', { ascending: false }).limit(TODOS_PER_PAGE);
+
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      countQuery = countQuery.eq('agency_id', currentAgencyId);
+      todosQuery = todosQuery.eq('agency_id', currentAgencyId);
+    }
+
+    // Staff data scoping (M6 fix): when user lacks can_view_all_tasks,
+    // only fetch tasks they created or are assigned to.
+    if (!canViewAllTasks) {
+      // Sanitize userName for PostgREST filter syntax (escape special chars that could break filter)
+      const sanitizeForFilter = (str: string) => str.replace(/[,().]/g, '');
+      const safeUserName = sanitizeForFilter(userName);
+      const scopeFilter = `created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`;
+      countQuery = countQuery.or(scopeFilter);
+      todosQuery = todosQuery.or(scopeFilter);
+    }
+
+    // Fetch count, initial todos (limited), and users in parallel
+    const [countResult, todosResult, usersResult] = await Promise.all([
+      countQuery,
+      todosQuery,
       supabase.from('users').select('name, color').order('name'),
     ]);
 
@@ -52,9 +100,20 @@ export function useTodoData(currentUser: AuthUser) {
       logger.error('Error fetching todos', todosResult.error, { component: 'useTodoData' });
       setError('Failed to connect to database. Please check your Supabase configuration.');
     } else {
-      setTodos(todosResult.data || []);
+      // Normalize todos to ensure subtasks and attachments are always arrays
+      const fetchedTodos = (todosResult.data || []).map((todo: any) => ({
+        ...todo,
+        subtasks: Array.isArray(todo.subtasks) ? todo.subtasks : [],
+        attachments: Array.isArray(todo.attachments) ? todo.attachments : [],
+      }));
+      const totalCount = countResult.count || fetchedTodos.length;
+
+      setTodos(fetchedTodos);
+      setTotalTodoCount(totalCount);
+      setHasMoreTodos(fetchedTodos.length < totalCount);
+      
       const registeredUsers = (usersResult.data || []).map((u: { name: string }) => u.name);
-      const todoUsers = [...new Set((todosResult.data || []).map((t: Todo) => t.created_by).filter(Boolean))];
+      const todoUsers = [...new Set((fetchedTodos).map((t: Todo) => t.created_by).filter(Boolean))];
       setUsers([...new Set([...registeredUsers, ...todoUsers])]);
       setUsersWithColors((usersResult.data || []).map((u: { name: string; color: string }) => ({
         name: u.name,
@@ -63,7 +122,7 @@ export function useTodoData(currentUser: AuthUser) {
       setError(null);
     }
     setLoading(false);
-  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError]);
+  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId, canViewAllTasks, userName]);
 
   // Setup real-time subscription
   useEffect(() => {
@@ -86,15 +145,49 @@ export function useTodoData(currentUser: AuthUser) {
 
     init();
 
+    // Build channel name and filter based on multi-tenancy status
+    const channelName = isMultiTenancyEnabled && currentAgencyId
+      ? `todos-${currentAgencyId}`
+      : 'todos-all';
+
+    const subscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'todos';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'todos',
+    };
+
+    // Add agency filter if multi-tenancy is enabled
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const channel = supabase
-      .channel('todos-channel')
+      .channel(channelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'todos' },
+        subscriptionConfig,
         (payload) => {
           if (!isMounted) return;
+
+          // Staff data scoping (M6 fix): when user lacks can_view_all_tasks,
+          // only allow todos they created or are assigned to into the store.
+          const isVisibleToUser = (todo: Todo) =>
+            canViewAllTasks || todo.created_by === userName || todo.assigned_to === userName;
+
           if (payload.eventType === 'INSERT') {
-            const newTodo = payload.new as Todo;
+            // BUGFIX TYPE-001: Validate payload instead of dangerous cast
+            const newTodo = parseTodo(payload.new);
+            if (!newTodo) {
+              logger.warn('Invalid todo payload received in INSERT', { payload: payload.new, component: 'useTodoData' });
+              return;
+            }
+
+            if (!isVisibleToUser(newTodo)) return;
             // Check if todo already exists (to avoid duplicates from optimistic updates)
             const store = useTodoStore.getState();
             const exists = store.todos.some((t) => t.id === newTodo.id);
@@ -102,7 +195,35 @@ export function useTodoData(currentUser: AuthUser) {
               addTodoToStore(newTodo);
             }
           } else if (payload.eventType === 'UPDATE') {
-            updateTodoInStore(payload.new.id, payload.new as Todo);
+            // BUGFIX TYPE-001: Validate payload instead of dangerous cast
+            const updatedTodo = parseTodo(payload.new);
+            if (!updatedTodo) {
+              logger.warn('Invalid todo payload received in UPDATE', { payload: payload.new, component: 'useTodoData' });
+              return;
+            }
+            // During reorder, suppress updates that only change display_order/updated_at
+            // to prevent the list from reshuffling mid-drag
+            // REACT-007: Check both module-level flag (legacy) and instance ref
+            if (_isReordering || isReorderingRef.current) {
+              const existing = useTodoStore.getState().todos.find(t => t.id === updatedTodo.id);
+              if (existing) {
+                const isReorderOnly =
+                  existing.text === updatedTodo.text &&
+                  existing.completed === updatedTodo.completed &&
+                  existing.status === updatedTodo.status &&
+                  existing.priority === updatedTodo.priority &&
+                  existing.assigned_to === updatedTodo.assigned_to &&
+                  existing.notes === updatedTodo.notes;
+                if (isReorderOnly) return;
+              }
+            }
+            if (isVisibleToUser(updatedTodo)) {
+              updateTodoInStore(updatedTodo.id, updatedTodo);
+            } else {
+              // Todo is no longer visible to this user (e.g. unassigned from them).
+              // Remove it from the store.
+              deleteTodoFromStore(updatedTodo.id);
+            }
           } else if (payload.eventType === 'DELETE') {
             deleteTodoFromStore(payload.old.id);
           }
@@ -116,7 +237,7 @@ export function useTodoData(currentUser: AuthUser) {
       isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchTodos, currentUser, setShowWelcomeBack, setConnected, setError, setLoading, addTodoToStore, updateTodoInStore, deleteTodoFromStore]);
+  }, [fetchTodos, currentUser, setShowWelcomeBack, setConnected, setError, setLoading, addTodoToStore, updateTodoInStore, deleteTodoFromStore, currentAgencyId, isMultiTenancyEnabled, canViewAllTasks, userName]);
 
   // Create a new todo
   const createTodo = useCallback(async (
@@ -153,6 +274,11 @@ export function useTodoData(currentUser: AuthUser) {
       created_by: newTodo.created_by,
     };
 
+    // Set agency_id for multi-tenancy data isolation
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
+
     if (newTodo.status && newTodo.status !== 'todo') insertData.status = newTodo.status;
     if (newTodo.priority && newTodo.priority !== 'medium') insertData.priority = newTodo.priority;
     if (newTodo.due_date) insertData.due_date = newTodo.due_date;
@@ -164,7 +290,11 @@ export function useTodoData(currentUser: AuthUser) {
 
     if (insertError) {
       logger.error('Error adding todo', insertError, { component: 'useTodoData' });
-      // Rollback optimistic update
+      // UX-008: Show rollback toast and revert optimistic update
+      toast.warning('Reverting...', {
+        description: 'Failed to create task. Changes have been reverted.',
+        duration: 5000,
+      });
       deleteTodoFromStore(newTodo.id);
       return null;
     }
@@ -245,12 +375,12 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return newTodo;
-  }, [userName, addTodoToStore, deleteTodoFromStore]);
+  }, [userName, addTodoToStore, deleteTodoFromStore, toast, currentAgencyId]);
 
   // Update an existing todo
   const updateTodo = useCallback(async (id: string, updates: Partial<Todo>) => {
-    // Get current todo for rollback
-    const currentTodo = todos.find((t) => t.id === id);
+    // Get current todo for rollback using store.getState() to avoid stale closure
+    const currentTodo = useTodoStore.getState().todos.find((t) => t.id === id);
     if (!currentTodo) return false;
 
     // Optimistic update
@@ -271,7 +401,11 @@ export function useTodoData(currentUser: AuthUser) {
 
     if (error) {
       logger.error('Error updating todo', error, { component: 'useTodoData' });
-      // Rollback
+      // UX-008: Show rollback toast and revert optimistic update
+      toast.warning('Reverting...', {
+        description: 'Failed to update task. Changes have been reverted.',
+        duration: 5000,
+      });
       updateTodoInStore(id, currentTodo);
       return false;
     }
@@ -310,12 +444,12 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return true;
-  }, [todos, userName, updateTodoInStore]);
+  }, [userName, updateTodoInStore, toast]);
 
   // Delete a todo
   const deleteTodo = useCallback(async (id: string) => {
-    // Get current todo for rollback
-    const currentTodo = todos.find((t) => t.id === id);
+    // Get current todo for rollback using store.getState() to avoid stale closure
+    const currentTodo = useTodoStore.getState().todos.find((t) => t.id === id);
     if (!currentTodo) return false;
 
     // Optimistic delete
@@ -325,7 +459,11 @@ export function useTodoData(currentUser: AuthUser) {
 
     if (error) {
       logger.error('Error deleting todo', error, { component: 'useTodoData' });
-      // Rollback
+      // UX-008: Show rollback toast and revert optimistic delete
+      toast.warning('Reverting...', {
+        description: 'Failed to delete task. The task has been restored.',
+        duration: 5000,
+      });
       addTodoToStore(currentTodo);
       return false;
     }
@@ -339,11 +477,12 @@ export function useTodoData(currentUser: AuthUser) {
     });
 
     return true;
-  }, [todos, userName, deleteTodoFromStore, addTodoToStore]);
+  }, [userName, deleteTodoFromStore, addTodoToStore, toast]);
 
   // Toggle todo completion
   const toggleComplete = useCallback(async (id: string) => {
-    const todo = todos.find((t) => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const todo = useTodoStore.getState().todos.find((t) => t.id === id);
     if (!todo) return false;
 
     const newCompleted = !todo.completed;
@@ -364,7 +503,7 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return success;
-  }, [todos, userName, updateTodo]);
+  }, [userName, updateTodo]);
 
   // Refresh data
   const refresh = useCallback(async () => {
@@ -372,11 +511,66 @@ export function useTodoData(currentUser: AuthUser) {
     await fetchTodos();
   }, [fetchTodos, setLoading]);
 
+  /**
+   * Load more todos for pagination
+   * Fetches the next page of todos and appends them to the existing list
+   */
+  const loadMoreTodos = useCallback(async () => {
+    // Use store.getState() to get current values to avoid stale closure
+    const state = useTodoStore.getState();
+    if (!state.hasMoreTodos || state.loadingMore) return;
+
+    setLoadingMore(true);
+
+    try {
+      const currentCount = state.todos.length;
+      let query = supabase
+        .from('todos')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(currentCount, currentCount + TODOS_PER_PAGE - 1);
+
+      // Add agency filter if multi-tenancy is enabled
+      if (isMultiTenancyEnabled && currentAgencyId) {
+        query = query.eq('agency_id', currentAgencyId);
+      }
+
+      // Staff data scoping for pagination too
+      if (!canViewAllTasks) {
+        // Sanitize userName for PostgREST filter syntax (escape special chars that could break filter)
+        const sanitizeForFilter = (str: string) => str.replace(/[,().]/g, '');
+        const safeUserName = sanitizeForFilter(userName);
+        query = query.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        logger.error('Error loading more todos', error, { component: 'useTodoData' });
+      } else if (data) {
+        appendTodos(data);
+        // If we got fewer than requested, there are no more
+        setHasMoreTodos(data.length === TODOS_PER_PAGE);
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [setLoadingMore, appendTodos, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId, canViewAllTasks, userName]);
+
+  // REACT-007: Setter for the reordering ref (scoped per component instance)
+  const setReordering = useCallback((value: boolean) => {
+    isReorderingRef.current = value;
+    // Also set module-level flag for backward compatibility
+    _isReordering = value;
+  }, []);
+
   return {
     createTodo,
     updateTodo,
     deleteTodo,
     toggleComplete,
     refresh,
+    loadMoreTodos,
+    setReordering, // REACT-007: Prefer this over module-level setReorderingFlag
   };
 }

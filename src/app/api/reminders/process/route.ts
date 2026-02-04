@@ -1,96 +1,55 @@
 /**
  * Process Reminders API
  *
- * Endpoint to process and send due reminders.
- * Can be called by a cron job or external scheduler.
+ * Endpoint to process and send due reminders across ALL agencies.
+ * Called by a cron job or external scheduler.
  *
- * Protected by API key authentication.
+ * Protected by system authentication (CRON_SECRET or API key).
+ * This is a system route - no agency context (processes all agencies).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { processAllDueReminders, getDueReminders } from '@/lib/reminderService';
-import { sendWebPushNotifications } from '@/lib/webPushServer';
-
-// Use the same API key as Outlook add-in for simplicity
-const API_KEY = process.env.OUTLOOK_ADDON_API_KEY;
+import { createClient } from '@supabase/supabase-js';
+import { processAllDueReminders } from '@/lib/reminderService';
+import { logger } from '@/lib/logger';
+import { withSystemAuth } from '@/lib/agencyAuth';
 
 /**
  * POST /api/reminders/process
  *
  * Process all due reminders and send notifications.
- * Requires X-API-Key header for authentication.
+ * Requires system-level auth (CRON_SECRET or X-API-Key).
+ * Processes reminders across all agencies.
  */
-export async function POST(request: NextRequest) {
-  // Authenticate with API key
-  const apiKey = request.headers.get('X-API-Key');
-
-  if (!API_KEY || apiKey !== API_KEY) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export const POST = withSystemAuth(async (_request: NextRequest) => {
   try {
-    // First process reminders through the standard flow (Edge Function for iOS)
+    // Process reminders through the standard flow (which already sends push notifications)
+    // Note: processAllDueReminders processes across all agencies.
+    // Reminders are linked to todos which have agency_id for context.
     const result = await processAllDueReminders();
-
-    // Also send web push notifications directly (more reliable with web-push package)
-    // This is a fallback/supplement to the Edge Function
-    try {
-      const dueReminders = await getDueReminders();
-      for (const reminder of dueReminders) {
-        if (reminder.user_id && (reminder.reminder_type === 'push_notification' || reminder.reminder_type === 'both')) {
-          await sendWebPushNotifications({
-            type: 'task_due_soon',
-            payload: {
-              taskId: reminder.todo_id,
-              taskText: reminder.todo_text,
-              timeUntil: 'soon',
-            },
-            userIds: [reminder.user_id],
-          });
-        }
-      }
-    } catch (webPushError) {
-      console.error('Web push fallback error:', webPushError);
-      // Don't fail the whole request if web push fails
-    }
 
     return NextResponse.json({
       success: true,
       ...result,
     });
   } catch (error) {
-    console.error('Error processing reminders:', error);
+    logger.error('Error processing reminders', error, { component: 'reminders/process' });
     return NextResponse.json(
       { success: false, error: 'Failed to process reminders' },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/reminders/process
  *
  * Health check endpoint for the reminder processor.
- * Returns the count of pending reminders.
+ * Returns the count of pending reminders across all agencies.
+ * Requires system-level auth (CRON_SECRET or X-API-Key).
  */
-export async function GET(request: NextRequest) {
-  // Authenticate with API key
-  const apiKey = request.headers.get('X-API-Key');
-
-  if (!API_KEY || apiKey !== API_KEY) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export const GET = withSystemAuth(async (_request: NextRequest) => {
   try {
-    // Import here to avoid circular dependency issues
-    const { createClient } = await import('@supabase/supabase-js');
-
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -98,13 +57,13 @@ export async function GET(request: NextRequest) {
     }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Count pending reminders
+    // Count pending reminders across all agencies
     const { count: pendingCount } = await supabase
       .from('task_reminders')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
 
-    // Count reminders due in next 5 minutes
+    // Count reminders due in next 5 minutes across all agencies
     const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     const { count: dueCount } = await supabase
       .from('task_reminders')
@@ -120,10 +79,10 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error checking reminder status:', error);
+    logger.error('Error checking reminder status', error, { component: 'reminders/process' });
     return NextResponse.json(
       { success: false, error: 'Failed to check reminder status' },
       { status: 500 }
     );
   }
-}
+});

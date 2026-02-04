@@ -1,6 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
-import { logger } from '@/lib/logger';
+import { NextRequest } from 'next/server';
+import {
+  validateAiRequest,
+  callClaude,
+  parseAiJsonResponse,
+  aiErrorResponse,
+  aiSuccessResponse,
+  isAiConfigured,
+  withAiErrorHandling,
+} from '@/lib/aiApiHelper';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 // Customer email generation endpoint
 // Generates professional update emails for internal staff to send to customers
@@ -28,7 +36,7 @@ interface EmailRequest {
   includeNextSteps: boolean;
 }
 
-const SYSTEM_PROMPT = `You are a professional assistant helping insurance agency staff write customer update emails.
+const ENGLISH_SYSTEM_PROMPT = `You are a professional assistant helping insurance agency staff write customer update emails.
 
 Your job is to generate clear, professional emails that update customers on the status of their insurance-related tasks.
 
@@ -114,57 +122,57 @@ También debes identificar problemas potenciales que el agente debe revisar ante
 - Noticias negativas que puedan necesitar una entrega más suave
 - Menciones de dinero, pagos o precios que deben ser verificados`;
 
-export async function POST(request: NextRequest) {
-  try {
-    const body: EmailRequest = await request.json();
-    const { customerName, customerEmail, customerPhone, tasks, tone, language = 'english', senderName, includeNextSteps } = body;
-
-    if (!customerName || !tasks || tasks.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Customer name and at least one task are required' },
-        { status: 400 }
-      );
-    }
-
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { success: false, error: 'API key not configured' },
-        { status: 500 }
-      );
-    }
-
-    const anthropic = new Anthropic({ apiKey });
-
-    // Build detailed task summary for the prompt
-    const taskSummary = tasks.map((t, i) => {
-      const statusLabel = t.status === 'done' || t.completed ? 'Completed' : t.status === 'in_progress' ? 'In Progress' : 'Pending';
-      const subtaskInfo = t.subtasksTotal > 0 ? ` (${t.subtasksCompleted}/${t.subtasksTotal} steps completed)` : '';
+function buildTaskSummary(tasks: TaskSummary[]): string {
+  return tasks
+    .map((t, i) => {
+      const statusLabel =
+        t.status === 'done' || t.completed
+          ? 'Completed'
+          : t.status === 'in_progress'
+            ? 'In Progress'
+            : 'Pending';
+      const subtaskInfo =
+        t.subtasksTotal > 0 ? ` (${t.subtasksCompleted}/${t.subtasksTotal} steps completed)` : '';
       const dueInfo = t.dueDate ? ` - Due: ${t.dueDate}` : '';
       const notesInfo = t.notes ? `\n   Notes: ${t.notes}` : '';
       const transcriptionInfo = t.transcription ? `\n   Voicemail: ${t.transcription}` : '';
-      const attachmentInfo = t.attachments && t.attachments.length > 0
-        ? `\n   Attachments: ${t.attachments.map(a => `${a.file_name} (${a.file_type})`).join(', ')}`
-        : '';
+      const attachmentInfo =
+        t.attachments && t.attachments.length > 0
+          ? `\n   Attachments: ${t.attachments.map((a) => `${a.file_name} (${a.file_type})`).join(', ')}`
+          : '';
       return `${i + 1}. ${t.text} - ${statusLabel}${subtaskInfo}${dueInfo}${notesInfo}${transcriptionInfo}${attachmentInfo}`;
-    }).join('\n\n');
+    })
+    .join('\n\n');
+}
 
-    // Calculate overall progress
-    const completed = tasks.filter(t => t.status === 'done').length;
-    const inProgress = tasks.filter(t => t.status === 'in_progress').length;
-    const pending = tasks.filter(t => t.status === 'todo').length;
+function buildPrompt(body: EmailRequest, taskSummary: string): string {
+  const { customerName, customerEmail, customerPhone, tasks, tone, language, senderName, includeNextSteps } =
+    body;
 
-    const toneInstructions = language === 'spanish' ? {
-      formal: 'Usa un tono formal y profesional apropiado para correspondencia de negocios.',
-      friendly: 'Usa un tono cálido y amigable mientras te mantienes profesional. Esta es una agencia pequeña con relaciones personales.',
-      brief: 'Manténlo muy corto y directo al grano - solo la actualización esencial en máximo 2-3 oraciones.',
-    } : {
-      formal: 'Use a formal, professional tone suitable for business correspondence.',
-      friendly: 'Use a warm, friendly tone while remaining professional. This is a small agency with personal relationships.',
-      brief: 'Keep it very short and to the point - just the essential update in 2-3 sentences max.',
-    };
+  // Calculate overall progress
+  const completed = tasks.filter((t) => t.status === 'done').length;
+  const inProgress = tasks.filter((t) => t.status === 'in_progress').length;
+  const pending = tasks.filter((t) => t.status === 'todo').length;
 
-    const promptDetails = language === 'spanish' ? `
+  const toneInstructions =
+    language === 'spanish'
+      ? {
+          formal: 'Usa un tono formal y profesional apropiado para correspondencia de negocios.',
+          friendly:
+            'Usa un tono cálido y amigable mientras te mantienes profesional. Esta es una agencia pequeña con relaciones personales.',
+          brief:
+            'Manténlo muy corto y directo al grano - solo la actualización esencial en máximo 2-3 oraciones.',
+        }
+      : {
+          formal: 'Use a formal, professional tone suitable for business correspondence.',
+          friendly:
+            'Use a warm, friendly tone while remaining professional. This is a small agency with personal relationships.',
+          brief: 'Keep it very short and to the point - just the essential update in 2-3 sentences max.',
+        };
+
+  if (language === 'spanish') {
+    return `Genera un correo electrónico de actualización para el cliente con los siguientes detalles:
+
 Nombre del Cliente: ${customerName}
 ${customerEmail ? `Email del Cliente: ${customerEmail}` : ''}
 ${customerPhone ? `Teléfono del Cliente: ${customerPhone}` : ''}
@@ -193,7 +201,11 @@ Genera una respuesta JSON con:
   ]
 }
 
-El array de warnings debe señalar cualquier elemento que necesite la revisión del agente antes de enviar. Solo incluye warnings si hay problemas reales para revisar.` : `
+El array de warnings debe señalar cualquier elemento que necesite la revisión del agente antes de enviar. Solo incluye warnings si hay problemas reales para revisar.`;
+  }
+
+  return `Generate a customer update email with the following details:
+
 Customer Name: ${customerName}
 ${customerEmail ? `Customer Email: ${customerEmail}` : ''}
 ${customerPhone ? `Customer Phone: ${customerPhone}` : ''}
@@ -223,45 +235,71 @@ Generate a JSON response with:
 }
 
 The warnings array should flag any items that need the agent's review before sending. Only include warnings if there are actual issues to review.`;
-
-    const prompt = (language === 'spanish'
-      ? `Genera un correo electrónico de actualización para el cliente con los siguientes detalles:`
-      : `Generate a customer update email with the following details:`) + promptDetails;
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: language === 'spanish' ? SPANISH_SYSTEM_PROMPT : SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    // Extract text response
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from AI');
-    }
-
-    // Parse JSON from response
-    const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Could not parse email response');
-    }
-
-    const emailData = JSON.parse(jsonMatch[0]);
-
-    return NextResponse.json({
-      success: true,
-      subject: emailData.subject,
-      body: emailData.body,
-      suggestedFollowUp: emailData.suggestedFollowUp || null,
-      warnings: emailData.warnings || [],
-    });
-
-  } catch (error) {
-    logger.error('Email generation error', error, { component: 'GenerateEmailAPI' });
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate email. Please try again.' },
-      { status: 500 }
-    );
-  }
 }
+
+async function handleGenerateEmail(request: NextRequest) {
+  // Validate request
+  const validation = await validateAiRequest(request, {
+    customValidator: (body) => {
+      if (!body.customerName) {
+        return 'Customer name is required';
+      }
+      if (!body.tasks || !Array.isArray(body.tasks) || body.tasks.length === 0) {
+        return 'Customer name and at least one task are required';
+      }
+      return null;
+    },
+  });
+
+  if (!validation.valid) {
+    return validation.response;
+  }
+
+  if (!isAiConfigured()) {
+    return aiErrorResponse('API key not configured', 500);
+  }
+
+  const body = validation.body as unknown as EmailRequest;
+  const { language = 'english' } = body;
+
+  // Build detailed task summary for the prompt
+  const taskSummary = buildTaskSummary(body.tasks);
+
+  // Build prompt
+  const prompt = buildPrompt(body, taskSummary);
+
+  // Call Claude with appropriate system prompt
+  const aiResult = await callClaude({
+    systemPrompt: language === 'spanish' ? SPANISH_SYSTEM_PROMPT : ENGLISH_SYSTEM_PROMPT,
+    userMessage: prompt,
+    maxTokens: 1024,
+    component: 'GenerateEmailAPI',
+  });
+
+  if (!aiResult.success) {
+    return aiErrorResponse('Failed to generate email. Please try again.', 500, aiResult.error);
+  }
+
+  // Parse JSON from response
+  const emailData = parseAiJsonResponse<{
+    subject?: string;
+    body?: string;
+    suggestedFollowUp?: string | null;
+    warnings?: Array<{ type: string; message: string; location: string }>;
+  }>(aiResult.content);
+
+  if (!emailData) {
+    return aiErrorResponse('Could not parse email response', 500);
+  }
+
+  return aiSuccessResponse({
+    subject: emailData.subject || '',
+    body: emailData.body || '',
+    suggestedFollowUp: emailData.suggestedFollowUp || null,
+    warnings: emailData.warnings || [],
+  });
+}
+
+export const POST = withAiErrorHandling('GenerateEmailAPI', withSessionAuth(async (request) => {
+  return handleGenerateEmail(request);
+}));

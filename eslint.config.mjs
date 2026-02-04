@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Coverage reports are generated files
     "coverage/**",
+    // Hosting/build output directories
+    ".netlify/**",
   ]),
   // Custom rules overrides
   {
@@ -36,6 +38,26 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      // The codebase and tests legitimately use `any` in boundary layers (e.g. JSON parsing,
+      // third-party SDK types, or Playwright helpers). Keep it visible without failing CI.
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
+  // Allow CommonJS-style scripts in the scripts/ folder (migration helpers, one-off tooling).
+  {
+    files: ["scripts/**/*.{js,cjs}"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
+    files: ["tests/**/*.{js,cjs,mjs,ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      // Playwright tests intentionally use mutable locals for readability.
+      "prefer-const": "off",
+      // Playwright fixtures use a `use(...)` callback that trips the React hook rule.
+      "react-hooks/rules-of-hooks": "off",
     },
   },
 ]);

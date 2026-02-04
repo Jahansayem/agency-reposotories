@@ -1,30 +1,16 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { OWNER_USERNAME } from '@/types/todo';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Verify owner access
-function isOwner(userName: string | null): boolean {
-  return userName === OWNER_USERNAME;
-}
+import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
 // GET - Fetch all goal categories
-export async function GET(request: Request) {
+export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { searchParams } = new URL(request.url);
-    const userName = searchParams.get('userName');
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
+    const supabase = createServiceRoleClient();
     const { data, error } = await supabase
       .from('goal_categories')
       .select('*')
+      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: true });
 
     if (error) throw error;
@@ -34,26 +20,24 @@ export async function GET(request: Request) {
     logger.error('Error fetching categories', error, { component: 'api/goals/categories', action: 'GET' });
     return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
   }
-}
+});
 
 // POST - Create a new category
-export async function POST(request: Request) {
+export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = createServiceRoleClient();
     const body = await request.json();
-    const { name, color, icon, userName } = body;
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+    const { name, color, icon } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'name is required' }, { status: 400 });
     }
 
-    // Get max display_order
+    // Get max display_order within this agency
     const { data: maxOrderData } = await supabase
       .from('goal_categories')
       .select('display_order')
+      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: false })
       .limit(1)
       .single();
@@ -67,6 +51,7 @@ export async function POST(request: Request) {
         color: color || '#6366f1',
         icon: icon || 'target',
         display_order: nextOrder,
+        agency_id: ctx.agencyId,
       })
       .select()
       .single();
@@ -78,17 +63,14 @@ export async function POST(request: Request) {
     logger.error('Error creating category', error, { component: 'api/goals/categories', action: 'POST' });
     return NextResponse.json({ error: 'Failed to create category' }, { status: 500 });
   }
-}
+});
 
 // PUT - Update a category
-export async function PUT(request: Request) {
+export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = createServiceRoleClient();
     const body = await request.json();
-    const { id, name, color, icon, display_order, userName } = body;
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+    const { id, name, color, icon, display_order } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -104,6 +86,7 @@ export async function PUT(request: Request) {
       .from('goal_categories')
       .update(updateData)
       .eq('id', id)
+      .eq('agency_id', ctx.agencyId)
       .select()
       .single();
 
@@ -114,18 +97,14 @@ export async function PUT(request: Request) {
     logger.error('Error updating category', error, { component: 'api/goals/categories', action: 'PUT' });
     return NextResponse.json({ error: 'Failed to update category' }, { status: 500 });
   }
-}
+});
 
 // DELETE - Delete a category
-export async function DELETE(request: Request) {
+export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = createServiceRoleClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userName = searchParams.get('userName');
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -134,7 +113,8 @@ export async function DELETE(request: Request) {
     const { error } = await supabase
       .from('goal_categories')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('agency_id', ctx.agencyId);
 
     if (error) throw error;
 
@@ -143,4 +123,4 @@ export async function DELETE(request: Request) {
     logger.error('Error deleting category', error, { component: 'api/goals/categories', action: 'DELETE' });
     return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });
   }
-}
+});

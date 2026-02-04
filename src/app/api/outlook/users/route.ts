@@ -1,22 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
+import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
 // Create Supabase client for server-side operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Verify API key middleware
-function verifyApiKey(request: NextRequest): boolean {
-  const apiKey = request.headers.get('X-API-Key');
-  return apiKey === process.env.OUTLOOK_ADDON_API_KEY;
+/**
+ * Get users from a specific agency via agency_members join
+ */
+async function getUsersFromAgency(agencyId: string): Promise<string[]> {
+  const { data: members, error } = await supabase
+    .from('agency_members')
+    .select(`
+      users!inner (
+        name
+      )
+    `)
+    .eq('agency_id', agencyId)
+    .eq('status', 'active');
+
+  if (error) {
+    logger.error('Error fetching agency members', error, { component: 'OutlookUsersAPI' });
+    return [];
+  }
+
+  // Extract unique user names from the join result
+  const userNames = new Set<string>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (members || []).forEach((m: any) => {
+    if (m.users?.name) {
+      userNames.add(m.users.name);
+    }
+  });
+
+  return Array.from(userNames).sort();
 }
 
 export async function GET(request: NextRequest) {
-  // Verify API key
-  if (!verifyApiKey(request)) {
+  // Verify API key (constant-time comparison)
+  if (!verifyOutlookApiKey(request)) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }
@@ -24,6 +50,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Get optional agency_id from query params
+    const { searchParams } = new URL(request.url);
+    const agencyId = searchParams.get('agency_id');
+
+    // If agency_id is provided, return only users from that agency
+    if (agencyId) {
+      const agencyUsers = await getUsersFromAgency(agencyId);
+
+      return NextResponse.json({
+        success: true,
+        users: agencyUsers,
+        agencyId,
+        scoped: true,
+      });
+    }
+
+    // Backward compatible: return all users when no agency_id specified
     // Fetch registered users
     const { data: registeredUsers, error: usersError } = await supabase
       .from('users')
@@ -63,6 +106,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       users,
+      scoped: false,
     });
   } catch (error) {
     logger.error('Error fetching users', error, { component: 'OutlookUsersAPI' });
@@ -73,14 +117,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
-    },
-  });
+// Handle CORS preflight - only allow specific Outlook origins
+export async function OPTIONS(request: NextRequest) {
+  return createOutlookCorsPreflightResponse(request, 'GET, OPTIONS');
 }

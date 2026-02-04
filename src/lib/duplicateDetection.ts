@@ -1,12 +1,17 @@
 import { Todo } from '@/types/todo';
 
 // Extract phone numbers from text
+// BUGFIX UTIL-003: Use more restrictive regex to prevent catastrophic backtracking
 export function extractPhoneNumbers(text: string): string[] {
-  // Match various phone formats
-  const phoneRegex = /(?:\+?1[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}/g;
-  const matches = text.match(phoneRegex) || [];
+  // Limit input length to prevent ReDoS attacks
+  const safeText = text.length > 10000 ? text.slice(0, 10000) : text;
+
+  // Use a more restrictive, non-backtracking regex pattern
+  // This pattern matches phone numbers without nested optional groups
+  const phoneRegex = /\d{3}[-.\s]?\d{3}[-.\s]?\d{4}|\(\d{3}\)[-.\s]?\d{3}[-.\s]?\d{4}|\+?1[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/g;
+  const matches = safeText.match(phoneRegex) || [];
   // Normalize: remove all non-digits
-  return matches.map(m => m.replace(/\D/g, '')).filter(m => m.length >= 10);
+  return matches.map(m => m.replace(/\D/g, '')).filter(m => m.length >= 10 && m.length <= 15);
 }
 
 // Extract email addresses from text
@@ -37,7 +42,11 @@ export function extractPotentialNames(text: string): string[] {
 }
 
 // Calculate similarity score between two strings (0-1)
+// BUGFIX UTIL-005: Prevent NaN propagation when both strings have no significant words
 export function stringSimilarity(str1: string, str2: string): number {
+  // Guard against null/undefined/empty strings
+  if (!str1 || !str2) return 0;
+
   const s1 = str1.toLowerCase();
   const s2 = str2.toLowerCase();
 
@@ -48,6 +57,7 @@ export function stringSimilarity(str1: string, str2: string): number {
   const words1 = new Set(s1.split(/\s+/).filter(w => w.length > 2));
   const words2 = new Set(s2.split(/\s+/).filter(w => w.length > 2));
 
+  // Return 0 if either set is empty (prevents division by zero / NaN)
   if (words1.size === 0 || words2.size === 0) return 0;
 
   let matches = 0;
@@ -55,13 +65,40 @@ export function stringSimilarity(str1: string, str2: string): number {
     if (words2.has(w)) matches++;
   });
 
-  return matches / Math.max(words1.size, words2.size);
+  const denominator = Math.max(words1.size, words2.size);
+  // Extra safety check - should never hit this due to earlier check, but prevents NaN
+  if (denominator === 0) return 0;
+
+  return matches / denominator;
 }
 
 export interface DuplicateMatch {
   todo: Todo;
   score: number;
   matchReasons: string[];
+}
+
+// Cache for extracted todo data to avoid repeated regex parsing
+// PERFORMANCE FIX: Pre-compute extractions to avoid O(n * regex_cost) on every call
+interface TodoExtractionCache {
+  phones: string[];
+  emails: string[];
+  names: string[];
+}
+const todoExtractionCache = new WeakMap<Todo, TodoExtractionCache>();
+
+function getOrComputeExtraction(todo: Todo): TodoExtractionCache {
+  let cached = todoExtractionCache.get(todo);
+  if (!cached) {
+    const combinedText = `${todo.text} ${todo.notes || ''} ${todo.transcription || ''}`;
+    cached = {
+      phones: extractPhoneNumbers(combinedText),
+      emails: extractEmails(combinedText),
+      names: extractPotentialNames(combinedText),
+    };
+    todoExtractionCache.set(todo, cached);
+  }
+  return cached;
 }
 
 // Find potential duplicates for a new task
@@ -80,10 +117,8 @@ export function findPotentialDuplicates(
     // Skip completed tasks
     if (todo.completed) continue;
 
-    const combinedText = `${todo.text} ${todo.notes || ''} ${todo.transcription || ''}`;
-    const todoPhones = extractPhoneNumbers(combinedText);
-    const todoEmails = extractEmails(combinedText);
-    const todoNames = extractPotentialNames(combinedText);
+    // PERFORMANCE FIX: Use cached extractions instead of re-computing regex on every call
+    const { phones: todoPhones, emails: todoEmails, names: todoNames } = getOrComputeExtraction(todo);
 
     let score = 0;
     const reasons: string[] = [];

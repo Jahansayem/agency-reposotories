@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Loader2, AlertCircle } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE } from '@/types/todo';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { ContextualErrorMessages } from '@/lib/errorMessages';
 
 interface AttachmentUploadProps {
   todoId: string;
@@ -27,6 +28,22 @@ export default function AttachmentUpload({
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Track mounted state and active XHR to prevent state updates after unmount
+  const isMountedRef = useRef(true);
+  const activeXhrRef = useRef<XMLHttpRequest | null>(null);
+
+  // Cleanup on unmount: abort any active XHR and mark as unmounted
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (activeXhrRef.current) {
+        activeXhrRef.current.abort();
+        activeXhrRef.current = null;
+      }
+    };
+  }, []);
 
   const remainingSlots = maxAttachments - currentAttachmentCount;
 
@@ -55,7 +72,6 @@ export default function AttachmentUpload({
     }
 
     setUploading(true);
-    setProgress(10);
 
     try {
       const formData = new FormData();
@@ -63,29 +79,85 @@ export default function AttachmentUpload({
       formData.append('todoId', todoId);
       formData.append('userName', userName);
 
-      setProgress(30);
+      // UX-005: Use XMLHttpRequest to track actual upload progress
+      const result = await new Promise<{ success: boolean; attachment?: import('@/types/todo').Attachment; error?: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        activeXhrRef.current = xhr;
 
-      const response = await fetchWithCsrf('/api/attachments', {
-        method: 'POST',
-        body: formData,
+        // Track upload progress (only update state if mounted)
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable && isMountedRef.current) {
+            // Upload progress is 0-90%, leave 10% for server processing
+            const uploadProgress = Math.round((event.loaded / event.total) * 90);
+            setProgress(uploadProgress);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          activeXhrRef.current = null;
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (isMountedRef.current) {
+                setProgress(100);
+              }
+              resolve(data);
+            } catch {
+              reject(new Error('Invalid response from server'));
+            }
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(errorData.error || 'Upload failed'));
+            } catch {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => {
+          activeXhrRef.current = null;
+          reject(new Error('Network error during upload'));
+        });
+
+        xhr.addEventListener('abort', () => {
+          activeXhrRef.current = null;
+          // Only reject if component is still mounted (user didn't unmount)
+          if (isMountedRef.current) {
+            reject(new Error('Upload cancelled'));
+          }
+        });
+
+        xhr.open('POST', '/api/attachments');
+        // Note: fetchWithCsrf adds CSRF token, we need to add it manually here
+        // The CSRF token is fetched from cookies or a meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+          xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+        }
+        xhr.send(formData);
       });
 
-      setProgress(70);
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || 'Upload failed');
       }
 
-      setProgress(100);
       // Pass the new attachment back to parent for state update and activity logging
-      onUploadComplete(result.attachment);
-      onClose();
+      // Only proceed if component is still mounted
+      if (isMountedRef.current) {
+        onUploadComplete(result.attachment!);
+        onClose();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload file');
+      // Only update error state if component is still mounted
+      if (isMountedRef.current) {
+        const errorMsg = ContextualErrorMessages.attachmentUpload(err);
+        setError(`${errorMsg.message}. ${errorMsg.action}`);
+      }
     } finally {
-      setUploading(false);
+      if (isMountedRef.current) {
+        setUploading(false);
+      }
     }
   }, [todoId, userName, validateFile, onUploadComplete, onClose]);
 
@@ -139,6 +211,7 @@ export default function AttachmentUpload({
           <button
             onClick={onClose}
             disabled={uploading}
+            aria-label="Close upload dialog"
             className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
@@ -178,13 +251,18 @@ export default function AttachmentUpload({
             {uploading ? (
               <div className="space-y-3">
                 <Loader2 className="w-10 h-10 mx-auto text-[var(--accent)] animate-spin" />
-                <p className="text-sm font-medium text-[var(--foreground)]">Uploading...</p>
+                <p className="text-sm font-medium text-[var(--foreground)]">
+                  Uploading... {progress}%
+                </p>
                 <div className="w-full h-2 bg-[var(--surface-3)] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[var(--accent)] transition-all duration-300"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {progress < 90 ? 'Uploading file...' : 'Processing...'}
+                </p>
               </div>
             ) : (
               <>

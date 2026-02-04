@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, AlertTriangle, Calendar, CalendarClock, CalendarX } from 'lucide-react';
-import { Todo, TodoPriority, Subtask, Attachment, RecurrencePattern } from '@/types/todo';
+import { Todo, TodoPriority, Subtask, Attachment, RecurrencePattern, WaitingContactType } from '@/types/todo';
 import { prefersReducedMotion, DURATION } from '@/lib/animations';
 import { isToday, isPast, isFuture, parseISO, startOfDay } from 'date-fns';
 
@@ -31,6 +31,8 @@ interface TaskSectionsProps {
   onAssign: (id: string, user: string | null) => void;
   onSetDueDate: (id: string, date: string | null) => void;
   onSetReminder: (id: string, reminderAt: string | null) => void;
+  onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
+  onClearWaiting?: (id: string) => Promise<void>;
   onSetPriority: (id: string, priority: TodoPriority) => void;
   onStatusChange: (id: string, status: 'todo' | 'in_progress' | 'done') => void;
   onUpdateText: (id: string, text: string) => void;
@@ -39,7 +41,7 @@ interface TaskSectionsProps {
   onSetRecurrence: (id: string, pattern: RecurrencePattern | null) => void;
   onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void;
   onUpdateAttachments: (id: string, attachments: Attachment[]) => void;
-  onSaveAsTemplate: (todo: Todo) => void;
+  onSaveAsTemplate?: (todo: Todo) => void;
   onEmailCustomer: (todo: Todo) => void;
   isDragEnabled: boolean;
   renderTodoItem: (todo: Todo, index: number) => React.ReactNode;
@@ -181,7 +183,7 @@ export default function TaskSections({
             <button
               onClick={() => toggleSection(section.id)}
               className={`
-                w-full flex items-center gap-2 px-3 py-2 rounded-lg
+                w-full flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
                 transition-colors duration-200
                 hover:bg-[var(--surface-2)]
                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]

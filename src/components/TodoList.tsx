@@ -1,94 +1,46 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { motion, AnimatePresence } from 'framer-motion';
-import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, OWNER_USERNAME } from '@/types/todo';
-import SortableTodoItem from './SortableTodoItem';
-import AddTodo from './AddTodo';
-import AddTaskModal from './AddTaskModal';
-import KanbanBoard from './KanbanBoard';
+import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, WaitingContactType, DEFAULT_FOLLOW_UP_HOURS } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 import { logger } from '@/lib/logger';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder as _priorityOrder, hydrateFocusMode } from '@/store/todoStore';
-import { useTodoData, useFilters, useBulkActions, useIsDesktopWide, useEscapeKey, useTodoModals } from '@/hooks';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import CelebrationEffect from './CelebrationEffect';
-import ProgressSummary from './ProgressSummary';
-import WelcomeBackNotification from './WelcomeBackNotification';
-import ConfirmDialog from './ConfirmDialog';
-import EmptyState from './EmptyState';
-// Note: KeyboardShortcutsModal moved to MainApp.tsx
+import { useTodoData, useFilters, useBulkActions, useEscapeKey, useTodoModals, setReorderingFlag } from '@/hooks';
+import { arrayMove } from '@dnd-kit/sortable';
+import { DragEndEvent } from '@dnd-kit/core';
 import PullToRefresh from './PullToRefresh';
 import StatusLine from './StatusLine';
 import BottomTabs from './BottomTabs';
 import { ExitFocusModeButton } from './FocusModeToggle';
-import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, TodoModals } from './todo';
-import TaskSections, { useShouldUseSections } from './TaskSections';
+import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, BulkActionBar, TodoModals } from './todo';
+import { TaskDetailModal } from './task-detail';
+import { useShouldUseSections } from './TaskSections';
 import { v4 as uuidv4 } from 'uuid';
 import {
-  Search, AlertTriangle,
-  ArrowUpDown, User, CheckSquare,
-  Trash2, X, ChevronDown, GitMerge, Layers,
-  Paperclip, Filter, RotateCcw, Check, FileText, MoreHorizontal
+  Search, X, ChevronDown, GitMerge,
+  Paperclip, Check, Trash2
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
-import SaveTemplateModal from './SaveTemplateModal';
-import TemplatePicker from './TemplatePicker';
-import ArchivedTaskModal from './ArchivedTaskModal';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAgency } from '@/contexts/AgencyContext';
 import { useAppShell } from './layout/AppShell';
 import { logActivity } from '@/lib/activityLogger';
-import { findPotentialDuplicates, shouldCheckForDuplicates, DuplicateMatch } from '@/lib/duplicateDetection';
+import { useAnnouncement } from './LiveRegion';
+import LiveRegion from './LiveRegion';
+import { findPotentialDuplicates, shouldCheckForDuplicates } from '@/lib/duplicateDetection';
+import { ContextualErrorMessages } from '@/lib/errorMessages';
 import { sendTaskAssignmentNotification, sendTaskCompletionNotification, sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { getNextSuggestedTasks, calculateCompletionStreak, getEncouragementMessage } from '@/lib/taskSuggestions';
-import DuplicateDetectionModal from './DuplicateDetectionModal';
-import CustomerEmailModal from './CustomerEmailModal';
-import { CompletionCelebration } from './CompletionCelebration';
-import { TaskCompletionSummary } from './TaskCompletionSummary';
-import { CelebrationData, ActivityLogEntry } from '@/types/todo';
+import { ActivityLogEntry } from '@/types/todo';
 import {
-  ChatPanelSkeleton,
   StrategicDashboardSkeleton,
   ActivityFeedSkeleton,
-  // Note: WeeklyProgressChartSkeleton moved to MainApp.tsx
 } from './LoadingSkeletons';
 
 // Lazy load secondary features for better initial load performance
-// These components are not needed immediately on page load
-// NOTE: FloatingChat removed - Chat is now accessible via navigation sidebar
-// const FloatingChat = dynamic(() => import('./FloatingChat'), {
-//   ssr: false,
-//   loading: () => null,
-// });
-
-// NOTE: UtilitySidebar removed - navigation now in AppShell sidebar
-// const UtilitySidebar = dynamic(() => import('./UtilitySidebar'), {
-//   ssr: false,
-//   loading: () => <div className="w-[280px] bg-[var(--surface)] animate-pulse" />,
-// });
-
-const ChatPanel = dynamic(() => import('./ChatPanel'), {
-  ssr: false,
-  loading: () => <ChatPanelSkeleton />,
-});
-
 const StrategicDashboard = dynamic(() => import('./StrategicDashboard'), {
   ssr: false,
   loading: () => <StrategicDashboardSkeleton />,
@@ -99,12 +51,9 @@ const ActivityFeed = dynamic(() => import('./ActivityFeed'), {
   loading: () => <ActivityFeedSkeleton />,
 });
 
-// Note: WeeklyProgressChart moved to MainApp.tsx
-
 interface TodoListProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
-  onOpenDashboard?: () => void;
   initialFilter?: QuickFilter | null;
   autoFocusAddTask?: boolean;
   onAddTaskModalOpened?: () => void;
@@ -128,14 +77,19 @@ const getCompletedAtMs = (todo: Todo): number | null => {
   return null;
 };
 
-export default function TodoList({ currentUser, onUserChange, onOpenDashboard, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
+export default function TodoList({ currentUser, onUserChange, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
   const userName = currentUser.name;
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
-  const canViewArchive = currentUser.role === 'admin' || ['derrick', 'adrian'].includes(userName.toLowerCase());
+  const { currentAgencyId } = useAgency();
+  const canViewArchive = usePermission('can_view_archive');
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canManageTemplates = usePermission('can_manage_templates');
 
   // Get navigation state from AppShell context
   const { activeView, setActiveView } = useAppShell();
+
+  // Screen reader announcements for dynamic content
+  const { announcement, announce } = useAnnouncement();
 
   // NOTE: isWideDesktop removed - no longer using UtilitySidebar or conditional chat layouts
   // const isWideDesktop = useIsDesktopWide(1280);
@@ -152,6 +106,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     addTodo: addTodoToStore,
     updateTodo: updateTodoInStore,
     deleteTodo: deleteTodoFromStore,
+    setTodos: setTodosInStore,
     // Bulk action helpers from store
     toggleTodoSelection,
   } = useTodoStore();
@@ -228,6 +183,26 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   }, [initialFilter, setQuickFilter, onInitialFilterApplied]);
 
+  // Track previous filter to announce changes (A11Y-006)
+  const prevFilterRef = useRef(quickFilter);
+  useEffect(() => {
+    if (prevFilterRef.current !== quickFilter && !loading) {
+      const filterLabels: Record<string, string> = {
+        all: 'all tasks',
+        my_tasks: 'my tasks',
+        assigned_by_me: 'tasks I assigned',
+        due_today: 'tasks due today',
+        overdue: 'overdue tasks',
+        high_priority: 'high priority tasks',
+        unassigned: 'unassigned tasks',
+      };
+      const label = filterLabels[quickFilter] || quickFilter;
+      const count = visibleTodos.length;
+      announce(`Showing ${label}: ${count} task${count !== 1 ? 's' : ''}`);
+      prevFilterRef.current = quickFilter;
+    }
+  }, [quickFilter, visibleTodos.length, announce, loading]);
+
   // Open add task modal when autoFocusAddTask is true
   useEffect(() => {
     if (autoFocusAddTask) {
@@ -242,6 +217,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     selectedTodos,
     showBulkActions,
     handleSelectTodo: hookHandleSelectTodo,
+    selectAll, // Phase 2.3: For Cmd+A keyboard shortcut
     clearSelection,
     setShowBulkActions,
     bulkDelete: hookBulkDelete,
@@ -364,23 +340,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   }, [activeView, openActivityFeed, closeActivityFeed, openStrategicDashboard, closeStrategicDashboard, openArchiveView, closeArchiveView]);
 
-  // Custom order for drag-and-drop sorting (component-specific, not in modal hook)
-  const [customOrder, setCustomOrder] = useState<string[]>([]);
-
   // Add Task modal state (separate from useTodoModals as it's a different concern)
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
-
-  // DnD sensors for drag-and-drop reordering
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // Minimum drag distance before activating
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -412,9 +373,30 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           setFocusMode(false);
           return;
         }
+        // If bulk selection is active, clear it (Phase 2.3)
+        if (showBulkActions && selectedTodos.size > 0) {
+          e.preventDefault();
+          clearSelection();
+          setShowBulkActions(false);
+          return;
+        }
         clearSelection();
         setSearchQuery('');
         setShowBulkActions(false);
+      }
+
+      // Cmd/Ctrl + A - select all visible todos (Phase 2.3)
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+        // Only trigger if not typing in an input field
+        const target = e.target as HTMLElement;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        if (!isInputField && visibleTodos.length > 0) {
+          e.preventDefault();
+          const visibleIds = visibleTodos.map(t => t.id);
+          selectAll(visibleIds);
+          setShowBulkActions(true);
+        }
       }
 
       // Cmd/Ctrl + Shift + F - toggle focus mode
@@ -478,7 +460,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }, [fetchActivityLog]);
 
   // Check for duplicates and either show modal or create task directly
-  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
+  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => {
     // Check if we should look for duplicates
     const combinedText = `${text} ${transcription || ''}`;
     if (shouldCheckForDuplicates(combinedText)) {
@@ -490,11 +472,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       }
     }
     // No duplicates found, create directly
-    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt);
+    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence);
   };
 
   // Actually create the todo (called after duplicate check or when user confirms)
-  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string) => {
+  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => {
     const newTodo: Todo = {
       id: uuidv4(),
       text,
@@ -509,6 +491,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       transcription: transcription,
       reminder_at: reminderAt,
       reminder_sent: false,
+      notes: notes,
+      recurrence: recurrence || undefined,
     };
 
     // Optimistic update using store action
@@ -532,6 +516,13 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       insertData.reminder_at = newTodo.reminder_at;
       insertData.reminder_sent = false;
     }
+    if (newTodo.notes) insertData.notes = newTodo.notes;
+    if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
+
+    // Set agency_id for multi-tenancy
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
 
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
@@ -540,7 +531,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       // Rollback optimistic update
       deleteTodoFromStore(newTodo.id);
     } else {
-      // Log activity
+      // Log activity and announce to screen readers
       logActivity({
         action: 'task_created',
         userName,
@@ -554,6 +545,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           has_transcription: !!transcription,
         },
       });
+      announce(`New task added: ${newTodo.text}`);
 
       // Send rich task card notification if task is assigned to someone else (Feature 2)
       if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
@@ -770,6 +762,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     if (newTodo.notes) insertData.notes = newTodo.notes;
     if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
 
+    // Set agency_id for multi-tenancy
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
+
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
     if (insertError) {
@@ -845,7 +842,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         updateTodoInStore(id, oldTodo);
       }
     } else if (oldTodo) {
-      // Log activity
+      // Log activity and announce to screen readers
       if (status === 'done' && oldTodo.status !== 'done') {
         logActivity({
           action: 'task_completed',
@@ -853,6 +850,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todoId: id,
           todoText: oldTodo.text,
         });
+        announce(`Task marked as complete: ${oldTodo.text}`);
       } else if (oldTodo.status === 'done' && status !== 'done') {
         logActivity({
           action: 'task_reopened',
@@ -860,6 +858,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todoId: id,
           todoText: oldTodo.text,
         });
+        announce(`Task reopened: ${oldTodo.text}`);
       } else {
         logActivity({
           action: 'status_changed',
@@ -868,6 +867,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           todoText: oldTodo.text,
           details: { from: oldTodo.status, to: status },
         });
+        announce(`Task status changed to ${status}: ${oldTodo.text}`);
       }
     }
   };
@@ -917,6 +917,11 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
     if (newTodo.notes) insertData.notes = newTodo.notes;
 
+    // Set agency_id for multi-tenancy
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
+
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
     if (!insertError) {
@@ -935,8 +940,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
-  const toggleTodo = async (id: string, completed: boolean) => {
-    const todoItem = todos.find(t => t.id === id);
+  const toggleTodo = useCallback(async (id: string, completed: boolean) => {
+    const currentTodos = useTodoStore.getState().todos;
+    const todoItem = currentTodos.find(t => t.id === id);
     const updated_at = new Date().toISOString();
     // When completing a task, also set status to 'done'; when uncompleting, set to 'todo'
     const newStatus: TodoStatus = completed ? 'done' : 'todo';
@@ -947,7 +953,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     if (completed && todoItem) {
       // Calculate streak and get next tasks for enhanced celebration
       const streakCount = calculateCompletionStreak(activityLog, userName) + 1;
-      const nextTasks = getNextSuggestedTasks(todos, userName, id);
+      const nextTasks = getNextSuggestedTasks(currentTodos, userName, id);
       const encouragementMessage = getEncouragementMessage(streakCount);
 
       const updatedTodo = { ...todoItem, completed: true, updated_at };
@@ -996,7 +1002,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         todoText: todoItem.text,
       });
     }
-  };
+  }, [userName, activityLog, updateTodoInStore, triggerEnhancedCelebration, triggerCelebration, createNextRecurrence]);
 
   const deleteTodo = async (id: string) => {
     const todoToDelete = todos.find((t) => t.id === id);
@@ -1022,6 +1028,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         todoId: id,
         todoText: todoToDelete.text,
       });
+      announce(`Task deleted: ${todoToDelete.text}`);
     }
   };
 
@@ -1037,8 +1044,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     );
   };
 
-  const assignTodo = async (id: string, assignedTo: string | null) => {
-    const oldTodo = todos.find((t) => t.id === id);
+  const assignTodo = useCallback(async (id: string, assignedTo: string | null) => {
+    const oldTodo = useTodoStore.getState().todos.find((t) => t.id === id);
 
     // Optimistic update using store action
     updateTodoInStore(id, { assigned_to: assignedTo || undefined });
@@ -1091,7 +1098,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         }
       }
     }
-  };
+  }, [userName, updateTodoInStore]);
 
   const setDueDate = async (id: string, dueDate: string | null) => {
     const oldTodo = todos.find((t) => t.id === id);
@@ -1149,8 +1156,91 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
-  const setPriority = async (id: string, priority: TodoPriority) => {
+  // Mark a task as waiting for customer response
+  const markWaiting = async (id: string, contactType: WaitingContactType, followUpHours: number = DEFAULT_FOLLOW_UP_HOURS) => {
     const oldTodo = todos.find((t) => t.id === id);
+    const now = new Date().toISOString();
+
+    // Optimistic update using store action
+    updateTodoInStore(id, {
+      waiting_for_response: true,
+      waiting_since: now,
+      waiting_contact_type: contactType,
+      follow_up_after_hours: followUpHours,
+    });
+
+    try {
+      const response = await fetchWithCsrf('/api/todos/waiting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Name': userName,
+        },
+        body: JSON.stringify({ todoId: id, contactType, followUpAfterHours: followUpHours }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark as waiting');
+      }
+
+      // Activity is logged by the API
+    } catch (error) {
+      logger.error('Error marking task as waiting', error, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback optimistic update
+        updateTodoInStore(id, {
+          waiting_for_response: oldTodo.waiting_for_response,
+          waiting_since: oldTodo.waiting_since,
+          waiting_contact_type: oldTodo.waiting_contact_type,
+          follow_up_after_hours: oldTodo.follow_up_after_hours,
+        });
+      }
+      throw error;
+    }
+  };
+
+  // Clear waiting status when customer responds
+  const clearWaiting = async (id: string) => {
+    const oldTodo = todos.find((t) => t.id === id);
+
+    // Optimistic update using store action
+    updateTodoInStore(id, {
+      waiting_for_response: false,
+      waiting_since: undefined,
+      waiting_contact_type: undefined,
+    });
+
+    try {
+      const response = await fetchWithCsrf('/api/todos/waiting', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Name': userName,
+        },
+        body: JSON.stringify({ todoId: id }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to clear waiting status');
+      }
+
+      // Activity is logged by the API
+    } catch (error) {
+      logger.error('Error clearing waiting status', error, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback optimistic update
+        updateTodoInStore(id, {
+          waiting_for_response: oldTodo.waiting_for_response,
+          waiting_since: oldTodo.waiting_since,
+          waiting_contact_type: oldTodo.waiting_contact_type,
+        });
+      }
+      throw error;
+    }
+  };
+
+  const setPriority = useCallback(async (id: string, priority: TodoPriority) => {
+    const oldTodo = useTodoStore.getState().todos.find((t) => t.id === id);
 
     // Optimistic update using store action
     updateTodoInStore(id, { priority });
@@ -1175,7 +1265,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         details: { from: oldTodo.priority, to: priority },
       });
     }
-  };
+  }, [userName, updateTodoInStore]);
 
   const updateNotes = async (id: string, notes: string) => {
     const oldTodo = todos.find((t) => t.id === id);
@@ -1311,6 +1401,40 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     }
   };
 
+  // Detail modal state
+  const [detailTodoId, setDetailTodoId] = useState<string | null>(null);
+
+  const detailTodo = useMemo(() =>
+    detailTodoId ? todos.find(t => t.id === detailTodoId) || null : null,
+    [detailTodoId, todos]
+  );
+
+  const handleDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
+    const oldTodo = todos.find(t => t.id === id);
+    updateTodoInStore(id, updates);
+
+    const { error } = await supabase
+      .from('todos')
+      .update({ ...updates, updated_at: new Date().toISOString(), updated_by: userName })
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Error updating todo', error, { component: 'TodoList' });
+      if (oldTodo) {
+        // Rollback
+        const rollback: Partial<Todo> = {};
+        for (const key of Object.keys(updates)) {
+          (rollback as unknown as Record<string, unknown>)[key] = (oldTodo as unknown as Record<string, unknown>)[key];
+        }
+        updateTodoInStore(id, rollback);
+      }
+    }
+  }, [todos, updateTodoInStore, userName]);
+
+  const handleOpenDetail = useCallback((todoId: string) => {
+    setDetailTodoId(todoId);
+  }, []);
+
   // Save task as template
   const saveAsTemplate = async (name: string, isShared: boolean) => {
     if (!templateTodo) return;
@@ -1352,10 +1476,25 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     });
   };
 
-  // Direct wrappers for hook bulk actions
-  const bulkAssign = hookBulkAssign;
-  const bulkComplete = hookBulkComplete;
-  const bulkReschedule = hookBulkReschedule;
+  // Wrappers for hook bulk actions with screen reader announcements
+  const bulkAssign = useCallback(async (assignedTo: string) => {
+    const count = selectedTodos.size;
+    await hookBulkAssign(assignedTo);
+    announce(`${count} task${count > 1 ? 's' : ''} reassigned to ${assignedTo}`);
+  }, [hookBulkAssign, selectedTodos.size, announce]);
+
+  const bulkComplete = useCallback(async () => {
+    const count = selectedTodos.size;
+    await hookBulkComplete();
+    announce(`${count} task${count > 1 ? 's' : ''} marked as complete`);
+  }, [hookBulkComplete, selectedTodos.size, announce]);
+
+  const bulkReschedule = useCallback(async (newDueDate: string) => {
+    const count = selectedTodos.size;
+    await hookBulkReschedule(newDueDate);
+    const dateLabel = new Date(newDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    announce(`${count} task${count > 1 ? 's' : ''} rescheduled to ${dateLabel}`);
+  }, [hookBulkReschedule, selectedTodos.size, announce]);
 
   // Merge selected todos into one
   const initiateMerge = () => {
@@ -1422,7 +1561,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
       if (updateError) {
         logger.error('Error updating merged todo', updateError, { component: 'TodoList' });
-        alert('Failed to merge tasks. Please try again.');
+        const errorMsg = ContextualErrorMessages.taskUpdate(updateError);
+        alert(`${errorMsg.message}. ${errorMsg.action}`);
         setMergingState(false);
         return;
       }
@@ -1435,7 +1575,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
 
       if (deleteError) {
         logger.error('Error deleting merged todos', deleteError, { component: 'TodoList' });
-        alert('Merge partially failed. Refreshing...');
+        const errorMsg = ContextualErrorMessages.taskDelete(deleteError);
+        alert(`Merge partially failed. ${errorMsg.action} Refreshing...`);
         refreshTodos();
         setMergingState(false);
         return;
@@ -1465,13 +1606,17 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         },
       });
 
+      // Announce success
+      announce(`${secondaryTodos.length + 1} tasks merged successfully`);
+
       // Clear selection and close modal
       clearSelection();
       setShowBulkActions(false);
       closeMergeModal();
     } catch (error) {
       logger.error('Error during merge', error, { component: 'TodoList' });
-      alert('An unexpected error occurred. Please try again.');
+      const errorMsg = ContextualErrorMessages.taskUpdate(error);
+      alert(`${errorMsg.message}. ${errorMsg.action}`);
       refreshTodos();
     } finally {
       setMergingState(false);
@@ -1486,24 +1631,8 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
     return filterArchivedTodos(archiveQuery);
   }, [filterArchivedTodos, archiveQuery]);
 
-  // Final filtered and sorted todos (uses hook result, applies custom order if needed)
-  const filteredAndSortedTodos = useMemo(() => {
-    // Custom order sorting is handled separately since it's component-specific state
-    if (sortOption === 'custom' && customOrder.length > 0) {
-      const result = [...hookFilteredTodos];
-      result.sort((a, b) => {
-        const aIndex = customOrder.indexOf(a.id);
-        const bIndex = customOrder.indexOf(b.id);
-        // Items not in custom order go to the end
-        if (aIndex === -1 && bIndex === -1) return 0;
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
-      });
-      return result;
-    }
-    return hookFilteredTodos;
-  }, [hookFilteredTodos, sortOption, customOrder]);
+  // Final filtered and sorted todos — custom order now handled by useFilters via display_order
+  const filteredAndSortedTodos = hookFilteredTodos;
 
   // Stats - calculate based on filter context for dynamic counts
   // Create a Map of todos by ID for efficient lookup (used by ChatPanel for TaskAssignmentCards)
@@ -1533,23 +1662,77 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }, [visibleTodos, quickFilter, highPriorityOnly, userName]);
 
   // Handle drag end for manual reordering
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
       const oldIndex = filteredAndSortedTodos.findIndex((t) => t.id === active.id);
       const newIndex = filteredAndSortedTodos.findIndex((t) => t.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
 
-      const newOrder = arrayMove(
-        filteredAndSortedTodos.map((t) => t.id),
-        oldIndex,
-        newIndex
-      );
+      // Compute new order array from current visual order
+      const reordered = arrayMove([...filteredAndSortedTodos], oldIndex, newIndex);
 
-      setCustomOrder(newOrder);
-      // Auto-switch to custom sort when reordering
+      // Build a map of new display_order for the visible/filtered todos
+      const newOrderMap = new Map<string, number>();
+      reordered.forEach((todo, index) => {
+        newOrderMap.set(todo.id, index);
+      });
+
+      // Snapshot the entire todos array for rollback
+      const allTodos = useTodoStore.getState().todos;
+      const snapshot = allTodos.map(t => ({ ...t }));
+
+      // Suppress real-time updates during reorder
+      setReorderingFlag(true);
+
+      // Atomic update: update display_order on all todos in one setTodos call
+      // This prevents N intermediate re-renders
+      const updatedTodos = allTodos.map(t => {
+        const newOrder = newOrderMap.get(t.id);
+        if (newOrder !== undefined) {
+          return { ...t, display_order: newOrder };
+        }
+        return t;
+      });
+      setTodosInStore(updatedTodos);
+
+      // Switch to custom sort AFTER setting display_order so the sort is stable
       if (sortOption !== 'custom') {
         setSortOption('custom');
+      }
+
+      // Persist to database via API — send the explicit ordered ID list
+      try {
+        const response = await fetchWithCsrf('/api/todos/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderedIds: reordered.map(t => t.id),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to reorder task');
+        }
+
+        // Log activity
+        await logActivity({
+          action: 'task_reordered',
+          todoId: active.id as string,
+          todoText: reordered[newIndex]?.text || '',
+          userName: currentUser.name,
+          details: { from: oldIndex, to: newIndex },
+        });
+
+        announce('Task reordered');
+      } catch (error) {
+        logger.error('Failed to persist task order', error as Error, { component: 'TodoList', action: 'handleDragEnd', taskId: active.id as string });
+        // Rollback: restore the full snapshot
+        setTodosInStore(snapshot);
+        announce('Failed to reorder task. Please try again.');
+      } finally {
+        setReorderingFlag(false);
       }
     }
   };
@@ -1563,10 +1746,13 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
   }
 
   return (
-    <PullToRefresh onRefresh={refreshTodos} darkMode={darkMode}>
+    <PullToRefresh onRefresh={refreshTodos}>
       <div className="min-h-screen transition-colors bg-[var(--background)]">
+        {/* Screen reader announcements for dynamic content */}
+        <LiveRegion message={announcement} />
+
         {/* Skip link for accessibility */}
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:z-50">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
           Skip to main content
         </a>
 
@@ -1577,6 +1763,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           onUserChange={onUserChange}
           viewMode={viewMode}
           setViewMode={setViewMode}
+          onAddTask={() => setShowAddTaskModal(true)}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           showAdvancedFilters={showAdvancedFilters}
@@ -1637,610 +1824,134 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
           </div>
         )}
 
-        {/* Add Task Button - opens modal */}
-        <div className="mb-4">
-          <button
-            onClick={() => setShowAddTaskModal(true)}
-            className={`
-              flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium text-sm
-              bg-[var(--accent)] text-white
-              hover:bg-[var(--accent)]/90 active:scale-[0.98]
-              transition-all duration-150 shadow-sm hover:shadow
-            `}
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Add Task
-          </button>
-        </div>
-
         {/* Compact Filter Bar - hidden in focus mode */}
         {!focusMode && (
-        <div className="mb-4">
-          {/* Single Row: All filters, sort, select (search moved to header) */}
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            {/* Quick filter dropdown - compact */}
-            <div className="relative">
-              <select
-                value={quickFilter}
-                onChange={(e) => setQuickFilter(e.target.value as QuickFilter)}
-                className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
-              >
-                <option value="all">All</option>
-                <option value="my_tasks">Mine</option>
-                <option value="due_today">Today</option>
-                <option value="overdue">Overdue</option>
-              </select>
-              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[var(--text-muted)]" />
-            </div>
-
-            {/* High Priority toggle - icon only on mobile */}
-            <button
-              type="button"
-              onClick={() => setHighPriorityOnly(!highPriorityOnly)}
-              className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                highPriorityOnly
-                  ? 'bg-[var(--danger)] text-white'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-              }`}
-              aria-pressed={highPriorityOnly}
-              title="High Priority"
-            >
-              <AlertTriangle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Urgent</span>
-            </button>
-
-            {/* Show completed toggle - icon only on mobile */}
-            <button
-              type="button"
-              onClick={() => setShowCompleted(!showCompleted)}
-              className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                showCompleted
-                  ? 'bg-[var(--success)] text-white'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-              }`}
-              aria-pressed={showCompleted}
-              title="Show Completed"
-            >
-              <CheckSquare className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Done</span>
-            </button>
-
-            {/* More filters button */}
-            <button
-              type="button"
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                showAdvancedFilters || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end
-                  ? 'bg-[var(--accent)] text-white'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-              }`}
-              aria-expanded={showAdvancedFilters}
-              title="More Filters"
-            >
-              <Filter className="w-3.5 h-3.5" />
-              {(statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
-                <span className="px-1 py-0.5 text-[10px] rounded-full bg-white/20 leading-none">
-                  {[statusFilter !== 'all', assignedToFilter !== 'all', customerFilter !== 'all', hasAttachmentsFilter !== null, dateRangeFilter.start || dateRangeFilter.end].filter(Boolean).length}
-                </span>
-              )}
-            </button>
-
-            {/* Sort dropdown - compact */}
-            <div className="relative">
-              <select
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value as SortOption)}
-                aria-label="Sort tasks"
-                className="appearance-none pl-2 pr-6 py-1.5 text-xs font-medium rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] cursor-pointer hover:bg-[var(--surface-3)] transition-colors"
-              >
-                <option value="created">New</option>
-                <option value="due_date">Due</option>
-                <option value="priority">Priority</option>
-                <option value="urgency">Urgency</option>
-                <option value="alphabetical">A-Z</option>
-                <option value="custom">Manual</option>
-              </select>
-              <ArrowUpDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none text-[var(--text-muted)]" />
-            </div>
-
-            {/* More dropdown - contains Templates, Select, and Sections */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-                className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all ${
-                  showMoreDropdown || showBulkActions || useSectionedView
-                    ? 'bg-[var(--accent)] text-white'
-                    : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] border border-[var(--border)]'
-                }`}
-                aria-expanded={showMoreDropdown}
-                aria-haspopup="menu"
-                title="More options"
-              >
-                <MoreHorizontal className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">More</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${showMoreDropdown ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showMoreDropdown && (
-                <>
-                  {/* Backdrop */}
-                  <div className="fixed inset-0 z-40" onClick={() => setShowMoreDropdown(false)} />
-
-                  {/* Dropdown */}
-                  <div className={`absolute right-0 top-full mt-1 w-48 rounded-lg shadow-lg border z-50 overflow-hidden ${
-                    darkMode ? 'bg-[var(--surface)] border-[var(--border)]' : 'bg-white border-slate-200'
-                  }`}>
-                    {/* Templates button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowMoreDropdown(false);
-                        setShowTemplatePicker(true);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                        darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <FileText className="w-4 h-4 text-[var(--text-muted)]" />
-                      <span>Templates</span>
-                    </button>
-
-                    {/* Select/Bulk actions button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (showBulkActions) {
-                          clearSelection();
-                        }
-                        setShowBulkActions(!showBulkActions);
-                        setShowMoreDropdown(false);
-                      }}
-                      className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                        showBulkActions
-                          ? 'bg-[var(--brand-sky)]/10 text-[var(--brand-sky)]'
-                          : darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <CheckSquare className="w-4 h-4 text-[var(--text-muted)]" />
-                      <span>{showBulkActions ? 'Cancel Selection' : 'Select Tasks'}</span>
-                    </button>
-
-                    {/* Sections Toggle - Show in both list and board views when not using custom sort */}
-                    {shouldUseSections && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUseSectionedView(!useSectionedView);
-                          setShowMoreDropdown(false);
-                        }}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                          useSectionedView
-                            ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                            : darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--foreground)]' : 'hover:bg-slate-50 text-slate-700'
-                        }`}
-                        aria-pressed={useSectionedView}
-                      >
-                        <Layers className="w-4 h-4 text-[var(--text-muted)]" />
-                        <span>Sections</span>
-                        {useSectionedView && <Check className="w-3.5 h-3.5 ml-auto" />}
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Template Picker - controlled from More dropdown */}
-            <div className="relative">
-              <TemplatePicker
-                currentUserName={userName}
-                users={users}
-                darkMode={darkMode}
-                isOpen={showTemplatePicker}
-                onOpenChange={setShowTemplatePicker}
-                hideTrigger={true}
-                onSelectTemplate={(text, priority, assignedTo, subtasks) => {
-                  addTodo(text, priority, undefined, assignedTo, subtasks);
-                  setShowTemplatePicker(false);
-                }}
-              />
-            </div>
-
-            {/* Clear all - only when filters active */}
-            {(quickFilter !== 'all' || highPriorityOnly || showCompleted || searchQuery || statusFilter !== 'all' || assignedToFilter !== 'all' || customerFilter !== 'all' || hasAttachmentsFilter !== null || dateRangeFilter.start || dateRangeFilter.end) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickFilter('all');
-                  setHighPriorityOnly(false);
-                  setShowCompleted(false);
-                  setSearchQuery('');
-                  setStatusFilter('all');
-                  setAssignedToFilter('all');
-                  setCustomerFilter('all');
-                  setHasAttachmentsFilter(null);
-                  setDateRangeFilter({ start: '', end: '' });
-                }}
-                className="flex items-center gap-1 px-2 py-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-dark)] font-medium"
-                title="Clear all filters"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span className="hidden sm:inline">Clear</span>
-              </button>
-            )}
-          </div>
-
-          {/* Selection mode hint */}
-          {showBulkActions && (
-            <div className="mt-2 text-xs text-[var(--text-muted)]">
-              Click tasks to select them
-            </div>
-          )}
-
-          {/* Advanced Filters Panel - expandable */}
-          <AnimatePresence>
-            {showAdvancedFilters && (
-              <motion.div
-                initial={prefersReducedMotion() ? false : { opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: DURATION.normal }}
-                className="overflow-hidden"
-              >
-                <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  {/* Status filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Status</label>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value as TodoStatus | 'all')}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">All</option>
-                      <option value="todo">To Do</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="done">Done</option>
-                    </select>
-                  </div>
-
-                  {/* Assigned to filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Assigned</label>
-                    <select
-                      value={assignedToFilter}
-                      onChange={(e) => setAssignedToFilter(e.target.value)}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">Anyone</option>
-                      <option value="unassigned">Unassigned</option>
-                      {users.map((user) => (
-                        <option key={user} value={user}>{user}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Customer filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Customer</label>
-                    <select
-                      value={customerFilter}
-                      onChange={(e) => setCustomerFilter(e.target.value)}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">All</option>
-                      {uniqueCustomers.map((customer) => (
-                        <option key={customer} value={customer}>{customer}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Has attachments filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Attachments</label>
-                    <select
-                      value={hasAttachmentsFilter === null ? 'all' : hasAttachmentsFilter ? 'yes' : 'no'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setHasAttachmentsFilter(val === 'all' ? null : val === 'yes');
-                      }}
-                      className="w-full text-xs py-1.5 px-2 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)]"
-                    >
-                      <option value="all">Any</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
-
-                  {/* Date range filter */}
-                  <div>
-                    <label className="block text-[10px] font-medium text-[var(--text-light)] mb-1">Due Range</label>
-                    <div className="flex gap-1">
-                      <input
-                        type="date"
-                        value={dateRangeFilter.start}
-                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, start: e.target.value })}
-                        className="flex-1 text-xs py-1.5 px-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
-                      />
-                      <input
-                        type="date"
-                        value={dateRangeFilter.end}
-                        onChange={(e) => setDateRangeFilter({ ...dateRangeFilter, end: e.target.value })}
-                        className="flex-1 text-xs py-1.5 px-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--foreground)] min-w-0"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+          <TodoFiltersBar
+            quickFilter={quickFilter}
+            setQuickFilter={setQuickFilter}
+            highPriorityOnly={highPriorityOnly}
+            setHighPriorityOnly={setHighPriorityOnly}
+            showCompleted={showCompleted}
+            setShowCompleted={setShowCompleted}
+            showAdvancedFilters={showAdvancedFilters}
+            setShowAdvancedFilters={setShowAdvancedFilters}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            assignedToFilter={assignedToFilter}
+            setAssignedToFilter={setAssignedToFilter}
+            customerFilter={customerFilter}
+            setCustomerFilter={setCustomerFilter}
+            hasAttachmentsFilter={hasAttachmentsFilter}
+            setHasAttachmentsFilter={setHasAttachmentsFilter}
+            dateRangeFilter={dateRangeFilter}
+            setDateRangeFilter={setDateRangeFilter}
+            sortOption={sortOption}
+            setSortOption={setSortOption}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            showMoreDropdown={showMoreDropdown}
+            setShowMoreDropdown={setShowMoreDropdown}
+            showTemplatePicker={showTemplatePicker}
+            setShowTemplatePicker={setShowTemplatePicker}
+            showBulkActions={showBulkActions}
+            setShowBulkActions={setShowBulkActions}
+            clearSelection={clearSelection}
+            useSectionedView={useSectionedView}
+            setUseSectionedView={setUseSectionedView}
+            shouldUseSections={shouldUseSections}
+            users={users}
+            uniqueCustomers={uniqueCustomers}
+            onAddFromTemplate={(text, priority, assignedTo, subtasks) => {
+              // Ensure subtasks have all required Subtask fields
+              const normalizedSubtasks: Subtask[] | undefined = subtasks?.map(s => ({
+                id: s.id,
+                text: s.text,
+                completed: s.completed,
+                priority: ('priority' in s ? (s as Subtask).priority : 'medium') as TodoPriority,
+              }));
+              addTodo(text, priority, undefined, assignedTo, normalizedSubtasks);
+            }}
+            userName={userName}
+          />
         )}
 
-        {/* List or Kanban - with smooth view transition */}
-        <AnimatePresence mode="wait" initial={false}>
-          {viewMode === 'list' ? (
-            <motion.div
-              key="list-view"
-              initial={prefersReducedMotion() ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={prefersReducedMotion() ? undefined : { opacity: 0, y: -10 }}
-              transition={{ duration: DURATION.fast }}
-            >
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={filteredAndSortedTodos.map((t) => t.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {/* Render sectioned view or flat list based on toggle */}
-                  {useSectionedView && shouldUseSections ? (
-                    <TaskSections
-                      todos={filteredAndSortedTodos}
-                      users={users}
-                      currentUserName={userName}
-                      selectedTodos={selectedTodos}
-                      showBulkActions={showBulkActions}
-                      onSelectTodo={showBulkActions ? handleSelectTodo : undefined}
-                      onToggle={toggleTodo}
-                      onDelete={confirmDeleteTodo}
-                      onAssign={assignTodo}
-                      onSetDueDate={setDueDate}
-                      onSetReminder={setReminder}
-                      onSetPriority={setPriority}
-                      onStatusChange={updateStatus}
-                      onUpdateText={updateText}
-                      onDuplicate={duplicateTodo}
-                      onUpdateNotes={updateNotes}
-                      onSetRecurrence={setRecurrence}
-                      onUpdateSubtasks={updateSubtasks}
-                      onUpdateAttachments={updateAttachments}
-                      onSaveAsTemplate={(t) => openTemplateModal(t)}
-                      onEmailCustomer={(todo) => {
-                        openEmailModal([todo]);
-                      }}
-                      isDragEnabled={!showBulkActions && sortOption === 'custom'}
-                      renderTodoItem={(todo, index) => (
-                        <motion.div
-                          key={todo.id}
-                          layout={!prefersReducedMotion()}
-                          variants={prefersReducedMotion() ? undefined : listItemVariants}
-                          initial={prefersReducedMotion() ? false : 'hidden'}
-                          animate="visible"
-                          exit="exit"
-                          transition={{
-                            layout: { type: 'spring', stiffness: 350, damping: 25 },
-                            delay: Math.min(index * 0.02, 0.1),
-                          }}
-                        >
-                          <SortableTodoItem
-                            todo={todo}
-                            users={users}
-                            currentUserName={userName}
-                            selected={selectedTodos.has(todo.id)}
-                            autoExpand={todo.id === selectedTaskId}
-                            onAutoExpandHandled={onSelectedTaskHandled}
-                            onSelect={showBulkActions ? handleSelectTodo : undefined}
-                            onToggle={toggleTodo}
-                            onDelete={confirmDeleteTodo}
-                            onAssign={assignTodo}
-                            onSetDueDate={setDueDate}
-                            onSetReminder={setReminder}
-                            onSetPriority={setPriority}
-                            onStatusChange={updateStatus}
-                            onUpdateText={updateText}
-                            onDuplicate={duplicateTodo}
-                            onUpdateNotes={updateNotes}
-                            onSetRecurrence={setRecurrence}
-                            onUpdateSubtasks={updateSubtasks}
-                            onUpdateAttachments={updateAttachments}
-                            onSaveAsTemplate={(t) => openTemplateModal(t)}
-                            onEmailCustomer={(todo) => {
-                              openEmailModal([todo]);
-                            }}
-                            isDragEnabled={!showBulkActions && sortOption === 'custom'}
-                          />
-                        </motion.div>
-                      )}
-                      emptyState={
-                        <motion.div
-                          key="empty-state"
-                          initial={prefersReducedMotion() ? false : { opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: DURATION.fast }}
-                        >
-                          <EmptyState
-                            variant={
-                              searchQuery
-                                ? 'no-results'
-                                : quickFilter === 'due_today'
-                                  ? 'no-due-today'
-                                  : quickFilter === 'overdue'
-                                    ? 'no-overdue'
-                                    : stats.total === 0
-                                      ? 'no-tasks'
-                                      : stats.completed === stats.total && stats.total > 0
-                                        ? 'all-done'
-                                        : 'no-tasks'
-                            }
-                            darkMode={darkMode}
-                            searchQuery={searchQuery}
-                            onAddTask={() => {
-                              const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
-                              if (input) input.focus();
-                            }}
-                            onClearSearch={() => setSearchQuery('')}
-                            userName={userName}
-                          />
-                        </motion.div>
-                      }
-                    />
-                  ) : (
-                    /* Flat list view (original behavior) */
-                    <div className="space-y-2" role="list" aria-label="Task list">
-                      <AnimatePresence mode="popLayout" initial={false}>
-                        {filteredAndSortedTodos.length === 0 ? (
-                          <motion.div
-                            key="empty-state"
-                            initial={prefersReducedMotion() ? false : { opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: DURATION.fast }}
-                          >
-                            <EmptyState
-                              variant={
-                                searchQuery
-                                  ? 'no-results'
-                                  : quickFilter === 'due_today'
-                                    ? 'no-due-today'
-                                    : quickFilter === 'overdue'
-                                      ? 'no-overdue'
-                                      : stats.total === 0
-                                        ? 'no-tasks'
-                                        : stats.completed === stats.total && stats.total > 0
-                                          ? 'all-done'
-                                          : 'no-tasks'
-                              }
-                              darkMode={darkMode}
-                              searchQuery={searchQuery}
-                              onAddTask={() => {
-                                const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
-                                if (input) input.focus();
-                              }}
-                              onClearSearch={() => setSearchQuery('')}
-                              userName={userName}
-                            />
-                          </motion.div>
-                        ) : (
-                          filteredAndSortedTodos.map((todo, index) => (
-                            <motion.div
-                              key={todo.id}
-                              layout={!prefersReducedMotion()}
-                              variants={prefersReducedMotion() ? undefined : listItemVariants}
-                              initial={prefersReducedMotion() ? false : 'hidden'}
-                              animate="visible"
-                              exit="exit"
-                              transition={{
-                                layout: { type: 'spring', stiffness: 350, damping: 25 },
-                                delay: Math.min(index * 0.02, 0.1),
-                              }}
-                            >
-                              <SortableTodoItem
-                                todo={todo}
-                                users={users}
-                                currentUserName={userName}
-                                selected={selectedTodos.has(todo.id)}
-                                autoExpand={todo.id === selectedTaskId}
-                                onAutoExpandHandled={onSelectedTaskHandled}
-                                onSelect={showBulkActions ? handleSelectTodo : undefined}
-                                onToggle={toggleTodo}
-                                onDelete={confirmDeleteTodo}
-                                onAssign={assignTodo}
-                                onSetDueDate={setDueDate}
-                                onSetReminder={setReminder}
-                                onSetPriority={setPriority}
-                                onStatusChange={updateStatus}
-                                onUpdateText={updateText}
-                                onDuplicate={duplicateTodo}
-                                onUpdateNotes={updateNotes}
-                                onSetRecurrence={setRecurrence}
-                                onUpdateSubtasks={updateSubtasks}
-                                onUpdateAttachments={updateAttachments}
-                                onSaveAsTemplate={(t) => openTemplateModal(t)}
-                                onEmailCustomer={(todo) => {
-                                  openEmailModal([todo]);
-                                }}
-                                isDragEnabled={!showBulkActions && sortOption === 'custom'}
-                              />
-                            </motion.div>
-                          ))
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
-                </SortableContext>
-              </DndContext>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="kanban-view"
-              initial={prefersReducedMotion() ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={prefersReducedMotion() ? undefined : { opacity: 0, y: -10 }}
-              transition={{ duration: DURATION.fast }}
-            >
-              <KanbanBoard
-                todos={filteredAndSortedTodos}
-                users={users}
-                darkMode={darkMode}
-                onStatusChange={updateStatus}
-                onDelete={confirmDeleteTodo}
-                onAssign={assignTodo}
-                onSetDueDate={setDueDate}
-                onSetReminder={setReminder}
-                onSetPriority={setPriority}
-                onUpdateNotes={updateNotes}
-                onUpdateText={updateText}
-                onUpdateSubtasks={updateSubtasks}
-                onToggle={toggleTodo}
-                onDuplicate={duplicateTodo}
-                onSetRecurrence={setRecurrence}
-                onUpdateAttachments={updateAttachments}
-                onSaveAsTemplate={(t) => openTemplateModal(t)}
-                onEmailCustomer={(todo) => {
-                  openEmailModal([todo]);
-                }}
-                showBulkActions={showBulkActions}
-                selectedTodos={selectedTodos}
-                onSelectTodo={handleSelectTodo}
-                useSectionedView={useSectionedView}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* List or Kanban content - delegated to TodoListContent */}
+        <TodoListContent
+          todos={filteredAndSortedTodos}
+          users={users}
+          currentUserName={userName}
+          viewMode={viewMode}
+          useSectionedView={useSectionedView}
+          shouldUseSections={shouldUseSections}
+          sortOption={sortOption}
+          selectedTodos={selectedTodos}
+          showBulkActions={showBulkActions}
+          searchQuery={searchQuery}
+          quickFilter={quickFilter}
+          stats={stats}
+          selectedTaskId={selectedTaskId}
+          onSelectedTaskHandled={onSelectedTaskHandled}
+          onDragEnd={handleDragEnd}
+          onSelectTodo={(id: string) => handleSelectTodo(id, true)}
+          onToggle={toggleTodo}
+          onDelete={confirmDeleteTodo}
+          onAssign={assignTodo}
+          onSetDueDate={setDueDate}
+          onSetReminder={setReminder}
+          onMarkWaiting={markWaiting}
+          onClearWaiting={clearWaiting}
+          onSetPriority={setPriority}
+          onStatusChange={updateStatus}
+          onUpdateText={updateText}
+          onDuplicate={duplicateTodo}
+          onUpdateNotes={updateNotes}
+          onSetRecurrence={setRecurrence}
+          onUpdateSubtasks={updateSubtasks}
+          onUpdateAttachments={updateAttachments}
+          onSaveAsTemplate={canManageTemplates ? (t) => openTemplateModal(t) : undefined}
+          onEmailCustomer={(todo) => openEmailModal([todo])}
+          onOpenDetail={handleOpenDetail}
+          onClearSearch={() => setSearchQuery('')}
+          onAddTask={() => {
+            const input = document.querySelector('textarea[placeholder*="task"]') as HTMLTextAreaElement;
+            if (input) input.focus();
+          }}
+        />
+
+        {/* Task Detail Modal */}
+        {detailTodo && (
+          <TaskDetailModal
+            todo={detailTodo}
+            isOpen={!!detailTodo}
+            onClose={() => setDetailTodoId(null)}
+            currentUser={currentUser}
+            users={users}
+            onUpdate={handleDetailUpdate}
+            onDelete={async (id: string) => { confirmDeleteTodo(id); }}
+            onComplete={toggleTodo}
+            onMarkWaiting={markWaiting}
+            onClearWaiting={clearWaiting}
+            onSetReminder={setReminder}
+            onDuplicate={duplicateTodo}
+            onSaveAsTemplate={canManageTemplates ? (t) => openTemplateModal(t) : undefined}
+            onEmailCustomer={(todo) => openEmailModal([todo])}
+            onUpdateAttachments={updateAttachments}
+          />
+        )}
 
         {/* Keyboard shortcuts hint - hidden in focus mode */}
         {!focusMode && (
           <button
             onClick={() => openShortcuts()}
-            className={`mt-8 w-full text-center text-xs py-2 rounded-lg transition-colors ${
-              darkMode
-                ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800'
-                : 'text-slate-400 hover:text-slate-500 hover:bg-slate-100'
-            }`}
+            className={`mt-8 w-full text-center text-xs py-2 rounded-[var(--radius-lg)] transition-colors ${
+              'text-slate-400 hover:text-slate-500 hover:bg-slate-100'}`}
           >
             <span className="hidden sm:inline">
-              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>N</kbd> new
+              <kbd className={`px-1.5 py-0.5 rounded ${'bg-slate-200'}`}>N</kbd> new
               <span className="mx-2">|</span>
-              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>/</kbd> search
+              <kbd className={`px-1.5 py-0.5 rounded ${'bg-slate-200'}`}>/</kbd> search
               <span className="mx-2">|</span>
-              <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>?</kbd> all shortcuts
+              <kbd className={`px-1.5 py-0.5 rounded ${'bg-slate-200'}`}>?</kbd> all shortcuts
             </span>
             <span className="sm:hidden">Tap for keyboard shortcuts</span>
           </button>
@@ -2252,61 +1963,70 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       {/* NOTE: Chat moved to dedicated navigation view - no longer floating widget
           Access chat via the "Messages" item in the navigation sidebar */}
 
-      <CelebrationEffect
-        show={showCelebration}
-        onComplete={() => dismissCelebration()}
-        taskText={celebrationText}
-      />
-
-      <ProgressSummary
-        show={showProgressSummary}
-        onClose={() => closeProgressSummary()}
-        todos={todos}
+      {/* Modals: Celebration, Progress, Welcome, Confirm, AddTask, Template,
+          Duplicate, Email, Enhanced Celebration, Completion Summary, Archived Detail */}
+      <TodoModals
         currentUser={currentUser}
-        onUserUpdate={onUserChange}
-      />
-
-      <WelcomeBackNotification
-        show={showWelcomeBack}
-        onClose={() => closeWelcomeBack()}
-        onViewProgress={() => openProgressSummary()}
+        onUserChange={onUserChange}
         todos={todos}
-        currentUser={currentUser}
-        onUserUpdate={onUserChange}
-      />
-
-      <ConfirmDialog
-        isOpen={confirmDialog.isOpen}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        confirmLabel="Delete"
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={() => closeConfirmDialog()}
-      />
-
-      {/* Note: WeeklyProgressChart and KeyboardShortcutsModal are rendered in MainApp.tsx
-          using AppShell context state, so they're accessible from any view */}
-
-      {/* Add Task Modal */}
-      <AddTaskModal
-        isOpen={showAddTaskModal}
-        onClose={() => setShowAddTaskModal(false)}
-        onAdd={addTodo}
         users={users}
-        darkMode={darkMode}
-        currentUserId={currentUser.id}
+        showCelebration={showCelebration}
+        celebrationText={celebrationText}
+        dismissCelebration={dismissCelebration}
+        showEnhancedCelebration={showEnhancedCelebration}
+        celebrationData={celebrationData}
+        dismissEnhancedCelebration={dismissEnhancedCelebration}
+        showProgressSummary={showProgressSummary}
+        closeProgressSummary={closeProgressSummary}
+        showWelcomeBack={showWelcomeBack}
+        closeWelcomeBack={closeWelcomeBack}
+        openProgressSummary={openProgressSummary}
+        confirmDialog={confirmDialog}
+        closeConfirmDialog={closeConfirmDialog}
+        showAddTaskModal={showAddTaskModal}
+        setShowAddTaskModal={setShowAddTaskModal}
+        onAddTodo={addTodo}
+        templateTodo={templateTodo}
+        closeTemplateModal={closeTemplateModal}
+        onSaveAsTemplate={saveAsTemplate}
+        showCompletionSummary={showCompletionSummary}
+        completedTaskForSummary={completedTaskForSummary}
+        closeCompletionSummary={closeCompletionSummary}
+        openCompletionSummary={openCompletionSummary}
+        userName={userName}
+        showDuplicateModal={showDuplicateModal}
+        pendingTask={pendingTask}
+        duplicateMatches={duplicateMatches}
+        onCreateTaskAnyway={handleCreateTaskAnyway}
+        onAddToExistingTask={handleAddToExistingTask}
+        onCancelDuplicateDetection={handleCancelDuplicateDetection}
+        showEmailModal={showEmailModal}
+        emailTargetTodos={emailTargetTodos}
+        closeEmailModal={closeEmailModal}
+        selectedArchivedTodo={selectedArchivedTodo}
+        selectArchivedTodo={selectArchivedTodo}
+        onNextTaskClick={(taskId) => {
+          const taskElement = document.getElementById(`todo-${taskId}`);
+          if (taskElement) {
+            taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            taskElement.classList.add('ring-2', 'ring-blue-500');
+            setTimeout(() => {
+              taskElement.classList.remove('ring-2', 'ring-blue-500');
+            }, 2000);
+          }
+        }}
       />
 
       {/* Activity Feed - Full Page View */}
       {showActivityFeed && (
         <div className="fixed inset-0 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Activity Feed">
           {/* Full-page container with proper spacing for navigation */}
-          <div className={`flex-1 flex flex-col ${darkMode ? 'bg-[var(--background)]' : 'bg-[var(--background)]'}`}>
+          <div className={`flex-1 flex flex-col ${'bg-[var(--background)]'}`}>
             {/* Header with back button */}
-            <div className={`px-4 sm:px-6 py-4 border-b flex items-center gap-4 ${darkMode ? 'border-[var(--border)] bg-[var(--surface)]' : 'border-[var(--border)] bg-white'}`}>
+            <div className={`px-4 sm:px-6 py-4 border-b flex items-center gap-4 ${'border-[var(--border)] bg-[var(--surface)]'}`}>
               <button
                 onClick={() => { closeActivityFeed(); setActiveView('tasks'); }}
-                className={`p-2 -ml-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]' : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
+                className={`p-2 -ml-2 rounded-[var(--radius-lg)] transition-colors ${'hover:bg-[var(--surface-2)] text-[var(--text-muted)]'}`}
                 aria-label="Back to tasks"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -2314,10 +2034,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                 </svg>
               </button>
               <div>
-                <h1 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                <h1 className={`text-xl font-semibold ${'text-[var(--foreground)]'}`}>
                   Activity Monitor
                 </h1>
-                <p className={`text-sm ${darkMode ? 'text-[var(--text-muted)]' : 'text-[var(--text-muted)]'}`}>
+                <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
                   Track all changes across your tasks
                 </p>
               </div>
@@ -2328,7 +2048,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               <div className="h-full max-w-4xl mx-auto">
                 <ActivityFeed
                   currentUserName={userName}
-                  darkMode={darkMode}
                   onClose={() => { closeActivityFeed(); setActiveView('tasks'); }}
                 />
               </div>
@@ -2338,10 +2057,9 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
       )}
 
       {/* Strategic Dashboard - Owner only */}
-      {showStrategicDashboard && userName === OWNER_USERNAME && (
+      {showStrategicDashboard && canViewStrategicGoals && (
         <StrategicDashboard
           userName={userName}
-          darkMode={darkMode}
           onClose={() => { closeStrategicDashboard(); setActiveView('tasks'); }}
         />
       )}
@@ -2362,7 +2080,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               </div>
               <button
                 onClick={() => { closeArchiveView(); setActiveView('tasks'); }}
-                className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
+                className="p-2 rounded-[var(--radius-lg)] hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]"
                 aria-label="Close archive"
               >
                 <X className="w-4 h-4" />
@@ -2452,23 +2170,6 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         </div>
       )}
 
-      {/* Archived Task Detail Modal */}
-      {selectedArchivedTodo && (
-        <ArchivedTaskModal
-          todo={selectedArchivedTodo}
-          onClose={() => selectArchivedTodo(null)}
-        />
-      )}
-
-      {/* Save Template Modal */}
-      {templateTodo && (
-        <SaveTemplateModal
-          todo={templateTodo}
-          darkMode={darkMode}
-          onClose={() => closeTemplateModal()}
-          onSave={saveAsTemplate}
-        />
-      )}
 
       {/* Merge Tasks Modal */}
       {showMergeModal && mergeTargets.length >= 2 && (
@@ -2481,16 +2182,16 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
               }
             }}
           />
-          <div className={`relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-[var(--surface)]' : 'bg-white'}`}>
+          <div className={`relative w-full max-w-md rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden ${'bg-[var(--surface)]'}`}>
             {/* Header */}
-            <div className={`px-5 py-4 border-b ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}>
+            <div className={`px-5 py-4 border-b ${'border-[var(--border)] bg-[var(--surface)]'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-[var(--brand-blue)]/15 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-[var(--radius-lg)] bg-[var(--brand-blue)]/15 flex items-center justify-center">
                   <GitMerge className="w-4.5 h-4.5 text-[var(--brand-blue)]" />
                 </div>
                 <div>
-                  <h2 className={`text-base font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>Merge {mergeTargets.length} Tasks</h2>
-                  <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+                  <h2 className={`text-base font-semibold ${'text-[var(--foreground)]'}`}>Merge {mergeTargets.length} Tasks</h2>
+                  <p className={`text-xs ${'text-[var(--text-muted)]'}`}>
                     Select the task to keep
                   </p>
                 </div>
@@ -2504,41 +2205,35 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   <button
                     key={todo.id}
                     onClick={() => setMergePrimaryId(todo.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all ${
+                    className={`w-full text-left p-3 rounded-[var(--radius-xl)] border transition-all ${
                       selectedPrimaryId === todo.id
                         ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]/10 ring-1 ring-[var(--brand-blue)]/30'
-                        : darkMode
-                          ? 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
-                          : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
-                    }`}
+                        : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] hover:border-[var(--border-hover)]'}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                         selectedPrimaryId === todo.id
                           ? 'border-[var(--brand-blue)] bg-[var(--brand-blue)]'
-                          : darkMode
-                            ? 'border-slate-500'
-                            : 'border-[var(--border)]'
-                      }`}>
+                          : 'border-[var(--border)]'}`}>
                         {selectedPrimaryId === todo.id && (
                           <Check className="w-3 h-3 text-white" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                        <p className={`text-sm font-medium truncate ${'text-[var(--foreground)]'}`}>
                           {todo.text}
                         </p>
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-[var(--text-muted)]'}`}>
+                          <span className={`text-xs ${'text-[var(--text-muted)]'}`}>
                             {new Date(todo.created_at).toLocaleDateString()}
                           </span>
                           {todo.attachments && todo.attachments.length > 0 && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                            <span className="px-1.5 py-0.5 rounded text-badge bg-amber-500/10 text-amber-600 dark:text-amber-400">
                               {todo.attachments.length} file{todo.attachments.length !== 1 ? 's' : ''}
                             </span>
                           )}
                           {todo.subtasks && todo.subtasks.length > 0 && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <span className="px-1.5 py-0.5 rounded text-badge bg-blue-500/10 text-blue-600 dark:text-blue-400">
                               {todo.subtasks.length} subtask{todo.subtasks.length !== 1 ? 's' : ''}
                             </span>
                           )}
@@ -2551,7 +2246,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </div>
 
             {/* Info Box */}
-            <div className={`mx-4 mb-3 p-3 rounded-lg text-xs ${darkMode ? 'bg-white/5 text-slate-400' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
+            <div className={`mx-4 mb-3 p-3 rounded-[var(--radius-lg)] text-xs ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
               <p className="font-medium mb-1.5 text-[var(--text-light)]">When merged:</p>
               <div className="grid grid-cols-2 gap-1">
                 <span>• Notes combined</span>
@@ -2562,7 +2257,7 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
             </div>
 
             {/* Footer */}
-            <div className={`px-4 py-3 border-t flex justify-end gap-2 ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}`}>
+            <div className={`px-4 py-3 border-t flex justify-end gap-2 ${'border-[var(--border)] bg-[var(--surface)]'}`}>
               <button
                 onClick={() => {
                   if (!isMerging) {
@@ -2570,13 +2265,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   }
                 }}
                 disabled={isMerging}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-lg)] transition-colors ${
                   isMerging
                     ? 'opacity-50 cursor-not-allowed'
-                    : darkMode
-                      ? 'text-slate-300 hover:bg-white/10'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
-                }`}
+                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'}`}
               >
                 Cancel
               </button>
@@ -2587,13 +2279,10 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
                   }
                 }}
                 disabled={!selectedPrimaryId || isMerging}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 text-sm font-medium rounded-[var(--radius-lg)] transition-all flex items-center gap-2 ${
                   selectedPrimaryId && !isMerging
                     ? 'bg-[var(--brand-blue)] text-white hover:bg-[var(--brand-blue)]/90 shadow-sm'
-                    : darkMode
-                      ? 'bg-white/10 text-slate-500 cursor-not-allowed'
-                      : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'
-                }`}
+                    : 'bg-[var(--surface-2)] text-[var(--text-light)] cursor-not-allowed'}`}
               >
                 {isMerging ? (
                   <>
@@ -2615,164 +2304,20 @@ export default function TodoList({ currentUser, onUserChange, onOpenDashboard, i
         </div>
       )}
 
-      {/* Duplicate Detection Modal */}
-      {showDuplicateModal && pendingTask && (
-        <DuplicateDetectionModal
-          isOpen={showDuplicateModal}
-          darkMode={darkMode}
-          newTaskText={pendingTask.text}
-          newTaskPriority={pendingTask.priority}
-          newTaskDueDate={pendingTask.dueDate}
-          newTaskAssignedTo={pendingTask.assignedTo}
-          newTaskSubtasks={pendingTask.subtasks}
-          newTaskTranscription={pendingTask.transcription}
-          newTaskSourceFile={pendingTask.sourceFile}
-          duplicates={duplicateMatches}
-          onCreateAnyway={handleCreateTaskAnyway}
-          onAddToExisting={handleAddToExistingTask}
-          onCancel={handleCancelDuplicateDetection}
-        />
-      )}
-
-      {/* Customer Email Modal */}
-      {showEmailModal && emailTargetTodos.length > 0 && (
-        <CustomerEmailModal
-          todos={emailTargetTodos}
-          currentUser={currentUser}
-          onClose={() => {
-            closeEmailModal();
-          }}
-          darkMode={darkMode}
-        />
-      )}
-
-      {/* Enhanced Celebration Modal (Feature 3) */}
-      {showEnhancedCelebration && celebrationData && (
-        <CompletionCelebration
-          celebrationData={celebrationData}
-          onDismiss={() => {
-            dismissEnhancedCelebration();
-          }}
-          onNextTaskClick={(taskId) => {
-            dismissEnhancedCelebration();
-            // Scroll to task - highlight it briefly
-            const taskElement = document.getElementById(`todo-${taskId}`);
-            if (taskElement) {
-              taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              taskElement.classList.add('ring-2', 'ring-blue-500');
-              setTimeout(() => {
-                taskElement.classList.remove('ring-2', 'ring-blue-500');
-              }, 2000);
-            }
-          }}
-          onShowSummary={() => {
-            openCompletionSummary(celebrationData.completedTask);
-          }}
-        />
-      )}
-
-      {/* Task Completion Summary Modal (Feature 1) */}
-      {showCompletionSummary && completedTaskForSummary && (
-        <TaskCompletionSummary
-          todo={completedTaskForSummary}
-          completedBy={userName}
-          onClose={() => {
-            closeCompletionSummary();
-          }}
-        />
-      )}
-
       {/* Floating Bulk Action Bar - Sticky at bottom */}
       {showBulkActions && selectedTodos.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
-          <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
-            <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
-              <div className="flex items-center justify-between gap-4">
-                {/* Left side - selection info with dismiss button */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={clearSelection}
-                    className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
-                    title="Clear selection"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[var(--foreground)]">{selectedTodos.size}</span>
-                    <span className="text-sm text-[var(--text-muted)]">selected</span>
-                  </div>
-                  <div className="hidden sm:block w-px h-5 bg-[var(--border)]" />
-                </div>
-
-                {/* Action buttons - horizontal inline */}
-                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
-                  {/* Mark Complete */}
-                  <button
-                    onClick={bulkComplete}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--success)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span className="hidden sm:inline">Mark Complete</span>
-                  </button>
-
-                  {/* Reassign dropdown */}
-                  <div className="relative">
-                    <select
-                      onChange={(e) => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}
-                      className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
-                      aria-label="Reassign"
-                    >
-                      <option value="">Reassign</option>
-                      {users.map((user) => (
-                        <option key={user} value={user}>{user}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
-                  </div>
-
-                  {/* Change Date dropdown */}
-                  <div className="relative">
-                    <select
-                      onChange={(e) => {
-                        if (e.target.value) bulkReschedule(e.target.value);
-                        e.target.value = '';
-                      }}
-                      className="appearance-none px-3 py-2 pr-7 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer text-sm font-medium border border-[var(--border)]"
-                      aria-label="Change Date"
-                    >
-                      <option value="">Change Date</option>
-                      <option value={getDateOffset(0)}>Today</option>
-                      <option value={getDateOffset(1)}>Tomorrow</option>
-                      <option value={getDateOffset(7)}>Next Week</option>
-                      <option value={getDateOffset(30)}>Next Month</option>
-                    </select>
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none text-[var(--text-muted)]" />
-                  </div>
-
-                  {/* Merge - only show when 2+ selected */}
-                  {selectedTodos.size >= 2 && (
-                    <button
-                      onClick={initiateMerge}
-                      className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--brand-blue)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
-                    >
-                      <GitMerge className="w-4 h-4" />
-                      Merge
-                    </button>
-                  )}
-
-                  {/* Delete */}
-                  <button
-                    onClick={bulkDelete}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--danger)] text-white hover:opacity-90 transition-all text-sm font-medium whitespace-nowrap"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Delete</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <BulkActionBar
+          selectedCount={selectedTodos.size}
+          users={users}
+          viewMode={viewMode}
+          onClearSelection={clearSelection}
+          onBulkDelete={bulkDelete}
+          onBulkComplete={bulkComplete}
+          onBulkAssign={bulkAssign}
+          onBulkReschedule={bulkReschedule}
+          onInitiateMerge={initiateMerge}
+          getDateOffset={getDateOffset}
+        />
       )}
 
       {/* NOTE: ChatPanel removed from task view - access via navigation sidebar "Messages" */}

@@ -32,7 +32,7 @@ async function registerAndLogin(page: Page, userName: string = 'Test User', pin:
   await page.getByRole('button', { name: 'Create Account' }).click();
 
   // Wait for app to load (shows main header with Bealer Agency)
-  await expect(page.locator('textarea[placeholder="What needs to be done?"]')).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
 }
 
 // Generate unique test user name
@@ -49,8 +49,8 @@ test.describe('Subtask Feature', () => {
   test('should show subtasks section with AI Breakdown button when task is expanded', async ({ page }) => {
     // Add a task - avoid using "subtask" word in task text to prevent selector conflicts
     const taskText = `Build website ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -70,8 +70,8 @@ test.describe('Subtask Feature', () => {
 
     // Add a task that can be broken down
     const taskText = `Organize company retreat ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -96,8 +96,8 @@ test.describe('Subtask Feature', () => {
   test('should allow manually adding subtasks without AI', async ({ page }) => {
     // Add a task
     const taskText = `Complete project ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -123,8 +123,8 @@ test.describe('Subtask Feature', () => {
   test('should toggle subtask completion with checkbox', async ({ page }) => {
     // Add a task
     const taskText = `Review documents ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -158,8 +158,8 @@ test.describe('Subtask Feature', () => {
   test('should delete subtask with trash icon', async ({ page }) => {
     // Add a task
     const taskText = `Prepare presentation ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -195,8 +195,8 @@ test.describe('Subtask Feature', () => {
   test('should allow inline editing of subtask text', async ({ page }) => {
     // Add a task
     const taskText = `Test editing ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });
@@ -233,8 +233,8 @@ test.describe('Subtask Feature', () => {
   test('should show subtask badge on collapsed task', async ({ page }) => {
     // Add a task
     const taskText = `Task with subtasks ${Date.now()}`;
-    await page.locator('textarea[placeholder="What needs to be done?"]').fill(taskText);
-    await page.locator('button:has-text("Add")').click();
+    await page.locator('[data-testid="add-task-input"]').fill(taskText);
+    await page.keyboard.press('Enter');
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskText}`)).toBeVisible({ timeout: 5000 });

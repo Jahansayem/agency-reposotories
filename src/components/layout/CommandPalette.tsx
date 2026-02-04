@@ -23,7 +23,9 @@ import {
   CornerDownLeft,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser, OWNER_USERNAME } from '@/types/todo';
+import { AuthUser } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
+import type { AgencyPermissions } from '@/types/agency';
 import { useAppShell } from './AppShell';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -47,7 +49,7 @@ interface CommandItem {
   category: 'navigation' | 'actions' | 'settings' | 'recent';
   shortcut?: string;
   action: () => void;
-  ownerOnly?: boolean;
+  permission?: keyof AgencyPermissions;
 }
 
 export default function CommandPalette({
@@ -56,8 +58,12 @@ export default function CommandPalette({
   currentUser,
 }: CommandPaletteProps) {
   const { theme, toggleTheme } = useTheme();
-  const darkMode = theme === 'dark';
-  const { setActiveView, openRightPanel } = useAppShell();
+  const { setActiveView, triggerNewTask } = useAppShell();
+
+  // Permission checks for gated commands
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canViewArchive = usePermission('can_view_archive');
+  const canManageTemplates = usePermission('can_manage_templates');
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -120,7 +126,7 @@ export default function CommandPalette({
       category: 'navigation',
       shortcut: 'G G',
       action: () => { setActiveView('goals'); onClose(); },
-      ownerOnly: true,
+      permission: 'can_view_strategic_goals',
     },
     {
       id: 'nav-archive',
@@ -129,6 +135,7 @@ export default function CommandPalette({
       icon: Archive,
       category: 'navigation',
       action: () => { setActiveView('archive'); onClose(); },
+      permission: 'can_view_archive',
     },
 
     // Actions
@@ -139,7 +146,7 @@ export default function CommandPalette({
       icon: Plus,
       category: 'actions',
       shortcut: 'N',
-      action: () => { setActiveView('tasks'); onClose(); /* TODO: focus add task input */ },
+      action: () => { triggerNewTask(); onClose(); },
     },
     {
       id: 'action-filter-today',
@@ -169,9 +176,9 @@ export default function CommandPalette({
     // Settings
     {
       id: 'settings-theme',
-      label: darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+      label: 'Switch to Dark Mode',
       description: 'Toggle between light and dark theme',
-      icon: darkMode ? Sun : Moon,
+      icon: theme === 'dark' ? Sun : Moon,
       category: 'settings',
       action: () => { toggleTheme(); onClose(); },
     },
@@ -184,7 +191,7 @@ export default function CommandPalette({
       shortcut: '?',
       action: () => { onClose(); /* TODO: open shortcuts modal */ },
     },
-  ], [darkMode, toggleTheme, setActiveView, openRightPanel, onClose]);
+  ], [theme, toggleTheme, setActiveView, triggerNewTask, onClose]);
 
   // Filter commands based on query and user permissions
   const filteredCommands = useMemo(() => {
@@ -192,9 +199,11 @@ export default function CommandPalette({
 
     return commands
       .filter(cmd => {
-        // Owner-only commands
-        if (cmd.ownerOnly && currentUser.name !== OWNER_USERNAME) {
-          return false;
+        // Permission-gated commands - inline checks for proper memoization
+        if (cmd.permission) {
+          if (cmd.permission === 'can_view_strategic_goals' && !canViewStrategicGoals) return false;
+          if (cmd.permission === 'can_view_archive' && !canViewArchive) return false;
+          if (cmd.permission === 'can_manage_templates' && !canManageTemplates) return false;
         }
 
         // Search filter
@@ -205,7 +214,7 @@ export default function CommandPalette({
           cmd.category.toLowerCase().includes(lowerQuery)
         );
       });
-  }, [commands, query, currentUser.name]);
+  }, [commands, query, canViewStrategicGoals, canViewArchive, canManageTemplates]);
 
   // Group commands by category
   const groupedCommands = useMemo(() => {
@@ -301,11 +310,8 @@ export default function CommandPalette({
             className={`
               fixed top-[20%] left-1/2 -translate-x-1/2 z-50
               w-full max-w-xl mx-4 sm:mx-auto
-              rounded-2xl overflow-hidden shadow-2xl
-              ${darkMode
-                ? 'bg-[var(--surface)] border border-white/10'
-                : 'bg-white border border-[var(--border)]'
-              }
+              rounded-[var(--radius-2xl)] overflow-hidden shadow-2xl
+              ${'bg-[var(--surface)] border border-[var(--border)]'}
             `}
             role="dialog"
             aria-modal="true"
@@ -314,9 +320,9 @@ export default function CommandPalette({
             {/* Search Input */}
             <div className={`
               flex items-center gap-3 px-4 py-4 border-b
-              ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+              ${'border-[var(--border)]'}
             `}>
-              <Search className={`w-5 h-5 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+              <Search className={`w-5 h-5 ${'text-[var(--text-muted)]'}`} />
               <input
                 ref={inputRef}
                 type="text"
@@ -326,16 +332,13 @@ export default function CommandPalette({
                 placeholder="Type a command or search..."
                 className={`
                   flex-1 bg-transparent outline-none text-base
-                  ${darkMode ? 'text-white placeholder-white/40' : 'text-[var(--foreground)] placeholder-[var(--text-muted)]'}
+                  ${'text-[var(--foreground)] placeholder-[var(--text-muted)]'}
                 `}
                 aria-label="Search commands"
               />
               <kbd className={`
-                hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium
-                ${darkMode
-                  ? 'bg-white/10 text-white/40'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                }
+                hidden sm:flex items-center gap-1 px-2 py-1 rounded-[var(--radius-md)] text-xs font-medium
+                ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}
               `}>
                 esc
               </kbd>
@@ -350,7 +353,7 @@ export default function CommandPalette({
               {flatCommands.length === 0 ? (
                 <div className={`
                   px-4 py-8 text-center
-                  ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}
+                  ${'text-[var(--text-muted)]'}
                 `}>
                   <p className="text-sm">No commands found</p>
                   <p className="text-xs mt-1">Try a different search term</p>
@@ -365,7 +368,7 @@ export default function CommandPalette({
                     <div key={category} className="mb-2 last:mb-0">
                       <p className={`
                         px-4 py-2 text-xs font-semibold uppercase tracking-wider
-                        ${darkMode ? 'text-white/30' : 'text-[var(--text-light)]'}
+                        ${'text-[var(--text-light)]'}
                       `}>
                         {categoryLabels[category]}
                       </p>
@@ -385,31 +388,25 @@ export default function CommandPalette({
                               w-full flex items-center gap-3 px-4 py-3 text-left
                               transition-colors
                               ${isSelected
-                                ? darkMode
-                                  ? 'bg-white/10'
-                                  : 'bg-[var(--surface-2)]'
-                                : ''
+                                ? 'bg-[var(--surface-2)]': ''
                               }
                             `}
                             role="option"
                             aria-selected={isSelected}
                           >
                             <div className={`
-                              w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0
-                              ${darkMode
-                                ? 'bg-white/10'
-                                : 'bg-[var(--surface-2)]'
-                              }
+                              w-9 h-9 rounded-[var(--radius-lg)] flex items-center justify-center flex-shrink-0
+                              ${'bg-[var(--surface-2)]'}
                             `}>
-                              <Icon className={`w-4 h-4 ${darkMode ? 'text-white/70' : 'text-[var(--foreground)]'}`} />
+                              <Icon className={`w-4 h-4 ${'text-[var(--foreground)]'}`} />
                             </div>
 
                             <div className="flex-1 min-w-0">
-                              <p className={`font-medium text-sm ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                              <p className={`font-medium text-sm ${'text-[var(--foreground)]'}`}>
                                 {cmd.label}
                               </p>
                               {cmd.description && (
-                                <p className={`text-xs truncate ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+                                <p className={`text-xs truncate ${'text-[var(--text-muted)]'}`}>
                                   {cmd.description}
                                 </p>
                               )}
@@ -417,18 +414,15 @@ export default function CommandPalette({
 
                             {cmd.shortcut && (
                               <kbd className={`
-                                flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium
-                                ${darkMode
-                                  ? 'bg-white/10 text-white/40'
-                                  : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                                }
+                                flex items-center gap-1 px-2 py-1 rounded-[var(--radius-md)] text-xs font-medium
+                                ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}
                               `}>
                                 {cmd.shortcut}
                               </kbd>
                             )}
 
                             {isSelected && (
-                              <ArrowRight className={`w-4 h-4 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+                              <ArrowRight className={`w-4 h-4 ${'text-[var(--text-muted)]'}`} />
                             )}
                           </button>
                         );
@@ -442,19 +436,16 @@ export default function CommandPalette({
             {/* Footer */}
             <div className={`
               flex items-center justify-between px-4 py-3 border-t text-xs
-              ${darkMode
-                ? 'border-white/10 text-white/40'
-                : 'border-[var(--border)] text-[var(--text-muted)]'
-              }
+              ${'border-[var(--border)] text-[var(--text-muted)]'}
             `}>
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1">
-                  <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-2)]'}`}>↑</kbd>
-                  <kbd className={`px-1.5 py-0.5 rounded ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-2)]'}`}>↓</kbd>
+                  <kbd className={`px-1.5 py-0.5 rounded ${'bg-[var(--surface-2)]'}`}>↑</kbd>
+                  <kbd className={`px-1.5 py-0.5 rounded ${'bg-[var(--surface-2)]'}`}>↓</kbd>
                   Navigate
                 </span>
                 <span className="flex items-center gap-1">
-                  <kbd className={`px-1.5 py-0.5 rounded flex items-center ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-2)]'}`}>
+                  <kbd className={`px-1.5 py-0.5 rounded flex items-center ${'bg-[var(--surface-2)]'}`}>
                     <CornerDownLeft className="w-3 h-3" />
                   </kbd>
                   Select

@@ -20,7 +20,6 @@ interface InlineAddTaskProps {
     reminderAt?: string
   ) => void;
   users: string[];
-  darkMode?: boolean;
   currentUserId?: string;
   autoFocus?: boolean;
 }
@@ -53,7 +52,6 @@ interface SmartParseResult {
 export default function InlineAddTask({
   onAdd,
   users,
-  darkMode = true,
   currentUserId,
   autoFocus,
 }: InlineAddTaskProps) {
@@ -197,7 +195,7 @@ export default function InlineAddTask({
       <form onSubmit={handleSubmit} className="relative">
         <div
           className={`
-            flex items-center gap-2 px-4 py-3 rounded-xl
+            flex items-center gap-2 px-4 py-3 rounded-[var(--radius-xl)]
             border-2 transition-all duration-200
             ${showPreview
               ? 'border-[var(--accent)]/40 bg-[var(--surface)]'
@@ -222,13 +220,14 @@ export default function InlineAddTask({
             onChange={(e) => setText(e.target.value)}
             placeholder="Add task... (Type naturally or paste text)"
             disabled={isProcessing || showPreview}
+            data-testid="add-task-input"
             className="flex-1 bg-transparent text-[var(--foreground)] placeholder-[var(--text-muted)] text-base font-medium focus:outline-none disabled:opacity-50"
             aria-label="New task"
           />
 
           {/* AI indicator for complex input */}
           {text.trim() && isComplexInput && !showPreview && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-medium">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-lg)] bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-medium">
               <Sparkles className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">AI will parse</span>
             </div>
@@ -263,7 +262,7 @@ export default function InlineAddTask({
             animate={{ opacity: 1, y: 0 }}
             exit={prefersReducedMotion() ? undefined : { opacity: 0, y: -10 }}
             transition={{ duration: DURATION.normal }}
-            className="rounded-xl border-2 border-[var(--accent)]/30 bg-[var(--surface)] shadow-[var(--shadow-lg)] overflow-hidden"
+            className="rounded-[var(--radius-xl)] border-2 border-[var(--accent)]/30 bg-[var(--surface)] shadow-[var(--shadow-lg)] overflow-hidden"
           >
             {/* Header */}
             <div className="px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--accent)]/5 flex items-center gap-2">
@@ -282,7 +281,7 @@ export default function InlineAddTask({
                   type="text"
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] text-base font-medium focus:outline-none focus:border-[var(--accent)]"
+                  className="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] text-base font-medium focus:outline-none focus:border-[var(--accent)]"
                   autoFocus
                 />
               ) : (
@@ -296,7 +295,7 @@ export default function InlineAddTask({
                   <select
                     value={editPriority}
                     onChange={(e) => setEditPriority(e.target.value as TodoPriority)}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm font-medium focus:outline-none"
+                    className="px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm font-medium focus:outline-none"
                     style={{ color: PRIORITY_CONFIG[editPriority].color }}
                   >
                     <option value="low">Low</option>
@@ -320,7 +319,7 @@ export default function InlineAddTask({
                     type="date"
                     value={editDueDate}
                     onChange={(e) => setEditDueDate(e.target.value)}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm focus:outline-none"
+                    className="px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm focus:outline-none"
                   />
                 ) : editDueDate ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--surface-2)] text-xs font-medium text-[var(--foreground)]">
@@ -334,7 +333,7 @@ export default function InlineAddTask({
                   <select
                     value={editAssignedTo}
                     onChange={(e) => setEditAssignedTo(e.target.value)}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm focus:outline-none"
+                    className="px-3 py-1.5 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-sm focus:outline-none"
                   >
                     <option value="">Unassigned</option>
                     {users.map((user) => (
@@ -402,14 +401,14 @@ export default function InlineAddTask({
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors"
+                className="px-4 py-2 rounded-[var(--radius-lg)] text-sm font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)] transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={() => setIsEditing(!isEditing)}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--foreground)] bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 rounded-[var(--radius-lg)] text-sm font-medium text-[var(--foreground)] bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors flex items-center gap-1.5"
               >
                 <Pencil className="w-3.5 h-3.5" />
                 {isEditing ? 'Done' : 'Edit'}
@@ -417,7 +416,7 @@ export default function InlineAddTask({
               <button
                 type="button"
                 onClick={handleCreate}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] hover:opacity-90 shadow-[var(--shadow-blue)] transition-all flex items-center gap-1.5"
+                className="px-4 py-2 rounded-[var(--radius-lg)] text-sm font-semibold text-white bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] hover:opacity-90 shadow-[var(--shadow-blue)] transition-all flex items-center gap-1.5"
               >
                 <Check className="w-4 h-4" />
                 Create Task

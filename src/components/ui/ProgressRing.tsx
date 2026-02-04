@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export interface ProgressRingProps {
   /** Progress value from 0-100 */
@@ -34,6 +35,7 @@ export interface ProgressRingProps {
  * - Customizable colors and sizes
  * - Optional center content
  * - Accessible with proper ARIA attributes
+ * - Optional tooltip with score breakdown
  */
 export function ProgressRing({
   progress,
@@ -45,9 +47,17 @@ export function ProgressRing({
   animationDuration = 0.8,
   children,
   className = '',
-}: ProgressRingProps) {
+  tooltip,
+  tooltipPosition = 'bottom',
+}: ProgressRingProps & {
+  /** Optional tooltip content explaining the score */
+  tooltip?: React.ReactNode;
+  /** Tooltip position */
+  tooltipPosition?: 'top' | 'bottom' | 'left' | 'right';
+}) {
   // Ensure progress is within bounds
   const normalizedProgress = Math.min(100, Math.max(0, progress));
+  const [showTooltip, setShowTooltip] = useState(false);
 
   // Calculate circle properties
   const radius = (size - strokeWidth) / 2;
@@ -57,6 +67,14 @@ export function ProgressRing({
   // Center point
   const center = size / 2;
 
+  // Tooltip position styles
+  const tooltipPositionStyles = {
+    top: 'bottom-full left-1/2 -translate-x-1/2 mb-2',
+    bottom: 'top-full left-1/2 -translate-x-1/2 mt-2',
+    left: 'right-full top-1/2 -translate-y-1/2 mr-2',
+    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+  };
+
   return (
     <div
       className={`relative inline-flex items-center justify-center ${className}`}
@@ -65,6 +83,11 @@ export function ProgressRing({
       aria-valuenow={normalizedProgress}
       aria-valuemin={0}
       aria-valuemax={100}
+      onMouseEnter={() => tooltip && setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      onFocus={() => tooltip && setShowTooltip(true)}
+      onBlur={() => setShowTooltip(false)}
+      tabIndex={tooltip ? 0 : undefined}
     >
       <svg
         width={size}
@@ -116,6 +139,23 @@ export function ProgressRing({
           )}
         </div>
       )}
+
+      {/* Tooltip */}
+      <AnimatePresence>
+        {tooltip && showTooltip && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className={`absolute z-50 ${tooltipPositionStyles[tooltipPosition]} pointer-events-none`}
+          >
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg p-3 min-w-[200px] text-sm">
+              {tooltip}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -187,7 +227,7 @@ export function GoalProgressRing({
             <span className="text-xs font-bold text-[var(--foreground)] leading-none">
               {current}
             </span>
-            <span className="text-[10px] text-[var(--text-muted)] leading-none">
+            <span className="text-badge text-[var(--text-muted)] leading-none">
               /{goal}
             </span>
           </>

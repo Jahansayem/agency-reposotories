@@ -1,12 +1,22 @@
 'use client';
 
 import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import { MessageCircle, ArrowLeft } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser, Todo } from '@/types/todo';
-import ChatPanel from '../ChatPanel';
 import { useTodoStore } from '@/store/todoStore';
+import { SkeletonChatPanel } from '../SkeletonLoader';
+
+// Lazy load ChatPanel (1185 lines) - only load when ChatView is opened
+const ChatPanel = dynamic(() => import('../ChatPanel'), {
+  ssr: false,
+  loading: () => (
+    <div className="p-4">
+      <SkeletonChatPanel />
+    </div>
+  ),
+});
 
 /**
  * ChatView - Dedicated full-page chat experience
@@ -34,8 +44,6 @@ export default function ChatView({
   onBack,
   onTaskLinkClick,
 }: ChatViewProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const todos = useTodoStore((state) => state.todos);
 
   // Create a map of todos for task linking
@@ -65,10 +73,7 @@ export default function ChatView({
       <header
         className={`
           flex items-center gap-4 px-4 sm:px-6 h-16 border-b flex-shrink-0
-          ${darkMode
-            ? 'bg-[var(--surface)] border-white/10'
-            : 'bg-white border-[var(--border)]'
-          }
+          ${'bg-[var(--surface)] border-[var(--border)]'}
         `}
       >
         {/* Back button - for mobile or when onBack is provided */}
@@ -76,11 +81,8 @@ export default function ChatView({
           <button
             onClick={onBack}
             className={`
-              p-2 rounded-lg transition-colors md:hidden
-              ${darkMode
-                ? 'text-white/60 hover:text-white hover:bg-white/10'
-                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              p-2 rounded-[var(--radius-lg)] transition-colors md:hidden
+              ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
             aria-label="Go back"
           >
@@ -90,14 +92,14 @@ export default function ChatView({
 
         {/* Title */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center shadow-md">
+          <div className="w-10 h-10 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center shadow-md">
             <MessageCircle className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+            <h1 className={`font-semibold text-lg ${'text-[var(--foreground)]'}`}>
               Messages
             </h1>
-            <p className={`text-xs ${darkMode ? 'text-white/50' : 'text-[var(--text-muted)]'}`}>
+            <p className={`text-xs ${'text-[var(--text-muted)]'}`}>
               Team chat and direct messages
             </p>
           </div>

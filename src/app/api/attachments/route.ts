@@ -8,23 +8,14 @@ import {
   Attachment
 } from '@/types/todo';
 import { logger } from '@/lib/logger';
-import {
-  extractUserName,
-  validateUserName,
-  verifyTodoAccess,
-  extractTodoIdFromPath
-} from '@/lib/apiAuth';
+import { verifyTodoAccess, extractTodoIdFromPath } from '@/lib/apiAuth';
+import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 // Create a Supabase client for storage operations
-// SECURITY: Use anon key by default. Service role key should only be used
-// for specific admin operations and never exposed to client-side code.
+// SECURITY: Use service role key on server-side for storage operations
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 
-// Use service role key ONLY on server-side and only when necessary
-// The anon key with proper RLS policies is preferred
 const getSupabaseClient = () => {
-  // In API routes (server-side), we can use service role for storage operations
-  // Storage buckets may have different RLS than database tables
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
   return createClient(supabaseUrl, key);
 };
@@ -34,13 +25,10 @@ const supabase = getSupabaseClient();
 const STORAGE_BUCKET = 'todo-attachments';
 
 // Helper to ensure bucket exists
-// Note: This function is a no-op if using anon key with RLS enabled
-// The bucket should be pre-created in Supabase dashboard or via service role
 async function ensureBucketExists() {
   try {
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
 
-    // If we can't list buckets (RLS blocks it), assume bucket exists and proceed
     if (listError) {
       logger.debug('Cannot list buckets (likely RLS), assuming bucket exists', { component: 'AttachmentsAPI' });
       return;
@@ -55,23 +43,23 @@ async function ensureBucketExists() {
         allowedMimeTypes: Object.keys(ALLOWED_ATTACHMENT_TYPES),
       });
       if (error && !error.message.includes('already exists')) {
-        // Don't throw - bucket might exist but we can't see it due to RLS
         logger.warn('Could not create bucket (may already exist)', { component: 'AttachmentsAPI', error: error.message });
       }
     }
   } catch (err) {
-    // Don't fail the upload if bucket check fails - proceed and let the upload attempt tell us
     logger.warn('Bucket check failed, proceeding with upload attempt', { component: 'AttachmentsAPI', error: err });
   }
 }
 
 // POST - Upload a new attachment
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const todoId = formData.get('todoId') as string | null;
-    const userName = formData.get('userName') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -87,11 +75,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!userName) {
-      return NextResponse.json(
-        { success: false, error: 'No userName provided' },
-        { status: 400 }
-      );
+    // Verify user has access to this todo before allowing upload
+    // Pass agencyId for cross-tenant protection
+    const { error: accessError } = await verifyTodoAccess(todoId, ctx.userName, ctx.agencyId || undefined);
+    if (accessError) {
+      logger.security('Attachment upload access denied', {
+        endpoint: '/api/attachments',
+        todoId,
+        userName: ctx.userName,
+        ip: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+      return accessError;
     }
 
     // Validate file type
@@ -112,12 +106,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Check current attachment count for this todo
-    // Use a transaction-safe approach: fetch, validate, and we'll re-check before update
-    const { data: todo, error: fetchError } = await supabase
+    // Scope query to agency via parent todo's agency_id
+    let todoQuery = supabase
       .from('todos')
       .select('attachments, text')
-      .eq('id', todoId)
-      .single();
+      .eq('id', todoId);
+
+    if (ctx.agencyId) {
+      todoQuery = todoQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: todo, error: fetchError } = await todoQuery.single();
 
     if (fetchError) {
       logger.error('Error fetching todo', fetchError, { component: 'AttachmentsAPI' });
@@ -173,12 +172,11 @@ export async function POST(request: NextRequest) {
       file_size: file.size,
       storage_path: storagePath,
       mime_type: mimeType,
-      uploaded_by: userName,
+      uploaded_by: ctx.userName,
       uploaded_at: new Date().toISOString(),
     };
 
     // Use atomic update with jsonb concatenation to prevent race conditions
-    // This ensures the attachment is appended atomically without overwriting concurrent changes
     const { data: updateData, error: updateError } = await supabase.rpc(
       'append_attachment_if_under_limit',
       {
@@ -194,11 +192,16 @@ export async function POST(request: NextRequest) {
     // If RPC doesn't exist, fall back to regular update with re-verification
     if (updateError?.code === 'PGRST202' || updateError?.message?.includes('function') || updateError?.message?.includes('does not exist')) {
       // Fallback: Re-fetch to verify count hasn't changed (optimistic concurrency check)
-      const { data: verifyData, error: verifyError } = await supabase
+      let verifyQuery = supabase
         .from('todos')
         .select('attachments')
-        .eq('id', todoId)
-        .single();
+        .eq('id', todoId);
+
+      if (ctx.agencyId) {
+        verifyQuery = verifyQuery.eq('agency_id', ctx.agencyId);
+      }
+
+      const { data: verifyData, error: verifyError } = await verifyQuery.single();
 
       if (verifyError) {
         await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
@@ -220,10 +223,17 @@ export async function POST(request: NextRequest) {
 
       // Use the verified attachments array to avoid overwriting concurrent changes
       const finalAttachments = [...verifyAttachments, attachment];
-      const { error: fallbackError } = await supabase
+
+      let updateQuery = supabase
         .from('todos')
         .update({ attachments: finalAttachments })
         .eq('id', todoId);
+
+      if (ctx.agencyId) {
+        updateQuery = updateQuery.eq('agency_id', ctx.agencyId);
+      }
+
+      const { error: fallbackError } = await updateQuery;
 
       if (fallbackError) {
         await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
@@ -258,15 +268,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Error handling attachment upload', error, { component: 'AttachmentsAPI' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});
 
 // DELETE - Remove an attachment
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const { searchParams } = new URL(request.url);
     const todoId = searchParams.get('todoId');
     const attachmentId = searchParams.get('attachmentId');
@@ -278,15 +291,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Extract and validate userName for authorization
-    const userName = extractUserName(request);
-    const authError = validateUserName(userName);
-    if (authError) {
-      return authError;
-    }
-
     // Verify user has access to this todo before allowing deletion
-    const { todo, error: accessError } = await verifyTodoAccess(todoId, userName!);
+    // Pass agencyId for cross-tenant protection
+    const { todo, error: accessError } = await verifyTodoAccess(todoId, ctx.userName, ctx.agencyId || undefined);
     if (accessError) {
       return accessError;
     }
@@ -311,12 +318,19 @@ export async function DELETE(request: NextRequest) {
       // Continue anyway to clean up metadata
     }
 
-    // Update todo without this attachment
+    // Update todo without this attachment, scoped to agency
     const updatedAttachments = currentAttachments.filter(a => a.id !== attachmentId);
-    const { error: updateError } = await supabase
+
+    let updateQuery = supabase
       .from('todos')
       .update({ attachments: updatedAttachments })
       .eq('id', todoId);
+
+    if (ctx.agencyId) {
+      updateQuery = updateQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       logger.error('Error updating todo', updateError, { component: 'AttachmentsAPI' });
@@ -330,15 +344,18 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     logger.error('Error handling attachment deletion', error, { component: 'AttachmentsAPI' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});
 
 // GET - Get a signed URL for downloading
-export async function GET(request: NextRequest) {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const { searchParams } = new URL(request.url);
     const storagePath = searchParams.get('path');
 
@@ -347,13 +364,6 @@ export async function GET(request: NextRequest) {
         { success: false, error: 'Storage path is required' },
         { status: 400 }
       );
-    }
-
-    // Extract and validate userName for authorization
-    const userName = extractUserName(request);
-    const authError = validateUserName(userName);
-    if (authError) {
-      return authError;
     }
 
     // Extract todoId from storage path and verify access
@@ -366,7 +376,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user has access to this todo before generating signed URL
-    const { error: accessError } = await verifyTodoAccess(todoId, userName!);
+    // Pass agencyId for cross-tenant protection
+    const { error: accessError } = await verifyTodoAccess(todoId, ctx.userName, ctx.agencyId || undefined);
     if (accessError) {
       return accessError;
     }
@@ -391,8 +402,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error('Error handling download request', error, { component: 'AttachmentsAPI' });
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});

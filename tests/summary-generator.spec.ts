@@ -28,7 +28,7 @@ const mockTodo = {
     {
       id: 'att1',
       file_name: 'policy_document.pdf',
-      file_type: 'pdf',
+      file_type: 'document', // PDF files are document category
       file_size: 1048576, // 1MB
       storage_path: 'todos/test-todo-123/policy_document.pdf',
       mime_type: 'application/pdf',

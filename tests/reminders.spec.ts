@@ -23,10 +23,15 @@ async function loginAsUser(page: import('@playwright/test').Page, userName: stri
   if (await userCard.isVisible()) {
     await userCard.click();
     // Enter PIN
-    await page.fill('[data-testid="pin-input"]', pin);
-    await page.click('[data-testid="login-button"]');
+    await page.waitForTimeout(600);
+    const pinInputs = page.locator('input[type="password"]');
+    await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
+    for (let i = 0; i < 4; i++) {
+      await pinInputs.nth(i).fill(pin[i]);
+      await page.waitForTimeout(100);
+    }
     // Wait for main app to load
-    await page.waitForSelector('[data-testid="main-app"]', { timeout: 10000 });
+    await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 15000 });
   }
 }
 

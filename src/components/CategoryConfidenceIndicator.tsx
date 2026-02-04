@@ -96,7 +96,7 @@ export function CategoryConfidenceIndicator({
         aria-label="AI task analysis"
       >
         <div
-          className={`p-3 rounded-lg border mb-3 ${confidenceLevel.bgColor} ${confidenceLevel.borderColor}`}
+          className={`p-3 rounded-[var(--radius-lg)] border mb-3 ${confidenceLevel.bgColor} ${confidenceLevel.borderColor}`}
         >
           {/* Header with category and confidence */}
           <div className="flex items-start justify-between">
@@ -183,7 +183,7 @@ export function CategoryConfidenceIndicator({
           <div className="mt-3 flex gap-2">
             <button
               onClick={onAcceptSuggestions}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-[var(--radius-lg)] hover:bg-blue-700 transition-colors"
             >
               <Check className="w-3 h-3" />
               Apply Suggestions

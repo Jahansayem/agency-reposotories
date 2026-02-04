@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
+import { withAiAuth } from '@/lib/agencyAuth';
 
-const anthropic = new Anthropic();
+function getAnthropicClient(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY is not configured');
+  }
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
-export async function POST(request: NextRequest) {
+async function handleParseFile(request: NextRequest): Promise<NextResponse> {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -23,6 +29,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'No file provided' },
         { status: 400 }
+      );
+    }
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'File too large. Maximum size is 10MB.' },
+        { status: 413 }
       );
     }
 
@@ -117,6 +131,7 @@ Respond with ONLY the JSON object, no other text.`,
     });
 
     // Use Claude's vision capability to read and parse the document
+    const anthropic = getAnthropicClient();
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,
@@ -165,9 +180,14 @@ Respond with ONLY the JSON object, no other text.`,
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to parse file',
+        error: 'Internal server error',
       },
       { status: 500 }
     );
   }
 }
+
+// Export wrapped handler with session auth and AI-specific error handling
+export const POST = withAiAuth('ParseFileAPI', async (request) => {
+  return handleParseFile(request);
+});

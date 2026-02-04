@@ -23,7 +23,7 @@ export interface ModalProps {
   /** Modal description for accessibility */
   description?: string;
   /** Size variant */
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   /** Whether to show the close button */
   showCloseButton?: boolean;
   /** Whether clicking backdrop closes modal */
@@ -38,12 +38,16 @@ export interface ModalProps {
   ariaDescribedBy?: string;
 }
 
+// Size classes with mobile-first responsive design
+// On narrow screens (<640px), use calc(100vw-2rem) to prevent overflow on 320px screens
+// On larger screens, use the specified max-width
 const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  full: 'max-w-4xl',
+  sm: 'max-w-[calc(100vw-2rem)] sm:max-w-sm',
+  md: 'max-w-[calc(100vw-2rem)] sm:max-w-md',
+  lg: 'max-w-[calc(100vw-2rem)] sm:max-w-lg',
+  xl: 'max-w-[calc(100vw-2rem)] sm:max-w-xl',
+  '2xl': 'max-w-[calc(100vw-2rem)] sm:max-w-3xl',
+  full: 'max-w-[calc(100vw-2rem)] sm:max-w-4xl',
 };
 
 /**
@@ -182,7 +186,7 @@ export function Modal({
             transition={reducedMotion ? { duration: 0 } : modalTransition}
             className={`
               relative w-full ${sizeClasses[size]}
-              bg-[var(--surface)] rounded-2xl shadow-2xl
+              bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl
               border border-[var(--border-subtle)]
               max-h-[90vh] overflow-hidden
               ${className}
@@ -207,7 +211,7 @@ export function Modal({
                 onClick={onClose}
                 className="
                   absolute top-3 right-3 z-10
-                  p-2 rounded-lg
+                  p-2 rounded-[var(--radius-lg)]
                   text-[var(--text-muted)] hover:text-[var(--foreground)]
                   hover:bg-[var(--surface-2)]
                   transition-colors

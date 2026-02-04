@@ -1,24 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
+import { motion, AnimatePresence } from 'framer-motion';
 import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
-import { DashboardModalSkeleton, ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton } from './LoadingSkeletons';
+import { ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton, DashboardModalSkeleton } from './LoadingSkeletons';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser, Todo, QuickFilter } from '@/types/todo';
+import { AuthUser, QuickFilter, Todo } from '@/types/todo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
-import { AppShell, useAppShell, ActiveView } from './layout';
+import { AppShell, useAppShell } from './layout';
 import { useTodoStore } from '@/store/todoStore';
+import { useTodoData } from '@/hooks';
+import { usePermission } from '@/hooks/usePermission';
 import { ErrorBoundary } from './ErrorBoundary';
+import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
-
-// Lazy load DashboardModal for better initial load performance
-const DashboardModal = dynamic(() => import('./DashboardModal'), {
-  ssr: false,
-  loading: () => <DashboardModalSkeleton />,
-});
+import SyncStatusIndicator from './SyncStatusIndicator';
+import SkipLink from './SkipLink';
 
 // Lazy load ChatView for the dedicated messages view
 const ChatView = dynamic(() => import('./views/ChatView'), {
@@ -75,94 +75,65 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     closeShortcuts,
   } = useAppShell();
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
+  const { currentAgencyId, isSwitchingAgency, currentAgency, agencies } = useAgency();
+
+  // Permission checks for restricted views
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canViewArchive = usePermission('can_view_archive');
+
+  // Redirect to tasks view if user navigates to a restricted view without permission
+  useEffect(() => {
+    if (activeView === 'goals' && !canViewStrategicGoals) {
+      setActiveView('tasks');
+    }
+    if (activeView === 'archive' && !canViewArchive) {
+      setActiveView('tasks');
+    }
+  }, [activeView, canViewStrategicGoals, canViewArchive, setActiveView]);
+
+  // Agency key forces full remount of view components on agency switch (H7 fix)
+  const agencyKey = currentAgencyId || 'default';
+
+  // Kick off data fetching & real-time subscriptions so the Zustand store
+  // gets populated. This must run here (not only in TodoList) because
+  // MainApp reads `loading` from the store to decide whether to show
+  // the spinner — if useTodoData never runs, loading stays true forever.
+  useTodoData(currentUser);
+
+  const todos = useTodoStore((state) => state.todos);
+  const loading = useTodoStore((state) => state.loading);
   const usersWithColors = useTodoStore((state) => state.usersWithColors);
   const users = useTodoStore((state) => state.users);
 
-  const [todos, setTodos] = useState<Todo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [initialFilter, setInitialFilter] = useState<QuickFilter | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
-  // Initialize showDashboard to false - we'll check for daily show AFTER data loads
-  const [showDashboard, setShowDashboard] = useState(false);
   const [hasCheckedDailyDashboard, setHasCheckedDailyDashboard] = useState(false);
   // Track which task to auto-expand when navigating from dashboard/notifications
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  // Fetch todos
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!isSupabaseConfigured()) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const todosResult = await supabase
-          .from('todos')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (todosResult.data) {
-          setTodos(todosResult.data);
-        }
-      } catch (error) {
-        logger.error('Failed to fetch data', error, { component: 'MainApp' });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-
-    // Set up realtime subscription for todos
-    const channel = supabase
-      .channel('dashboard-todos')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setTodos(prev => [payload.new as Todo, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setTodos(prev => prev.map(t => t.id === payload.new.id ? payload.new as Todo : t));
-        } else if (payload.eventType === 'DELETE') {
-          setTodos(prev => prev.filter(t => t.id !== payload.old.id));
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Check if we should show daily dashboard on first login of the day
+  // Navigate to dashboard on first login of the day
   // Only check ONCE after initial data load - prevents flash on hard refresh
   useEffect(() => {
     if (!loading && !hasCheckedDailyDashboard) {
       setHasCheckedDailyDashboard(true);
       if (shouldShowDailyDashboard()) {
-        markDailyDashboardShown(); // Mark BEFORE showing to prevent duplicates
-        setShowDashboard(true);
+        markDailyDashboardShown();
+        setActiveView('dashboard');
       }
     }
-  }, [loading, hasCheckedDailyDashboard]);
+  }, [loading, hasCheckedDailyDashboard, setActiveView]);
 
   const handleNavigateToTasks = useCallback((filter?: QuickFilter) => {
     if (filter) {
       setInitialFilter(filter);
     }
-    setShowDashboard(false);
     setActiveView('tasks');
   }, [setActiveView]);
 
   const handleAddTask = useCallback(() => {
     setShowAddTask(true);
-    setShowDashboard(false);
     setActiveView('tasks');
   }, [setActiveView]);
-
-  const handleOpenDashboard = useCallback(() => {
-    setShowDashboard(true);
-  }, []);
 
   // Reset the add task trigger after modal opens
   const handleAddTaskModalOpened = useCallback(() => {
@@ -174,20 +145,39 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     setInitialFilter(null);
   }, []);
 
+  // Timer refs for cleanup on unmount
+  const taskLinkScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taskLinkHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+      if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    };
+  }, []);
+
   // Handle task link click from chat/dashboard/notifications (navigate to tasks view and open task)
   const handleTaskLinkClick = useCallback((taskId: string) => {
     setActiveView('tasks');
     // Set the selected task ID to trigger auto-expand in TodoItem
     setSelectedTaskId(taskId);
     // Small delay to allow view switch, then scroll to task
-    setTimeout(() => {
+    if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+    if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    taskLinkScrollTimerRef.current = setTimeout(() => {
       const taskElement = document.getElementById(`todo-${taskId}`);
       if (taskElement) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Add animated highlight class
         taskElement.classList.add('notification-highlight');
+        // BUGFIX REACT-001: Clear any existing highlight timer before creating new one
+        // This prevents orphaned timers if the callback runs during rapid clicks
+        if (taskLinkHighlightTimerRef.current) {
+          clearTimeout(taskLinkHighlightTimerRef.current);
+        }
         // Remove the class after animation completes
-        setTimeout(() => {
+        taskLinkHighlightTimerRef.current = setTimeout(() => {
           taskElement.classList.remove('notification-highlight');
         }, 3000);
       }
@@ -273,9 +263,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     }
   }, [currentUser.name]);
 
-  // Dashboard view is now a full page, no longer triggers modal
-  // The modal is only shown on daily login check
-
   // Register the new task trigger callback with AppShell
   useEffect(() => {
     onNewTaskTrigger(() => {
@@ -303,6 +290,13 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const handleArchiveClose = useCallback(() => setActiveView('tasks'), [setActiveView]);
   const handleChatBack = useCallback(() => setActiveView('tasks'), [setActiveView]);
 
+  // Get the agency name being switched to
+  // NOTE: Must be defined BEFORE any conditional returns to follow Rules of Hooks
+  const switchingToAgencyName = useMemo(() => {
+    if (!isSwitchingAgency || !currentAgency) return '';
+    return currentAgency.name;
+  }, [isSwitchingAgency, currentAgency]);
+
   // Memoized view rendering to prevent unnecessary re-renders
   // NOTE: Must be defined BEFORE any conditional returns to follow Rules of Hooks
   const activeViewContent = useMemo(() => {
@@ -310,10 +304,12 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       case 'dashboard':
         return (
           <DashboardPage
+            key={agencyKey}
             currentUser={currentUser}
             todos={todos}
             users={users}
             onNavigateToTasks={() => handleNavigateToTasks()}
+            onAddTask={handleAddTask}
             onTaskClick={handleTaskLinkClick}
             onFilterOverdue={() => handleNavigateToTasks('overdue')}
             onFilterDueToday={() => handleNavigateToTasks('due_today')}
@@ -323,6 +319,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       case 'chat':
         return (
           <ChatView
+            key={agencyKey}
             currentUser={currentUser}
             users={usersWithColors}
             onBack={handleChatBack}
@@ -335,38 +332,51 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // Just switch to tasks view for now
         return (
           <TodoList
+            key={agencyKey}
             currentUser={currentUser}
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
             onAddTaskModalOpened={handleAddTaskModalOpened}
             onInitialFilterApplied={handleInitialFilterApplied}
-            onOpenDashboard={handleOpenDashboard}
+
             selectedTaskId={selectedTaskId}
             onSelectedTaskHandled={handleSelectedTaskHandled}
           />
         );
 
       case 'goals':
+        // Strategic goals requires permission - redirect handled by useEffect
+        // This guard prevents any flash of content while redirecting
+        if (!canViewStrategicGoals) {
+          return null;
+        }
         // Strategic goals is handled by TodoList internally
         return (
           <TodoList
+            key={agencyKey}
             currentUser={currentUser}
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
             onAddTaskModalOpened={handleAddTaskModalOpened}
             onInitialFilterApplied={handleInitialFilterApplied}
-            onOpenDashboard={handleOpenDashboard}
+
             selectedTaskId={selectedTaskId}
             onSelectedTaskHandled={handleSelectedTaskHandled}
           />
         );
 
       case 'archive':
+        // Archive requires permission - redirect handled by useEffect
+        // This guard prevents any flash of content while redirecting
+        if (!canViewArchive) {
+          return null;
+        }
         // Full-featured archive browser
         return (
           <ArchiveView
+            key={agencyKey}
             currentUser={currentUser}
             users={users}
             onRestore={handleRestoreTask}
@@ -379,6 +389,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // AI Inbox view for reviewing AI-derived tasks
         return (
           <AIInbox
+            key={agencyKey}
             items={[]} // TODO: Connect to actual AI inbox state from store
             users={usersWithColors.map(u => u.name)}
             onAccept={handleAIAccept}
@@ -391,13 +402,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       default:
         return (
           <TodoList
+            key={agencyKey}
             currentUser={currentUser}
             onUserChange={onUserChange}
             initialFilter={initialFilter}
             autoFocusAddTask={showAddTask}
             onAddTaskModalOpened={handleAddTaskModalOpened}
             onInitialFilterApplied={handleInitialFilterApplied}
-            onOpenDashboard={handleOpenDashboard}
+
             selectedTaskId={selectedTaskId}
             onSelectedTaskHandled={handleSelectedTaskHandled}
           />
@@ -405,6 +417,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     }
   }, [
     activeView,
+    agencyKey,
     currentUser,
     todos,
     users,
@@ -412,6 +425,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     initialFilter,
     showAddTask,
     selectedTaskId,
+    canViewStrategicGoals,
+    canViewArchive,
     handleNavigateToTasks,
     handleTaskLinkClick,
     handleSelectedTaskHandled,
@@ -419,7 +434,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleDeleteTask,
     handleAddTaskModalOpened,
     handleInitialFilterApplied,
-    handleOpenDashboard,
     handleChatBack,
     handleArchiveClose,
     handleAIAccept,
@@ -443,22 +457,61 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   return (
     <>
-      {activeViewContent}
+      <SkipLink />
 
-      {/* Only render DashboardModal when it needs to be shown - prevents skeleton flash */}
-      {showDashboard && (
-        <DashboardModal
-          isOpen={showDashboard}
-          onClose={() => setShowDashboard(false)}
-          todos={todos}
-          currentUser={currentUser}
-          onNavigateToTasks={() => handleNavigateToTasks()}
-          onAddTask={handleAddTask}
-          onFilterOverdue={() => handleNavigateToTasks('overdue')}
-          onFilterDueToday={() => handleNavigateToTasks('due_today')}
-          users={users}
-        />
-      )}
+      <main id="main-content" tabIndex={-1}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeView}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+            className="min-h-full"
+          >
+            {activeViewContent}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Agency Switching Overlay */}
+      <AnimatePresence>
+        {isSwitchingAgency && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+            role="alert"
+            aria-live="polite"
+            aria-label="Switching agency"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2, delay: 0.1 }}
+              className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm mx-4"
+            >
+              {/* Spinner */}
+              <div className="w-12 h-12 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+
+              {/* Text */}
+              <div className="text-center">
+                <p className="text-lg font-semibold text-[var(--foreground)] mb-1">
+                  Switching Agency
+                </p>
+                {switchingToAgencyName && (
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Loading {switchingToAgencyName}...
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Push notification permission banner */}
       <NotificationPermissionBanner currentUser={currentUser} />
@@ -467,7 +520,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       {showWeeklyChart && (
         <WeeklyProgressChart
           todos={todos}
-          darkMode={darkMode}
           show={showWeeklyChart}
           onClose={closeWeeklyChart}
         />
@@ -477,8 +529,12 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <KeyboardShortcutsModal
         show={showShortcuts}
         onClose={closeShortcuts}
-        darkMode={darkMode}
       />
+
+      {/* Sync status indicator - shows real-time connection state */}
+      <div className="fixed bottom-4 right-4 z-40">
+        <SyncStatusIndicator showLabel />
+      </div>
     </>
   );
 }

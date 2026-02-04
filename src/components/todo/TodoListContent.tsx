@@ -1,13 +1,20 @@
 'use client';
 
-import { memo, ReactNode } from 'react';
+import { memo, useState, ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import { listItemVariants, prefersReducedMotion, DURATION } from '@/lib/animations';
-import { Todo, SortOption } from '@/types/todo';
+import { Todo, SortOption, WaitingContactType, Subtask, Attachment } from '@/types/todo';
 import SortableTodoItem from '../SortableTodoItem';
-import KanbanBoard from '../KanbanBoard';
 import TaskSections from '../TaskSections';
 import EmptyState from '../EmptyState';
+import { SkeletonKanbanBoard } from '../SkeletonLoader';
+
+// Lazy load KanbanBoard (979 lines) - only needed when switching to kanban view
+const KanbanBoard = dynamic(() => import('../KanbanBoard'), {
+  ssr: false,
+  loading: () => <SkeletonKanbanBoard />,
+});
 import {
   DndContext,
   closestCenter,
@@ -16,6 +23,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -31,7 +39,6 @@ interface TodoListContentProps {
   useSectionedView: boolean;
   shouldUseSections: boolean;
   sortOption: SortOption;
-  darkMode: boolean;
 
   // Selection
   selectedTodos: Set<string>;
@@ -42,7 +49,12 @@ interface TodoListContentProps {
   quickFilter: string;
   stats: { total: number; completed: number };
 
+  // Task auto-expand (for navigating to a specific task)
+  selectedTaskId?: string | null;
+  onSelectedTaskHandled?: () => void;
+
   // Handlers
+  onDragStart?: (event: DragStartEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;
   onSelectTodo: (id: string) => void;
   onToggle: (id: string, completed: boolean) => void;
@@ -50,18 +62,21 @@ interface TodoListContentProps {
   onAssign: (id: string, user: string | null) => void;
   onSetDueDate: (id: string, date: string | null) => void;
   onSetReminder: (id: string, date: string | null) => void;
+  onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
+  onClearWaiting?: (id: string) => Promise<void>;
   onSetPriority: (id: string, priority: 'low' | 'medium' | 'high' | 'urgent') => void;
   onStatusChange: (id: string, status: 'todo' | 'in_progress' | 'done') => void;
   onUpdateText: (id: string, text: string) => void;
   onDuplicate: (todo: Todo) => void;
   onUpdateNotes: (id: string, notes: string) => void;
   onSetRecurrence: (id: string, recurrence: 'daily' | 'weekly' | 'monthly' | null) => void;
-  onUpdateSubtasks: (id: string, subtasks: { id: string; text: string; completed: boolean }[]) => void;
-  onUpdateAttachments: (id: string, attachments: unknown[]) => void;
-  onSaveAsTemplate: (todo: Todo) => void;
+  onUpdateSubtasks: (id: string, subtasks: Subtask[]) => void;
+  onUpdateAttachments: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
+  onSaveAsTemplate?: (todo: Todo) => void;
   onEmailCustomer: (todo: Todo) => void;
   onClearSearch: () => void;
   onAddTask: () => void;
+  onOpenDetail?: (todoId: string) => void;
 }
 
 function TodoListContent({
@@ -72,12 +87,14 @@ function TodoListContent({
   useSectionedView,
   shouldUseSections,
   sortOption,
-  darkMode,
   selectedTodos,
   showBulkActions,
   searchQuery,
   quickFilter,
   stats,
+  selectedTaskId,
+  onSelectedTaskHandled,
+  onDragStart,
   onDragEnd,
   onSelectTodo,
   onToggle,
@@ -85,6 +102,8 @@ function TodoListContent({
   onAssign,
   onSetDueDate,
   onSetReminder,
+  onMarkWaiting,
+  onClearWaiting,
   onSetPriority,
   onStatusChange,
   onUpdateText,
@@ -97,12 +116,18 @@ function TodoListContent({
   onEmailCustomer,
   onClearSearch,
   onAddTask,
+  onOpenDetail,
 }: TodoListContentProps) {
   // DnD sensors for drag-and-drop reordering
+  // Use distance + delay to prevent accidental drags when clicking on inline controls
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        // Require 10px of movement OR 150ms delay to start dragging
+        // This prevents accidental drags when clicking quickly on other elements
+        distance: 10,
+        delay: 150,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -110,7 +135,8 @@ function TodoListContent({
     })
   );
 
-  const isDragEnabled = !showBulkActions && sortOption === 'custom';
+  const [isDragging, setIsDragging] = useState(false);
+  const isDragEnabled = !showBulkActions;
 
   // Determine empty state variant
   const getEmptyStateVariant = () => {
@@ -132,7 +158,6 @@ function TodoListContent({
     >
       <EmptyState
         variant={getEmptyStateVariant()}
-        darkMode={darkMode}
         searchQuery={searchQuery}
         onAddTask={onAddTask}
         onClearSearch={onClearSearch}
@@ -144,7 +169,7 @@ function TodoListContent({
   const renderTodoItem = (todo: Todo, index: number): ReactNode => (
     <motion.div
       key={todo.id}
-      layout={!prefersReducedMotion()}
+      layout={!isDragging && !prefersReducedMotion()}
       variants={prefersReducedMotion() ? undefined : listItemVariants}
       initial={prefersReducedMotion() ? false : 'hidden'}
       animate="visible"
@@ -159,12 +184,16 @@ function TodoListContent({
         users={users}
         currentUserName={currentUserName}
         selected={selectedTodos.has(todo.id)}
+        autoExpand={todo.id === selectedTaskId}
+        onAutoExpandHandled={onSelectedTaskHandled}
         onSelect={showBulkActions ? onSelectTodo : undefined}
         onToggle={onToggle}
         onDelete={onDelete}
         onAssign={onAssign}
         onSetDueDate={onSetDueDate}
         onSetReminder={onSetReminder}
+        onMarkWaiting={onMarkWaiting}
+        onClearWaiting={onClearWaiting}
         onSetPriority={onSetPriority}
         onStatusChange={onStatusChange}
         onUpdateText={onUpdateText}
@@ -175,6 +204,7 @@ function TodoListContent({
         onUpdateAttachments={onUpdateAttachments}
         onSaveAsTemplate={onSaveAsTemplate}
         onEmailCustomer={onEmailCustomer}
+        onOpenDetail={onOpenDetail}
         isDragEnabled={isDragEnabled}
       />
     </motion.div>
@@ -220,7 +250,15 @@ function TodoListContent({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
+            onDragStart={(event) => {
+              setIsDragging(true);
+              onDragStart?.(event);
+            }}
+            onDragEnd={(event) => {
+              setIsDragging(false);
+              onDragEnd(event);
+            }}
+            onDragCancel={() => setIsDragging(false)}
           >
             <SortableContext
               items={todos.map((t) => t.id)}
@@ -240,6 +278,8 @@ function TodoListContent({
                   onAssign={onAssign}
                   onSetDueDate={onSetDueDate}
                   onSetReminder={onSetReminder}
+                  onMarkWaiting={onMarkWaiting}
+                  onClearWaiting={onClearWaiting}
                   onSetPriority={onSetPriority}
                   onStatusChange={onStatusChange}
                   onUpdateText={onUpdateText}
@@ -257,7 +297,7 @@ function TodoListContent({
               ) : (
                 /* Flat list view (original behavior) */
                 <div className="space-y-2" role="list" aria-label="Task list">
-                  <AnimatePresence mode="popLayout" initial={false}>
+                  <AnimatePresence initial={false}>
                     {todos.length === 0 ? (
                       renderEmptyState()
                     ) : (
@@ -280,12 +320,13 @@ function TodoListContent({
           <KanbanBoard
             todos={todos}
             users={users}
-            darkMode={darkMode}
             onStatusChange={onStatusChange}
             onDelete={onDelete}
             onAssign={onAssign}
             onSetDueDate={onSetDueDate}
             onSetReminder={onSetReminder}
+            onMarkWaiting={onMarkWaiting}
+            onClearWaiting={onClearWaiting}
             onSetPriority={onSetPriority}
             onUpdateNotes={onUpdateNotes}
             onUpdateText={onUpdateText}
@@ -296,6 +337,7 @@ function TodoListContent({
             onUpdateAttachments={onUpdateAttachments}
             onSaveAsTemplate={onSaveAsTemplate}
             onEmailCustomer={onEmailCustomer}
+            onOpenDetail={onOpenDetail}
             showBulkActions={showBulkActions}
             selectedTodos={selectedTodos}
             onSelectTodo={onSelectTodo}

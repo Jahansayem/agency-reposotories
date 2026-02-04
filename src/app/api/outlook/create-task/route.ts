@@ -4,22 +4,77 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
 import { TodoPriority } from '@/types/todo';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
+import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
 // Create Supabase client for server-side operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Verify API key middleware
-function verifyApiKey(request: NextRequest): boolean {
-  const apiKey = request.headers.get('X-API-Key');
-  return apiKey === process.env.OUTLOOK_ADDON_API_KEY;
+/**
+ * Get the default agency ID (Bealer Agency) for backward compatibility
+ * when no agency_id is provided in the request.
+ */
+async function getDefaultAgencyId(): Promise<string | null> {
+  const { data: agency, error } = await supabase
+    .from('agencies')
+    .select('id')
+    .eq('slug', 'bealer-agency')
+    .eq('is_active', true)
+    .single();
+
+  if (error || !agency) {
+    logger.warn('Default agency (bealer-agency) not found', {
+      component: 'OutlookCreateTaskAPI',
+      error: error?.message,
+    });
+    return null;
+  }
+
+  return agency.id;
+}
+
+/**
+ * Validate that the specified agency exists and is active
+ */
+async function validateAgency(agencyId: string): Promise<boolean> {
+  const { data: agency, error } = await supabase
+    .from('agencies')
+    .select('id')
+    .eq('id', agencyId)
+    .eq('is_active', true)
+    .single();
+
+  return !error && !!agency;
+}
+
+// Validate that createdBy is a valid user in the system
+async function validateCreator(createdBy: string): Promise<{ valid: boolean; userId?: string }> {
+  if (!createdBy || typeof createdBy !== 'string' || createdBy.trim().length === 0) {
+    return { valid: false };
+  }
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('id, name')
+    .eq('name', createdBy.trim())
+    .single();
+
+  if (error || !user) {
+    return { valid: false };
+  }
+
+  return { valid: true, userId: user.id };
 }
 
 export async function POST(request: NextRequest) {
-  // Verify API key
-  if (!verifyApiKey(request)) {
+  // Verify API key (constant-time comparison)
+  if (!verifyOutlookApiKey(request)) {
+    logger.security('Outlook API key validation failed', {
+      endpoint: '/api/outlook/create-task',
+      ip: request.headers.get('x-forwarded-for') || 'unknown',
+    });
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
       { status: 401 }
@@ -27,7 +82,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { text, assignedTo, priority, dueDate, createdBy } = await request.json();
+    const { text, assignedTo, priority, dueDate, createdBy, agency_id } = await request.json();
+
+    // SECURITY: Validate that createdBy is a real user in the system
+    // This prevents impersonation attacks
+    const creatorValidation = await validateCreator(createdBy);
+    if (!creatorValidation.valid) {
+      logger.security('Invalid creator in Outlook task creation', {
+        endpoint: '/api/outlook/create-task',
+        attemptedCreator: createdBy,
+        ip: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+      return NextResponse.json(
+        { success: false, error: 'Invalid creator - user does not exist' },
+        { status: 400 }
+      );
+    }
 
     if (!text || !text.trim()) {
       return NextResponse.json(
@@ -36,10 +106,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine target agency: use provided agency_id or fall back to default
+    let targetAgencyId: string | null = null;
+
+    if (agency_id) {
+      // Validate provided agency_id
+      const isValidAgency = await validateAgency(agency_id);
+      if (!isValidAgency) {
+        logger.security('Invalid agency_id in Outlook task creation', {
+          endpoint: '/api/outlook/create-task',
+          attemptedAgencyId: agency_id,
+          ip: request.headers.get('x-forwarded-for') || 'unknown',
+        });
+        return NextResponse.json(
+          { success: false, error: 'Invalid agency_id - agency does not exist or is inactive' },
+          { status: 400 }
+        );
+      }
+      targetAgencyId = agency_id;
+    } else {
+      // Use default Bealer Agency for backward compatibility
+      targetAgencyId = await getDefaultAgencyId();
+      if (!targetAgencyId) {
+        logger.error('No default agency found for Outlook task creation', undefined, {
+          component: 'OutlookCreateTaskAPI',
+        });
+        return NextResponse.json(
+          { success: false, error: 'No agency specified and default agency not found' },
+          { status: 400 }
+        );
+      }
+      logger.info('Using default agency for Outlook task creation', {
+        component: 'OutlookCreateTaskAPI',
+        agencyId: targetAgencyId,
+      });
+    }
+
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    // Build the task object
+    // Build the task object with agency scoping
     const task: Record<string, unknown> = {
       id: taskId,
       text: text.trim(),
@@ -47,6 +153,7 @@ export async function POST(request: NextRequest) {
       status: 'todo',
       created_at: now,
       created_by: createdBy || 'Outlook Add-in',
+      agency_id: targetAgencyId,
     };
 
     // Add optional fields
@@ -92,6 +199,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       taskId,
+      agencyId: targetAgencyId,
       message: 'Task created successfully',
     });
   } catch (error) {
@@ -103,14 +211,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Handle CORS preflight
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
-    },
-  });
+// Handle CORS preflight - only allow specific Outlook origins
+export async function OPTIONS(request: NextRequest) {
+  return createOutlookCorsPreflightResponse(request, 'POST, OPTIONS');
 }

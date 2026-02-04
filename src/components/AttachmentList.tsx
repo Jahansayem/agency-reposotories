@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import NextImage from 'next/image';
 import {
   FileText, Image, Music, Video, Archive, File,
   Download, Trash2, Loader2, ExternalLink, Eye
@@ -22,6 +23,7 @@ const categoryIcons: Record<AttachmentCategory, React.ElementType> = {
   audio: Music,
   video: Video,
   archive: Archive,
+  other: FileText, // Default to document icon for unknown types
 };
 
 const categoryColors: Record<AttachmentCategory, string> = {
@@ -30,6 +32,7 @@ const categoryColors: Record<AttachmentCategory, string> = {
   audio: 'text-[var(--accent)] bg-[var(--accent)]/10',
   video: 'text-pink-500 bg-pink-500/10',
   archive: 'text-amber-500 bg-amber-500/10',
+  other: 'text-gray-500 bg-gray-500/10', // Default color for unknown types
 };
 
 function formatFileSize(bytes: number): string {
@@ -55,10 +58,26 @@ function AttachmentItem({ attachment, todoId, onRemove, canRemove }: AttachmentI
   const [removing, setRemoving] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
 
   const category = attachment.file_type as AttachmentCategory;
   const Icon = categoryIcons[category] || File;
   const colorClass = categoryColors[category] || 'text-gray-500 bg-gray-500/10';
+
+  // Load thumbnail for image attachments (Issue #26)
+  const isImage = category === 'image';
+  if (isImage && !thumbnailUrl && !previewUrl) {
+    fetchWithCsrf(`/api/attachments?path=${encodeURIComponent(attachment.storage_path)}`)
+      .then(async (response) => {
+        const result = await response.json();
+        if (result.success && result.url) {
+          setThumbnailUrl(result.url);
+        }
+      })
+      .catch((error) => {
+        logger.error('Thumbnail load failed', error, { component: 'AttachmentList' });
+      });
+  }
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -125,61 +144,129 @@ function AttachmentItem({ attachment, todoId, onRemove, canRemove }: AttachmentI
 
   return (
     <>
-      <div className="group flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] transition-colors">
-        {/* Icon */}
-        <div className={`p-2 rounded-[var(--radius-md)] ${colorClass}`}>
-          <Icon className="w-4 h-4" />
-        </div>
-
-        {/* File info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[var(--foreground)] truncate" title={attachment.file_name}>
-            {attachment.file_name}
-          </p>
-          <p className="text-xs text-[var(--text-muted)]">
-            {formatFileSize(attachment.file_size)} • {formatDate(attachment.uploaded_at)} • by {attachment.uploaded_by}
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity">
-          {canPreview && (
-            <button
-              onClick={handlePreview}
-              className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-light)] transition-colors"
-              title="Preview"
-            >
-              <Eye className="w-4 h-4" />
-            </button>
-          )}
+      {/* Issue #26: Show inline thumbnail for images */}
+      {isImage && thumbnailUrl ? (
+        <div className="group relative rounded-[var(--radius-lg)] overflow-hidden bg-[var(--surface-2)] hover:bg-[var(--surface-3)] transition-colors">
+          {/* Image thumbnail - Issue #30: Optimized with Next.js Image */}
           <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-light)] transition-colors disabled:opacity-50"
-            title="Download"
+            onClick={handlePreview}
+            className="w-full aspect-video bg-[var(--surface-2)] overflow-hidden cursor-pointer relative"
+            aria-label={`Preview ${attachment.file_name}`}
           >
-            {downloading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
+            <NextImage
+              src={thumbnailUrl}
+              alt={attachment.file_name}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover transition-transform group-hover:scale-105"
+              loading="lazy"
+              quality={80}
+            />
           </button>
-          {canRemove && (
+
+          {/* File info overlay */}
+          <div className="p-2 bg-gradient-to-t from-black/60 to-transparent">
+            <p className="text-xs text-white font-medium truncate" title={attachment.file_name}>
+              {attachment.file_name}
+            </p>
+            <p className="text-xs text-white/80">
+              {formatFileSize(attachment.file_size)}
+            </p>
+          </div>
+
+          {/* Action buttons - top right corner */}
+          <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
-              onClick={handleRemove}
-              disabled={removing}
-              className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-50"
-              title="Remove"
+              onClick={handleDownload}
+              disabled={downloading}
+              className="p-1.5 rounded-[var(--radius-md)] bg-black/50 text-white hover:bg-black/70 transition-colors disabled:opacity-50 backdrop-blur-sm"
+              title="Download"
+              aria-label="Download attachment"
             >
-              {removing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+              {downloading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Trash2 className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
               )}
             </button>
-          )}
+            {canRemove && (
+              <button
+                onClick={handleRemove}
+                disabled={removing}
+                className="p-1.5 rounded-[var(--radius-md)] bg-black/50 text-white hover:bg-red-600 transition-colors disabled:opacity-50 backdrop-blur-sm"
+                title="Remove"
+                aria-label="Remove attachment"
+              >
+                {removing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Non-image attachments or loading - show list view */
+        <div className="group flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] transition-colors">
+          {/* Icon */}
+          <div className={`p-2 rounded-[var(--radius-md)] ${colorClass}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+
+          {/* File info */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[var(--foreground)] truncate" title={attachment.file_name}>
+              {attachment.file_name}
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {formatFileSize(attachment.file_size)} • {formatDate(attachment.uploaded_at)} • by {attachment.uploaded_by}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity">
+            {canPreview && (
+              <button
+                onClick={handlePreview}
+                className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-light)] transition-colors"
+                title="Preview"
+                aria-label="Preview attachment"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-light)] transition-colors disabled:opacity-50"
+              title="Download"
+              aria-label="Download attachment"
+            >
+              {downloading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+            </button>
+            {canRemove && (
+              <button
+                onClick={handleRemove}
+                disabled={removing}
+                className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)] transition-colors disabled:opacity-50"
+                title="Remove"
+                aria-label="Remove attachment"
+              >
+                {removing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Preview Modal */}
       {showPreview && previewUrl && (
@@ -243,8 +330,11 @@ export default function AttachmentList({ attachments, todoId, onRemove, canRemov
     return null;
   }
 
+  // Issue #26: Check if we have any image attachments for grid layout
+  const hasImages = attachments.some((att) => att.file_type === 'image');
+
   return (
-    <div className="space-y-2">
+    <div className={hasImages ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : 'space-y-2'}>
       {attachments.map((attachment) => (
         <AttachmentItem
           key={attachment.id}

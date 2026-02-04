@@ -39,6 +39,9 @@ export default function ConfirmDialog({
   useEffect(() => {
     if (!isOpen) return;
 
+    const modal = dialogRef.current;
+    if (!modal) return;
+
     // Focus the cancel button when opening (safer default for destructive dialogs)
     cancelButtonRef.current?.focus();
 
@@ -46,9 +49,14 @@ export default function ConfirmDialog({
       if (e.key === 'Escape') {
         onCancel();
       }
+      // Cmd/Ctrl+Enter to confirm (keyboard shortcut)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        onConfirm();
+      }
       // Trap focus within dialog
-      if (e.key === 'Tab' && dialogRef.current) {
-        const focusableElements = dialogRef.current.querySelectorAll(
+      if (e.key === 'Tab') {
+        const focusableElements = modal.querySelectorAll(
           'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
         const firstElement = focusableElements[0] as HTMLElement;
@@ -56,23 +64,38 @@ export default function ConfirmDialog({
 
         if (e.shiftKey && document.activeElement === firstElement) {
           e.preventDefault();
-          lastElement.focus();
+          lastElement?.focus();
         } else if (!e.shiftKey && document.activeElement === lastElement) {
           e.preventDefault();
-          firstElement.focus();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    // Prevent mouse clicks outside modal from stealing focus
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (modal && !modal.contains(target)) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Restore focus to modal if it was lost
+        if (!modal.contains(document.activeElement)) {
+          cancelButtonRef.current?.focus();
         }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown, true);
     // Prevent body scroll
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown, true);
       document.body.style.overflow = '';
     };
-  }, [isOpen, onCancel]);
+  }, [isOpen, onCancel, onConfirm]);
 
   const reducedMotion = prefersReducedMotion();
 

@@ -131,6 +131,13 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 
 # Outlook Add-in API Key (shared secret for add-in authentication)
 OUTLOOK_ADDON_API_KEY=your-secure-random-key
+
+# Email Service (optional - for invitation emails)
+# Sign up at https://resend.com (free tier: 100 emails/day)
+RESEND_API_KEY=re_your_resend_api_key
+
+# Application URL (for email links and CORS)
+NEXT_PUBLIC_APP_URL=https://your-production-domain.com
 ```
 
 ### Installing the Add-in in Outlook

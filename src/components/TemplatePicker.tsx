@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useEscapeKey } from '@/hooks';
+import { usePermission } from '@/hooks/usePermission';
 import { FileText, Plus, Trash2, Share2, Lock, X, ChevronDown, Loader2 } from 'lucide-react';
 import { TaskTemplate, TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +12,6 @@ import { fetchWithCsrf } from '@/lib/csrf';
 interface TemplatePickerProps {
   currentUserName: string;
   users: string[];
-  darkMode?: boolean;
   compact?: boolean; // Show as subtle icon button instead of full dropdown button
   isOpen?: boolean; // Optional controlled open state
   onOpenChange?: (open: boolean) => void; // Callback when open state changes
@@ -27,13 +27,13 @@ interface TemplatePickerProps {
 export default function TemplatePicker({
   currentUserName,
   users,
-  darkMode = true,
   compact = false,
   isOpen: controlledIsOpen,
   onOpenChange,
   hideTrigger = false,
   onSelectTemplate,
 }: TemplatePickerProps) {
+  const canManageTemplates = usePermission('can_manage_templates');
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
@@ -177,17 +177,12 @@ export default function TemplatePicker({
           aria-haspopup="listbox"
           aria-label={compact ? 'My Templates' : undefined}
           title={compact ? 'My Templates - Create and use custom task templates' : undefined}
+          data-testid="template-picker-button"
           className={compact
-            ? `flex items-center justify-center p-2 rounded-lg transition-colors min-h-[36px] min-w-[36px] touch-manipulation ${
-                darkMode
-                  ? 'text-[var(--text-light)] hover:text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-              }`
-            : `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] touch-manipulation ${
-                darkMode
-                  ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`
+            ? `flex items-center justify-center p-2 rounded-[var(--radius-lg)] transition-colors min-h-[36px] min-w-[36px] touch-manipulation ${
+                'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`
+            : `flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-sm font-medium transition-colors min-h-[44px] touch-manipulation ${
+                'bg-slate-100 text-slate-600 hover:bg-slate-200'}`
           }
         >
           <FileText className={compact ? 'w-4 h-4' : 'w-4 h-4'} />
@@ -207,67 +202,59 @@ export default function TemplatePicker({
 
           {/* Dropdown */}
           <div
-            className={`absolute left-0 top-full mt-2 w-80 rounded-xl shadow-xl border z-50 overflow-hidden ${
-              darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-            }`}
+            data-testid="template-picker-dropdown"
+            className={`absolute left-0 top-full mt-2 w-80 rounded-[var(--radius-xl)] shadow-xl border z-50 overflow-hidden ${
+              'bg-[var(--surface)] border-[var(--border)]'}`}
           >
             {/* Header */}
             <div
+              data-testid="template-picker-header"
               className={`px-4 py-3 border-b flex items-center justify-between ${
-                darkMode ? 'border-slate-700' : 'border-slate-200'
-              }`}
+                'border-slate-200'}`}
             >
-              <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              <h3 className={`font-semibold ${'text-slate-900'}`}>
                 Task Templates
               </h3>
-              <button
-                onClick={() => setShowCreateForm(!showCreateForm)}
-                aria-label={showCreateForm ? 'Cancel creating template' : 'Create new template'}
-                className={`p-2 rounded-lg transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation ${
-                  darkMode ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
-                }`}
-              >
-                {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              </button>
+              {canManageTemplates && (
+                <button
+                  onClick={() => setShowCreateForm(!showCreateForm)}
+                  aria-label={showCreateForm ? 'Cancel creating template' : 'Create new template'}
+                  className={`p-2 rounded-[var(--radius-lg)] transition-colors min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation ${
+                    'hover:bg-slate-100 text-slate-500'}`}
+                >
+                  {showCreateForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </button>
+              )}
             </div>
 
-            {/* Create Form */}
-            {showCreateForm && (
+            {/* Create Form - only show if user has permission */}
+            {showCreateForm && canManageTemplates && (
               <form
                 onSubmit={handleCreateTemplate}
-                className={`p-4 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}
+                className={`p-4 border-b ${'border-slate-200'}`}
               >
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Template name"
-                  className={`w-full px-3 py-2 rounded-lg text-sm mb-2 ${
-                    darkMode
-                      ? 'bg-slate-700 text-white placeholder-slate-400 border-slate-600'
-                      : 'bg-slate-50 text-slate-800 placeholder-slate-400 border-slate-200'
-                  } border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20`}
+                  className={`w-full px-3 py-2 rounded-[var(--radius-lg)] text-sm mb-2 ${
+                    'bg-slate-50 text-slate-800 placeholder-slate-400 border-slate-200'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20`}
                 />
                 <textarea
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="Default task description (optional)"
                   rows={2}
-                  className={`w-full px-3 py-2 rounded-lg text-sm mb-2 resize-none ${
-                    darkMode
-                      ? 'bg-slate-700 text-white placeholder-slate-400 border-slate-600'
-                      : 'bg-slate-50 text-slate-800 placeholder-slate-400 border-slate-200'
-                  } border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20`}
+                  className={`w-full px-3 py-2 rounded-[var(--radius-lg)] text-sm mb-2 resize-none ${
+                    'bg-slate-50 text-slate-800 placeholder-slate-400 border-slate-200'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/20`}
                 />
                 <div className="flex gap-2 mb-2">
                   <select
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value as TodoPriority)}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-                      darkMode
-                        ? 'bg-slate-700 text-white border-slate-600'
-                        : 'bg-slate-50 text-slate-800 border-slate-200'
-                    } border focus:outline-none`}
+                    className={`flex-1 px-3 py-2 rounded-[var(--radius-lg)] text-sm ${
+                      'bg-slate-50 text-slate-800 border-slate-200'} border focus:outline-none`}
                   >
                     <option value="low">Low Priority</option>
                     <option value="medium">Medium Priority</option>
@@ -277,11 +264,8 @@ export default function TemplatePicker({
                   <select
                     value={newAssignedTo}
                     onChange={(e) => setNewAssignedTo(e.target.value)}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-                      darkMode
-                        ? 'bg-slate-700 text-white border-slate-600'
-                        : 'bg-slate-50 text-slate-800 border-slate-200'
-                    } border focus:outline-none`}
+                    className={`flex-1 px-3 py-2 rounded-[var(--radius-lg)] text-sm ${
+                      'bg-slate-50 text-slate-800 border-slate-200'} border focus:outline-none`}
                   >
                     <option value="">No assignee</option>
                     {users.map((user) => (
@@ -294,8 +278,7 @@ export default function TemplatePicker({
                 <div className="flex items-center justify-between">
                   <label
                     className={`flex items-center gap-2 text-sm cursor-pointer ${
-                      darkMode ? 'text-slate-300' : 'text-slate-600'
-                    }`}
+                      'text-slate-600'}`}
                   >
                     <input
                       type="checkbox"
@@ -308,7 +291,7 @@ export default function TemplatePicker({
                   <button
                     type="submit"
                     disabled={!newName.trim() || isSaving}
-                    className="px-4 py-2 rounded-lg bg-[#0033A0] text-white text-sm font-medium hover:bg-[#002878] disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px] touch-manipulation"
+                    className="px-4 py-2 rounded-[var(--radius-lg)] bg-[#0033A0] text-white text-sm font-medium hover:bg-[#002878] disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px] touch-manipulation"
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
                   </button>
@@ -322,41 +305,39 @@ export default function TemplatePicker({
                 <div className="p-8 text-center">
                   <Loader2
                     className={`w-6 h-6 animate-spin mx-auto ${
-                      darkMode ? 'text-slate-400' : 'text-slate-500'
-                    }`}
+                      'text-slate-500'}`}
                   />
                 </div>
               ) : templates.length === 0 ? (
-                <div className={`p-8 text-center ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <div className={`p-8 text-center ${'text-slate-500'}`}>
                   <div
-                    className={`w-14 h-14 mx-auto mb-4 rounded-xl flex items-center justify-center ${
-                      darkMode ? 'bg-slate-800/50' : 'bg-slate-100'
-                    }`}
+                    className={`w-14 h-14 mx-auto mb-4 rounded-[var(--radius-xl)] flex items-center justify-center ${
+                      'bg-slate-100'}`}
                   >
-                    <FileText className={`w-7 h-7 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <FileText className={`w-7 h-7 ${'text-slate-400'}`} />
                   </div>
-                  <p className={`font-medium text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                  <p className={`font-medium text-sm ${'text-slate-700'}`}>
                     No templates yet
                   </p>
-                  <p className={`text-xs mt-1.5 max-w-[180px] mx-auto ${darkMode ? 'text-slate-500' : 'text-slate-500'}`}>
-                    Save time by creating reusable task templates
+                  <p className={`text-xs mt-1.5 max-w-[180px] mx-auto ${'text-slate-500'}`}>
+                    {canManageTemplates
+                      ? 'Save time by creating reusable task templates'
+                      : 'No templates available'}
                   </p>
-                  <button
-                    onClick={() => {
-                      setIsOpen(false);
-                      // Trigger create template action - users can create from task menu
-                    }}
-                    className={`mt-4 px-4 py-2 text-xs font-medium rounded-lg transition-colors ${
-                      darkMode
-                        ? 'bg-slate-700 hover:bg-slate-600 text-slate-200'
-                        : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Plus className="w-3.5 h-3.5" />
-                      Create your first template
-                    </span>
-                  </button>
+                  {canManageTemplates && (
+                    <button
+                      onClick={() => {
+                        setShowCreateForm(true);
+                      }}
+                      className={`mt-4 px-4 py-2 text-xs font-medium rounded-[var(--radius-lg)] transition-colors ${
+                        'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5" />
+                        Create your first template
+                      </span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
@@ -365,8 +346,7 @@ export default function TemplatePicker({
                     <div>
                       <div
                         className={`px-4 py-2 text-xs font-medium uppercase tracking-wide ${
-                          darkMode ? 'text-slate-400 bg-slate-900/50' : 'text-slate-500 bg-slate-50'
-                        }`}
+                          'text-slate-500 bg-slate-50'}`}
                       >
                         My Templates
                       </div>
@@ -374,8 +354,8 @@ export default function TemplatePicker({
                         <TemplateItem
                           key={template.id}
                           template={template}
-                          darkMode={darkMode}
-                          isOwner={true}
+                          isTemplateCreator={true}
+                          canDelete={canManageTemplates}
                           onSelect={() => handleSelectTemplate(template)}
                           onDelete={(e) => handleDeleteTemplate(template, e)}
                         />
@@ -388,8 +368,7 @@ export default function TemplatePicker({
                     <div>
                       <div
                         className={`px-4 py-2 text-xs font-medium uppercase tracking-wide ${
-                          darkMode ? 'text-slate-400 bg-slate-900/50' : 'text-slate-500 bg-slate-50'
-                        }`}
+                          'text-slate-500 bg-slate-50'}`}
                       >
                         Shared Templates
                       </div>
@@ -397,8 +376,8 @@ export default function TemplatePicker({
                         <TemplateItem
                           key={template.id}
                           template={template}
-                          darkMode={darkMode}
-                          isOwner={false}
+                          isTemplateCreator={false}
+                          canDelete={false}
                           onSelect={() => handleSelectTemplate(template)}
                           onDelete={() => {}}
                         />
@@ -418,14 +397,15 @@ export default function TemplatePicker({
 // Template item component
 function TemplateItem({
   template,
-  darkMode,
-  isOwner,
+  isTemplateCreator,
+  canDelete = false,
   onSelect,
   onDelete,
 }: {
   template: TaskTemplate;
-  darkMode: boolean;
-  isOwner: boolean;
+  isTemplateCreator: boolean;
+  /** Whether the user has permission to delete templates */
+  canDelete?: boolean;
   onSelect: () => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {
@@ -434,26 +414,25 @@ function TemplateItem({
   return (
     <button
       onClick={onSelect}
-      className={`w-full px-4 py-3 text-left transition-all flex items-start gap-3 group border border-dashed rounded-lg opacity-75 hover:opacity-100 ${
-        darkMode
-          ? 'border-slate-600/60 hover:bg-slate-700/30 hover:border-slate-500'
-          : 'border-slate-300/80 hover:bg-slate-50 hover:border-slate-400'
-      }`}
+      data-testid="template-item"
+      data-priority={template.default_priority}
+      data-assigned-to={template.default_assigned_to || ''}
+      className={`w-full px-4 py-3 text-left transition-all flex items-start gap-3 group border border-dashed rounded-[var(--radius-lg)] opacity-75 hover:opacity-100 ${
+        'border-slate-300/80 hover:bg-slate-50 hover:border-slate-400'}`}
     >
       <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 opacity-80"
+        className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center flex-shrink-0 mt-0.5 opacity-80"
         style={{ backgroundColor: priorityConfig.bgColor }}
       >
         <FileText className="w-4 h-4" style={{ color: priorityConfig.color }} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`font-medium truncate ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+          <span data-testid="template-name" className={`font-medium truncate ${'text-slate-900'}`}>
             {template.name}
           </span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-            darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500'
-          }`}>
+            'bg-slate-200 text-slate-500'}`}>
             Template
           </span>
           {template.is_shared ? (
@@ -463,7 +442,7 @@ function TemplateItem({
           )}
         </div>
         {template.description && (
-          <p className={`text-xs truncate mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-xs truncate mt-0.5 ${'text-slate-500'}`}>
             {template.description}
           </p>
         )}
@@ -475,24 +454,24 @@ function TemplateItem({
             {priorityConfig.label}
           </span>
           {template.default_assigned_to && (
-            <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-xs ${'text-slate-500'}`}>
               → {template.default_assigned_to}
             </span>
           )}
           {template.subtasks.length > 0 && (
-            <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <span className={`text-xs ${'text-slate-500'}`}>
               {template.subtasks.length} subtask{template.subtasks.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>
       </div>
-      {isOwner && (
+      {/* Delete button - only show if user created the template AND has permission */}
+      {isTemplateCreator && canDelete && (
         <button
           onClick={onDelete}
           aria-label={`Delete template: ${template.name}`}
-          className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation ${
-            darkMode ? 'hover:bg-slate-600 text-slate-400' : 'hover:bg-slate-200 text-slate-500'
-          }`}
+          className={`p-2 rounded-[var(--radius-lg)] opacity-0 group-hover:opacity-100 transition-opacity min-h-[40px] min-w-[40px] flex items-center justify-center touch-manipulation ${
+            'hover:bg-slate-200 text-slate-500'}`}
         >
           <Trash2 className="w-4 h-4" />
         </button>

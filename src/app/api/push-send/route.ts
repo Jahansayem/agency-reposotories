@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
+import { logger } from '@/lib/logger';
 
 // Configure web-push with VAPID keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
@@ -15,13 +17,25 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
 
 // Initialize web-push if keys are available
+let webPushInitialized = false;
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    webPushInitialized = true;
+  } catch (error) {
+    logger.error('Failed to initialize web-push', error, { component: 'push-send' });
+  }
 }
 
-// Create Supabase client with service role
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Create Supabase client with service role (lazy initialization)
+function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 interface WebPushPayload {
   title: string;
@@ -68,26 +82,26 @@ function buildNotificationPayload(
   switch (type) {
     case 'task_assigned':
       title = 'New Task Assigned';
-      body = `${payload.assignedBy} assigned you: ${payload.taskText}`;
+      body = `${payload.assignedBy || 'Someone'} assigned you: ${payload.taskText || 'a task'}`;
       break;
 
     case 'task_due_soon':
       title = 'Task Due Soon';
-      body = `"${payload.taskText}" is due ${payload.timeUntil}`;
+      body = `"${payload.taskText || 'a task'}" is due ${payload.timeUntil || 'soon'}`;
       break;
 
     case 'task_overdue':
       title = 'Overdue Task';
-      body = `"${payload.taskText}" is overdue`;
+      body = `"${payload.taskText || 'a task'}" is overdue`;
       break;
 
     case 'task_completed':
       title = 'Task Completed';
-      body = `${payload.completedBy} completed: ${payload.taskText}`;
+      body = `${payload.completedBy || 'Someone'} completed: ${payload.taskText || 'a task'}`;
       break;
 
     case 'message':
-      title = payload.isDm ? `Message from ${payload.senderName}` : `${payload.senderName} mentioned you`;
+      title = payload.isDm ? `Message from ${payload.senderName || 'Someone'}` : `${payload.senderName || 'Someone'} mentioned you`;
       body = payload.messageText || 'New message';
       // Truncate long messages
       if (body.length > 100) {
@@ -134,7 +148,7 @@ async function sendToSubscription(
     return { success: true, token: subscriptionJson };
   } catch (error: unknown) {
     const err = error as { statusCode?: number; message?: string };
-    console.error('Web push error:', err);
+    logger.error('Web push error', err, { component: 'push-send' });
 
     // Handle specific errors
     if (err.statusCode === 404 || err.statusCode === 410) {
@@ -150,10 +164,11 @@ async function sendToSubscription(
  * POST /api/push-send
  *
  * Send web push notifications to specified users.
+ * Restricts notification targets to users within the same agency.
  */
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   // Validate VAPID configuration
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  if (!webPushInitialized) {
     return NextResponse.json(
       { success: false, error: 'VAPID keys not configured' },
       { status: 500 }
@@ -173,8 +188,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Authorization: verify sender identity matches authenticated user
+    if (type === 'task_assigned') {
+      if (!payload.assignedBy) {
+        return NextResponse.json(
+          { success: false, error: 'assignedBy is required for task_assigned notifications' },
+          { status: 400 }
+        );
+      }
+      if (payload.assignedBy !== ctx.userName) {
+        return NextResponse.json(
+          { success: false, error: 'Sender identity mismatch' },
+          { status: 403 }
+        );
+      }
+    }
+    if (type === 'task_completed') {
+      if (!payload.completedBy) {
+        return NextResponse.json(
+          { success: false, error: 'completedBy is required for task_completed notifications' },
+          { status: 400 }
+        );
+      }
+      if (payload.completedBy !== ctx.userName) {
+        return NextResponse.json(
+          { success: false, error: 'Sender identity mismatch' },
+          { status: 403 }
+        );
+      }
+    }
+    if (type === 'message') {
+      if (!payload.senderName) {
+        return NextResponse.json(
+          { success: false, error: 'senderName is required for message notifications' },
+          { status: 400 }
+        );
+      }
+      if (payload.senderName !== ctx.userName) {
+        return NextResponse.json(
+          { success: false, error: 'Sender identity mismatch' },
+          { status: 403 }
+        );
+      }
+    }
+
     // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = getSupabase();
+
+    // Restrict target users to members of the same agency
+    // First get all user IDs that are members of this agency
+    const { data: agencyMembers } = await supabase
+      .from('agency_members')
+      .select('user_id')
+      .eq('agency_id', ctx.agencyId)
+      .eq('status', 'active');
+
+    const agencyMemberIds = new Set((agencyMembers || []).map(m => m.user_id));
 
     // If userNames provided but not userIds, look up the user IDs
     if ((!userIds || userIds.length === 0) && userNames && userNames.length > 0) {
@@ -184,10 +253,17 @@ export async function POST(request: NextRequest) {
         .in('name', userNames);
 
       if (userError) {
-        console.error('Error looking up users by name:', userError);
+        logger.error('Error looking up users by name', userError, { component: 'push-send' });
       } else if (users && users.length > 0) {
         userIds = users.map(u => u.id);
       }
+    }
+
+    if ((!userIds || userIds.length === 0) && userNames && userNames.length > 0) {
+      return NextResponse.json(
+        { success: false, error: 'None of the specified users were found' },
+        { status: 404 }
+      );
     }
 
     if (!userIds || userIds.length === 0) {
@@ -198,15 +274,26 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get web push subscriptions for users
+    // Filter userIds to only include agency members
+    const filteredUserIds = userIds.filter(id => agencyMemberIds.has(id));
+
+    // API-009: Return early with error if target list is empty after filtering
+    if (filteredUserIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid target users found in this agency' },
+        { status: 400 }
+      );
+    }
+
+    // Get web push subscriptions for agency-filtered users
     const { data: tokens, error: fetchError } = await supabase
       .from('device_tokens')
       .select('token, user_id')
-      .in('user_id', userIds)
+      .in('user_id', filteredUserIds)
       .eq('platform', 'web');
 
     if (fetchError) {
-      console.error('Error fetching device tokens:', fetchError);
+      logger.error('Error fetching device tokens', fetchError, { component: 'push-send' });
       return NextResponse.json(
         { success: false, error: 'Failed to fetch subscriptions' },
         { status: 500 }
@@ -244,7 +331,7 @@ export async function POST(request: NextRequest) {
         .in('token', unregistered);
 
       if (deleteError) {
-        console.error('Error removing invalid tokens:', deleteError);
+        logger.error('Error removing invalid tokens', deleteError, { component: 'push-send' });
       }
     }
 
@@ -255,10 +342,10 @@ export async function POST(request: NextRequest) {
       unregistered: unregistered.length,
     });
   } catch (error) {
-    console.error('Error in push-send:', error);
+    logger.error('Error in push-send', error, { component: 'push-send' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});

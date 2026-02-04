@@ -140,7 +140,7 @@ describe('Auth Utilities', () => {
         const mockSession = {
           userId: 'user-123',
           userName: 'TestUser',
-          loginAt: '2025-01-15T10:00:00Z',
+          loginAt: new Date().toISOString(),
         };
         mockLocalStorage.store['todoSession'] = JSON.stringify(mockSession);
 
@@ -162,6 +162,8 @@ describe('Auth Utilities', () => {
           id: 'user-123',
           name: 'TestUser',
           color: '#0033A0',
+          role: 'staff',
+          created_at: new Date().toISOString(),
         };
 
         setStoredSession(user);
@@ -199,49 +201,13 @@ describe('Auth Utilities', () => {
         const state = getLockoutState('user-123');
         expect(state).toEqual({ attempts: 0 });
       });
-
-      it('should return stored lockout state', () => {
-        const mockState = { attempts: 2, lockedUntil: '2025-01-15T10:01:00Z' };
-        mockLocalStorage.store['authLockout_user-123'] = JSON.stringify(mockState);
-
-        const state = getLockoutState('user-123');
-        expect(state).toEqual(mockState);
-      });
-
-      it('should return default state for invalid JSON', () => {
-        mockLocalStorage.store['authLockout_user-123'] = 'invalid';
-
-        const state = getLockoutState('user-123');
-        expect(state).toEqual({ attempts: 0 });
-      });
     });
 
     describe('incrementLockout', () => {
       it('should increment attempt counter', () => {
         const state = incrementLockout('user-123');
-        expect(state.attempts).toBe(1);
-      });
-
-      it('should lock after 3 failed attempts', () => {
-        incrementLockout('user-123');
-        incrementLockout('user-123');
-        const state = incrementLockout('user-123');
-
-        expect(state.attempts).toBe(3);
-        expect(state.lockedUntil).toBeDefined();
-      });
-
-      it('should set lockout duration to ~30 seconds', () => {
-        incrementLockout('user-123');
-        incrementLockout('user-123');
-        const state = incrementLockout('user-123');
-
-        const lockUntil = new Date(state.lockedUntil!);
-        const now = new Date();
-        const diffSeconds = (lockUntil.getTime() - now.getTime()) / 1000;
-
-        expect(diffSeconds).toBeGreaterThan(28);
-        expect(diffSeconds).toBeLessThanOrEqual(31);
+        // Client-side lockout was removed (security fix) - this remains a stub for API compatibility.
+        expect(state.attempts).toBe(0);
       });
     });
 
@@ -251,7 +217,8 @@ describe('Auth Utilities', () => {
 
         clearLockout('user-123');
 
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('authLockout_user-123');
+        // Client-side lockout was removed (security fix) - no localStorage key is removed anymore.
+        expect(mockLocalStorage.removeItem).not.toHaveBeenCalled();
       });
     });
 
@@ -261,31 +228,14 @@ describe('Auth Utilities', () => {
         expect(result).toEqual({ locked: false, remainingSeconds: 0 });
       });
 
-      it('should return locked with remaining time when locked', () => {
-        const futureTime = new Date();
-        futureTime.setSeconds(futureTime.getSeconds() + 15);
+      it('should return not locked even if legacy lockout state exists', () => {
         mockLocalStorage.store['authLockout_user-123'] = JSON.stringify({
-          attempts: 3,
-          lockedUntil: futureTime.toISOString(),
-        });
-
-        const result = isLockedOut('user-123');
-        expect(result.locked).toBe(true);
-        expect(result.remainingSeconds).toBeGreaterThan(10);
-        expect(result.remainingSeconds).toBeLessThanOrEqual(16);
-      });
-
-      it('should clear lockout and return not locked when lockout expired', () => {
-        const pastTime = new Date();
-        pastTime.setSeconds(pastTime.getSeconds() - 10);
-        mockLocalStorage.store['authLockout_user-123'] = JSON.stringify({
-          attempts: 3,
-          lockedUntil: pastTime.toISOString(),
+          attempts: 999,
+          lockedUntil: new Date(Date.now() + 600000).toISOString(),
         });
 
         const result = isLockedOut('user-123');
         expect(result).toEqual({ locked: false, remainingSeconds: 0 });
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('authLockout_user-123');
       });
     });
   });

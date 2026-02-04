@@ -1,16 +1,16 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Search, CheckCircle2, Calendar, Rocket, Trophy, ClipboardList } from 'lucide-react';
 
 type EmptyStateVariant = 'no-tasks' | 'no-results' | 'all-done' | 'no-due-today' | 'no-overdue' | 'first-time';
 
 interface EmptyStateProps {
   variant: EmptyStateVariant;
-  darkMode?: boolean;
   searchQuery?: string;
   onAddTask?: () => void;
   onClearSearch?: () => void;
+  onViewAllTasks?: () => void;
   userName?: string;
 }
 
@@ -46,7 +46,7 @@ const variants = {
     icon: Calendar,
     title: 'Nothing due today',
     description: 'Enjoy your free time or plan ahead',
-    action: null,
+    action: 'View All Tasks',
     color: 'var(--accent-gold)',
     bgColor: 'var(--accent-gold-light)',
     gradient: 'from-amber-500/20 to-yellow-500/20',
@@ -55,7 +55,7 @@ const variants = {
     icon: CheckCircle2,
     title: 'No overdue tasks',
     description: 'You\'re on top of your deadlines',
-    action: null,
+    action: 'View All Tasks',
     color: 'var(--success)',
     bgColor: 'var(--success-light)',
     gradient: 'from-emerald-500/20 to-teal-500/20',
@@ -71,10 +71,14 @@ const variants = {
   },
 };
 
-// Refined SVG illustrations
-function TaskIllustration({ color }: { color: string }) {
+// ═══════════════════════════════════════════════════════════════════════════
+// RESPONSIVE SVG ILLUSTRATIONS
+// Mobile: 80x70px, Desktop: 140x120px (using viewBox + responsive classes)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function TaskIllustration({ color, reduceMotion = false }: { color: string; reduceMotion?: boolean }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Clipboard body */}
       <motion.rect
         initial={{ opacity: 0, y: 10 }}
@@ -117,11 +121,8 @@ function TaskIllustration({ color }: { color: string }) {
 
       {/* Floating plus icon */}
       <motion.g
-        animate={{
-          y: [0, -8, 0],
-          rotate: [0, 5, 0]
-        }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        animate={reduceMotion ? { y: 0, rotate: 0 } : { y: [0, -8, 0], rotate: [0, 5, 0] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
       >
         <circle cx="108" cy="32" r="16" fill={color} />
         <path d="M108 24V40M100 32H116" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
@@ -129,17 +130,17 @@ function TaskIllustration({ color }: { color: string }) {
 
       {/* Decorative sparkle */}
       <motion.circle
-        animate={{ opacity: [0.2, 0.8, 0.2], scale: [0.8, 1.2, 0.8] }}
-        transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+        animate={reduceMotion ? { opacity: 0.4, scale: 1 } : { opacity: [0.2, 0.8, 0.2], scale: [0.8, 1.2, 0.8] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 2, repeat: Infinity, delay: 0.5 }}
         cx="32" cy="45" r="3" fill={color}
       />
     </svg>
   );
 }
 
-function SearchIllustration({ color }: { color: string }) {
+function SearchIllustration({ color, reduceMotion = false }: { color: string; reduceMotion?: boolean }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Magnifying glass */}
       <motion.circle
         initial={{ scale: 0.8, opacity: 0 }}
@@ -188,22 +189,22 @@ function SearchIllustration({ color }: { color: string }) {
 
       {/* Decorative dots */}
       <motion.circle
-        animate={{ opacity: [0.2, 0.6, 0.2] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
+        animate={reduceMotion ? { opacity: 0.4 } : { opacity: [0.2, 0.6, 0.2] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}
         cx="95" cy="35" r="4" fill={color}
       />
       <motion.circle
-        animate={{ opacity: [0.2, 0.6, 0.2] }}
-        transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+        animate={reduceMotion ? { opacity: 0.4 } : { opacity: [0.2, 0.6, 0.2] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity, delay: 0.5 }}
         cx="110" cy="50" r="3" fill={color}
       />
     </svg>
   );
 }
 
-function CelebrationIllustration({ color }: { color: string }) {
+function CelebrationIllustration({ color, reduceMotion = false }: { color: string; reduceMotion?: boolean }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Trophy */}
       <motion.path
         initial={{ opacity: 0, y: 10 }}
@@ -257,12 +258,8 @@ function CelebrationIllustration({ color }: { color: string }) {
       ].map((star, i) => (
         <motion.g
           key={i}
-          animate={{
-            scale: [1, 1.3, 1],
-            opacity: [0.5, 1, 0.5],
-            rotate: [0, 15, 0]
-          }}
-          transition={{ duration: 1.5, repeat: Infinity, delay: star.delay }}
+          animate={reduceMotion ? { scale: 1, opacity: 0.7, rotate: 0 } : { scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5], rotate: [0, 15, 0] }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity, delay: star.delay }}
           style={{ originX: `${star.x}px`, originY: `${star.y}px` }}
         >
           <polygon
@@ -275,16 +272,13 @@ function CelebrationIllustration({ color }: { color: string }) {
   );
 }
 
-function WelcomeIllustration({ color }: { color: string }) {
+function WelcomeIllustration({ color, reduceMotion = false }: { color: string; reduceMotion?: boolean }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Rocket */}
       <motion.g
-        animate={{
-          y: [0, -10, 0],
-          rotate: [0, 3, 0]
-        }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        animate={reduceMotion ? { y: 0, rotate: 0 } : { y: [0, -10, 0], rotate: [0, 3, 0] }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
       >
         {/* Rocket body */}
         <motion.ellipse
@@ -334,7 +328,7 @@ function WelcomeIllustration({ color }: { color: string }) {
 
       {/* Flame */}
       <motion.path
-        animate={{
+        animate={reduceMotion ? { d: "M60 82 Q70 100 80 82 Q75 95 70 100 Q65 95 60 82", opacity: 0.7 } : {
           d: [
             "M60 82 Q70 100 80 82 Q75 95 70 100 Q65 95 60 82",
             "M58 82 Q70 105 82 82 Q75 98 70 105 Q65 98 58 82",
@@ -342,7 +336,7 @@ function WelcomeIllustration({ color }: { color: string }) {
           ],
           opacity: [0.6, 0.9, 0.6]
         }}
-        transition={{ duration: 0.5, repeat: Infinity }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.5, repeat: Infinity }}
         fill="url(#flameGradient)"
       />
 
@@ -362,8 +356,8 @@ function WelcomeIllustration({ color }: { color: string }) {
       ].map((star, i) => (
         <motion.circle
           key={i}
-          animate={{ opacity: [0.2, 0.8, 0.2], scale: [0.8, 1.2, 0.8] }}
-          transition={{ duration: 2, repeat: Infinity, delay: star.delay }}
+          animate={reduceMotion ? { opacity: 0.5, scale: 1 } : { opacity: [0.2, 0.8, 0.2], scale: [0.8, 1.2, 0.8] }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 2, repeat: Infinity, delay: star.delay }}
           cx={star.x}
           cy={star.y}
           r="3"
@@ -376,7 +370,7 @@ function WelcomeIllustration({ color }: { color: string }) {
 
 function CalendarIllustration({ color }: { color: string }) {
   return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-20 h-[70px] sm:w-[140px] sm:h-[120px]">
       {/* Calendar body */}
       <motion.rect
         initial={{ opacity: 0, y: 10 }}
@@ -452,14 +446,18 @@ export default function EmptyState({
   searchQuery,
   onAddTask,
   onClearSearch,
+  onViewAllTasks,
   userName,
 }: EmptyStateProps) {
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const config = variants[variant];
   const Icon = config.icon;
 
   const handleAction = () => {
     if (variant === 'no-results' && onClearSearch) {
       onClearSearch();
+    } else if ((variant === 'no-due-today' || variant === 'no-overdue') && onViewAllTasks) {
+      onViewAllTasks();
     } else if (onAddTask) {
       onAddTask();
     }
@@ -468,14 +466,14 @@ export default function EmptyState({
   const renderIllustration = () => {
     switch (variant) {
       case 'no-tasks':
-        return <TaskIllustration color={config.color} />;
+        return <TaskIllustration color={config.color} reduceMotion={prefersReducedMotion} />;
       case 'no-results':
-        return <SearchIllustration color={config.color} />;
+        return <SearchIllustration color={config.color} reduceMotion={prefersReducedMotion} />;
       case 'all-done':
       case 'no-overdue':
-        return <CelebrationIllustration color={config.color} />;
+        return <CelebrationIllustration color={config.color} reduceMotion={prefersReducedMotion} />;
       case 'first-time':
-        return <WelcomeIllustration color={config.color} />;
+        return <WelcomeIllustration color={config.color} reduceMotion={prefersReducedMotion} />;
       case 'no-due-today':
         return <CalendarIllustration color={config.color} />;
       default:
@@ -488,7 +486,7 @@ export default function EmptyState({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-      className="flex flex-col items-center justify-center py-16 px-6"
+      className="flex flex-col items-center justify-center py-8 px-4 sm:py-16 sm:px-6"
     >
       {/* Background glow */}
       <div className={`absolute inset-0 bg-gradient-radial ${config.gradient} opacity-30 blur-3xl pointer-events-none`} />
@@ -508,11 +506,11 @@ export default function EmptyState({
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.3, type: 'spring', stiffness: 300, damping: 20 }}
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5 relative"
+        className="w-14 h-14 rounded-[var(--radius-2xl)] flex items-center justify-center mb-5 relative"
         style={{ backgroundColor: config.bgColor }}
       >
         <div
-          className="absolute inset-0 rounded-2xl blur-xl opacity-50"
+          className="absolute inset-0 rounded-[var(--radius-2xl)] blur-xl opacity-50"
           style={{ backgroundColor: config.color }}
         />
         <Icon className="w-7 h-7 relative z-10" style={{ color: config.color }} />
@@ -523,7 +521,7 @@ export default function EmptyState({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35, duration: 0.4 }}
-        className="text-xl font-semibold mb-2 text-[var(--foreground)]"
+        className="text-lg sm:text-xl font-semibold mb-2 text-[var(--foreground)]"
       >
         {variant === 'first-time' && userName ? `Welcome, ${userName}!` : config.title}
       </motion.h3>
@@ -549,7 +547,7 @@ export default function EmptyState({
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleAction}
-          className="mt-6 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg"
+          className="mt-6 px-6 py-3 rounded-[var(--radius-xl)] font-semibold text-sm transition-all duration-200 shadow-lg w-full sm:w-auto"
           style={{
             backgroundColor: config.color,
             color: 'white',

@@ -6,6 +6,7 @@ import { Plus, AlertCircle, Play, MessageCircle, LucideIcon } from 'lucide-react
 interface QuickAction {
   id: string;
   label: string;
+  shortLabel: string;
   icon: LucideIcon;
   onClick: () => void;
   variant?: 'default' | 'primary' | 'warning';
@@ -17,7 +18,6 @@ interface QuickActionsProps {
   onFilterOverdue?: () => void;
   onStartFocus?: () => void;
   onOpenChat?: () => void;
-  darkMode?: boolean;
   overdueCount?: number;
 }
 
@@ -26,13 +26,13 @@ export default function QuickActions({
   onFilterOverdue,
   onStartFocus,
   onOpenChat,
-  darkMode = false,
   overdueCount = 0,
 }: QuickActionsProps) {
   const actions: QuickAction[] = [
     {
       id: 'add-task',
       label: 'Add Task',
+      shortLabel: 'Add',
       icon: Plus,
       onClick: onAddTask || (() => {}),
       variant: 'primary',
@@ -40,6 +40,7 @@ export default function QuickActions({
     {
       id: 'my-overdue',
       label: 'My Overdue',
+      shortLabel: 'Overdue',
       icon: AlertCircle,
       onClick: onFilterOverdue || (() => {}),
       variant: overdueCount > 0 ? 'warning' : 'default',
@@ -48,12 +49,14 @@ export default function QuickActions({
     {
       id: 'start-focus',
       label: 'Start Focus',
+      shortLabel: 'Focus',
       icon: Play,
       onClick: onStartFocus || (() => {}),
     },
     {
       id: 'chat',
       label: 'Team Chat',
+      shortLabel: 'Chat',
       icon: MessageCircle,
       onClick: onOpenChat || (() => {}),
     },
@@ -82,37 +85,26 @@ export default function QuickActions({
             whileTap={{ scale: 0.98 }}
             className={`
               relative flex items-center justify-center gap-2
-              px-3 py-3 rounded-lg
+              px-3 py-3 rounded-[var(--radius-lg)]
               min-h-[44px] min-w-[44px]
               text-sm font-medium
               transition-colors duration-150
               touch-manipulation
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2
-              ${darkMode ? 'focus-visible:ring-offset-[#0A1628]' : 'focus-visible:ring-offset-white'}
+              ${'focus-visible:ring-offset-white'}
               ${isPrimary
-                ? darkMode
-                  ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90'
-                  : 'bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90'
-                : isWarning
-                  ? darkMode
-                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30'
-                    : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'
-                  : darkMode
-                    ? 'bg-white/5 text-white/80 hover:bg-white/10 hover:text-white'
-                    : 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]'
-              }
+                ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90': isWarning
+                  ? 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200': 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)]'}
               border
               ${isPrimary
                 ? 'border-transparent'
                 : isWarning
                   ? '' // border color set above
-                  : darkMode
-                    ? 'border-white/10'
-                    : 'border-[var(--border)]'
-              }
+                  : 'border-[var(--border)]'}
             `}
           >
             <Icon className="w-4 h-4" />
+            <span className="sm:hidden text-xs">{action.shortLabel}</span>
             <span className="hidden sm:inline">{action.label}</span>
             {action.badge !== undefined && (
               <span className={`
@@ -120,7 +112,7 @@ export default function QuickActions({
                 min-w-[18px] h-[18px]
                 flex items-center justify-center
                 text-xs font-bold rounded-full
-                ${darkMode ? 'bg-red-500 text-white' : 'bg-red-500 text-white'}
+                ${'bg-red-500 text-white'}
               `}>
                 {action.badge}
               </span>

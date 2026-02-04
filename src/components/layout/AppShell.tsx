@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, createContext, useContext, ReactNode,
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 import { useTodoStore } from '@/store/todoStore';
 import NavigationSidebar from './NavigationSidebar';
 import CommandPalette from './CommandPalette';
@@ -98,7 +99,6 @@ export default function AppShell({
   onUserChange
 }: AppShellProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   
   // Get users from store for FloatingChatButton
   const users = useTodoStore((state) => state.usersWithColors);
@@ -125,6 +125,20 @@ export default function AppShell({
   // Modal state for Weekly Progress and Shortcuts
   const [showWeeklyChart, setShowWeeklyChart] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Timer refs for cleanup on unmount
+  const newTaskTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taskLinkScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const taskLinkHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (newTaskTimerRef.current) clearTimeout(newTaskTimerRef.current);
+      if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+      if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    };
+  }, []);
 
   // Handle responsive sidebar
   useEffect(() => {
@@ -154,9 +168,23 @@ export default function AppShell({
         setSidebarCollapsed(prev => !prev);
       }
 
+      // Keyboard shortcuts modal: ? key
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // Don't trigger if user is typing in an input/textarea
+        const target = e.target as HTMLElement;
+        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+        if (!isInputField) {
+          e.preventDefault();
+          setShowShortcuts(prev => !prev);
+        }
+      }
+
       // Close panels on Escape
       if (e.key === 'Escape') {
-        if (commandPaletteOpen) {
+        if (showShortcuts) {
+          setShowShortcuts(false);
+        } else if (commandPaletteOpen) {
           setCommandPaletteOpen(false);
         } else if (rightPanel) {
           setRightPanel(null);
@@ -169,7 +197,7 @@ export default function AppShell({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [commandPaletteOpen, rightPanel, mobileSheetOpen]);
+  }, [commandPaletteOpen, rightPanel, mobileSheetOpen, showShortcuts]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev);
@@ -205,7 +233,8 @@ export default function AppShell({
   const triggerNewTask = useCallback(() => {
     setActiveView('tasks');
     // Small delay to ensure view is switched before triggering callback
-    setTimeout(() => {
+    if (newTaskTimerRef.current) clearTimeout(newTaskTimerRef.current);
+    newTaskTimerRef.current = setTimeout(() => {
       if (newTaskCallback) {
         newTaskCallback();
       }
@@ -217,14 +246,16 @@ export default function AppShell({
     // Navigate to tasks view
     setActiveView('tasks');
     // Small delay to ensure view switches, then scroll to task
-    setTimeout(() => {
+    if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
+    if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+    taskLinkScrollTimerRef.current = setTimeout(() => {
       const taskElement = document.getElementById(`todo-${taskId}`);
       if (taskElement) {
         taskElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         // Add animated highlight class
         taskElement.classList.add('notification-highlight');
         // Remove the class after animation completes
-        setTimeout(() => {
+        taskLinkHighlightTimerRef.current = setTimeout(() => {
           taskElement.classList.remove('notification-highlight');
         }, 3000);
       }
@@ -277,7 +308,7 @@ export default function AppShell({
         className={`
           min-h-screen min-h-[100dvh] flex flex-col
           transition-colors duration-200
-          ${darkMode ? 'bg-[var(--background)]' : 'bg-[var(--background)]'}
+          ${'bg-[var(--background)]'}
         `}
       >
         {/* Skip link for accessibility */}
@@ -300,10 +331,7 @@ export default function AppShell({
           {/* ═══ MAIN CONTENT AREA ═══ */}
           <main
             id="main-content"
-            className={`
-              flex-1 flex flex-col min-w-0 overflow-hidden
-              transition-all duration-300 ease-out
-            `}
+            className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300 ease-out"
           >
             {/* Main content with proper overflow handling */}
             <div className="flex-1 overflow-auto">
@@ -324,10 +352,7 @@ export default function AppShell({
                   hidden lg:flex flex-col overflow-hidden
                   border-l flex-shrink-0
                   lg:w-[340px] xl:w-[380px] 2xl:w-[420px]
-                  ${darkMode
-                    ? 'bg-[var(--surface)] border-white/10'
-                    : 'bg-white border-[var(--border)]'
-                  }
+                  ${'bg-[var(--surface)] border-[var(--border)]'}
                 `}
               >
                 {rightPanelContent}
@@ -375,10 +400,7 @@ export default function AppShell({
                 className={`
                   fixed inset-x-0 bottom-0 z-50 lg:hidden
                   max-h-[85vh] rounded-t-3xl overflow-hidden
-                  ${darkMode
-                    ? 'bg-[var(--surface)]'
-                    : 'bg-white'
-                  }
+                  ${'bg-[var(--surface)]'}
                 `}
               >
                 {/* Drag handle */}
@@ -386,7 +408,7 @@ export default function AppShell({
                   <div
                     className={`
                       w-10 h-1 rounded-full
-                      ${darkMode ? 'bg-white/20' : 'bg-[var(--border)]'}
+                      ${'bg-[var(--border)]'}
                     `}
                   />
                 </div>
@@ -420,8 +442,8 @@ export default function AppShell({
 
 function MobileMenuContent({ onClose }: { onClose: () => void }) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const { setActiveView, currentUser } = useAppShell();
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
 
   const menuItems = [
     { id: 'tasks', label: 'Tasks', icon: '📋' },
@@ -436,7 +458,7 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="space-y-2 pb-4">
-      <h2 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+      <h2 className={`text-lg font-semibold mb-4 ${'text-[var(--foreground)]'}`}>
         Navigation
       </h2>
       {menuItems.map(item => (
@@ -444,12 +466,9 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
           key={item.id}
           onClick={() => handleItemClick(item.id)}
           className={`
-            w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left
+            w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
             transition-colors
-            ${darkMode
-              ? 'text-white/80 hover:bg-white/10'
-              : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-            }
+            ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
           `}
         >
           <span className="text-xl">{item.icon}</span>
@@ -457,18 +476,15 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
         </button>
       ))}
 
-      {currentUser?.name === 'Derrick' && (
+      {canViewStrategicGoals && (
         <>
-          <div className={`border-t my-4 ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`} />
+          <div className={`border-t my-4 ${'border-[var(--border)]'}`} />
           <button
             onClick={() => handleItemClick('goals')}
             className={`
-              w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left
+              w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
               transition-colors
-              ${darkMode
-                ? 'text-white/80 hover:bg-white/10'
-                : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
           >
             <span className="text-xl">🎯</span>
@@ -482,14 +498,13 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 
 function MobileFiltersContent({ onClose }: { onClose: () => void }) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
 
   return (
     <div className="space-y-4 pb-4">
-      <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+      <h2 className={`text-lg font-semibold ${'text-[var(--foreground)]'}`}>
         Filters
       </h2>
-      <p className={`text-sm ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}`}>
+      <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
         Filter controls will be rendered here
       </p>
     </div>

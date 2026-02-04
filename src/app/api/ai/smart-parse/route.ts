@@ -1,16 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { NextRequest } from 'next/server';
 import { logger } from '@/lib/logger';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-export interface ParsedSubtask {
-  text: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  estimatedMinutes?: number;
-}
+import {
+  validateAiRequest,
+  callClaude,
+  parseAiJsonResponse,
+  aiErrorResponse,
+  aiSuccessResponse,
+  validators,
+  dateHelpers,
+  withAiErrorHandling,
+  ParsedSubtask,
+} from '@/lib/aiApiHelper';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 export interface SmartParseResult {
   mainTask: {
@@ -24,33 +25,8 @@ export interface SmartParseResult {
   wasComplex: boolean;
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const { text, users } = await request.json();
-
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Text is required' },
-        { status: 400 }
-      );
-    }
-
-    const userList = Array.isArray(users) && users.length > 0
-      ? users.join(', ')
-      : 'no team members registered';
-
-    const today = new Date().toISOString().split('T')[0];
-    const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-
-    // Analyze text complexity to determine if we should extract subtasks
-    const wordCount = text.split(/\s+/).length;
-    const hasMultipleLines = text.includes('\n');
-    const hasBulletPoints = /[-•*]\s/.test(text);
-    const hasNumberedList = /\d+[.)]\s/.test(text);
-    const isComplex = wordCount > 15 || hasMultipleLines || hasBulletPoints || hasNumberedList;
-
-    // Insurance-specific context for better parsing
-    const insuranceContext = `
+// Insurance-specific context for better parsing
+const INSURANCE_CONTEXT = `
 INSURANCE AGENCY CONTEXT:
 You are parsing tasks for an Allstate insurance agency. Common task types and terminology include:
 
@@ -92,9 +68,10 @@ PRIORITY HINTS:
 When parsing, detect these patterns and set appropriate priority, subtasks, and due dates.
 `;
 
-    const prompt = `You are a smart task parser for an insurance agency team. Analyze the user's input and extract a clean, actionable task with optional subtasks.
+function buildPrompt(text: string, userList: string, today: string, dayOfWeek: string): string {
+  return `You are a smart task parser for an insurance agency team. Analyze the user's input and extract a clean, actionable task with optional subtasks.
 
-${insuranceContext}
+${INSURANCE_CONTEXT}
 
 User's input:
 """
@@ -175,65 +152,94 @@ Complex input: "Email from client: Hi, thanks for the presentation yesterday. Ca
 }
 
 Respond with ONLY the JSON object, no other text.`;
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
-
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'SmartParseAPI', responseText });
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-
-    // Validate and clean up the response
-    const validatedResult: SmartParseResult = {
-      mainTask: {
-        text: String(result.mainTask?.text || text).slice(0, 200),
-        priority: ['low', 'medium', 'high', 'urgent'].includes(result.mainTask?.priority)
-          ? result.mainTask.priority
-          : 'medium',
-        dueDate: result.mainTask?.dueDate || '',
-        assignedTo: result.mainTask?.assignedTo || '',
-      },
-      subtasks: (result.subtasks || [])
-        .slice(0, 6)
-        .map((subtask: { text?: string; priority?: string; estimatedMinutes?: number }) => ({
-          text: String(subtask.text || '').slice(0, 200),
-          priority: ['low', 'medium', 'high', 'urgent'].includes(subtask.priority || '')
-            ? subtask.priority
-            : 'medium',
-          estimatedMinutes: typeof subtask.estimatedMinutes === 'number'
-            ? Math.min(Math.max(subtask.estimatedMinutes, 5), 480)
-            : undefined,
-        }))
-        .filter((subtask: ParsedSubtask) => subtask.text.length > 0),
-      summary: String(result.summary || '').slice(0, 300),
-      wasComplex: Boolean(result.wasComplex) || isComplex,
-    };
-
-    return NextResponse.json({
-      success: true,
-      result: validatedResult,
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error in smart parse', error, { component: 'SmartParseAPI', details: errorMessage });
-    return NextResponse.json(
-      { success: false, error: 'Failed to parse content', details: errorMessage },
-      { status: 500 }
-    );
-  }
 }
+
+async function handleSmartParse(request: NextRequest) {
+  // API-010: Input length limit to prevent excessive token usage
+  const MAX_INPUT_LENGTH = 10000;
+
+  // Validate request
+  const validation = await validateAiRequest(request, {
+    customValidator: (body) => {
+      if (!body.text || typeof body.text !== 'string') {
+        return 'Text is required';
+      }
+      if (body.text.length > MAX_INPUT_LENGTH) {
+        return `Input text exceeds maximum length of ${MAX_INPUT_LENGTH} characters`;
+      }
+      return null;
+    },
+  });
+
+  if (!validation.valid) {
+    return validation.response;
+  }
+
+  const { text, users } = validation.body as { text: string; users?: string[] };
+
+  const userList = dateHelpers.formatUserList(users);
+  const today = dateHelpers.getTodayISO();
+  const dayOfWeek = dateHelpers.getDayOfWeek();
+
+  // Analyze text complexity to determine if we should extract subtasks
+  const wordCount = (text as string).split(/\s+/).length;
+  const hasMultipleLines = (text as string).includes('\n');
+  const hasBulletPoints = /[-•*]\s/.test(text as string);
+  const hasNumberedList = /\d+[.)]\s/.test(text as string);
+  const isComplex = wordCount > 15 || hasMultipleLines || hasBulletPoints || hasNumberedList;
+
+  // Build prompt and call Claude
+  const prompt = buildPrompt(text as string, userList, today, dayOfWeek);
+
+  const aiResult = await callClaude({
+    userMessage: prompt,
+    maxTokens: 1000,
+    component: 'SmartParseAPI',
+  });
+
+  if (!aiResult.success) {
+    return aiErrorResponse('Failed to parse content', 500, aiResult.error);
+  }
+
+  // Parse the JSON response
+  const result = parseAiJsonResponse<{
+    mainTask?: { text?: string; priority?: string; dueDate?: string; assignedTo?: string };
+    subtasks?: Array<{ text?: string; priority?: string; estimatedMinutes?: number }>;
+    summary?: string;
+    wasComplex?: boolean;
+  }>(aiResult.content);
+
+  if (!result) {
+    logger.error('Failed to parse AI response', undefined, {
+      component: 'SmartParseAPI',
+      responseText: aiResult.content,
+    });
+    return aiErrorResponse('Failed to parse AI response', 500);
+  }
+
+  // Validate and clean up the response
+  const validatedResult: SmartParseResult = {
+    mainTask: {
+      text: String(result.mainTask?.text || text).slice(0, 200),
+      priority: validators.sanitizePriority(result.mainTask?.priority),
+      dueDate: result.mainTask?.dueDate || '',
+      assignedTo: result.mainTask?.assignedTo || '',
+    },
+    subtasks: (result.subtasks || [])
+      .slice(0, 6)
+      .map((subtask) => ({
+        text: String(subtask.text || '').slice(0, 200),
+        priority: validators.sanitizePriority(subtask.priority),
+        estimatedMinutes: validators.clampEstimatedMinutes(subtask.estimatedMinutes),
+      }))
+      .filter((subtask) => subtask.text.length > 0),
+    summary: String(result.summary || '').slice(0, 300),
+    wasComplex: Boolean(result.wasComplex) || isComplex,
+  };
+
+  return aiSuccessResponse({ result: validatedResult });
+}
+
+export const POST = withAiErrorHandling('SmartParseAPI', withSessionAuth(async (request) => {
+  return handleSmartParse(request);
+}));

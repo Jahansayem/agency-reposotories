@@ -47,28 +47,37 @@ interface NotificationModalProps {
   onViewAllActivity?: () => void;
 }
 
+/**
+ * Action configuration using semantic color tokens from design system.
+ * Colors use CSS variables for consistent light/dark mode support.
+ * @see src/lib/design-tokens.ts for ACTION_COLORS definitions
+ */
 const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: string; color: string; verb: string }> = {
-  task_created: { icon: Circle, label: 'created task', color: '#10b981', verb: 'created' },
-  task_updated: { icon: RefreshCw, label: 'updated task', color: '#3b82f6', verb: 'updated' },
-  task_deleted: { icon: Trash2, label: 'deleted task', color: '#ef4444', verb: 'deleted' },
-  task_completed: { icon: CheckCircle2, label: 'completed task', color: '#10b981', verb: 'completed' },
-  task_reopened: { icon: Circle, label: 'reopened task', color: '#f59e0b', verb: 'reopened' },
-  status_changed: { icon: ArrowRight, label: 'changed status', color: '#8b5cf6', verb: 'moved' },
-  priority_changed: { icon: Flag, label: 'changed priority', color: '#f59e0b', verb: 'reprioritized' },
-  assigned_to_changed: { icon: User, label: 'reassigned task', color: '#3b82f6', verb: 'assigned' },
-  due_date_changed: { icon: Calendar, label: 'updated due date', color: '#3b82f6', verb: 'rescheduled' },
-  subtask_added: { icon: ListTodo, label: 'added subtask', color: '#10b981', verb: 'added subtask to' },
-  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: '#10b981', verb: 'completed subtask in' },
-  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: '#ef4444', verb: 'removed subtask from' },
-  notes_updated: { icon: StickyNote, label: 'updated notes', color: '#8b5cf6', verb: 'noted on' },
-  template_created: { icon: Activity, label: 'created template', color: '#10b981', verb: 'created template' },
-  template_used: { icon: Activity, label: 'used template', color: '#3b82f6', verb: 'used template on' },
-  attachment_added: { icon: Paperclip, label: 'added attachment', color: '#10b981', verb: 'attached to' },
-  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: '#ef4444', verb: 'removed attachment from' },
-  tasks_merged: { icon: GitMerge, label: 'merged tasks', color: '#0033A0', verb: 'merged' },
-  reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6', verb: 'set reminder for' },
-  reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444', verb: 'removed reminder from' },
-  reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981', verb: 'reminder sent for' },
+  task_created: { icon: Circle, label: 'created task', color: 'var(--success-vivid)', verb: 'created' },
+  task_updated: { icon: RefreshCw, label: 'updated task', color: 'var(--accent-vivid)', verb: 'updated' },
+  task_deleted: { icon: Trash2, label: 'deleted task', color: 'var(--danger)', verb: 'deleted' },
+  task_completed: { icon: CheckCircle2, label: 'completed task', color: 'var(--success-vivid)', verb: 'completed' },
+  task_reopened: { icon: Circle, label: 'reopened task', color: 'var(--warning)', verb: 'reopened' },
+  status_changed: { icon: ArrowRight, label: 'changed status', color: 'var(--state-info)', verb: 'moved' },
+  priority_changed: { icon: Flag, label: 'changed priority', color: 'var(--warning)', verb: 'reprioritized' },
+  assigned_to_changed: { icon: User, label: 'reassigned task', color: 'var(--accent-vivid)', verb: 'assigned' },
+  due_date_changed: { icon: Calendar, label: 'updated due date', color: 'var(--accent-vivid)', verb: 'rescheduled' },
+  subtask_added: { icon: ListTodo, label: 'added subtask', color: 'var(--success-vivid)', verb: 'added subtask to' },
+  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: 'var(--success-vivid)', verb: 'completed subtask in' },
+  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: 'var(--danger)', verb: 'removed subtask from' },
+  notes_updated: { icon: StickyNote, label: 'updated notes', color: 'var(--state-info)', verb: 'noted on' },
+  template_created: { icon: Activity, label: 'created template', color: 'var(--success-vivid)', verb: 'created template' },
+  template_used: { icon: Activity, label: 'used template', color: 'var(--accent-vivid)', verb: 'used template on' },
+  attachment_added: { icon: Paperclip, label: 'added attachment', color: 'var(--success-vivid)', verb: 'attached to' },
+  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: 'var(--danger)', verb: 'removed attachment from' },
+  tasks_merged: { icon: GitMerge, label: 'merged tasks', color: 'var(--accent)', verb: 'merged' },
+  reminder_added: { icon: Bell, label: 'added reminder', color: 'var(--state-info)', verb: 'set reminder for' },
+  reminder_removed: { icon: BellOff, label: 'removed reminder', color: 'var(--danger)', verb: 'removed reminder from' },
+  reminder_sent: { icon: BellRing, label: 'sent reminder', color: 'var(--success-vivid)', verb: 'reminder sent for' },
+  marked_waiting: { icon: Clock, label: 'marked waiting', color: 'var(--state-info)', verb: 'waiting for response on' },
+  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)', verb: 'got response on' },
+  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)', verb: 'needs follow-up on' },
+  task_reordered: { icon: RefreshCw, label: 'reordered task', color: 'var(--accent-vivid)', verb: 'reordered' },
 };
 
 // Local storage key for last seen notification
@@ -84,8 +93,9 @@ export default function NotificationModal({
   onViewAllActivity,
 }: NotificationModalProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const modalRef = useRef<HTMLDivElement>(null);
+  const wasOpenRef = useRef(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,40 +141,65 @@ export default function NotificationModal({
     fetchActivities();
   }, [fetchActivities]);
 
-  // Mark all as read when modal closes
+  // Mark all as read when modal transitions from open to closed
   useEffect(() => {
-    if (!isOpen && activities.length > 0) {
+    if (wasOpenRef.current && !isOpen && activities.length > 0) {
       const now = new Date().toISOString();
       localStorage.setItem(LAST_SEEN_KEY, now);
       setLastSeenAt(now);
       onMarkAllRead?.();
     }
+    wasOpenRef.current = isOpen;
   }, [isOpen, activities.length, onMarkAllRead]);
 
-  // Subscribe to real-time updates
+  // Subscribe to real-time updates with debounce to prevent overlapping channels
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      // Clean up channel when modal closes
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      return;
+    }
 
-    const channel = supabase
-      .channel('notification-modal')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activity_log',
-        },
-        (payload) => {
-          const newActivity = payload.new as ActivityLogEntry;
-          setActivities((prev) => [newActivity, ...prev].slice(0, 30));
-        }
-      )
-      .subscribe();
+    // Prevent creating duplicate channel if one already exists
+    if (channelRef.current) {
+      return;
+    }
+
+    // Small debounce to prevent rapid open/close creating multiple channels
+    const debounceTimer = setTimeout(() => {
+      // Double-check modal is still open and no channel exists
+      if (!isOpen || channelRef.current) return;
+
+      const channel = supabase
+        .channel(`notification-modal-${currentUserName}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'activity_log',
+          },
+          (payload) => {
+            const newActivity = payload.new as ActivityLogEntry;
+            setActivities((prev) => [newActivity, ...prev].slice(0, 30));
+          }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+    }, 100);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearTimeout(debounceTimer);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
-  }, [isOpen]);
+  }, [isOpen, currentUserName]);
 
   // Handle click outside
   useEffect(() => {
@@ -231,8 +266,10 @@ export default function NotificationModal({
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
-    if (isOpen && anchorRef?.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
+    if (!isOpen || !anchorRef?.current) return;
+
+    const updatePosition = () => {
+      const rect = anchorRef.current!.getBoundingClientRect();
       const modalWidth = 380;
       const modalHeight = 520;
       const padding = 16;
@@ -261,7 +298,11 @@ export default function NotificationModal({
       }
 
       setPosition({ top, left });
-    }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
   }, [isOpen, anchorRef]);
 
   return (
@@ -279,12 +320,9 @@ export default function NotificationModal({
             left: position.left,
           }}
           className={`
-            z-[100] w-[380px] max-h-[520px] rounded-xl overflow-hidden
+            z-[100] w-[380px] max-h-[520px] rounded-[var(--radius-xl)] overflow-hidden
             shadow-2xl border
-            ${darkMode
-              ? 'bg-[var(--surface)] border-white/10'
-              : 'bg-white border-[var(--border)]'
-            }
+            ${'bg-[var(--surface)] border-[var(--border)]'}
           `}
           role="dialog"
           aria-label="Notifications"
@@ -292,11 +330,11 @@ export default function NotificationModal({
           {/* Header */}
           <div className={`
             flex items-center justify-between px-4 py-3 border-b
-            ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+            ${'border-[var(--border)]'}
           `}>
             <div className="flex items-center gap-2">
               <Bell className="w-5 h-5 text-[var(--accent)]" />
-              <h2 className={`font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+              <h2 className={`font-semibold ${'text-[var(--foreground)]'}`}>
                 Notifications
               </h2>
               {unreadCount > 0 && (
@@ -310,11 +348,8 @@ export default function NotificationModal({
                 <button
                   onClick={handleMarkAllReadClick}
                   className={`
-                    px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors
-                    ${darkMode
-                      ? 'text-[var(--accent)] hover:bg-[var(--accent)]/10'
-                      : 'text-[var(--accent)] hover:bg-[var(--accent-light)]'
-                    }
+                    px-2.5 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-colors
+                    ${'text-[var(--accent)] hover:bg-[var(--accent-light)]'}
                   `}
                   aria-label="Mark all notifications as read"
                 >
@@ -324,11 +359,8 @@ export default function NotificationModal({
               <button
                 onClick={onClose}
                 className={`
-                  p-1.5 rounded-lg transition-colors
-                  ${darkMode
-                    ? 'text-white/40 hover:text-white hover:bg-white/10'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  p-1.5 rounded-[var(--radius-lg)] transition-colors
+                  ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                 `}
                 aria-label="Close notifications"
               >
@@ -351,11 +383,8 @@ export default function NotificationModal({
                 <button
                   onClick={fetchActivities}
                   className={`
-                    mt-3 px-4 py-2 text-sm rounded-lg transition-colors
-                    ${darkMode
-                      ? 'bg-white/10 hover:bg-white/20 text-white'
-                      : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]'
-                    }
+                    mt-3 px-4 py-2 text-sm rounded-[var(--radius-lg)] transition-colors
+                    ${'bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)]'}
                   `}
                 >
                   Try Again
@@ -364,20 +393,17 @@ export default function NotificationModal({
             ) : activities.length === 0 ? (
               <div className="p-10 text-center">
                 <motion.div
-                  className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${
-                    darkMode
-                      ? 'bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/10'
-                      : 'bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200'
-                  }`}
+                  className={`w-16 h-16 mx-auto mb-4 rounded-[var(--radius-2xl)] flex items-center justify-center ${
+                    'bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200'}`}
                   animate={{ scale: [1, 1.03, 1] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  <BellRing className={`w-8 h-8 ${darkMode ? 'text-white/30' : 'text-slate-400'}`} />
+                  <BellRing className={`w-8 h-8 ${'text-slate-400'}`} />
                 </motion.div>
-                <p className={`font-semibold text-base ${darkMode ? 'text-white/80' : 'text-slate-700'}`}>
+                <p className={`font-semibold text-base ${'text-slate-700'}`}>
                   No notifications yet
                 </p>
-                <p className={`text-sm mt-2 max-w-[200px] mx-auto ${darkMode ? 'text-white/40' : 'text-slate-500'}`}>
+                <p className={`text-sm mt-2 max-w-[200px] mx-auto ${'text-slate-500'}`}>
                   When there is activity on your tasks, you will be notified here
                 </p>
               </div>
@@ -387,7 +413,6 @@ export default function NotificationModal({
                   <NotificationItem
                     key={activity.id}
                     activity={activity}
-                    darkMode={darkMode}
                     isUnread={isUnread(activity)}
                     onClick={() => handleActivityClick(activity)}
                   />
@@ -400,7 +425,7 @@ export default function NotificationModal({
           {activities.length > 0 && (
             <div className={`
               px-4 py-3 border-t text-center
-              ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+              ${'border-[var(--border)]'}
             `}>
               <button
                 onClick={() => {
@@ -410,7 +435,7 @@ export default function NotificationModal({
                 }}
                 className={`
                   text-sm font-medium transition-colors
-                  ${darkMode ? 'text-[var(--accent)] hover:text-[var(--accent-light)]' : 'text-[var(--accent)] hover:underline'}
+                  ${'text-[var(--accent)] hover:underline'}
                 `}
               >
                 View all activity
@@ -429,12 +454,11 @@ export default function NotificationModal({
 
 interface NotificationItemProps {
   activity: ActivityLogEntry;
-  darkMode: boolean;
   isUnread: boolean;
   onClick: () => void;
 }
 
-function NotificationItem({ activity, darkMode, isUnread, onClick }: NotificationItemProps) {
+function NotificationItem({ activity, isUnread, onClick }: NotificationItemProps) {
   const config = ACTION_CONFIG[activity.action];
   const Icon = config.icon;
   const details = activity.details as Record<string, string | number | undefined>;
@@ -489,13 +513,7 @@ function NotificationItem({ activity, darkMode, isUnread, onClick }: Notificatio
       className={`
         w-full flex items-start gap-3 px-4 py-3 text-left transition-colors
         ${isUnread
-          ? darkMode
-            ? 'bg-[var(--accent)]/10 hover:bg-[var(--accent)]/15'
-            : 'bg-[var(--accent-light)]/50 hover:bg-[var(--accent-light)]'
-          : darkMode
-            ? 'hover:bg-white/5'
-            : 'hover:bg-[var(--surface-2)]'
-        }
+          ? 'bg-[var(--accent-light)]/50 hover:bg-[var(--accent-light)]': 'hover:bg-[var(--surface-2)]'}
       `}
     >
       {/* Icon with colored background */}
@@ -508,11 +526,11 @@ function NotificationItem({ activity, darkMode, isUnread, onClick }: Notificatio
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm leading-snug ${darkMode ? 'text-white/90' : 'text-[var(--foreground)]'}`}>
+        <p className={`text-sm leading-snug ${'text-[var(--foreground)]'}`}>
           {getMessage()}
         </p>
 
-        <div className={`flex items-center gap-2 mt-1 text-xs ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+        <div className={`flex items-center gap-2 mt-1 text-xs ${'text-[var(--text-muted)]'}`}>
           <Clock className="w-3 h-3" />
           {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
         </div>
@@ -524,7 +542,7 @@ function NotificationItem({ activity, darkMode, isUnread, onClick }: Notificatio
       )}
 
       {/* Chevron for clickable hint */}
-      <ChevronRight className={`w-4 h-4 flex-shrink-0 mt-2 ${darkMode ? 'text-white/20' : 'text-[var(--text-light)]'}`} />
+      <ChevronRight className={`w-4 h-4 flex-shrink-0 mt-2 ${'text-[var(--text-light)]'}`} />
     </button>
   );
 }
@@ -543,23 +561,16 @@ interface NotificationBellProps {
   unreadCount: number;
   onClick: () => void;
   isActive: boolean;
-  darkMode: boolean;
 }
 
-export function NotificationBell({ unreadCount, onClick, isActive, darkMode }: NotificationBellProps) {
+export function NotificationBell({ unreadCount, onClick, isActive }: NotificationBellProps) {
   return (
     <button
       onClick={onClick}
       className={`
-        relative p-2 rounded-xl transition-colors
+        relative p-2 rounded-[var(--radius-xl)] transition-colors
         ${isActive
-          ? darkMode
-            ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
-            : 'bg-[var(--accent-light)] text-[var(--accent)]'
-          : darkMode
-            ? 'text-white/60 hover:text-white hover:bg-white/10'
-            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-        }
+          ? 'bg-[var(--accent-light)] text-[var(--accent)]': 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
       `}
       aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
     >
@@ -570,7 +581,7 @@ export function NotificationBell({ unreadCount, onClick, isActive, darkMode }: N
         <motion.span
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-[10px] font-bold bg-[var(--danger)] text-white"
+          className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-badge bg-[var(--danger)] text-white"
         >
           {unreadCount > 99 ? '99+' : unreadCount}
         </motion.span>

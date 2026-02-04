@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AuthUser } from '@/types/todo';
+import { logger } from '@/lib/logger';
+import { TIME, getPriorityColor as getConstantPriorityColor } from '@/lib/constants';
 
 // Types based on the API response
 export interface DailyDigestTask {
@@ -46,7 +48,7 @@ interface UseDailyDigestReturn {
   loading: boolean;
   generating: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<boolean>;
   generateNow: () => Promise<void>;
   lastFetched: Date | null;
   isNew: boolean;
@@ -55,11 +57,18 @@ interface UseDailyDigestReturn {
   hasDigest: boolean;
 }
 
-// Helper to get CSRF token from cookie
-const getCsrfToken = (): string | null => {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/csrf_token=([^;]+)/);
-  return match ? match[1] : null;
+// Helper to get CSRF token from the /api/csrf endpoint
+// The new HttpOnly pattern requires fetching the token from the server
+// since the csrf_secret cookie is HttpOnly and cannot be read by JS
+const fetchCsrfToken = async (): Promise<string | null> => {
+  try {
+    const response = await fetch('/api/csrf', { credentials: 'include' });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.token || null; // Returns format: "nonce:signature"
+  } catch {
+    return null;
+  }
 };
 
 export function useDailyDigest({
@@ -76,18 +85,22 @@ export function useDailyDigest({
   const [digestType, setDigestType] = useState<'morning' | 'afternoon' | null>(null);
   const [nextScheduled, setNextScheduled] = useState<Date | null>(null);
   const [hasDigest, setHasDigest] = useState(false);
+  const autoGenerateAttempted = useRef(false);
 
-  const fetchDigest = useCallback(async () => {
-    if (!currentUser?.name || !enabled) return;
+  const fetchDigest = useCallback(async (): Promise<boolean> => {
+    if (!currentUser?.name || !enabled) return false;
 
     setLoading(true);
     setError(null);
 
     try {
-      const csrfToken = getCsrfToken();
+      // Fetch CSRF token first (required for protected endpoints)
+      const csrfToken = await fetchCsrfToken();
+
       // Fetch from stored digests instead of generating on-demand
       const response = await fetch('/api/digest/latest', {
         method: 'GET',
+        credentials: 'include', // Important: include cookies for session
         headers: {
           'Content-Type': 'application/json',
           'X-User-Name': currentUser.name,
@@ -119,10 +132,14 @@ export function useDailyDigest({
       }
 
       setLastFetched(new Date());
+      return !!data.hasDigest;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
       setError(errorMessage);
-      console.error('Error fetching daily digest:', err);
+      // Mark as fetched even on error to prevent infinite retry loop
+      setLastFetched(new Date());
+      logger.error('Error fetching daily digest', err as Error, { component: 'useDailyDigest', action: 'fetchDigest', userName: currentUser?.name });
+      return false;
     } finally {
       setLoading(false);
     }
@@ -136,11 +153,15 @@ export function useDailyDigest({
     setError(null);
 
     try {
-      const csrfToken = getCsrfToken();
+      // Fetch CSRF token first (required for protected endpoints)
+      const csrfToken = await fetchCsrfToken();
+
       const response = await fetch('/api/ai/daily-digest', {
         method: 'POST',
+        credentials: 'include', // Important: include cookies for session
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Name': currentUser.name,
           ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
         },
         body: JSON.stringify({ userName: currentUser.name }),
@@ -170,18 +191,31 @@ export function useDailyDigest({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate digest';
       setError(errorMessage);
-      console.error('Error generating daily digest:', err);
+      // Mark as fetched even on error to prevent infinite retry loop
+      setLastFetched(new Date());
+      logger.error('Error generating daily digest', err as Error, { component: 'useDailyDigest', action: 'generateNow', userName: currentUser?.name });
     } finally {
       setGenerating(false);
     }
   }, [currentUser?.name, enabled]);
 
-  // Auto-fetch on mount if enabled
+  // Auto-fetch on mount if enabled, and auto-generate if no stored digest exists
+  // Note: error check prevents retry loops, lastFetched prevents initial re-triggers
   useEffect(() => {
-    if (autoFetch && enabled && !digest && !loading && !lastFetched) {
-      fetchDigest();
+    if (autoFetch && enabled && !digest && !loading && !generating && !lastFetched && !error) {
+      fetchDigest()
+        .then((found) => {
+          if (!found && !autoGenerateAttempted.current) {
+            autoGenerateAttempted.current = true;
+            generateNow();
+          }
+        })
+        .catch((err) => {
+          // Error already handled in fetchDigest, but catch to prevent unhandled rejection
+          logger.error('Auto-fetch digest failed', err as Error, { component: 'useDailyDigest', action: 'autoFetch' });
+        });
     }
-  }, [autoFetch, enabled, digest, loading, lastFetched, fetchDigest]);
+  }, [autoFetch, enabled, digest, loading, generating, lastFetched, error, fetchDigest, generateNow]);
 
   return {
     digest,
@@ -198,27 +232,17 @@ export function useDailyDigest({
   };
 }
 
-// Priority color mapping helper
-export const getPriorityColor = (priority: string): string => {
-  switch (priority) {
-    case 'urgent':
-      return 'bg-red-500';
-    case 'high':
-      return 'bg-orange-500';
-    case 'medium':
-      return 'bg-[var(--brand-blue)]';
-    case 'low':
-      return 'bg-slate-400';
-    default:
-      return 'bg-[var(--brand-blue)]';
-  }
-};
+/**
+ * Priority color mapping helper
+ * @deprecated Use getPriorityColor from '@/lib/constants' directly
+ */
+export const getPriorityColor = getConstantPriorityColor;
 
 // Format relative due date helper
 export const formatDigestDueDate = (dateStr: string): string => {
   const date = new Date(dateStr);
   const now = new Date();
-  const diffDays = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((date.getTime() - now.getTime()) / TIME.DAY);
 
   if (diffDays < -1) {
     return `${Math.abs(diffDays)} days overdue`;

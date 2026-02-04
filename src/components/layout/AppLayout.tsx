@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useTodoStore } from '@/store/todoStore';
 import { useIsDesktopWide } from '@/hooks';
 import { prefersReducedMotion, DURATION } from '@/lib/animations';
@@ -25,8 +24,6 @@ interface AppLayoutProps {
  * - Mobile/Tablet: Single column with floating chat modal
  */
 export default function AppLayout({ children, sidebar, header }: AppLayoutProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const { focusMode } = useTodoStore((state) => state.ui);
   const isWideDesktop = useIsDesktopWide(1280);
 
@@ -81,10 +78,7 @@ export default function AppLayout({ children, sidebar, header }: AppLayoutProps)
                 h-[calc(100vh-72px)]
                 sticky top-[72px]
                 border-l
-                ${darkMode
-                  ? 'bg-[var(--surface)] border-white/10'
-                  : 'bg-white border-[var(--border)]'
-                }
+                ${'bg-[var(--surface)] border-[var(--border)]'}
               `}
               aria-label="Sidebar"
             >

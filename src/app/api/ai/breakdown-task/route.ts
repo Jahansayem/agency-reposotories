@@ -1,11 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { NextRequest } from 'next/server';
+import {
+  validateAiRequest,
+  callClaude,
+  parseAiJsonResponse,
+  aiErrorResponse,
+  aiSuccessResponse,
+  validators,
+  dateHelpers,
+  withAiErrorHandling,
+  ParsedSubtask,
+} from '@/lib/aiApiHelper';
 import { logger } from '@/lib/logger';
-import { analyzeTaskPattern, getAllPatternDefinitions, getCompletionRateWarning } from '@/lib/insurancePatterns';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+import {
+  analyzeTaskPattern,
+  getAllPatternDefinitions,
+  getCompletionRateWarning,
+} from '@/lib/insurancePatterns';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 export interface Subtask {
   text: string;
@@ -13,37 +24,12 @@ export interface Subtask {
   estimatedMinutes?: number;
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    // Accept both 'text' and 'taskText' for compatibility
-    const text = body.text || body.taskText;
-    const users = body.users;
-
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'Task text is required' },
-        { status: 400 }
-      );
-    }
-
-    // Analyze task pattern for insurance-specific context
-    const patternMatch = analyzeTaskPattern(text);
-    const insuranceContext = patternMatch
-      ? `\nDetected task category: ${patternMatch.category.toUpperCase()} (${Math.round(patternMatch.confidence * 100)}% confidence)
-Suggested subtasks for this category:
-${patternMatch.suggestedSubtasks.map((s, i) => `- ${s} (~${patternMatch.estimatedMinutes[i]} min)`).join('\n')}
-${patternMatch.tips ? `\nTip: ${patternMatch.tips}` : ''}`
-      : '';
-
-    const userList = Array.isArray(users) && users.length > 0
-      ? users.join(', ')
-      : 'no team members registered';
-
-    // Get completion rate warning if applicable
-    const completionWarning = patternMatch ? getCompletionRateWarning(patternMatch.category) : null;
-
-    const prompt = `You are a task breakdown assistant for Bealer Agency, an Allstate insurance agency. Take a task and break it down into actionable subtasks.
+function buildPrompt(
+  text: string,
+  userList: string,
+  insuranceContext: string
+): string {
+  return `You are a task breakdown assistant for Bealer Agency, an Allstate insurance agency. Take a task and break it down into actionable subtasks.
 
 Main task: "${text}"
 ${insuranceContext}
@@ -113,86 +99,113 @@ Task: "Call back customer about auto claim"
 }
 
 Respond with ONLY the JSON object, no other text.`;
-
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const responseText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
-
-    // Parse the JSON from Claude's response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'BreakdownTaskAPI', responseText });
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
-
-    const result = JSON.parse(jsonMatch[0]);
-
-    // Validate and clean up the response
-    const validatedSubtasks: Subtask[] = (result.subtasks || [])
-      .slice(0, 6) // Max 6 subtasks
-      .map((subtask: { text?: string; priority?: string; estimatedMinutes?: number }) => ({
-        text: String(subtask.text || '').slice(0, 200),
-        priority: ['low', 'medium', 'high', 'urgent'].includes(subtask.priority || '')
-          ? subtask.priority
-          : 'medium',
-        estimatedMinutes: typeof subtask.estimatedMinutes === 'number'
-          ? Math.min(Math.max(subtask.estimatedMinutes, 5), 480) // 5 min to 8 hours
-          : undefined,
-      }))
-      .filter((subtask: Subtask) => subtask.text.length > 0);
-
-    if (validatedSubtasks.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Could not generate subtasks for this task' },
-        { status: 400 }
-      );
-    }
-
-    // Build response with pattern analysis info
-    const response: {
-      success: boolean;
-      subtasks: Subtask[];
-      summary: string;
-      category?: string;
-      confidence?: number;
-      tips?: string;
-      completionWarning?: string;
-    } = {
-      success: true,
-      subtasks: validatedSubtasks,
-      summary: String(result.summary || '').slice(0, 200),
-    };
-
-    // Add pattern analysis info if available
-    if (patternMatch) {
-      response.category = patternMatch.category;
-      response.confidence = Math.round(patternMatch.confidence * 100);
-      if (patternMatch.tips) {
-        response.tips = patternMatch.tips;
-      }
-      if (completionWarning) {
-        response.completionWarning = completionWarning;
-      }
-    } else if (result.category) {
-      response.category = String(result.category);
-    }
-
-    return NextResponse.json(response);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error breaking down task', error, { component: 'BreakdownTaskAPI', details: errorMessage });
-    return NextResponse.json(
-      { success: false, error: 'Failed to break down task', details: errorMessage },
-      { status: 500 }
-    );
-  }
 }
+
+async function handleBreakdownTask(request: NextRequest) {
+  // Validate request
+  const validation = await validateAiRequest(request);
+
+  if (!validation.valid) {
+    return validation.response;
+  }
+
+  const body = validation.body;
+  // Accept both 'text' and 'taskText' for compatibility
+  const text = (body.text || body.taskText) as string;
+  const users = body.users as string[] | undefined;
+
+  if (!text || typeof text !== 'string') {
+    return aiErrorResponse('Task text is required', 400);
+  }
+
+  // Analyze task pattern for insurance-specific context
+  const patternMatch = analyzeTaskPattern(text);
+  const insuranceContext = patternMatch
+    ? `\nDetected task category: ${patternMatch.category.toUpperCase()} (${Math.round(patternMatch.confidence * 100)}% confidence)
+Suggested subtasks for this category:
+${patternMatch.suggestedSubtasks.map((s, i) => `- ${s} (~${patternMatch.estimatedMinutes[i]} min)`).join('\n')}
+${patternMatch.tips ? `\nTip: ${patternMatch.tips}` : ''}`
+    : '';
+
+  const userList = dateHelpers.formatUserList(users);
+
+  // Get completion rate warning if applicable
+  const completionWarning = patternMatch
+    ? getCompletionRateWarning(patternMatch.category)
+    : null;
+
+  // Build prompt and call Claude
+  const prompt = buildPrompt(text, userList, insuranceContext);
+
+  const aiResult = await callClaude({
+    userMessage: prompt,
+    maxTokens: 800,
+    component: 'BreakdownTaskAPI',
+  });
+
+  if (!aiResult.success) {
+    return aiErrorResponse('Failed to break down task', 500, aiResult.error);
+  }
+
+  // Parse the JSON response
+  const result = parseAiJsonResponse<{
+    subtasks?: Array<{ text?: string; priority?: string; estimatedMinutes?: number }>;
+    summary?: string;
+    category?: string;
+  }>(aiResult.content);
+
+  if (!result) {
+    logger.error('Failed to parse AI response', undefined, {
+      component: 'BreakdownTaskAPI',
+      responseText: aiResult.content,
+    });
+    return aiErrorResponse('Failed to parse AI response', 500);
+  }
+
+  // Validate and clean up the response
+  const validatedSubtasks: ParsedSubtask[] = (result.subtasks || [])
+    .slice(0, 6)
+    .map((subtask) => ({
+      text: String(subtask.text || '').slice(0, 200),
+      priority: validators.sanitizePriority(subtask.priority),
+      estimatedMinutes: validators.clampEstimatedMinutes(subtask.estimatedMinutes),
+    }))
+    .filter((subtask) => subtask.text.length > 0);
+
+  if (validatedSubtasks.length === 0) {
+    return aiErrorResponse('Could not generate subtasks for this task', 400);
+  }
+
+  // Build response with pattern analysis info
+  const response: {
+    subtasks: ParsedSubtask[];
+    summary: string;
+    category?: string;
+    confidence?: number;
+    tips?: string;
+    completionWarning?: string;
+  } = {
+    subtasks: validatedSubtasks,
+    summary: String(result.summary || '').slice(0, 200),
+  };
+
+  // Add pattern analysis info if available
+  if (patternMatch) {
+    response.category = patternMatch.category;
+    response.confidence = Math.round(patternMatch.confidence * 100);
+    if (patternMatch.tips) {
+      response.tips = patternMatch.tips;
+    }
+    if (completionWarning) {
+      response.completionWarning = completionWarning;
+    }
+  } else if (result.category) {
+    response.category = String(result.category);
+  }
+
+  return aiSuccessResponse(response);
+}
+
+export const POST = withAiErrorHandling('BreakdownTaskAPI', withSessionAuth(async (request) => {
+  return handleBreakdownTask(request);
+}));

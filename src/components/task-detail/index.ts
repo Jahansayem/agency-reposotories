@@ -1,0 +1,12 @@
+export { default as TaskDetailModal } from './TaskDetailModal';
+export type { TaskDetailModalProps } from './TaskDetailModal';
+export { useTaskDetail } from './useTaskDetail';
+export { default as TaskDetailHeader } from './TaskDetailHeader';
+export { default as MetadataSection } from './MetadataSection';
+export { default as ReminderRow } from './ReminderRow';
+export { default as WaitingRow } from './WaitingRow';
+export { default as NotesSection } from './NotesSection';
+export { default as SubtasksSection } from './SubtasksSection';
+export { default as AttachmentsSection } from './AttachmentsSection';
+export { default as OverflowMenu } from './OverflowMenu';
+export { default as TaskDetailFooter } from './TaskDetailFooter';

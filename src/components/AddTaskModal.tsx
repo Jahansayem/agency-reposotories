@@ -17,10 +17,11 @@ interface AddTaskModalProps {
     subtasks?: Subtask[],
     transcription?: string,
     sourceFile?: File,
-    reminderAt?: string
+    reminderAt?: string,
+    notes?: string,
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null
   ) => void;
   users: string[];
-  darkMode?: boolean;
   currentUserId?: string;
 }
 
@@ -29,7 +30,6 @@ export default function AddTaskModal({
   onClose,
   onAdd,
   users,
-  darkMode = true,
   currentUserId,
 }: AddTaskModalProps) {
   // Handle escape key to close
@@ -62,9 +62,11 @@ export default function AddTaskModal({
       subtasks?: Subtask[],
       transcription?: string,
       sourceFile?: File,
-      reminderAt?: string
+      reminderAt?: string,
+      notes?: string,
+      recurrence?: 'daily' | 'weekly' | 'monthly' | null
     ) => {
-      onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt);
+      onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence);
       onClose();
     },
     [onAdd, onClose]
@@ -91,31 +93,28 @@ export default function AddTaskModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="fixed inset-x-4 top-[5vh] bottom-[5vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 w-auto sm:w-full sm:max-w-2xl flex flex-col"
+            className="fixed inset-x-4 top-[3vh] bottom-[3vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 w-auto sm:w-full sm:max-w-4xl flex flex-col"
             role="dialog"
             aria-modal="true"
             aria-label="Add new task"
           >
             <div
               className={`
-                rounded-xl border shadow-2xl overflow-hidden flex flex-col max-h-full
-                ${darkMode
-                  ? 'bg-[var(--surface)] border-white/10'
-                  : 'bg-white border-[var(--border)]'
-                }
+                rounded-[var(--radius-xl)] border shadow-2xl overflow-hidden flex flex-col max-h-full
+                ${'bg-[var(--surface)] border-[var(--border)]'}
               `}
             >
               {/* Header */}
               <div
                 className={`
                   flex items-center justify-between px-6 py-5 border-b
-                  ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+                  ${'border-[var(--border)]'}
                 `}
               >
                 <h2
                   className={`
                     text-xl font-semibold
-                    ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
+                    ${'text-[var(--foreground)]'}
                   `}
                 >
                   Add New Task
@@ -123,11 +122,8 @@ export default function AddTaskModal({
                 <button
                   onClick={onClose}
                   className={`
-                    p-2.5 rounded-lg transition-colors
-                    ${darkMode
-                      ? 'text-white/70 hover:text-white hover:bg-white/10'
-                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                    }
+                    p-2.5 rounded-[var(--radius-lg)] transition-colors
+                    ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                   `}
                   aria-label="Close modal"
                 >
@@ -140,7 +136,6 @@ export default function AddTaskModal({
                 <AddTodo
                   onAdd={handleAdd}
                   users={users}
-                  darkMode={darkMode}
                   currentUserId={currentUserId}
                   autoFocus={true}
                 />

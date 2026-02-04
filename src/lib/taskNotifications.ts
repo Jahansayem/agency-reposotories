@@ -10,6 +10,7 @@ import { supabase } from './supabaseClient';
 import { format, formatDistanceToNow, startOfDay } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import { TodoPriority, Subtask } from '@/types/todo';
+import { logger } from './logger';
 
 const SYSTEM_SENDER = 'System';
 
@@ -123,14 +124,14 @@ export async function sendTaskAssignmentNotification(
     }).select();
 
     if (error) {
-      console.error('[TaskNotification] Failed to insert message:', error);
+      logger.error('TaskNotification: Failed to insert message', error, { component: 'taskNotifications', action: 'sendTaskAssignmentNotification', taskId, assignedTo });
       return { success: false, error: error.message };
     }
 
     console.log('[TaskNotification] Message inserted successfully:', data);
     return { success: true };
   } catch (err) {
-    console.error('[TaskNotification] Exception occurred:', err);
+    logger.error('TaskNotification: Exception occurred', err as Error, { component: 'taskNotifications', action: 'sendTaskAssignmentNotification', taskId, assignedTo });
     return { success: false, error: 'Unknown error occurred' };
   }
 }
@@ -266,13 +267,13 @@ export async function sendTaskCompletionNotification(
     });
 
     if (error) {
-      console.error('Failed to send task completion notification:', error);
+      logger.error('Failed to send task completion notification', error, { component: 'taskNotifications', action: 'sendTaskCompletionNotification', taskId, completedBy });
       return { success: false, error: error.message };
     }
 
     return { success: true };
   } catch (err) {
-    console.error('Error sending task completion notification:', err);
+    logger.error('Error sending task completion notification', err as Error, { component: 'taskNotifications', action: 'sendTaskCompletionNotification', taskId, completedBy });
     return { success: false, error: 'Unknown error occurred' };
   }
 }
@@ -344,7 +345,7 @@ export async function sendTaskReassignmentNotification(
       });
 
       if (newAssigneeError) {
-        console.error('Failed to send reassignment notification to new assignee:', newAssigneeError);
+        logger.error('Failed to send reassignment notification to new assignee', newAssigneeError, { component: 'taskNotifications', action: 'sendTaskReassignmentNotification', taskId, newAssignee });
         return { success: false, error: newAssigneeError.message };
       }
     }
@@ -371,14 +372,14 @@ export async function sendTaskReassignmentNotification(
       });
 
       if (prevAssigneeError) {
-        console.error('Failed to send reassignment notification to previous assignee:', prevAssigneeError);
+        logger.error('Failed to send reassignment notification to previous assignee', prevAssigneeError, { component: 'taskNotifications', action: 'sendTaskReassignmentNotification', taskId, previousAssignee });
         return { success: false, error: prevAssigneeError.message };
       }
     }
 
     return { success: true };
   } catch (err) {
-    console.error('Error sending task reassignment notification:', err);
+    logger.error('Error sending task reassignment notification', err as Error, { component: 'taskNotifications', action: 'sendTaskReassignmentNotification', taskId, previousAssignee, newAssignee });
     return { success: false, error: 'Unknown error occurred' };
   }
 }

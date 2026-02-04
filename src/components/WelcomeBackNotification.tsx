@@ -31,21 +31,18 @@ export default function WelcomeBackNotification({
   const [progress, setProgress] = useState(100);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressRef = useRef(progress);
+  const currentUserRef = useRef(currentUser);
+  const onUserUpdateRef = useRef(onUserUpdate);
+  const onCloseRef = useRef(onClose);
 
-  const markWelcomeShown = async () => {
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('users')
-      .update({ welcome_shown_at: now })
-      .eq('id', currentUser.id);
-
-    if (!error) {
-      onUserUpdate({
-        ...currentUser,
-        welcome_shown_at: now,
-      });
-    }
-  };
+  // Keep refs in sync with latest prop/state values
+  useEffect(() => { progressRef.current = progress; }, [progress]);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+    onUserUpdateRef.current = onUserUpdate;
+    onCloseRef.current = onClose;
+  }, [currentUser, onUserUpdate, onClose]);
 
   useEffect(() => {
     if (show) {
@@ -77,12 +74,27 @@ export default function WelcomeBackNotification({
       setHighPriorityTasks(highPriority);
       setProgress(100);
 
-      // Mark welcome as shown in database
+      // Mark welcome as shown in database (using refs to avoid stale closures)
+      const markWelcomeShown = async () => {
+        const now = new Date().toISOString();
+        const user = currentUserRef.current;
+        const { error } = await supabase
+          .from('users')
+          .update({ welcome_shown_at: now })
+          .eq('id', user.id);
+
+        if (!error) {
+          onUserUpdateRef.current({
+            ...user,
+            welcome_shown_at: now,
+          });
+        }
+      };
       markWelcomeShown();
 
       // Auto-dismiss timer
       timerRef.current = setTimeout(() => {
-        onClose();
+        onCloseRef.current();
       }, AUTO_DISMISS_MS);
 
       // Progress bar animation
@@ -116,7 +128,7 @@ export default function WelcomeBackNotification({
   };
 
   const handleMouseLeave = () => {
-    const remaining = (progress / 100) * AUTO_DISMISS_MS;
+    const remaining = (progressRef.current / 100) * AUTO_DISMISS_MS;
     timerRef.current = setTimeout(() => {
       onClose();
     }, remaining);
@@ -142,7 +154,7 @@ export default function WelcomeBackNotification({
           role="status"
           aria-live="polite"
         >
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-xl border border-[var(--border)] overflow-hidden">
             {/* Progress bar for auto-dismiss */}
             <div className="h-1 bg-slate-100 dark:bg-slate-700">
               <div
@@ -188,7 +200,7 @@ export default function WelcomeBackNotification({
                 {/* Close button */}
                 <button
                   onClick={handleClose}
-                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0"
+                  className="p-1.5 rounded-[var(--radius-lg)] hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0"
                   aria-label="Dismiss notification"
                 >
                   <X className="w-4 h-4" />
@@ -210,7 +222,7 @@ export default function WelcomeBackNotification({
                       return (
                         <div
                           key={task.id}
-                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 border-l-2"
+                          className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-lg)] bg-slate-50 dark:bg-slate-700/50 border-l-2"
                           style={{ borderLeftColor: priorityConfig.color }}
                         >
                           <div

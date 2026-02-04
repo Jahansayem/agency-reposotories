@@ -1,0 +1,111 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { generateSmartDefaults } from '@/lib/smartDefaults';
+import { getCache, setCache, isRedisAvailable } from '@/lib/redis';
+import { logger } from '@/lib/logger';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+/**
+ * POST /api/ai/suggest-defaults
+ *
+ * Generate smart default suggestions for task creation based on user patterns.
+ * Uses Redis caching with 5-minute TTL to reduce database queries.
+ *
+ * SECURITY: Uses withAgencyAuth to ensure users only see patterns from their own agency.
+ *
+ * Request body:
+ * {
+ *   "userName": "Derrick"
+ * }
+ *
+ * Response:
+ * {
+ *   "assignedTo": "Sefra",
+ *   "priority": "medium",
+ *   "dueDate": "2026-02-05",
+ *   "confidence": 0.75,
+ *   "metadata": {
+ *     "basedOnTasks": 45,
+ *     "lookbackDays": 30,
+ *     "patterns": {
+ *       "assigneeFrequency": { "Sefra": 30, "Derrick": 15 },
+ *       "priorityDistribution": { "medium": 25, "high": 15, "low": 5 },
+ *       "avgDueDateDays": 3
+ *     }
+ *   },
+ *   "cached": false
+ * }
+ */
+async function handleSuggestDefaults(
+  request: NextRequest,
+  ctx: AgencyAuthContext
+): Promise<NextResponse> {
+  try {
+    const body = await request.json();
+    const { userName } = body;
+
+    if (!userName || typeof userName !== 'string') {
+      return NextResponse.json(
+        { error: 'userName is required and must be a string' },
+        { status: 400 }
+      );
+    }
+
+    logger.info('Generating smart defaults', {
+      component: 'suggest-defaults-api',
+      // Note: userName intentionally omitted to comply with SEC-03 (No PII in logs)
+      agencyId: ctx.agencyId || 'none',
+    });
+
+    // Check Redis cache first - include agencyId in cache key for isolation
+    const cacheKey = ctx.agencyId
+      ? `smart-defaults:${ctx.agencyId}:${userName}`
+      : `smart-defaults:${userName}`;
+    const cached = await getCache<ReturnType<typeof generateSmartDefaults>>(cacheKey);
+
+    if (cached) {
+      logger.info('Returning cached smart defaults', {
+        component: 'suggest-defaults-api',
+        cached: true,
+        agencyId: ctx.agencyId || 'none',
+      });
+      return NextResponse.json({
+        ...cached,
+        cached: true,
+      });
+    }
+
+    // Generate new suggestions - pass agencyId for multi-tenancy filtering
+    const suggestions = await generateSmartDefaults(userName, ctx.agencyId || undefined);
+
+    logger.info('Generated smart defaults', {
+      component: 'suggest-defaults-api',
+      confidence: suggestions.confidence,
+      basedOnTasks: suggestions.metadata.basedOnTasks,
+      agencyId: ctx.agencyId || 'none',
+    });
+
+    // Cache for 5 minutes (300 seconds)
+    if (isRedisAvailable()) {
+      await setCache(cacheKey, suggestions, 300);
+    }
+
+    return NextResponse.json({
+      ...suggestions,
+      cached: false,
+    });
+  } catch (error) {
+    logger.error('Failed to generate smart defaults', error, {
+      component: 'suggest-defaults-api',
+    });
+
+    return NextResponse.json(
+      { error: 'Failed to generate suggestions' },
+      { status: 500 }
+    );
+  }
+}
+
+export const POST = withAgencyAuth(handleSuggestDefaults);

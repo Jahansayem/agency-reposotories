@@ -7,26 +7,31 @@
 
 import webpush from 'web-push';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from './logger';
 
-// Configure web-push with VAPID keys
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
-
-// Initialize web-push if keys are available
+// Lazy initialization for VAPID configuration to avoid issues with
+// env vars not being available at module load time in serverless environments.
 let webPushInitialized = false;
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  try {
-    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-    webPushInitialized = true;
-  } catch (error) {
-    console.error('Failed to initialize web-push:', error);
-  }
-}
+let initAttempted = false;
 
-// Create Supabase client with service role
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function ensureWebPushInitialized(): boolean {
+  if (initAttempted) return webPushInitialized;
+  initAttempted = true;
+
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
+  const privateKey = process.env.VAPID_PRIVATE_KEY || '';
+  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';
+
+  if (publicKey && privateKey) {
+    try {
+      webpush.setVapidDetails(subject, publicKey, privateKey);
+      webPushInitialized = true;
+    } catch (error) {
+      logger.error('Failed to initialize web-push', error, { component: 'webPushServer' });
+    }
+  }
+  return webPushInitialized;
+}
 
 interface WebPushPayload {
   title: string;
@@ -45,7 +50,7 @@ interface PushSubscription {
 }
 
 interface NotificationRequest {
-  type: 'task_assigned' | 'task_due_soon' | 'task_overdue' | 'task_completed' | 'generic';
+  type: 'task_assigned' | 'task_due_soon' | 'task_overdue' | 'task_completed' | 'message' | 'generic';
   payload: {
     taskId?: string;
     taskText?: string;
@@ -68,22 +73,27 @@ function buildNotificationPayload(
   switch (type) {
     case 'task_assigned':
       title = 'New Task Assigned';
-      body = `${payload.assignedBy} assigned you: ${payload.taskText}`;
+      body = `${payload.assignedBy || 'Someone'} assigned you: ${payload.taskText || 'a task'}`;
       break;
 
     case 'task_due_soon':
       title = 'Task Due Soon';
-      body = `"${payload.taskText}" is due ${payload.timeUntil}`;
+      body = `"${payload.taskText || 'a task'}" is due ${payload.timeUntil || 'soon'}`;
       break;
 
     case 'task_overdue':
       title = 'Overdue Task';
-      body = `"${payload.taskText}" is overdue`;
+      body = `"${payload.taskText || 'a task'}" is overdue`;
       break;
 
     case 'task_completed':
       title = 'Task Completed';
-      body = `${payload.completedBy} completed: ${payload.taskText}`;
+      body = `${payload.completedBy || 'Someone'} completed: ${payload.taskText || 'a task'}`;
+      break;
+
+    case 'message':
+      title = 'New Message';
+      body = payload.message || 'You have a new message';
       break;
 
     case 'generic':
@@ -117,7 +127,7 @@ async function sendToSubscription(
     return { success: true, token: subscriptionJson };
   } catch (error: unknown) {
     const err = error as { statusCode?: number; message?: string };
-    console.error('Web push error:', err);
+    logger.error('Web push error', err, { component: 'webPushServer' });
 
     // Handle specific errors
     if (err.statusCode === 404 || err.statusCode === 410) {
@@ -135,10 +145,13 @@ async function sendToSubscription(
 export async function sendWebPushNotifications(
   request: NotificationRequest
 ): Promise<{ success: boolean; sent?: number; failed?: number; error?: string }> {
-  // Check if web push is configured
-  if (!webPushInitialized) {
+  // Check if web push is configured (lazy initialization)
+  if (!ensureWebPushInitialized()) {
     return { success: false, error: 'Web push not configured (missing VAPID keys)' };
   }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return { success: false, error: 'Supabase not configured' };
@@ -162,7 +175,7 @@ export async function sendWebPushNotifications(
       .eq('platform', 'web');
 
     if (fetchError) {
-      console.error('Error fetching device tokens:', fetchError);
+      logger.error('Error fetching device tokens', fetchError, { component: 'webPushServer' });
       return { success: false, error: 'Failed to fetch subscriptions' };
     }
 
@@ -193,7 +206,7 @@ export async function sendWebPushNotifications(
         .in('token', unregistered);
 
       if (deleteError) {
-        console.error('Error removing invalid tokens:', deleteError);
+        logger.error('Error removing invalid tokens', deleteError, { component: 'webPushServer' });
       }
     }
 
@@ -203,7 +216,7 @@ export async function sendWebPushNotifications(
       failed: failed.length,
     };
   } catch (error) {
-    console.error('Error in sendWebPushNotifications:', error);
+    logger.error('Error in sendWebPushNotifications', error, { component: 'webPushServer' });
     return { success: false, error: 'Internal error' };
   }
 }

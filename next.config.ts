@@ -1,21 +1,23 @@
 import type { NextConfig } from "next";
+import withPWA from 'next-pwa';
 
-// Allowed origins for Outlook add-in CORS
-const OUTLOOK_ALLOWED_ORIGINS = [
-  "https://outlook.office.com",
-  "https://outlook.office365.com",
-  "https://outlook.live.com",
-  "https://outlook-sdf.office.com",
-  "https://outlook-sdf.office365.com",
-  // Add production domain for same-origin requests
-  process.env.NEXT_PUBLIC_APP_URL || "https://shared-todo-list-production.up.railway.app",
-].filter(Boolean).join(", ");
+// NOTE: Outlook CORS origins are now managed dynamically in middleware.ts
+// and src/lib/outlookAuth.ts to avoid the comma-separated origin issue.
+// See Issue #38: Access-Control-Allow-Origin must be a single origin, not a list.
 
 // Content Security Policy
+// Note: Next.js requires 'unsafe-inline' for styles due to how Tailwind/CSS-in-JS works
+// 'unsafe-eval' is removed in production for security
+const isProduction = process.env.NODE_ENV === 'production';
+
 const cspDirectives: Record<string, string[]> = {
   "default-src": ["'self'"],
-  "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-  "style-src": ["'self'", "'unsafe-inline'"],
+  // In production, we try to avoid unsafe-eval
+  // unsafe-inline is still needed for Next.js hydration scripts
+  "script-src": isProduction
+    ? ["'self'", "'unsafe-inline'"] // No unsafe-eval in production
+    : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Dev needs eval for hot reload
+  "style-src": ["'self'", "'unsafe-inline'"], // Tailwind requires unsafe-inline
   "img-src": ["'self'", "data:", "https:", "blob:"],
   "font-src": ["'self'", "data:"],
   "media-src": ["'self'", "data:", "blob:"], // Allow audio/video from data URLs and blobs
@@ -25,22 +27,44 @@ const cspDirectives: Record<string, string[]> = {
     "wss://*.supabase.co",
     "https://api.anthropic.com",
     "https://api.openai.com",
+    // Sentry for error reporting
+    "https://*.sentry.io",
   ],
-  "frame-ancestors": ["'none'"],
+  "frame-ancestors": ["'none'"], // Clickjacking protection
   "base-uri": ["'self'"],
   "form-action": ["'self'"],
-  "upgrade-insecure-requests": [],
+  "object-src": ["'none'"], // Prevent plugins like Flash
+  "worker-src": ["'self'", "blob:"], // Service workers
+  "child-src": ["'self'", "blob:"], // iframes and workers
+  "manifest-src": ["'self'"], // Web app manifest
+  // Only enforce HTTPS upgrade in production (dev uses http://localhost)
+  ...(isProduction ? { "upgrade-insecure-requests": [] } : {}),
+  // Report CSP violations for monitoring
+  "report-uri": ["/api/csp-report"],
 };
 
 const cspString = Object.entries(cspDirectives)
   .map(([key, values]) => `${key} ${values.join(" ")}`.trim())
   .join("; ");
 
-const nextConfig: NextConfig = {
-  reactStrictMode: false,
+const baseConfig: NextConfig = {
+  reactStrictMode: true,
   output: "standalone",
   turbopack: {
     root: ".",
+  },
+  // Issue #30: Image optimization configuration
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.supabase.co',
+        pathname: '/storage/v1/object/**',
+      },
+    ],
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   async headers() {
     return [
@@ -80,27 +104,88 @@ const nextConfig: NextConfig = {
       },
       {
         // Allow Office.js to load Outlook add-in files
-        // Must be accessible for Office Add-in manifest loading
+        // NOTE: Access-Control-Allow-Origin is set dynamically in middleware.ts
+        // to return only the single matching origin (not a comma-separated list).
         source: "/outlook/:path*",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: OUTLOOK_ALLOWED_ORIGINS },
           { key: "Access-Control-Allow-Methods", value: "GET, OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "Content-Type" },
-          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Vary", value: "Origin" },
         ],
       },
       {
         // CORS headers for Outlook API endpoints - restricted to Office domains
+        // NOTE: Access-Control-Allow-Origin is set dynamically in middleware.ts
+        // to return only the single matching origin (not a comma-separated list).
         source: "/api/outlook/:path*",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: OUTLOOK_ALLOWED_ORIGINS },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "Content-Type, X-API-Key, X-CSRF-Token" },
-          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Vary", value: "Origin" },
         ],
       },
     ];
   },
 };
 
-export default nextConfig;
+// Issue #34: Service Worker Implementation - PWA Configuration
+export default withPWA({
+  dest: 'public',
+  // Disable in development to avoid service worker caching issues
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+  // Runtime caching strategies for network requests
+  runtimeCaching: [
+    {
+      // Cache Supabase API requests with NetworkFirst strategy
+      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'supabase-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    {
+      // Cache static assets with CacheFirst strategy
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'static-image-cache',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        },
+      },
+    },
+    {
+      // Cache font files
+      urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'font-cache',
+        expiration: {
+          maxEntries: 20,
+          maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        },
+      },
+    },
+    {
+      // Cache API routes with NetworkFirst
+      urlPattern: /^https?:\/\/localhost:3000\/api\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-cache',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 5, // 5 minutes
+        },
+      },
+    },
+  ],
+})(baseConfig as any);

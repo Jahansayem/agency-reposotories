@@ -176,7 +176,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
               <button
                 onClick={onClose}
                 aria-label="Close progress summary"
-                className="absolute top-4 right-4 p-2 rounded-xl hover:bg-white/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0033A0]"
+                className="absolute top-4 right-4 p-2 rounded-[var(--radius-xl)] hover:bg-white/20 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0033A0]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -186,7 +186,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                   initial={{ rotate: -20 }}
                   animate={{ rotate: [-20, 20, -10, 10, 0] }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center shadow-lg"
+                  className="w-16 h-16 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center shadow-lg"
                   style={{ boxShadow: '0 8px 24px rgba(0, 51, 160, 0.35)' }}
                 >
                   <Trophy className="w-8 h-8 text-white" />
@@ -285,7 +285,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl bg-[var(--warning)]/20 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-[var(--radius-xl)] bg-[var(--warning)]/20 flex items-center justify-center">
                       <Flame className="w-7 h-7 text-[var(--warning)]" />
                     </div>
                     <div>
@@ -310,7 +310,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-xl bg-[var(--accent)]/20 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-[var(--radius-xl)] bg-[var(--accent)]/20 flex items-center justify-center">
                       <Target className="w-7 h-7 text-[var(--accent)]" />
                     </div>
                     <div>
@@ -333,7 +333,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                 {(() => {
                   const { Icon, color } = getMotivationIcon();
                   return (
-                    <div className="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+                    <div className="w-10 h-10 rounded-[var(--radius-xl)] mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
                       <Icon className="w-6 h-6" style={{ color }} />
                     </div>
                   );

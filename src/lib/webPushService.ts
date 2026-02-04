@@ -7,6 +7,9 @@
  * Uses VAPID protocol for authentication with push services.
  */
 
+import { fetchWithCsrf } from '@/lib/csrf';
+import { logger } from '@/lib/logger';
+
 // Get VAPID public key from environment
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
 
@@ -64,13 +67,10 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
       scope: '/',
     });
 
-    // Wait for the service worker to be ready
-    await navigator.serviceWorker.ready;
-
     console.log('Service worker registered successfully');
     return registration;
   } catch (error) {
-    console.error('Service worker registration failed:', error);
+    logger.error('Service worker registration failed', error as Error, { component: 'webPushService', action: 'registerServiceWorker' });
     return null;
   }
 }
@@ -84,9 +84,10 @@ export async function getServiceWorkerRegistration(): Promise<ServiceWorkerRegis
   }
 
   try {
-    return await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.getRegistration();
+    return registration || null;
   } catch (error) {
-    console.error('Failed to get service worker registration:', error);
+    logger.error('Failed to get service worker registration', error as Error, { component: 'webPushService', action: 'getServiceWorkerRegistration' });
     return null;
   }
 }
@@ -98,30 +99,24 @@ export async function subscribeToPush(
   registration: ServiceWorkerRegistration
 ): Promise<PushSubscription | null> {
   if (!VAPID_PUBLIC_KEY) {
-    console.error('VAPID public key not configured');
-    return null;
+    throw new Error('VAPID public key not configured. Set NEXT_PUBLIC_VAPID_PUBLIC_KEY in your environment.');
   }
 
-  try {
-    // Check for existing subscription
-    const existingSubscription = await registration.pushManager.getSubscription();
-    if (existingSubscription) {
-      console.log('Returning existing push subscription');
-      return existingSubscription;
-    }
-
-    // Create new subscription
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
-    });
-
-    console.log('Push subscription created successfully');
-    return subscription;
-  } catch (error) {
-    console.error('Push subscription failed:', error);
-    return null;
+  // Check for existing subscription
+  const existingSubscription = await registration.pushManager.getSubscription();
+  if (existingSubscription) {
+    console.log('Returning existing push subscription');
+    return existingSubscription;
   }
+
+  // Create new subscription
+  const subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as BufferSource,
+  });
+
+  console.log('Push subscription created successfully');
+  return subscription;
 }
 
 /**
@@ -139,7 +134,7 @@ export async function unsubscribeFromPush(
     }
     return false;
   } catch (error) {
-    console.error('Failed to unsubscribe:', error);
+    logger.error('Failed to unsubscribe', error as Error, { component: 'webPushService', action: 'unsubscribeFromPush' });
     return false;
   }
 }
@@ -154,7 +149,7 @@ export async function getCurrentSubscription(): Promise<PushSubscription | null>
   try {
     return await registration.pushManager.getSubscription();
   } catch (error) {
-    console.error('Failed to get current subscription:', error);
+    logger.error('Failed to get current subscription', error as Error, { component: 'webPushService', action: 'getCurrentSubscription' });
     return null;
   }
 }
@@ -168,7 +163,7 @@ export async function saveSubscriptionToServer(
   userName: string
 ): Promise<boolean> {
   try {
-    const response = await fetch('/api/push-subscribe', {
+    const response = await fetchWithCsrf('/api/push-subscribe', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -183,7 +178,7 @@ export async function saveSubscriptionToServer(
     const data = await response.json();
     return data.success === true;
   } catch (error) {
-    console.error('Failed to save subscription to server:', error);
+    logger.error('Failed to save subscription to server', error as Error, { component: 'webPushService', action: 'saveSubscriptionToServer', userId });
     return false;
   }
 }
@@ -197,7 +192,7 @@ export async function removeSubscriptionFromServer(
   userName: string
 ): Promise<boolean> {
   try {
-    const response = await fetch('/api/push-subscribe', {
+    const response = await fetchWithCsrf('/api/push-subscribe', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -212,7 +207,7 @@ export async function removeSubscriptionFromServer(
     const data = await response.json();
     return data.success === true;
   } catch (error) {
-    console.error('Failed to remove subscription from server:', error);
+    logger.error('Failed to remove subscription from server', error as Error, { component: 'webPushService', action: 'removeSubscriptionFromServer', userId });
     return false;
   }
 }
@@ -230,9 +225,14 @@ export async function enablePushNotifications(
   }
 
   // Request permission
-  const permission = await requestNotificationPermission();
-  if (permission !== 'granted') {
-    return { success: false, error: 'Notification permission was denied' };
+  try {
+    const permission = await requestNotificationPermission();
+    if (permission !== 'granted') {
+      return { success: false, error: 'Notification permission was denied. Check your browser settings.' };
+    }
+  } catch (err) {
+    logger.error('Permission request failed', err as Error, { component: 'webPushService', action: 'enablePushNotifications', userId });
+    return { success: false, error: 'Failed to request notification permission' };
   }
 
   // Register service worker
@@ -241,19 +241,40 @@ export async function enablePushNotifications(
     return { success: false, error: 'Failed to register service worker' };
   }
 
+  // Wait for SW to be active (needed for pushManager.subscribe)
+  if (!registration.active) {
+    await new Promise<void>((resolve) => {
+      const sw = registration.installing || registration.waiting;
+      if (!sw) { resolve(); return; }
+      if (sw.state === 'activated') { resolve(); return; }
+      sw.addEventListener('statechange', function handler() {
+        if (sw.state === 'activated') {
+          sw.removeEventListener('statechange', handler);
+          resolve();
+        }
+      });
+    });
+  }
+
   // Subscribe to push
-  const subscription = await subscribeToPush(registration);
-  if (!subscription) {
-    return { success: false, error: 'Failed to subscribe to push notifications' };
-  }
+  try {
+    const subscription = await subscribeToPush(registration);
+    if (!subscription) {
+      return { success: false, error: 'Failed to subscribe to push notifications' };
+    }
 
-  // Save to server
-  const saved = await saveSubscriptionToServer(subscription, userId, userName);
-  if (!saved) {
-    return { success: false, error: 'Failed to save subscription to server' };
-  }
+    // Save to server
+    const saved = await saveSubscriptionToServer(subscription, userId, userName);
+    if (!saved) {
+      return { success: false, error: 'Failed to save subscription to server' };
+    }
 
-  return { success: true };
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error during push subscription';
+    logger.error('Push subscription failed', err as Error, { component: 'webPushService', action: 'enablePushNotifications', userId });
+    return { success: false, error: message };
+  }
 }
 
 /**

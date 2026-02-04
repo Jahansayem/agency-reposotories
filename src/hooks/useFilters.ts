@@ -7,7 +7,7 @@
 
 import { useMemo, useCallback } from 'react';
 import { useTodoStore, isDueToday, isOverdue, priorityOrder } from '@/store/todoStore';
-import { TodoStatus, SortOption, QuickFilter } from '@/types/todo';
+import { TodoStatus, SortOption, QuickFilter, isFollowUpOverdue } from '@/types/todo';
 import { extractPotentialNames } from '@/lib/duplicateDetection';
 
 export interface FilterState {
@@ -120,6 +120,12 @@ export function useFilters(userName: string) {
         break;
       case 'overdue':
         result = result.filter((todo) => isOverdue(todo.due_date, todo.completed));
+        break;
+      case 'waiting':
+        result = result.filter((todo) => todo.waiting_for_response && !todo.completed);
+        break;
+      case 'needs_followup':
+        result = result.filter((todo) => todo.waiting_for_response && !todo.completed && isFollowUpOverdue(todo));
         break;
     }
 
@@ -247,7 +253,14 @@ export function useFilters(userName: string) {
         break;
 
       case 'custom':
-        // Custom order is handled separately in the component via customOrder state
+        // Sort by display_order (persisted via drag-and-drop reorder API)
+        result.sort((a, b) => {
+          const aOrder = a.display_order ?? Number.MAX_SAFE_INTEGER;
+          const bOrder = b.display_order ?? Number.MAX_SAFE_INTEGER;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          // Fallback to created_at descending for tasks without display_order
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
         break;
     }
 
@@ -257,6 +270,7 @@ export function useFilters(userName: string) {
   // Filter counts for UI
   const filterCounts = useMemo(() => {
     const activeTodos = visibleTodos.filter(t => !t.completed);
+    const waitingTodos = visibleTodos.filter(t => t.waiting_for_response && !t.completed);
     return {
       all: visibleTodos.length,
       active: activeTodos.length,
@@ -265,6 +279,8 @@ export function useFilters(userName: string) {
       dueToday: visibleTodos.filter(t => isDueToday(t.due_date) && !t.completed).length,
       overdue: visibleTodos.filter(t => isOverdue(t.due_date, t.completed)).length,
       urgent: visibleTodos.filter(t => t.priority === 'urgent' && !t.completed).length,
+      waiting: waitingTodos.length,
+      needsFollowup: waitingTodos.filter(t => isFollowUpOverdue(t)).length,
     };
   }, [visibleTodos, userName]);
 

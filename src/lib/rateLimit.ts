@@ -9,6 +9,7 @@ import { Redis } from '@upstash/redis';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from './logger';
 import { isFeatureEnabled } from './featureFlags';
+import { securityMonitor } from './securityMonitor';
 
 // Initialize Redis client (only if configured)
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -91,17 +92,28 @@ export async function checkRateLimit(
         remaining,
         reset: new Date(reset),
       });
+
+      // Send to security monitor for alerting
+      securityMonitor.rateLimitExceeded(identifier, 'api').catch(() => {
+        // Fire and forget - don't block on alerting
+      });
     }
 
     return { success, limit, remaining, reset };
   } catch (error) {
-    // If Redis is down, fail open (allow the request)
-    logger.error('Rate limit check failed', error as Error, {
+    // SECURITY: Fail closed - deny requests when Redis is unavailable
+    // This prevents bypass of rate limiting during service outages
+    logger.error('Rate limit check failed - denying request (fail-closed)', error as Error, {
       identifier,
       action: 'rate_limit_check',
     });
 
-    return { success: true };
+    return {
+      success: false,
+      limit: 0,
+      remaining: 0,
+      reset: Date.now() + 60000, // Retry after 1 minute
+    };
   }
 }
 
@@ -113,11 +125,13 @@ export async function withRateLimit(
   request: NextRequest,
   limiter: Ratelimit | null
 ): Promise<RateLimitResult> {
-  // Get identifier (prefer user ID, fallback to IP)
-  const userId = request.headers.get('x-user-id');
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  // SECURITY: Use IP-based keying only. Do NOT trust x-user-id header
+  // as it can be spoofed by an attacker to bypass per-user rate limits
+  // or to exhaust another user's rate limit quota.
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
 
-  const identifier = userId || ip;
+  const identifier = ip;
 
   return await checkRateLimit(identifier, limiter);
 }

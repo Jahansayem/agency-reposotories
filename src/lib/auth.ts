@@ -1,16 +1,19 @@
 // Auth utilities for PIN-based authentication
 
-export interface AuthUser {
-  id: string;
-  name: string;
-  color: string;
-  role?: 'owner' | 'admin' | 'member';
-  created_at?: string;
-  last_login?: string;
-  streak_count?: number;
-  streak_last_date?: string;
-  welcome_shown_at?: string;
-}
+// Re-export AuthUser from the canonical location to avoid duplicate definitions
+import type { AuthUser } from '@/types/todo';
+export type { AuthUser } from '@/types/todo';
+
+// Import centralized constants
+import {
+  SESSION_TIMEOUTS,
+  getRandomUserColor,
+  getUserInitials,
+  isValidPin,
+} from './constants';
+
+// Re-export utilities from constants for backward compatibility
+export { getRandomUserColor, getUserInitials, isValidPin };
 
 export interface StoredSession {
   userId: string;
@@ -19,7 +22,6 @@ export interface StoredSession {
 }
 
 const SESSION_KEY = 'todoSession';
-const LOCKOUT_KEY = 'authLockout';
 
 // Hash PIN using SHA-256
 export async function hashPin(pin: string): Promise<string> {
@@ -39,10 +41,28 @@ export async function verifyPin(pin: string, hash: string): Promise<boolean> {
 // Session management
 export function getStoredSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
-  const session = localStorage.getItem(SESSION_KEY);
-  if (!session) return null;
+  const raw = localStorage.getItem(SESSION_KEY);
+  if (!raw) return null;
   try {
-    return JSON.parse(session);
+    const session: StoredSession = JSON.parse(raw);
+
+    // Check session expiry using centralized timeout constant
+    // BUGFIX UTIL-001: Handle invalid timestamps and use >= for exact boundary
+    if (session.loginAt) {
+      const loginTime = new Date(session.loginAt).getTime();
+      // Check for invalid timestamp (NaN)
+      if (isNaN(loginTime)) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      // Use >= to ensure exact expiry time is also considered expired
+      if (Date.now() - loginTime >= SESSION_TIMEOUTS.MAX_AGE) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+    }
+
+    return session;
   } catch {
     return null;
   }
@@ -64,87 +84,52 @@ export function clearStoredSession(): void {
   localStorage.removeItem('userName');
 }
 
-// Lockout management for rate limiting
+// ============================================================================
+// CLIENT-SIDE LOCKOUT REMOVED (Security Fix P0 #4)
+// ============================================================================
+// Lockout is now handled entirely server-side via serverLockout.ts (Redis)
+// These functions are kept as stubs to maintain API compatibility
+// but no longer perform client-side lockout logic
+// ============================================================================
+
 interface LockoutState {
   attempts: number;
   lockedUntil?: string;
 }
 
-export function getLockoutState(userId: string): LockoutState {
-  if (typeof window === 'undefined') return { attempts: 0 };
-  const key = `${LOCKOUT_KEY}_${userId}`;
-  const state = localStorage.getItem(key);
-  if (!state) return { attempts: 0 };
-  try {
-    return JSON.parse(state);
-  } catch {
-    return { attempts: 0 };
-  }
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * Returns empty state for backward compatibility.
+ */
+export function getLockoutState(_userId: string): LockoutState {
+  return { attempts: 0 };
 }
 
-export function incrementLockout(userId: string): LockoutState {
-  const state = getLockoutState(userId);
-  state.attempts++;
-
-  if (state.attempts >= 3) {
-    // Lock for 30 seconds
-    const lockUntil = new Date();
-    lockUntil.setSeconds(lockUntil.getSeconds() + 30);
-    state.lockedUntil = lockUntil.toISOString();
-  }
-
-  const key = `${LOCKOUT_KEY}_${userId}`;
-  localStorage.setItem(key, JSON.stringify(state));
-  return state;
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * Returns empty state for backward compatibility.
+ */
+export function incrementLockout(_userId: string): LockoutState {
+  // No-op: server handles lockout via API endpoint
+  return { attempts: 0 };
 }
 
-export function clearLockout(userId: string): void {
-  const key = `${LOCKOUT_KEY}_${userId}`;
-  localStorage.removeItem(key);
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * No-op for backward compatibility.
+ */
+export function clearLockout(_userId: string): void {
+  // No-op: server handles lockout clearance
 }
 
-export function isLockedOut(userId: string): { locked: boolean; remainingSeconds: number } {
-  const state = getLockoutState(userId);
-  if (!state.lockedUntil) return { locked: false, remainingSeconds: 0 };
-
-  const lockUntil = new Date(state.lockedUntil);
-  const now = new Date();
-
-  if (now >= lockUntil) {
-    clearLockout(userId);
-    return { locked: false, remainingSeconds: 0 };
-  }
-
-  const remainingSeconds = Math.ceil((lockUntil.getTime() - now.getTime()) / 1000);
-  return { locked: true, remainingSeconds };
+/**
+ * @deprecated Client-side lockout removed. Server handles all lockout via Redis.
+ * Always returns unlocked for backward compatibility.
+ */
+export function isLockedOut(_userId: string): { locked: false; remainingSeconds: 0 } {
+  // Server-side lockout is checked via API response
+  return { locked: false, remainingSeconds: 0 };
 }
 
-// Generate a random color for new users
-const USER_COLORS = [
-  '#0033A0', // Allstate Blue
-  '#059669', // Green
-  '#7c3aed', // Purple
-  '#dc2626', // Red
-  '#ea580c', // Orange
-  '#0891b2', // Cyan
-  '#be185d', // Pink
-  '#4f46e5', // Indigo
-];
-
-export function getRandomUserColor(): string {
-  return USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
-}
-
-// Get user initials for avatar
-export function getUserInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
-
-// Validate PIN format (4 digits)
-export function isValidPin(pin: string): boolean {
-  return /^\d{4}$/.test(pin);
-}
+// Note: getRandomUserColor, getUserInitials, and isValidPin are now
+// imported from './constants' and re-exported above for backward compatibility

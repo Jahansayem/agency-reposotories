@@ -117,9 +117,50 @@ export function sanitizeUserName(name: string | null | undefined): string {
   }).trim();
 }
 
+/**
+ * Sanitizes a string value for use in Supabase/PostgREST filter expressions.
+ *
+ * SECURITY: PostgREST filter syntax uses special characters like `,`, `(`, `)`, `.`
+ * that can be exploited if user input is interpolated directly into `.or()` filters.
+ * This function escapes/removes these characters to prevent filter injection.
+ *
+ * Example attack: userName "admin,assigned_to.eq.victim)" could manipulate the filter.
+ *
+ * @param value - The value to sanitize for use in a filter
+ * @returns Sanitized string safe for PostgREST filter interpolation
+ */
+export function sanitizeForPostgrestFilter(value: string | null | undefined): string {
+  if (!value) return '';
+
+  // Remove characters that have special meaning in PostgREST filter syntax:
+  // - `,` separates multiple filters in .or()
+  // - `(` and `)` are used for grouping and operators
+  // - `.` is used in column references like "column.eq"
+  // - `:` is used in some operators
+  // - `*` is wildcard in text search
+  // - `%` is used for LIKE patterns
+  // Also remove backslash which could escape the next character
+  return value.replace(/[,().:\\*%]/g, '');
+}
+
+/**
+ * Validates that a UUID string is properly formatted.
+ * Use this before interpolating UUIDs into filters.
+ *
+ * @param uuid - The string to validate as UUID
+ * @returns true if valid UUID format, false otherwise
+ */
+export function isValidUuid(uuid: string | null | undefined): boolean {
+  if (!uuid) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
 export default {
   sanitizeText,
   sanitizeTranscription,
   sanitizeForDisplay,
   sanitizeUserName,
+  sanitizeForPostgrestFilter,
+  isValidUuid,
 };

@@ -1,22 +1,28 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Mail, Copy, Sparkles, Check,
   User, Phone, AtSign, FileText, ChevronDown, ChevronUp,
-  RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info, Languages
+  RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info, Languages,
+  AlertCircle, CheckCircle
 } from 'lucide-react';
 import { Todo, AuthUser } from '@/types/todo';
 import { extractPhoneNumbers, extractEmails, extractPotentialNames } from '@/lib/duplicateDetection';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey, useFocusTrap } from '@/hooks';
+import {
+  validateEmail as validateEmailField,
+  validatePhone as validatePhoneField,
+  required,
+  formatPhoneNumber,
+} from '@/lib/validation';
 
 interface CustomerEmailModalProps {
   todos: Todo[];
   currentUser: AuthUser;
   onClose: () => void;
-  darkMode?: boolean;
 }
 
 type EmailTone = 'formal' | 'friendly' | 'brief';
@@ -46,13 +52,94 @@ export default function CustomerEmailModal({
   todos,
   currentUser,
   onClose,
-  darkMode = false,
 }: CustomerEmailModalProps) {
   // Customer detection
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [detectedCustomer, setDetectedCustomer] = useState<DetectedCustomer | null>(null);
+
+  // ── Field validation state ──
+  const [fieldErrors, setFieldErrors] = useState<{
+    customerName?: string | null;
+    customerEmail?: string | null;
+    customerPhone?: string | null;
+  }>({});
+  const [fieldTouched, setFieldTouched] = useState<{
+    customerName?: boolean;
+    customerEmail?: boolean;
+    customerPhone?: boolean;
+  }>({});
+
+  const nameValidator = useCallback(required('Customer name'), []);
+
+  const validateFieldOnBlur = useCallback(
+    (field: 'customerName' | 'customerEmail' | 'customerPhone', value: string) => {
+      let fieldError: string | null = null;
+      if (field === 'customerName') {
+        fieldError = nameValidator(value);
+      } else if (field === 'customerEmail') {
+        fieldError = validateEmailField(value);
+      } else if (field === 'customerPhone') {
+        fieldError = validatePhoneField(value);
+      }
+      setFieldErrors((prev) => ({ ...prev, [field]: fieldError }));
+      setFieldTouched((prev) => ({ ...prev, [field]: true }));
+      return fieldError;
+    },
+    [nameValidator]
+  );
+
+  // Re-validate on change only after the field has been blurred once
+  const handleFieldChange = useCallback(
+    (
+      field: 'customerName' | 'customerEmail' | 'customerPhone',
+      value: string,
+      setter: (v: string) => void
+    ) => {
+      setter(value);
+      if (fieldTouched[field]) {
+        let fieldError: string | null = null;
+        if (field === 'customerName') {
+          fieldError = nameValidator(value);
+        } else if (field === 'customerEmail') {
+          fieldError = validateEmailField(value);
+        } else if (field === 'customerPhone') {
+          fieldError = validatePhoneField(value);
+        }
+        setFieldErrors((prev) => ({ ...prev, [field]: fieldError }));
+      }
+    },
+    [fieldTouched, nameValidator]
+  );
+
+  // Validate all customer fields (called before submission)
+  const validateAllCustomerFields = useCallback((): boolean => {
+    const nameError = nameValidator(customerName);
+    const emailError = validateEmailField(customerEmail);
+    const phoneError = validatePhoneField(customerPhone);
+
+    setFieldErrors({
+      customerName: nameError,
+      customerEmail: emailError,
+      customerPhone: phoneError,
+    });
+    setFieldTouched({
+      customerName: true,
+      customerEmail: true,
+      customerPhone: true,
+    });
+
+    return !nameError && !emailError && !phoneError;
+  }, [customerName, customerEmail, customerPhone, nameValidator]);
+
+  // Helper: check if a touched field is valid (for success indicator)
+  const isFieldValid = useCallback(
+    (field: 'customerName' | 'customerEmail' | 'customerPhone', value: string) => {
+      return fieldTouched[field] && !fieldErrors[field] && value.trim().length > 0;
+    },
+    [fieldTouched, fieldErrors]
+  );
 
   // Email generation
   const [tone, setTone] = useState<EmailTone>('friendly');
@@ -114,8 +201,9 @@ export default function CustomerEmailModal({
   }, [todos]);
 
   const generateEmail = async () => {
-    if (!customerName.trim()) {
-      setError('Please enter a customer name');
+    // Run validation on all customer info fields
+    if (!validateAllCustomerFields()) {
+      setError('Please fix the errors above before generating');
       return;
     }
 
@@ -224,15 +312,7 @@ export default function CustomerEmailModal({
     window.open(mailtoUrl, '_blank');
   };
 
-  const formatPhoneDisplay = (phone: string) => {
-    if (phone.length === 10) {
-      return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}`;
-    }
-    if (phone.length === 11 && phone.startsWith('1')) {
-      return `+1 (${phone.slice(1, 4)}) ${phone.slice(4, 7)}-${phone.slice(7)}`;
-    }
-    return phone;
-  };
+  // Phone display formatting is now handled by formatPhoneNumber from @/lib/validation
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -252,20 +332,18 @@ export default function CustomerEmailModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className={`relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl ${
-          darkMode ? 'bg-[#1a1f2e] text-white' : 'bg-white text-gray-900'
-        }`}
+          'bg-[var(--surface)] text-gray-900'}`}
       >
         {/* Header */}
         <div className={`flex items-center justify-between p-4 border-b ${
-          darkMode ? 'border-white/10' : 'border-gray-200'
-        }`}>
+          'border-gray-200'}`}>
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${darkMode ? 'bg-blue-500/20' : 'bg-blue-50'}`}>
+            <div className={`p-2 rounded-xl ${'bg-blue-50'}`}>
               <Mail className="w-5 h-5 text-blue-500" />
             </div>
             <div>
               <h2 className="text-lg font-semibold">Generate Customer Email</h2>
-              <p className={`text-sm ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+              <p className={`text-sm ${'text-gray-500'}`}>
                 Create an update email for {taskSummary.total} task{taskSummary.total !== 1 ? 's' : ''}
               </p>
             </div>
@@ -274,8 +352,7 @@ export default function CustomerEmailModal({
             onClick={onClose}
             aria-label="Close modal"
             className={`p-2 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation ${
-              darkMode ? 'hover:bg-white/10' : 'hover:bg-gray-100'
-            }`}
+              'hover:bg-gray-100'}`}
           >
             <X className="w-5 h-5" />
           </button>
@@ -284,7 +361,7 @@ export default function CustomerEmailModal({
         {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-140px)] p-4 space-y-4">
           {/* Customer Info */}
-          <div className={`p-4 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+          <div className={`p-4 rounded-xl ${'bg-gray-50'}`}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium flex items-center gap-2">
                 <User className="w-4 h-4" />
@@ -302,61 +379,142 @@ export default function CustomerEmailModal({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Customer Name (required) */}
               <div>
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
-                  Name *
+                <label
+                  htmlFor="customer-name"
+                  className={`block text-xs mb-1 ${'text-gray-500'}`}
+                >
+                  Name <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Customer name"
-                  className={`w-full px-3 py-2 rounded-lg text-sm ${
-                    darkMode
-                      ? 'bg-white/10 border-white/20 focus:border-blue-500'
-                      : 'bg-white border-gray-200 focus:border-blue-500'
-                  } border outline-none transition-colors`}
-                />
+                <div className="relative">
+                  <input
+                    id="customer-name"
+                    type="text"
+                    value={customerName}
+                    onChange={(e) =>
+                      handleFieldChange('customerName', e.target.value, setCustomerName)
+                    }
+                    onBlur={() => validateFieldOnBlur('customerName', customerName)}
+                    placeholder="Customer name"
+                    aria-invalid={fieldTouched.customerName && !!fieldErrors.customerName || undefined}
+                    aria-describedby={fieldErrors.customerName ? 'customer-name-error' : undefined}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors ${
+                      fieldTouched.customerName && fieldErrors.customerName
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-500/10'
+                        : isFieldValid('customerName', customerName)
+                        ? 'border-green-500'
+                        : 'bg-[var(--surface)] border-[var(--border)] focus:border-blue-500'} ${fieldTouched.customerName && fieldErrors.customerName ? 'animate-shake' : ''}`}
+                  />
+                  {isFieldValid('customerName', customerName) && (
+                    <CheckCircle className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
+                {fieldTouched.customerName && fieldErrors.customerName && (
+                  <p
+                    id="customer-name-error"
+                    role="alert"
+                    className="mt-1 flex items-center gap-1 text-xs text-red-500"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {fieldErrors.customerName}
+                  </p>
+                )}
               </div>
+
+              {/* Customer Email */}
               <div>
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label
+                  htmlFor="customer-email"
+                  className={`block text-xs mb-1 ${'text-gray-500'}`}
+                >
                   <AtSign className="w-3 h-3 inline mr-1" />
                   Email
                 </label>
-                <input
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  className={`w-full px-3 py-2 rounded-lg text-sm ${
-                    darkMode
-                      ? 'bg-white/10 border-white/20 focus:border-blue-500'
-                      : 'bg-white border-gray-200 focus:border-blue-500'
-                  } border outline-none transition-colors`}
-                />
+                <div className="relative">
+                  <input
+                    id="customer-email"
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) =>
+                      handleFieldChange('customerEmail', e.target.value, setCustomerEmail)
+                    }
+                    onBlur={() => validateFieldOnBlur('customerEmail', customerEmail)}
+                    placeholder="email@example.com"
+                    aria-invalid={fieldTouched.customerEmail && !!fieldErrors.customerEmail || undefined}
+                    aria-describedby={fieldErrors.customerEmail ? 'customer-email-error' : undefined}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors ${
+                      fieldTouched.customerEmail && fieldErrors.customerEmail
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-500/10'
+                        : isFieldValid('customerEmail', customerEmail)
+                        ? 'border-green-500'
+                        : 'bg-[var(--surface)] border-[var(--border)] focus:border-blue-500'} ${fieldTouched.customerEmail && fieldErrors.customerEmail ? 'animate-shake' : ''}`}
+                  />
+                  {isFieldValid('customerEmail', customerEmail) && (
+                    <CheckCircle className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
+                {fieldTouched.customerEmail && fieldErrors.customerEmail && (
+                  <p
+                    id="customer-email-error"
+                    role="alert"
+                    className="mt-1 flex items-center gap-1 text-xs text-red-500"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {fieldErrors.customerEmail}
+                  </p>
+                )}
               </div>
+
+              {/* Customer Phone */}
               <div>
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label
+                  htmlFor="customer-phone"
+                  className={`block text-xs mb-1 ${'text-gray-500'}`}
+                >
                   <Phone className="w-3 h-3 inline mr-1" />
                   Phone
                 </label>
-                <input
-                  type="tel"
-                  value={customerPhone ? formatPhoneDisplay(customerPhone) : ''}
-                  onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, ''))}
-                  placeholder="(555) 123-4567"
-                  className={`w-full px-3 py-2 rounded-lg text-sm ${
-                    darkMode
-                      ? 'bg-white/10 border-white/20 focus:border-blue-500'
-                      : 'bg-white border-gray-200 focus:border-blue-500'
-                  } border outline-none transition-colors`}
-                />
+                <div className="relative">
+                  <input
+                    id="customer-phone"
+                    type="tel"
+                    value={customerPhone ? formatPhoneNumber(customerPhone) : ''}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, '');
+                      handleFieldChange('customerPhone', digits, setCustomerPhone);
+                    }}
+                    onBlur={() => validateFieldOnBlur('customerPhone', customerPhone)}
+                    placeholder="(555) 123-4567"
+                    aria-invalid={fieldTouched.customerPhone && !!fieldErrors.customerPhone || undefined}
+                    aria-describedby={fieldErrors.customerPhone ? 'customer-phone-error' : undefined}
+                    className={`w-full px-3 py-2 rounded-lg text-sm border outline-none transition-colors ${
+                      fieldTouched.customerPhone && fieldErrors.customerPhone
+                        ? 'border-red-500 bg-red-50/50 dark:bg-red-500/10'
+                        : isFieldValid('customerPhone', customerPhone)
+                        ? 'border-green-500'
+                        : 'bg-[var(--surface)] border-[var(--border)] focus:border-blue-500'} ${fieldTouched.customerPhone && fieldErrors.customerPhone ? 'animate-shake' : ''}`}
+                  />
+                  {isFieldValid('customerPhone', customerPhone) && (
+                    <CheckCircle className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                  )}
+                </div>
+                {fieldTouched.customerPhone && fieldErrors.customerPhone && (
+                  <p
+                    id="customer-phone-error"
+                    role="alert"
+                    className="mt-1 flex items-center gap-1 text-xs text-red-500"
+                  >
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                    {fieldErrors.customerPhone}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
           {/* Task Summary */}
-          <div className={`p-4 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+          <div className={`p-4 rounded-xl ${'bg-gray-50'}`}>
             <button
               onClick={() => setShowTaskDetails(!showTaskDetails)}
               className="w-full flex items-center justify-between"
@@ -379,8 +537,7 @@ export default function CustomerEmailModal({
                   )}
                   {taskSummary.pending > 0 && (
                     <span className={`px-2 py-1 rounded-full ${
-                      darkMode ? 'bg-white/10 text-white/60' : 'bg-gray-200 text-gray-600'
-                    }`}>
+                      'bg-gray-200 text-gray-600'}`}>
                       {taskSummary.pending} pending
                     </span>
                   )}
@@ -402,8 +559,7 @@ export default function CustomerEmailModal({
                       <div
                         key={todo.id}
                         className={`p-2 rounded-lg text-sm ${
-                          darkMode ? 'bg-white/5' : 'bg-white'
-                        }`}
+                          'bg-[var(--surface)]'}`}
                       >
                         <div className="flex items-start gap-2">
                           <span className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
@@ -418,7 +574,7 @@ export default function CustomerEmailModal({
                           </span>
                         </div>
                         {todo.subtasks && todo.subtasks.length > 0 && (
-                          <div className={`ml-4 mt-1 text-xs ${darkMode ? 'text-white/40' : 'text-gray-400'}`}>
+                          <div className={`ml-4 mt-1 text-xs ${'text-gray-400'}`}>
                             {todo.subtasks.filter(s => s.completed).length}/{todo.subtasks.length} subtasks
                           </div>
                         )}
@@ -431,13 +587,13 @@ export default function CustomerEmailModal({
           </div>
 
           {/* Email Options */}
-          <div className={`p-4 rounded-xl ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+          <div className={`p-4 rounded-xl ${'bg-gray-50'}`}>
             <h3 className="font-medium mb-3">Email Options</h3>
 
             <div className="space-y-3">
               {/* Tone Selection */}
               <div>
-                <label className={`block text-xs mb-2 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label className={`block text-xs mb-2 ${'text-gray-500'}`}>
                   Tone
                 </label>
                 <div className="flex gap-2">
@@ -448,10 +604,7 @@ export default function CustomerEmailModal({
                       className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${
                         tone === t
                           ? 'bg-blue-500 text-white'
-                          : darkMode
-                          ? 'bg-white/10 hover:bg-white/20'
-                          : 'bg-gray-200 hover:bg-gray-300'
-                      }`}
+                          : 'bg-gray-200 hover:bg-gray-300'}`}
                     >
                       {t}
                     </button>
@@ -461,7 +614,7 @@ export default function CustomerEmailModal({
 
               {/* Language Selection */}
               <div>
-                <label className={`block text-xs mb-2 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label className={`block text-xs mb-2 ${'text-gray-500'}`}>
                   Language
                 </label>
                 <div className="flex gap-2">
@@ -470,10 +623,7 @@ export default function CustomerEmailModal({
                     className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                       language === 'english'
                         ? 'bg-blue-500 text-white'
-                        : darkMode
-                        ? 'bg-white/10 hover:bg-white/20'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
+                        : 'bg-gray-200 hover:bg-gray-300'}`}
                   >
                     English
                   </button>
@@ -482,10 +632,7 @@ export default function CustomerEmailModal({
                     className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                       language === 'spanish'
                         ? 'bg-blue-500 text-white'
-                        : darkMode
-                        ? 'bg-white/10 hover:bg-white/20'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    }`}
+                        : 'bg-gray-200 hover:bg-gray-300'}`}
                   >
                     Español
                   </button>
@@ -509,7 +656,7 @@ export default function CustomerEmailModal({
           {!generatedEmail && (
             <button
               onClick={generateEmail}
-              disabled={isGenerating || !customerName.trim()}
+              disabled={isGenerating || !customerName.trim() || (fieldTouched.customerEmail === true && !!fieldErrors.customerEmail) || (fieldTouched.customerPhone === true && !!fieldErrors.customerPhone)}
               className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                 isGenerating || !customerName.trim()
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -540,8 +687,7 @@ export default function CustomerEmailModal({
           {/* Generated Email Preview */}
           {generatedEmail && (
             <div className={`p-4 rounded-xl border-2 ${
-              darkMode ? 'bg-white/5 border-blue-500/30' : 'bg-blue-50/50 border-blue-200'
-            }`}>
+              'bg-blue-50/50 border-blue-200'}`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium flex items-center gap-2">
                   <Mail className="w-4 h-4 text-blue-500" />
@@ -558,8 +704,7 @@ export default function CustomerEmailModal({
                       onClick={translateToSpanish}
                       disabled={isTranslating}
                       className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
-                        darkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-white hover:bg-gray-100'
-                      }`}
+                        'bg-[var(--surface)] hover:bg-[var(--surface-2)]'}`}
                     >
                       <Languages className={`w-3 h-3 ${isTranslating ? 'animate-pulse' : ''}`} />
                       Translate to Spanish
@@ -569,8 +714,7 @@ export default function CustomerEmailModal({
                     onClick={generateEmail}
                     disabled={isGenerating}
                     className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
-                      darkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-white hover:bg-gray-100'
-                    }`}
+                      'bg-[var(--surface)] hover:bg-[var(--surface-2)]'}`}
                   >
                     <RefreshCw className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`} />
                     Regenerate
@@ -581,10 +725,7 @@ export default function CustomerEmailModal({
               {/* Warnings */}
               {generatedEmail.warnings && generatedEmail.warnings.length > 0 && (
                 <div className={`mb-3 p-3 rounded-lg border-2 ${
-                  darkMode
-                    ? 'bg-yellow-500/10 border-yellow-500/30'
-                    : 'bg-yellow-50 border-yellow-200'
-                }`}>
+                  'bg-yellow-50 border-yellow-200'}`}>
                   <div className="flex items-start gap-2 mb-2">
                     <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
@@ -605,8 +746,7 @@ export default function CustomerEmailModal({
                           const WarningIcon = getWarningIcon(warning.type);
                           return (
                             <div key={i} className={`flex items-start gap-2 text-xs ${
-                              darkMode ? 'text-yellow-200' : 'text-yellow-800'
-                            }`}>
+                              'text-yellow-800'}`}>
                               <WarningIcon className="w-3 h-3 flex-shrink-0 mt-0.5" />
                               <div>
                                 <span className="font-medium">{warning.location}:</span>{' '}
@@ -623,7 +763,7 @@ export default function CustomerEmailModal({
 
               {/* Subject */}
               <div className="mb-3">
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label className={`block text-xs mb-1 ${'text-gray-500'}`}>
                   Subject
                 </label>
                 {isEditingSubject ? (
@@ -634,17 +774,13 @@ export default function CustomerEmailModal({
                     onBlur={() => setIsEditingSubject(false)}
                     autoFocus
                     className={`w-full px-3 py-2 rounded-lg text-sm font-medium ${
-                      darkMode
-                        ? 'bg-white/10 border-white/20'
-                        : 'bg-white border-gray-200'
-                    } border outline-none`}
+                      'bg-[var(--surface)] border-[var(--border)]'} border outline-none`}
                   />
                 ) : (
                   <div
                     onClick={() => setIsEditingSubject(true)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium cursor-text ${
-                      darkMode ? 'bg-white/10 hover:bg-white/15' : 'bg-white hover:bg-gray-50'
-                    }`}
+                      'bg-[var(--surface)] hover:bg-[var(--surface-2)]'}`}
                   >
                     {editedSubject || generatedEmail.subject}
                   </div>
@@ -653,7 +789,7 @@ export default function CustomerEmailModal({
 
               {/* Body */}
               <div>
-                <label className={`block text-xs mb-1 ${darkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                <label className={`block text-xs mb-1 ${'text-gray-500'}`}>
                   Body (click to edit)
                 </label>
                 {isEditingBody ? (
@@ -664,17 +800,13 @@ export default function CustomerEmailModal({
                     autoFocus
                     rows={10}
                     className={`w-full px-3 py-2 rounded-lg text-sm ${
-                      darkMode
-                        ? 'bg-white/10 border-white/20'
-                        : 'bg-white border-gray-200'
-                    } border outline-none resize-none`}
+                      'bg-[var(--surface)] border-[var(--border)]'} border outline-none resize-none`}
                   />
                 ) : (
                   <div
                     onClick={() => setIsEditingBody(true)}
                     className={`px-3 py-2 rounded-lg text-sm whitespace-pre-wrap cursor-text min-h-[150px] ${
-                      darkMode ? 'bg-white/10 hover:bg-white/15' : 'bg-white hover:bg-gray-50'
-                    }`}
+                      'bg-[var(--surface)] hover:bg-[var(--surface-2)]'}`}
                   >
                     {editedBody || generatedEmail.body}
                   </div>
@@ -683,7 +815,7 @@ export default function CustomerEmailModal({
 
               {/* Follow-up suggestion */}
               {generatedEmail.suggestedFollowUp && (
-                <div className={`mt-3 text-xs ${darkMode ? 'text-white/40' : 'text-gray-400'}`}>
+                <div className={`mt-3 text-xs ${'text-gray-400'}`}>
                   Suggested follow-up: {generatedEmail.suggestedFollowUp}
                 </div>
               )}
@@ -693,17 +825,14 @@ export default function CustomerEmailModal({
 
         {/* Footer Actions */}
         {generatedEmail && (
-          <div className={`p-4 border-t ${darkMode ? 'border-white/10' : 'border-gray-200'}`}>
+          <div className={`p-4 border-t ${'border-gray-200'}`}>
             <div className="flex gap-2">
               <button
                 onClick={copyToClipboard}
                 className={`flex-1 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
                   copied
                     ? 'bg-green-500 text-white'
-                    : darkMode
-                    ? 'bg-white/10 hover:bg-white/20'
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
+                    : 'bg-gray-100 hover:bg-gray-200'}`}
               >
                 {copied ? (
                   <>

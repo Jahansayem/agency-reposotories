@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useTodoStore } from '@/store/todoStore';
 import { LayoutList, LayoutGrid, Home } from 'lucide-react';
 import { ViewMode } from '@/types/todo';
@@ -39,19 +38,11 @@ export default function AppHeader({
   onOpenDashboard,
   rightContent,
 }: AppHeaderProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const { focusMode } = useTodoStore((state) => state.ui);
 
   return (
     <header
-      className={`
-        shadow-[var(--shadow-lg)] border-b
-        ${darkMode
-          ? 'bg-[var(--gradient-hero)] border-white/5'
-          : 'bg-white border-[var(--border)]'
-        }
-      `}
+      className="shadow-[var(--shadow-lg)] border-b bg-[var(--surface)] border-[var(--border)]"
     >
       {/* Content container - consistent width */}
       <div className="mx-auto px-4 sm:px-6 py-4 max-w-full">
@@ -62,12 +53,10 @@ export default function AppHeader({
             {onOpenDashboard && !focusMode && (
               <button
                 onClick={onOpenDashboard}
-                className={`p-2 rounded-xl transition-all flex-shrink-0 ${
-                  darkMode
-                    ? 'hover:bg-white/10 text-white/70 hover:text-white'
-                    : 'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-                }`}
+                className={`p-2 rounded-[var(--radius-xl)] transition-all flex-shrink-0 ${
+                  'hover:bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'}`}
                 title="Daily Summary"
+                aria-label="Open daily summary"
               >
                 <Home className="w-5 h-5" />
               </button>
@@ -75,7 +64,7 @@ export default function AppHeader({
 
             {/* Logo */}
             <div
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center flex-shrink-0 shadow-lg"
+              className="w-10 h-10 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center flex-shrink-0 shadow-lg"
               style={{ boxShadow: '0 4px 12px rgba(0, 51, 160, 0.35)' }}
             >
               <span className="text-white font-bold text-base">B</span>
@@ -85,16 +74,14 @@ export default function AppHeader({
             <div className="min-w-0">
               <h1
                 className={`text-base font-bold truncate tracking-tight ${
-                  darkMode ? 'text-white' : 'text-[var(--brand-navy)]'
-                }`}
+                  'text-[var(--brand-navy)]'}`}
               >
                 Bealer Agency
               </h1>
               {!focusMode && (
                 <p
                   className={`text-xs truncate ${
-                    darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'
-                  }`}
+                    'text-[var(--text-muted)]'}`}
                 >
                   {stats.active} active
                   {stats.dueToday > 0 && ` \u2022 ${stats.dueToday} due today`}
@@ -109,21 +96,15 @@ export default function AppHeader({
             {/* View toggle - hidden in focus mode */}
             {!focusMode && (
               <div
-                className={`flex backdrop-blur-sm rounded-xl p-1 border ${
-                  darkMode
-                    ? 'bg-white/8 border-white/10'
-                    : 'bg-[var(--surface-2)] border-[var(--border)]'
-                }`}
+                className={`flex backdrop-blur-sm rounded-[var(--radius-xl)] p-1 border ${
+                  'bg-[var(--surface-2)] border-[var(--border)]'}`}
               >
                 <button
                   onClick={() => onViewModeChange('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-all duration-200 ${
                     viewMode === 'list'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                      : darkMode
-                        ? 'text-white/70 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'list'}
                   aria-label="List view"
                 >
@@ -132,13 +113,10 @@ export default function AppHeader({
                 </button>
                 <button
                   onClick={() => onViewModeChange('kanban')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-all duration-200 ${
                     viewMode === 'kanban'
                       ? 'bg-[var(--brand-sky)] text-[var(--brand-navy)] shadow-md'
-                      : darkMode
-                        ? 'text-white/70 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'
-                  }`}
+                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]'}`}
                   aria-pressed={viewMode === 'kanban'}
                   aria-label="Board view"
                 >

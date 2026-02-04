@@ -7,9 +7,9 @@ import {
   isPushSupported,
   getNotificationPermission,
   enablePushNotifications,
-  getCurrentSubscription,
 } from '@/lib/webPushService';
 import type { AuthUser } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 interface NotificationPermissionBannerProps {
   currentUser: AuthUser;
@@ -23,41 +23,45 @@ export default function NotificationPermissionBanner({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if we should show the banner
+    let timerId: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
     const checkPermissionStatus = async () => {
-      // Don't show if push not supported
-      if (!isPushSupported()) {
-        return;
-      }
+      if (!isPushSupported()) return;
 
-      // Don't show if permission already decided
       const permission = getNotificationPermission();
-      if (permission !== 'default') {
-        return;
-      }
+      if (permission !== 'default') return;
 
-      // Don't show if user has dismissed the banner recently
       const dismissedAt = localStorage.getItem('notificationBannerDismissed');
       if (dismissedAt) {
         const dismissedDate = new Date(dismissedAt);
         const daysSinceDismissed = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-        // Show again after 7 days
-        if (daysSinceDismissed < 7) {
-          return;
+        if (daysSinceDismissed < 7) return;
+      }
+
+      // Use getRegistration() instead of .ready to avoid hanging
+      // when no service worker has been registered yet
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription();
+          if (subscription) return;
         }
+      } catch {
+        // If SW API fails, show banner anyway
       }
 
-      // Check if already subscribed
-      const subscription = await getCurrentSubscription();
-      if (subscription) {
-        return;
+      if (!cancelled) {
+        timerId = setTimeout(() => setVisible(true), 2000);
       }
-
-      // Show the banner after a short delay
-      setTimeout(() => setVisible(true), 2000);
     };
 
     checkPermissionStatus();
+
+    return () => {
+      cancelled = true;
+      if (timerId) clearTimeout(timerId);
+    };
   }, []);
 
   const handleEnable = useCallback(async () => {
@@ -74,7 +78,7 @@ export default function NotificationPermissionBanner({
       }
     } catch (err) {
       setError('An unexpected error occurred');
-      console.error('Error enabling notifications:', err);
+      logger.error('Error enabling notifications', err as Error, { component: 'NotificationPermissionBanner', action: 'handleEnable', userId: currentUser.id });
     } finally {
       setLoading(false);
     }
@@ -95,10 +99,10 @@ export default function NotificationPermissionBanner({
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50"
         >
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-4 shadow-xl">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-2xl)] p-4 shadow-xl">
             <div className="flex items-start gap-3">
               {/* Icon */}
-              <div className="w-10 h-10 rounded-xl bg-[var(--brand-blue)]/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-[var(--radius-xl)] bg-[var(--brand-blue)]/10 flex items-center justify-center flex-shrink-0">
                 <Bell className="w-5 h-5 text-[var(--brand-blue)]" />
               </div>
 
@@ -121,7 +125,7 @@ export default function NotificationPermissionBanner({
                   <button
                     onClick={handleEnable}
                     disabled={loading}
-                    className="px-4 py-2 bg-[var(--brand-blue)] text-white rounded-lg text-sm font-medium hover:bg-[var(--brand-blue)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    className="px-4 py-2 bg-[var(--brand-blue)] text-white rounded-[var(--radius-lg)] text-sm font-medium hover:bg-[var(--brand-blue)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -146,7 +150,7 @@ export default function NotificationPermissionBanner({
               <button
                 onClick={handleDismiss}
                 disabled={loading}
-                className="p-1.5 hover:bg-[var(--surface-2)] rounded-lg transition-colors flex-shrink-0"
+                className="p-1.5 hover:bg-[var(--surface-2)] rounded-[var(--radius-lg)] transition-colors flex-shrink-0"
                 aria-label="Dismiss"
               >
                 <X className="w-4 h-4 text-[var(--text-muted)]" />

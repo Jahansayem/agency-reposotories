@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
 /* ═══════════════════════════════════════════════════════════════════════════
    ALLSTATE INSPIRED - PROFESSIONAL INSURANCE DESIGN SYSTEM
    A trustworthy, clean aesthetic built on Allstate's iconic blue and white
@@ -7,6 +10,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
+  color-scheme: light;
   /* ─── Core Allstate Brand Colors ─── */
   --brand-navy: #00205B;
   --brand-blue: #0033A0;
@@ -28,8 +32,8 @@
   --border: #CBD5E1;
   --border-hover: #94A3B8;
   --border-subtle: #E2E8F0;
-  --text-muted: #52627A; /* Improved contrast: 5.5:1 ratio on white */
-  --text-light: #94A3B8;
+  --text-muted: #475569; /* WCAG AA: 7.2:1 ratio on white for smaller text */
+  --text-light: #64748B; /* WCAG AA: 4.5:1 ratio on white for body text */
   --text-inverse: #FFFFFF;
 
   /* ─── Accent Colors ─── */
@@ -46,6 +50,12 @@
   /* Legacy gold mapped to sky for backward compatibility */
   --accent-gold: var(--brand-sky);
   --accent-gold-light: rgba(114, 181, 232, 0.12);
+  /* ─── Chat-specific tokens ─── */
+  --chat-surface: rgba(0, 0, 0, 0.04);
+  --chat-surface-hover: rgba(0, 0, 0, 0.06);
+  --chat-border: rgba(0, 0, 0, 0.08);
+  --chat-text-secondary: rgba(0, 0, 0, 0.6); /* WCAG AA: 4.5:1 contrast ratio on white */
+  --chat-text-muted: rgba(0, 0, 0, 0.55); /* WCAG AA: 4.5:1 contrast ratio on white */
 
   /* ─── Semantic Colors ─── */
   --success: #059669;
@@ -56,12 +66,19 @@
   --danger: #DC2626;
   --danger-light: rgba(220, 38, 38, 0.08);
 
+  /* ─── Task State Colors (Semantic) ─── */
+  --state-overdue: var(--danger);
+  --state-due-soon: var(--warning);
+  --state-on-track: var(--border-subtle);
+  --state-completed: var(--success);
+  --state-info: #8B5CF6;  /* Purple for status changes, notes, reminders */
+
   /* ─── Effects ─── */
-  --shadow-color: 215 28% 17%;
-  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.05);
-  --shadow-md: 0 4px 12px hsl(var(--shadow-color) / 0.08), 0 1px 3px hsl(var(--shadow-color) / 0.05);
-  --shadow-lg: 0 12px 32px hsl(var(--shadow-color) / 0.12), 0 4px 12px hsl(var(--shadow-color) / 0.08);
-  --shadow-xl: 0 24px 48px hsl(var(--shadow-color) / 0.15), 0 12px 24px hsl(var(--shadow-color) / 0.1);
+  --shadow-color: 31, 41, 55;
+  --shadow-sm: 0 1px 2px rgba(var(--shadow-color), 0.05);
+  --shadow-md: 0 4px 12px rgba(var(--shadow-color), 0.08), 0 1px 3px rgba(var(--shadow-color), 0.05);
+  --shadow-lg: 0 12px 32px rgba(var(--shadow-color), 0.12), 0 4px 12px rgba(var(--shadow-color), 0.08);
+  --shadow-xl: 0 24px 48px rgba(var(--shadow-color), 0.15), 0 12px 24px rgba(var(--shadow-color), 0.1);
   --shadow-blue: 0 8px 24px rgba(0, 51, 160, 0.2);
   --shadow-sky: 0 8px 24px rgba(114, 181, 232, 0.25);
 
@@ -82,20 +99,24 @@
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --duration-instant: 100ms;
   --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 400ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
 
   /* ─── Radius ─── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
+  /* IMPORTANT: These values MUST match src/lib/design-tokens.ts RADIUS */
+  --radius-sm: 6px;   /* Pills, small badges */
+  --radius-md: 8px;   /* Inputs, buttons */
+  --radius-lg: 10px;  /* Standard cards */
+  --radius-xl: 12px;  /* Large cards */
+  --radius-2xl: 16px; /* Modals */
 }
 
 /* ─── Dark Theme (via class toggle) ─── */
-:root.dark {
+:root.dark,
+.dark {
+  color-scheme: dark;
   --background: #0A1628;
   --background-warm: #0F1D32;
   --foreground: #F1F5F9;
@@ -106,8 +127,8 @@
   --border: #334155;
   --border-hover: #475569;
   --border-subtle: #1E293B;
-  --text-muted: #94A3B8;
-  --text-light: #64748B;
+  --text-muted: #CBD5E1; /* WCAG AA: 9.4:1 ratio on dark background */
+  --text-light: #94A3B8; /* WCAG AA: 6.8:1 ratio on dark background */
   --text-inverse: #0A1628;
 
   --accent: #72B5E8;
@@ -123,6 +144,12 @@
   /* Legacy gold mapped to sky for backward compatibility */
   --accent-gold: #72B5E8;
   --accent-gold-light: rgba(114, 181, 232, 0.18);
+  /* ─── Chat-specific tokens ─── */
+  --chat-surface: rgba(255, 255, 255, 0.04);
+  --chat-surface-hover: rgba(255, 255, 255, 0.06);
+  --chat-border: rgba(255, 255, 255, 0.08);
+  --chat-text-secondary: rgba(255, 255, 255, 0.7); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
+  --chat-text-muted: rgba(255, 255, 255, 0.6); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
 
   --success: #34D399;
   --success-light: rgba(52, 211, 153, 0.15);
@@ -131,8 +158,9 @@
   --warning-light: rgba(251, 191, 36, 0.15);
   --danger: #F87171;
   --danger-light: rgba(248, 113, 113, 0.15);
+  --state-info: #A78BFA;  /* Lighter purple for dark mode */
 
-  --shadow-color: 215 50% 8%;
+  --shadow-color: 10, 15, 31;
   --gradient-hero: linear-gradient(160deg, #0A1628 0%, #162236 40%, #1E2D47 100%);
   --gradient-subtle: linear-gradient(180deg, rgba(114, 181, 232, 0.03) 0%, rgba(114, 181, 232, 0.08) 100%);
 }
@@ -140,6 +168,7 @@
 /* ─── Dark Theme (via system preference, only when no explicit theme class) ─── */
 @media (prefers-color-scheme: dark) {
   :root:not(.dark):not(.light) {
+    color-scheme: dark;
     --background: #0A1628;
     --background-warm: #0F1D32;
     --foreground: #F1F5F9;
@@ -167,6 +196,12 @@
     /* Legacy gold mapped to sky for backward compatibility */
     --accent-gold: #72B5E8;
     --accent-gold-light: rgba(114, 181, 232, 0.18);
+    /* ─── Chat-specific tokens ─── */
+    --chat-surface: rgba(255, 255, 255, 0.04);
+    --chat-surface-hover: rgba(255, 255, 255, 0.06);
+    --chat-border: rgba(255, 255, 255, 0.08);
+    --chat-text-secondary: rgba(255, 255, 255, 0.7); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
+    --chat-text-muted: rgba(255, 255, 255, 0.6); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
 
     --success: #34D399;
     --success-light: rgba(52, 211, 153, 0.15);
@@ -175,8 +210,9 @@
     --warning-light: rgba(251, 191, 36, 0.15);
     --danger: #F87171;
     --danger-light: rgba(248, 113, 113, 0.15);
+    --state-info: #A78BFA;  /* Lighter purple for dark mode */
 
-    --shadow-color: 215 50% 8%;
+    --shadow-color: 10, 15, 31;
     --gradient-hero: linear-gradient(160deg, #0A1628 0%, #162236 40%, #1E2D47 100%);
     --gradient-subtle: linear-gradient(180deg, rgba(114, 181, 232, 0.03) 0%, rgba(114, 181, 232, 0.08) 100%);
   }
@@ -291,6 +327,58 @@ input[type="radio"]:focus-visible {
 
 .skip-link:focus {
   top: 1rem;
+}
+
+/* ─── Disabled Button States (WCAG AA Compliant) ─── */
+/* Improve disabled button contrast - DO NOT use opacity alone */
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+  /* Use explicit colors instead of opacity for better contrast */
+}
+
+/* Light mode disabled states */
+button:disabled {
+  color: #6B7280 !important; /* 4.5:1 on light backgrounds */
+  background-color: #E5E7EB !important;
+  border-color: #D1D5DB !important;
+  opacity: 1 !important; /* Override Tailwind opacity */
+}
+
+/* Dark mode disabled states */
+:root.dark button:disabled,
+.dark button:disabled {
+  color: #9CA3AF !important; /* 4.5:1 on dark backgrounds */
+  background-color: #374151 !important;
+  border-color: #4B5563 !important;
+  opacity: 1 !important; /* Override Tailwind opacity */
+}
+
+/* Disabled primary buttons (with background) */
+button:disabled.bg-\[var\(--accent\)\],
+button:disabled[class*="bg-gradient"],
+button:disabled[class*="bg-blue"],
+button:disabled[class*="bg-\[#"] {
+  background: #E5E7EB !important;
+  color: #6B7280 !important;
+  box-shadow: none !important;
+}
+
+:root.dark button:disabled.bg-\[var\(--accent\)\],
+.dark button:disabled[class*="bg-gradient"],
+.dark button:disabled[class*="bg-blue"],
+.dark button:disabled[class*="bg-\[#"] {
+  background: #374151 !important;
+  color: #9CA3AF !important;
+  box-shadow: none !important;
+}
+
+/* Ensure hover states don't override disabled */
+button:disabled:hover,
+button:disabled:active {
+  transform: none !important;
+  filter: none !important;
+  brightness: 1 !important;
 }
 
 /* ─── Custom Scrollbar ─── */
@@ -606,10 +694,12 @@ input[type="radio"]:focus-visible {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ACCESSIBILITY: REDUCED MOTION
-   Respects user preference for reduced animations
+   Comprehensive prefers-reduced-motion support.
+   Disables all decorative animations while preserving essential visual states.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @media (prefers-reduced-motion: reduce) {
+  /* ─── Global: Disable all animations and transitions ─── */
   *,
   *::before,
   *::after {
@@ -619,29 +709,109 @@ input[type="radio"]:focus-visible {
     scroll-behavior: auto !important;
   }
 
-  /* Preserve essential loading indicators but make them instant */
-  .loading-spinner {
-    animation: spin 0.01ms linear 1 !important;
-  }
-
-  /* Disable decorative animations */
-  .float,
-  .pulse-glow,
+  /* ─── Shimmer / Skeleton loading ─── */
   .shimmer,
-  .gradient-animate {
-    animation: none !important;
-  }
-
-  /* Keep opacity for shimmer visible without animation */
   .shimmer::after {
     animation: none !important;
     transform: none !important;
   }
+  .shimmer::after {
+    opacity: 0.3;
+  }
+  .skeleton {
+    animation: none !important;
+    background: var(--surface-2) !important;
+  }
 
-  /* Disable hover transforms */
+  /* ─── Pulse animations (priority badges, status dots, attention) ─── */
+  .pulse-glow,
+  .pulse-attention,
+  .animate-pulse-subtle,
+  .status-dot.online::after {
+    animation: none !important;
+  }
+
+  /* ─── Float animations (empty state illustrations) ─── */
+  .float {
+    animation: none !important;
+  }
+
+  /* ─── Spin animations (loading spinners) ─── */
+  .loading-spinner {
+    animation: none !important;
+    border-top-width: 3px;
+  }
+
+  /* ─── Shake / wiggle animations (form errors) ─── */
+  .animate-shake,
+  .wiggle {
+    animation: none !important;
+  }
+
+  /* ─── Gradient shift animations ─── */
+  .gradient-animate {
+    animation: none !important;
+    background-position: 0% 50% !important;
+  }
+
+  /* ─── Task priority pulse ─── */
+  .task-urgent:not(.task-completed) {
+    animation: none !important;
+    border-left-width: 5px !important;
+  }
+
+  /* ─── Progress bar shine ─── */
+  .progress-bar-fill::after {
+    animation: none !important;
+    display: none;
+  }
+
+  /* ─── Notification highlight ─── */
+  .notification-highlight {
+    animation: none !important;
+    box-shadow: 0 0 0 3px var(--accent) !important;
+  }
+
+  /* ─── Bounce / success animations ─── */
+  .bounce-success {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* ─── Stagger children fade ─── */
+  .stagger-children > * {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* ─── Fade slide up ─── */
+  .fade-slide-up {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* ─── Hover transforms (buttons, cards, lift effects) ─── */
   .btn-primary:hover,
   .btn-sky:hover,
-  .card-elevated:hover {
+  .btn-brand:hover,
+  .btn-success:hover,
+  .card-elevated:hover,
+  .card-interactive:hover,
+  .card-hoverable:hover,
+  .task-card:hover,
+  .stat-card:hover,
+  .hover-lift:hover,
+  .quick-action-btn:hover,
+  .chart-bar:hover {
+    transform: none !important;
+  }
+
+  /* ─── Active/press transforms ─── */
+  .press-scale:active,
+  .btn-press:active,
+  .card-hoverable:active,
+  .task-card:active,
+  .quick-action-btn:active {
     transform: none !important;
   }
 }
@@ -652,15 +822,19 @@ input[type="radio"]:focus-visible {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Font Size Scale */
-  --font-size-xs: 0.75rem;      /* 12px - captions, badges */
-  --font-size-sm: 0.875rem;     /* 14px - body meta, timestamps */
-  --font-size-base: 1rem;       /* 16px - body text */
-  --font-size-lg: 1.125rem;     /* 18px - list items, labels */
-  --font-size-xl: 1.25rem;      /* 20px - card titles */
-  --font-size-2xl: 1.5rem;      /* 24px - section headings */
-  --font-size-3xl: 1.875rem;    /* 30px - page titles */
-  --font-size-4xl: 2.25rem;     /* 36px - hero headings */
+  /* Font Size Scale - 8pt grid with semantic naming
+     WCAG AA: 12px minimum for readable text, 10px only for decorative elements */
+  --font-size-micro: 0.625rem;  /* 10px - badges, notification counters (decorative only) */
+  --font-size-2xs: 0.6875rem;   /* 11px - tab labels, uppercase form labels */
+  --font-size-xs: 0.75rem;      /* 12px - captions, helper text (WCAG minimum) */
+  --font-size-sm: 0.8125rem;    /* 13px - metadata, secondary info */
+  --font-size-base: 0.875rem;   /* 14px - body text, default readable size */
+  --font-size-md: 0.9375rem;    /* 15px - task titles, emphasized body */
+  --font-size-lg: 1rem;         /* 16px - large body, input text */
+  --font-size-xl: 1.125rem;     /* 18px - card titles, small headings */
+  --font-size-2xl: 1.375rem;    /* 22px - page titles */
+  --font-size-3xl: 1.75rem;     /* 28px - hero headings */
+  --font-size-4xl: 2.25rem;     /* 36px - display headings */
 
   /* Line Height Scale */
   --line-height-tight: 1.2;     /* Headings */
@@ -754,6 +928,42 @@ input[type="radio"]:focus-visible {
   line-height: var(--line-height-normal);
   letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
+}
+
+/* Additional semantic typography for UI components */
+.text-badge {
+  font-size: var(--font-size-micro);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.text-label {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-snug);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.text-tab-label {
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.text-metadata {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-snug);
+}
+
+.text-task-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+  letter-spacing: -0.005em;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1039,7 +1249,16 @@ input[type="radio"]:focus-visible {
 }
 
 .task-card-overdue:hover {
-  background: color-mix(in srgb, var(--danger-light) 80%, var(--surface-2) 20%);
+  background: rgba(220, 38, 38, 0.12);
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 
 /* ─── Enhanced Button Styles ─── */
@@ -1532,30 +1751,10 @@ input[type="radio"]:focus-visible {
   }
 }
 
-/* Reduce motion for accessibility */
-@media (prefers-reduced-motion: reduce) {
-  .hover-lift:hover,
-  .press-scale:active {
-    transform: none;
-  }
-
-  .pulse-attention,
-  .wiggle,
-  .bounce-success,
-  .status-dot.online::after {
-    animation: none;
-  }
-
-  .skeleton {
-    animation: none;
-    background: var(--surface-2);
-  }
-
-  .progress-bar-fill::after {
-    animation: none;
-    display: none;
-  }
-}
+/* NOTE: Reduced motion styles are consolidated in the main
+   "ACCESSIBILITY: REDUCED MOTION" section above.
+   All animation/transition overrides for prefers-reduced-motion
+   are maintained in a single block for consistency. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DASHBOARD COMPONENTS
@@ -1773,4 +1972,112 @@ input[type="radio"]:focus-visible {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(12px);
+}
+
+/* ─── Form Field Shake Animation ─── */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%, 75% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* .animate-shake reduced motion handled in main block above */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SPRINT 2: MOBILE & ACCESSIBILITY ADDITIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Priority Badge Urgent Pulse ─── */
+@keyframes priority-badge-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+  }
+}
+
+.priority-badge-urgent-pulse {
+  animation: priority-badge-pulse 2s ease-in-out infinite;
+}
+
+/* Disable pulse for reduced motion */
+.priority-badge-no-pulse,
+.priority-badge-no-pulse.priority-badge-urgent-pulse {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .priority-badge-urgent-pulse {
+    animation: none !important;
+  }
+}
+
+/* ─── Form Field Styles ─── */
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shake animation for form field errors */
+@keyframes form-field-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+.form-field-shake {
+  animation: form-field-shake 0.4s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-field-shake {
+    animation: none !important;
+  }
+}
+
+/* ─── Mobile Chat Overlay ─── */
+.chat-mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-dark);
+  /* Safe area insets for notched phones */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.chat-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Tablet slide-in panel */
+.chat-tablet-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 85vw;
+  z-index: 50;
+  background: var(--surface-dark);
+  box-shadow: var(--shadow-xl);
+  /* Safe area insets */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -10,16 +10,19 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Moon,
-  Sun,
   Plus,
   Inbox,
   BarChart2,
   Keyboard,
 } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
-import { AuthUser, OWNER_USERNAME } from '@/types/todo';
+import { AuthUser } from '@/types/todo';
+import { usePermission } from '@/hooks/usePermission';
 import { useAppShell, ActiveView } from './AppShell';
+import { useAgency } from '@/contexts/AgencyContext';
+import { AgencySwitcher } from '@/components/AgencySwitcher';
+import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
+import { CreateAgencyModal } from '@/components/CreateAgencyModal';
+import { AgencyMembersModal } from '@/components/AgencyMembersModal';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -40,7 +43,7 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   badge?: number;
   badgeColor?: string;
-  ownerOnly?: boolean;
+  permission?: 'can_view_strategic_goals' | 'can_view_archive' | 'can_view_dashboard' | 'can_view_activity_feed';
 }
 
 const primaryNavItems: NavItem[] = [
@@ -50,8 +53,8 @@ const primaryNavItems: NavItem[] = [
 ];
 
 const secondaryNavItems: NavItem[] = [
-  { id: 'goals', label: 'Strategic Goals', icon: Target, ownerOnly: true },
-  { id: 'archive', label: 'Archive', icon: Archive },
+  { id: 'goals', label: 'Strategic Goals', icon: Target, permission: 'can_view_strategic_goals' },
+  { id: 'archive', label: 'Archive', icon: Archive, permission: 'can_view_archive' },
 ];
 
 export default function NavigationSidebar({
@@ -60,8 +63,6 @@ export default function NavigationSidebar({
   onShowWeeklyChart,
   onShowShortcuts,
 }: NavigationSidebarProps) {
-  const { theme, toggleTheme } = useTheme();
-  const darkMode = theme === 'dark';
   const {
     activeView,
     setActiveView,
@@ -71,6 +72,33 @@ export default function NavigationSidebar({
     openRightPanel,
     triggerNewTask,
   } = useAppShell();
+
+  // Permission checks for gated nav items
+  // Note: These hooks must be called unconditionally at the top level
+  const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canViewArchive = usePermission('can_view_archive');
+
+  // Map permission keys to their resolved values for filtering
+  const permissionMap: Record<string, boolean> = {
+    can_view_strategic_goals: canViewStrategicGoals,
+    can_view_archive: canViewArchive,
+  };
+
+  // Helper to check if user has permission for a nav item
+  const hasNavPermission = (item: NavItem): boolean => {
+    if (!item.permission) return true; // No permission required
+    return permissionMap[item.permission] === true;
+  };
+
+  // Multi-tenancy context
+  const { currentAgency, isMultiTenancyEnabled } = useAgency();
+
+  // Agency onboarding tooltip
+  const { showTooltip, dismissTooltip } = useAgencyOnboarding();
+
+  // Create agency modal state
+  const [showCreateAgencyModal, setShowCreateAgencyModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
 
   const [hovering, setHovering] = useState(false);
 
@@ -88,15 +116,11 @@ export default function NavigationSidebar({
   };
 
   const navItemClass = (isActive: boolean) => `
-    group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
+    group relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
     font-medium text-sm transition-all duration-150 cursor-pointer
-    ${isActive
-      ? darkMode
-        ? 'bg-[var(--accent)]/15 text-[var(--accent)]'
-        : 'bg-[var(--accent-light)] text-[var(--accent)]'
-      : darkMode
-        ? 'text-white/60 hover:text-white hover:bg-white/5'
-        : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+    \${isActive
+      ? 'bg-[var(--accent-light)] text-[var(--accent)]'
+      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
     }
   `;
 
@@ -104,9 +128,7 @@ export default function NavigationSidebar({
     w-5 h-5 flex-shrink-0 transition-colors
     ${isActive
       ? 'text-[var(--accent)]'
-      : darkMode
-        ? 'text-white/40 group-hover:text-white/70'
-        : 'text-[var(--text-muted)] group-hover:text-[var(--foreground)]'
+      : 'text-[var(--text-muted)] group-hover:text-[var(--foreground)]'
     }
   `;
 
@@ -119,14 +141,7 @@ export default function NavigationSidebar({
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       onMouseEnter={() => sidebarCollapsed && setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      className={`
-        hidden md:flex flex-col flex-shrink-0 overflow-hidden
-        border-r transition-colors
-        ${darkMode
-          ? 'bg-[var(--surface)] border-white/10'
-          : 'bg-white border-[var(--border)]'
-        }
-      `}
+      className="hidden md:flex flex-col flex-shrink-0 overflow-hidden border-r transition-colors bg-[var(--surface)] border-[var(--border)]"
       aria-label="Main navigation"
     >
       {/* ─── Header ─── */}
@@ -138,20 +153,43 @@ export default function NavigationSidebar({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-2 overflow-hidden"
+              className="flex items-center gap-2 flex-1"
             >
-              {/* Logo/Brand */}
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-sm">B</span>
-              </div>
-              <div className="overflow-hidden">
-                <h1 className={`font-semibold text-sm truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
-                  Bealer Agency
-                </h1>
-                <p className={`text-xs truncate ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
-                  Task Manager
-                </p>
-              </div>
+              {/* Show AgencySwitcher when multi-tenancy is enabled */}
+              {isMultiTenancyEnabled ? (
+                <div className="relative flex-1">
+                  <AgencySwitcher
+                    size="md"
+                    showRole={false}
+                    onCreateAgency={() => setShowCreateAgencyModal(true)}
+                    onManageMembers={() => setShowMembersModal(true)}
+                  />
+                  <AgencyOnboardingTooltip
+                    show={showTooltip && isMultiTenancyEnabled}
+                    onDismiss={dismissTooltip}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Logo/Brand - fallback when multi-tenancy disabled */}
+                  <div
+                    className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: currentAgency?.primary_color || 'var(--brand-blue)' }}
+                  >
+                    <span className="text-white font-bold text-sm">
+                      {currentAgency?.name?.charAt(0) || 'B'}
+                    </span>
+                  </div>
+                  <div className="overflow-hidden">
+                    <h1 className="font-semibold text-sm truncate text-[var(--foreground)]">
+                      {currentAgency?.name || 'Bealer Agency'}
+                    </h1>
+                    <p className="text-xs truncate text-[var(--text-muted)]">
+                      Task Manager
+                    </p>
+                  </div>
+                </>
+              )}
             </motion.div>
           ) : (
             <motion.div
@@ -159,9 +197,12 @@ export default function NavigationSidebar({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-sky)] flex items-center justify-center mx-auto"
+              className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center mx-auto"
+              style={{ backgroundColor: currentAgency?.primary_color || 'var(--brand-blue)' }}
             >
-              <span className="text-white font-bold text-sm">B</span>
+              <span className="text-white font-bold text-sm">
+                {currentAgency?.name?.charAt(0) || 'B'}
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -171,11 +212,8 @@ export default function NavigationSidebar({
           <button
             onClick={toggleSidebar}
             className={`
-              p-1.5 rounded-lg transition-colors
-              ${darkMode
-                ? 'text-white/40 hover:text-white hover:bg-white/10'
-                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              p-1.5 rounded-[var(--radius-lg)] transition-colors
+              text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
             `}
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -192,14 +230,15 @@ export default function NavigationSidebar({
       <div className="px-3 py-3">
         <button
           onClick={triggerNewTask}
+          aria-label="Create new task"
           className={`
-            w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
+            w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[var(--radius-xl)]
             font-medium text-sm transition-all
             bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]
             text-white shadow-md hover:shadow-lg hover:brightness-110
           `}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           {isExpanded && <span>New Task</span>}
         </button>
       </div>
@@ -226,18 +265,18 @@ export default function NavigationSidebar({
         })}
 
         {/* Divider */}
-        <div className={`my-3 border-t ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`} />
+        <div className="my-3 border-t border-[var(--border)]" />
 
         {/* Section label */}
         {isExpanded && (
-          <p className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-white/30' : 'text-[var(--text-light)]'}`}>
+          <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-light)]">
             More
           </p>
         )}
 
-        {/* Secondary Navigation */}
+        {/* Secondary Navigation - filtered by permission */}
         {secondaryNavItems
-          .filter(item => !item.ownerOnly || currentUser.name === OWNER_USERNAME)
+          .filter(hasNavPermission)
           .map(item => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
@@ -261,22 +300,19 @@ export default function NavigationSidebar({
         {(onShowWeeklyChart || onShowShortcuts) && (
           <>
             {/* Divider before utility actions */}
-            <div className={`my-3 border-t ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}`} />
+            <div className="my-3 border-t border-[var(--border)]" />
 
             {/* Weekly Progress */}
             {onShowWeeklyChart && (
               <button
                 onClick={onShowWeeklyChart}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
                   font-medium text-sm transition-all duration-150
-                  ${darkMode
-                    ? 'text-white/60 hover:text-white hover:bg-white/5'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
                 `}
               >
-                <BarChart2 className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+                <BarChart2 className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
                 {isExpanded && <span>Weekly Progress</span>}
               </button>
             )}
@@ -286,19 +322,16 @@ export default function NavigationSidebar({
               <button
                 onClick={onShowShortcuts}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                  w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
                   font-medium text-sm transition-all duration-150
-                  ${darkMode
-                    ? 'text-white/60 hover:text-white hover:bg-white/5'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
                 `}
               >
-                <Keyboard className={`w-5 h-5 flex-shrink-0 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+                <Keyboard className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
                 {isExpanded && (
                   <>
                     <span className="flex-1 text-left">Shortcuts</span>
-                    <span className={`text-xs ${darkMode ? 'text-white/30' : 'text-[var(--text-light)]'}`}>?</span>
+                    <span className="text-xs text-[var(--text-light)]">?</span>
                   </>
                 )}
               </button>
@@ -307,73 +340,41 @@ export default function NavigationSidebar({
         )}
       </nav>
 
-      {/* ─── Footer / User Section ─── */}
-      <div className={`
-        mt-auto border-t px-3 py-3 space-y-2
-        ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
-      `}>
-        {/* Theme toggle */}
+      {/* ─── Footer / Logout ─── */}
+      <div className="mt-auto border-t px-3 py-3 border-[var(--border)]">
         <button
-          onClick={toggleTheme}
+          onClick={handleLogout}
           className={`
-            w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+            w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
             transition-colors
-            ${darkMode
-              ? 'text-white/60 hover:text-white hover:bg-white/10'
-              : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-            }
+            text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
           `}
-          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label="Log out"
         >
-          {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          {isExpanded && <span className="text-sm">{darkMode ? 'Light' : 'Dark'}</span>}
+          <LogOut className="w-4 h-4" />
+          {isExpanded && <span className="text-sm">Log out</span>}
         </button>
-
-        {/* User profile */}
-        <div className={`
-          flex items-center gap-3 px-3 py-2.5 rounded-xl
-          transition-colors cursor-pointer
-          ${darkMode
-            ? 'hover:bg-white/5'
-            : 'hover:bg-[var(--surface-2)]'
-          }
-        `}>
-          {/* Avatar */}
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-            style={{ backgroundColor: currentUser.color }}
-          >
-            {currentUser.name[0]}
-          </div>
-
-          {isExpanded && (
-            <>
-              <div className="flex-1 min-w-0">
-                <p className={`font-medium text-sm truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
-                  {currentUser.name}
-                </p>
-                <p className={`text-xs truncate ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
-                  {currentUser.role === 'admin' ? 'Administrator' : 'Team Member'}
-                </p>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className={`
-                  p-1.5 rounded-lg transition-colors
-                  ${darkMode
-                    ? 'text-white/40 hover:text-white hover:bg-white/10'
-                    : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
-                `}
-                aria-label="Log out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </>
-          )}
-        </div>
       </div>
+
+      {/* Create Agency Modal */}
+      <CreateAgencyModal
+        isOpen={showCreateAgencyModal}
+        onClose={() => setShowCreateAgencyModal(false)}
+        onSuccess={(agency) => {
+          // Successfully created agency - the AgencyContext will auto-refresh
+          console.log('Agency created:', agency);
+          setShowCreateAgencyModal(false);
+          // Optional: Show success toast notification here
+        }}
+        currentUserName={currentUser.name}
+      />
+
+      {/* Members Management Modal */}
+      <AgencyMembersModal
+        isOpen={showMembersModal}
+        onClose={() => setShowMembersModal(false)}
+        currentUserName={currentUser.name}
+      />
     </motion.aside>
   );
 }

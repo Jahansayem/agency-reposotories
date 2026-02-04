@@ -1,26 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { OWNER_USERNAME } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Verify owner access
-function isOwner(userName: string | null): boolean {
-  return userName === OWNER_USERNAME;
-}
+// API-008: Pagination constants
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 500;
 
 // GET - Fetch all strategic goals with categories and milestones
-export async function GET(request: Request) {
+export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const { searchParams } = new URL(request.url);
-    const userName = searchParams.get('userName');
     const categoryId = searchParams.get('categoryId');
 
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    // API-008: Parse and validate limit parameter
+    const limitParam = searchParams.get('limit');
+    let limit = DEFAULT_LIMIT;
+    if (limitParam) {
+      const parsedLimit = parseInt(limitParam, 10);
+      if (!isNaN(parsedLimit) && parsedLimit > 0) {
+        limit = Math.min(parsedLimit, MAX_LIMIT);
+      }
     }
 
     let query = supabase
@@ -30,7 +34,9 @@ export async function GET(request: Request) {
         category:goal_categories(*),
         milestones:goal_milestones(*)
       `)
-      .order('display_order', { ascending: true });
+      .eq('agency_id', ctx.agencyId)
+      .order('display_order', { ascending: true })
+      .limit(limit);
 
     if (categoryId) {
       query = query.eq('category_id', categoryId);
@@ -45,10 +51,10 @@ export async function GET(request: Request) {
     logger.error('Error fetching goals', error, { component: 'api/goals', action: 'GET' });
     return NextResponse.json({ error: 'Failed to fetch goals' }, { status: 500 });
   }
-}
+});
 
 // POST - Create a new strategic goal
-export async function POST(request: Request) {
+export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
     const {
@@ -60,21 +66,17 @@ export async function POST(request: Request) {
       target_date,
       target_value,
       notes,
-      created_by
     } = body;
 
-    if (!isOwner(created_by)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (!title) {
+      return NextResponse.json({ error: 'title is required' }, { status: 400 });
     }
 
-    if (!title || !created_by) {
-      return NextResponse.json({ error: 'title and created_by are required' }, { status: 400 });
-    }
-
-    // Get max display_order for new goal
+    // Get max display_order for new goal within this agency
     const { data: maxOrderData } = await supabase
       .from('strategic_goals')
       .select('display_order')
+      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: false })
       .limit(1)
       .single();
@@ -93,7 +95,8 @@ export async function POST(request: Request) {
         target_value: target_value || null,
         notes: notes || null,
         display_order: nextOrder,
-        created_by,
+        created_by: ctx.userName,
+        agency_id: ctx.agencyId,
       })
       .select(`
         *,
@@ -109,10 +112,10 @@ export async function POST(request: Request) {
     logger.error('Error creating goal', error, { component: 'api/goals', action: 'POST' });
     return NextResponse.json({ error: 'Failed to create goal' }, { status: 500 });
   }
-}
+});
 
 // PUT - Update a strategic goal
-export async function PUT(request: Request) {
+export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
     const {
@@ -128,12 +131,7 @@ export async function PUT(request: Request) {
       progress_percent,
       notes,
       display_order,
-      updated_by
     } = body;
-
-    if (!isOwner(updated_by)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -159,6 +157,7 @@ export async function PUT(request: Request) {
       .from('strategic_goals')
       .update(updateData)
       .eq('id', id)
+      .eq('agency_id', ctx.agencyId)
       .select(`
         *,
         category:goal_categories(*),
@@ -173,18 +172,13 @@ export async function PUT(request: Request) {
     logger.error('Error updating goal', error, { component: 'api/goals', action: 'PUT' });
     return NextResponse.json({ error: 'Failed to update goal' }, { status: 500 });
   }
-}
+});
 
 // DELETE - Delete a strategic goal
-export async function DELETE(request: Request) {
+export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const userName = searchParams.get('userName');
-
-    if (!isOwner(userName)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -193,7 +187,8 @@ export async function DELETE(request: Request) {
     const { error } = await supabase
       .from('strategic_goals')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('agency_id', ctx.agencyId);
 
     if (error) throw error;
 
@@ -202,4 +197,4 @@ export async function DELETE(request: Request) {
     logger.error('Error deleting goal', error, { component: 'api/goals', action: 'DELETE' });
     return NextResponse.json({ error: 'Failed to delete goal' }, { status: 500 });
   }
-}
+});

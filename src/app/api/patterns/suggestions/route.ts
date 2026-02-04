@@ -1,13 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
+import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 /**
  * GET /api/patterns/suggestions
  *
  * Returns task patterns grouped by category for quick task buttons.
+ * Scoped to the user's agency.
  */
-export async function GET() {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    // Set RLS context for defense-in-depth
+    await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -21,14 +27,21 @@ export async function GET() {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: patterns, error } = await supabase
+    let query = supabase
       .from('task_patterns')
       .select('*')
       .order('occurrence_count', { ascending: false })
       .limit(20);
 
+    // Scope to agency
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: patterns, error } = await query;
+
     if (error) {
-      console.error('Failed to fetch patterns:', error);
+      logger.error('Failed to fetch patterns', error, { component: 'patterns/suggestions' });
       return NextResponse.json({
         patterns: {},
         total: 0,
@@ -53,10 +66,10 @@ export async function GET() {
       total: patterns?.length || 0,
     });
   } catch (error) {
-    console.error('Pattern suggestions error:', error);
+    logger.error('Pattern suggestions error', error, { component: 'patterns/suggestions' });
     return NextResponse.json({
       patterns: {},
       total: 0,
     });
   }
-}
+});

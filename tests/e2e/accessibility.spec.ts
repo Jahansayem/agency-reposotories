@@ -24,8 +24,8 @@ async function login(page: Page, userName: string = 'Derrick') {
   }
 
   // Wait for main app to load
-  await page.waitForSelector('[data-testid="task-input"], [data-testid="add-task-button"]', {
-    timeout: 10000,
+  await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', {
+    timeout: 15000,
   });
 }
 

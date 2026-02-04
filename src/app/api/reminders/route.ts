@@ -5,12 +5,15 @@
  * - GET: Fetch reminders for a task or user
  * - POST: Create a new reminder
  * - DELETE: Remove a reminder
+ * - PATCH: Update a reminder
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { extractUserName, validateUserName, verifyTodoAccess } from '@/lib/apiAuth';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import type { TaskReminder, ReminderType } from '@/types/todo';
+import { logger } from '@/lib/logger';
+import { sanitizeForPostgrestFilter } from '@/lib/sanitize';
 
 // Create Supabase client lazily to avoid build-time errors
 function getSupabaseClient() {
@@ -33,30 +36,71 @@ function getSupabaseClient() {
  * - userId: Fetch reminders for a specific user
  * - status: Filter by status ('pending', 'sent', 'failed', 'cancelled')
  */
-export async function GET(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
-  if (authError) return authError;
-
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   const { searchParams } = new URL(request.url);
   const todoId = searchParams.get('todoId');
   const userId = searchParams.get('userId');
   const status = searchParams.get('status');
 
   const supabase = getSupabaseClient();
+
+  // Look up authenticated user's ID for authorization scoping
+  const { data: userRecord } = await supabase
+    .from('users')
+    .select('id')
+    .eq('name', ctx.userName)
+    .single();
+
+  if (!userRecord) {
+    return NextResponse.json(
+      { success: false, error: 'User not found' },
+      { status: 404 }
+    );
+  }
+
+  // If userId is provided, ensure it matches the authenticated user's ID
+  if (userId && userId !== userRecord.id) {
+    return NextResponse.json(
+      { success: false, error: 'Access denied' },
+      { status: 403 }
+    );
+  }
+
+  // If todoId is provided, verify the todo belongs to this agency
+  if (todoId) {
+    const { data: todo } = await supabase
+      .from('todos')
+      .select('id')
+      .eq('id', todoId)
+      .eq('agency_id', ctx.agencyId)
+      .single();
+
+    if (!todo) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found' },
+        { status: 404 }
+      );
+    }
+  }
+
+  // Build query - join through todos to enforce agency scoping
   let query = supabase
     .from('task_reminders')
     .select(`
       *,
-      todos:todo_id (
+      todos:todo_id!inner (
         id,
         text,
         priority,
         due_date,
         assigned_to,
-        completed
+        completed,
+        created_by,
+        updated_by,
+        agency_id
       )
     `)
+    .eq('todos.agency_id', ctx.agencyId)
     .order('reminder_time', { ascending: true });
 
   if (todoId) {
@@ -67,6 +111,11 @@ export async function GET(request: NextRequest) {
     query = query.eq('user_id', userId);
   }
 
+  // If neither todoId nor userId is provided, scope to reminders the user is involved with
+  if (!todoId && !userId) {
+    query = query.eq('created_by', ctx.userName);
+  }
+
   if (status) {
     query = query.eq('status', status);
   }
@@ -74,32 +123,74 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching reminders:', error);
+    logger.error('Error fetching reminders', error, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch reminders' },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ success: true, reminders: data || [] });
-}
+  // Strip agency_id from the nested todos to keep response clean
+  const reminders = (data || []).map(r => {
+    if (r.todos && typeof r.todos === 'object') {
+      const { agency_id: _aid, ...todoFields } = r.todos as Record<string, unknown>;
+      return { ...r, todos: todoFields };
+    }
+    return r;
+  });
+
+  if (!todoId && !userId) {
+    // Also include reminders for todos where this user is involved but didn't create the reminder
+    // SECURITY: Sanitize userName to prevent PostgREST filter injection
+    const safeUserName = sanitizeForPostgrestFilter(ctx.userName);
+    const { data: involvedReminders } = await supabase
+      .from('task_reminders')
+      .select(`
+        *,
+        todos:todo_id!inner (
+          id,
+          text,
+          priority,
+          due_date,
+          assigned_to,
+          completed,
+          created_by,
+          updated_by,
+          agency_id
+        )
+      `)
+      .eq('todos.agency_id', ctx.agencyId)
+      .neq('created_by', ctx.userName)
+      .or(`assigned_to.eq.${safeUserName},created_by.eq.${safeUserName}`, { referencedTable: 'todos' })
+      .order('reminder_time', { ascending: true });
+
+    if (involvedReminders && involvedReminders.length > 0) {
+      const existingIds = new Set(reminders.map((r: { id: string }) => r.id));
+      for (const r of involvedReminders) {
+        if (!existingIds.has(r.id)) {
+          // Strip agency_id from nested todos
+          if (r.todos && typeof r.todos === 'object') {
+            const { agency_id: _aid, ...todoFields } = r.todos as Record<string, unknown>;
+            reminders.push({ ...r, todos: todoFields });
+          } else {
+            reminders.push(r);
+          }
+        }
+      }
+      reminders.sort((a: { reminder_time: string }, b: { reminder_time: string }) =>
+        new Date(a.reminder_time).getTime() - new Date(b.reminder_time).getTime()
+      );
+    }
+  }
+
+  return NextResponse.json({ success: true, reminders });
+});
 
 /**
  * POST /api/reminders
  * Create a new reminder for a task
- *
- * Request body:
- * - todoId: UUID of the task
- * - reminderTime: ISO timestamp for when to send the reminder
- * - reminderType?: 'push_notification' | 'chat_message' | 'both' (default: 'both')
- * - message?: Custom reminder message
- * - userId?: UUID of user to remind (default: assigned user)
  */
-export async function POST(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
-  if (authError) return authError;
-
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   const supabase = getSupabaseClient();
 
   try {
@@ -152,9 +243,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user has access to the todo
-    const { todo, error: accessError } = await verifyTodoAccess(todoId, userName!);
-    if (accessError) return accessError;
+    // Verify the todo belongs to this agency
+    const { data: todo, error: todoError } = await supabase
+      .from('todos')
+      .select('*')
+      .eq('id', todoId)
+      .eq('agency_id', ctx.agencyId)
+      .single();
+
+    if (todoError || !todo) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found' },
+        { status: 404 }
+      );
+    }
 
     // Check if task is already completed
     if (todo.completed) {
@@ -167,12 +269,12 @@ export async function POST(request: NextRequest) {
     // Create the reminder
     const reminderData = {
       todo_id: todoId,
-      user_id: userId || null, // null = remind assigned user
+      user_id: userId || null,
       reminder_time: reminderDate.toISOString(),
       reminder_type: reminderType,
       message: message || null,
       status: 'pending',
-      created_by: userName,
+      created_by: ctx.userName,
     };
 
     const { data: reminder, error: insertError } = await supabase
@@ -182,7 +284,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('Error creating reminder:', insertError);
+      logger.error('Error creating reminder', insertError, { component: 'reminders' });
       return NextResponse.json(
         { success: false, error: 'Failed to create reminder' },
         { status: 500 }
@@ -190,7 +292,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Also update the simple reminder_at field on the todo for backward compatibility
-    // Only if no reminder_at is set or the new one is sooner
     if (!todo.reminder_at || new Date(todo.reminder_at) > reminderDate) {
       await supabase
         .from('todos')
@@ -198,9 +299,10 @@ export async function POST(request: NextRequest) {
           reminder_at: reminderDate.toISOString(),
           reminder_sent: false,
           updated_at: new Date().toISOString(),
-          updated_by: userName,
+          updated_by: ctx.userName,
         })
-        .eq('id', todoId);
+        .eq('id', todoId)
+        .eq('agency_id', ctx.agencyId);
     }
 
     return NextResponse.json({
@@ -208,26 +310,19 @@ export async function POST(request: NextRequest) {
       reminder: reminder as TaskReminder,
     });
   } catch (error) {
-    console.error('Error in POST /api/reminders:', error);
+    logger.error('Error in POST /api/reminders', error, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/reminders
  * Remove a reminder
- *
- * Query params:
- * - id: UUID of the reminder to delete
  */
-export async function DELETE(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
-  if (authError) return authError;
-
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
   const reminderId = searchParams.get('id');
@@ -239,10 +334,10 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  // First, fetch the reminder to verify access
+  // Fetch the reminder and verify it belongs to a todo in this agency
   const { data: reminder, error: fetchError } = await supabase
     .from('task_reminders')
-    .select('*, todos:todo_id (id, created_by, assigned_to, updated_by)')
+    .select('*, todos:todo_id!inner (id, created_by, assigned_to, updated_by, agency_id)')
     .eq('id', reminderId)
     .single();
 
@@ -253,13 +348,21 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  // Verify user has access to the associated todo
-  const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string };
+  // Verify agency ownership
+  const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string; agency_id: string };
+  if (todo.agency_id !== ctx.agencyId) {
+    return NextResponse.json(
+      { success: false, error: 'Reminder not found' },
+      { status: 404 }
+    );
+  }
+
+  // Verify user has access
   const hasAccess =
-    reminder.created_by === userName ||
-    todo.created_by === userName ||
-    todo.assigned_to === userName ||
-    todo.updated_by === userName;
+    reminder.created_by === ctx.userName ||
+    todo.created_by === ctx.userName ||
+    todo.assigned_to === ctx.userName ||
+    todo.updated_by === ctx.userName;
 
   if (!hasAccess) {
     return NextResponse.json(
@@ -275,7 +378,7 @@ export async function DELETE(request: NextRequest) {
     .eq('id', reminderId);
 
   if (deleteError) {
-    console.error('Error deleting reminder:', deleteError);
+    logger.error('Error deleting reminder', deleteError, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Failed to delete reminder' },
       { status: 500 }
@@ -283,23 +386,13 @@ export async function DELETE(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true });
-}
+});
 
 /**
  * PATCH /api/reminders
  * Update a reminder (e.g., change time or cancel)
- *
- * Request body:
- * - id: UUID of the reminder
- * - reminderTime?: New reminder time
- * - status?: New status ('cancelled' to cancel)
- * - message?: Updated message
  */
-export async function PATCH(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
-  if (authError) return authError;
-
+export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   const supabase = getSupabaseClient();
 
   try {
@@ -313,10 +406,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Fetch the reminder to verify access
+    // Fetch the reminder and verify agency
     const { data: reminder, error: fetchError } = await supabase
       .from('task_reminders')
-      .select('*, todos:todo_id (id, created_by, assigned_to, updated_by)')
+      .select('*, todos:todo_id!inner (id, created_by, assigned_to, updated_by, agency_id)')
       .eq('id', id)
       .single();
 
@@ -327,13 +420,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Verify agency ownership
+    const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string; agency_id: string };
+    if (todo.agency_id !== ctx.agencyId) {
+      return NextResponse.json(
+        { success: false, error: 'Reminder not found' },
+        { status: 404 }
+      );
+    }
+
     // Verify access
-    const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string };
     const hasAccess =
-      reminder.created_by === userName ||
-      todo.created_by === userName ||
-      todo.assigned_to === userName ||
-      todo.updated_by === userName;
+      reminder.created_by === ctx.userName ||
+      todo.created_by === ctx.userName ||
+      todo.assigned_to === ctx.userName ||
+      todo.updated_by === ctx.userName;
 
     if (!hasAccess) {
       return NextResponse.json(
@@ -393,7 +494,7 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error('Error updating reminder:', updateError);
+      logger.error('Error updating reminder', updateError, { component: 'reminders' });
       return NextResponse.json(
         { success: false, error: 'Failed to update reminder' },
         { status: 500 }
@@ -405,10 +506,10 @@ export async function PATCH(request: NextRequest) {
       reminder: updatedReminder as TaskReminder,
     });
   } catch (error) {
-    console.error('Error in PATCH /api/reminders:', error);
+    logger.error('Error in PATCH /api/reminders', error, { component: 'reminders' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});

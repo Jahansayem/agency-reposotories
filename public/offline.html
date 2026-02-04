@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0033A0" />
+    <title>Offline - Bealer Agency Tasks</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Plus Jakarta Sans', sans-serif;
+        background: linear-gradient(135deg, #0033A0 0%, #003D7A 100%);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      .container {
+        max-width: 500px;
+        animation: fadeIn 0.5s ease-in;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.9;
+      }
+
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #ffffff;
+      }
+
+      p {
+        font-size: 1.125rem;
+        line-height: 1.6;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+      }
+
+      .features {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .features h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #72B5E8;
+      }
+
+      .features ul {
+        list-style: none;
+        text-align: left;
+      }
+
+      .features li {
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        font-size: 0.95rem;
+      }
+
+      .features li::before {
+        content: "✓";
+        margin-right: 0.75rem;
+        color: #C9A227;
+        font-weight: bold;
+        font-size: 1.25rem;
+      }
+
+      .retry-button {
+        background: #C9A227;
+        color: #0033A0;
+        border: none;
+        border-radius: 8px;
+        padding: 1rem 2rem;
+        font-size: 1.125rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      .retry-button:hover {
+        background: #E0B030;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      .retry-button:active {
+        transform: translateY(0);
+      }
+
+      .status {
+        margin-top: 2rem;
+        font-size: 0.9rem;
+        opacity: 0.7;
+      }
+
+      .online-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        margin-top: 1rem;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #ff4444;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .status-dot.online {
+        background: #44ff44;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon">📡</div>
+      <h1>You're Offline</h1>
+      <p>
+        It looks like you've lost your internet connection. Don't worry — we're
+        working on offline support!
+      </p>
+
+      <div class="features">
+        <h2>Coming Soon: Offline Features</h2>
+        <ul>
+          <li>View your tasks offline</li>
+          <li>Create and edit tasks without internet</li>
+          <li>Automatic sync when back online</li>
+          <li>Offline message queue</li>
+        </ul>
+      </div>
+
+      <button class="retry-button" onclick="location.reload()">
+        Retry Connection
+      </button>
+
+      <div class="status">
+        <div class="online-indicator">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Offline</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Monitor online/offline status
+      function updateStatus() {
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+
+        if (navigator.onLine) {
+          statusDot.classList.add('online');
+          statusText.textContent = 'Back Online!';
+
+          // Auto-reload after 1 second when online
+          setTimeout(() => {
+            location.reload();
+          }, 1000);
+        } else {
+          statusDot.classList.remove('online');
+          statusText.textContent = 'Offline';
+        }
+      }
+
+      // Listen for online/offline events
+      window.addEventListener('online', updateStatus);
+      window.addEventListener('offline', updateStatus);
+
+      // Initial status check
+      updateStatus();
+
+      // Periodic connectivity check (every 5 seconds)
+      setInterval(() => {
+        fetch('/manifest.json', { method: 'HEAD', cache: 'no-cache' })
+          .then(() => {
+            if (!navigator.onLine) {
+              // Force online event
+              window.dispatchEvent(new Event('online'));
+            }
+          })
+          .catch(() => {
+            // Still offline
+          });
+      }, 5000);
+    </script>
+  </body>
+</html>

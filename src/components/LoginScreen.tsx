@@ -1,21 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, ChevronLeft, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap } from 'lucide-react';
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronUp, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap, Ticket, Loader2, Check, Building2 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import {
-  verifyPin,
   isValidPin,
   getUserInitials,
-  isLockedOut,
-  incrementLockout,
-  clearLockout,
   setStoredSession,
-  getLockoutState,
 } from '@/lib/auth';
 import { supabase } from '@/lib/supabaseClient';
 import { OAuthLoginButtons } from './OAuthLoginButtons';
+import RegisterModal from './RegisterModal';
+import { ContextualErrorMessages } from '@/lib/errorMessages';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 interface LoginScreenProps {
   onLogin: (user: AuthUser) => void;
@@ -89,10 +87,14 @@ function Logo3D() {
 }
 
 // Animated stat counter
-function AnimatedCounter({ value, duration = 1.5 }: { value: number; duration?: number }) {
+function AnimatedCounter({ value, duration = 1.5, reduceMotion = false }: { value: number; duration?: number; reduceMotion?: boolean }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
+    if (reduceMotion) {
+      setCount(value);
+      return;
+    }
     let start = 0;
     const end = value;
     const increment = end / (duration * 60);
@@ -106,24 +108,26 @@ function AnimatedCounter({ value, duration = 1.5 }: { value: number; duration?: 
       }
     }, 1000 / 60);
     return () => clearInterval(timer);
-  }, [value, duration]);
+  }, [value, duration, reduceMotion]);
 
   return <span className="tabular-nums">{count}</span>;
 }
 
 export default function LoginScreen({ onLogin }: LoginScreenProps) {
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const [screen, setScreen] = useState<Screen>('users');
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
   const [pin, setPin] = useState(['', '', '', '']);
   const [error, setError] = useState('');
-  const [attemptsRemaining, setAttemptsRemaining] = useState(3);
+  const [attemptsRemaining, setAttemptsRemaining] = useState(5);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [teamStats, setTeamStats] = useState<{ totalTasks: number; completedThisWeek: number; activeUsers: number } | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const features = [
     {
@@ -155,7 +159,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         .select('id, name, color, role, created_at, last_login')
         .order('name');
       if (data) {
-        setUsers(data.map(u => ({ ...u, role: u.role || 'member' })));
+        setUsers(data.map(u => ({ ...u, role: u.role || 'staff' })));
       }
       setLoading(false);
     };
@@ -210,27 +214,29 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Countdown timer for server-side lockout
   useEffect(() => {
-    if (!selectedUser) return;
-    const checkLockout = () => {
-      const { locked, remainingSeconds } = isLockedOut(selectedUser.id);
-      setLockoutSeconds(locked ? remainingSeconds : 0);
-      const state = getLockoutState(selectedUser.id);
-      setAttemptsRemaining(Math.max(0, 3 - state.attempts));
-    };
-    checkLockout();
-    const interval = setInterval(checkLockout, 1000);
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
     return () => clearInterval(interval);
-  }, [selectedUser]);
+  }, [lockoutSeconds]);
 
   const handleUserSelect = (user: AuthUser) => {
     setSelectedUser(user);
     setScreen('pin');
     setPin(['', '', '', '']);
     setError('');
-    const state = getLockoutState(user.id);
-    setAttemptsRemaining(Math.max(0, 3 - state.attempts));
-    setTimeout(() => pinRefs.current[0]?.focus(), 100);
+    setAttemptsRemaining(5);
+    setLockoutSeconds(0);
+    setTimeout(() => pinRefs.current[0]?.focus(), 550);
   };
 
   const handlePinChange = (
@@ -273,42 +279,46 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
     setError('');
 
     try {
-      const { data } = await supabase
-        .from('users')
-        .select('pin_hash')
-        .eq('id', selectedUser.id)
-        .single();
-
-      if (!data) {
-        setError('User not found');
-        setIsSubmitting(false);
-        return;
+      // Fetch CSRF token first
+      const csrfResponse = await fetch('/api/csrf');
+      if (!csrfResponse.ok) {
+        const errorMsg = ContextualErrorMessages.login(new Error('CSRF fetch failed'));
+        throw new Error(errorMsg.message);
       }
+      const { token: csrfToken } = await csrfResponse.json();
 
-      const isValid = await verifyPin(pinString, data.pin_hash);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ userId: selectedUser.id, pin: pinString }),
+      });
+      const result = await response.json();
+      const isValid = response.ok && result.success;
 
       if (isValid) {
-        clearLockout(selectedUser.id);
-        await supabase
-          .from('users')
-          .update({ last_login: new Date().toISOString() })
-          .eq('id', selectedUser.id);
+        // Store session in localStorage for client-side state (components use this to know who is logged in)
+        // The HttpOnly cookie set by the server handles actual authentication
         setStoredSession(selectedUser);
         onLogin(selectedUser);
       } else {
-        const lockout = incrementLockout(selectedUser.id);
-        const remaining = Math.max(0, 3 - lockout.attempts);
-        setAttemptsRemaining(remaining);
-        if (lockout.lockedUntil) {
+        if (result.locked || response.status === 429) {
+          setLockoutSeconds(result.remainingSeconds || 300);
           setError('Too many attempts. Please wait.');
-        } else {
+        } else if (result.attemptsRemaining !== undefined) {
+          setAttemptsRemaining(result.attemptsRemaining);
           setError('Incorrect PIN');
+        } else {
+          setError(result.error || 'Incorrect PIN');
         }
         setPin(['', '', '', '']);
         pinRefs.current[0]?.focus();
       }
-    } catch {
-      setError('Something went wrong.');
+    } catch (err) {
+      const errorMsg = ContextualErrorMessages.login(err);
+      setError(`${errorMsg.message}. ${errorMsg.action}`);
     }
 
     setIsSubmitting(false);
@@ -323,57 +333,60 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F] relative overflow-hidden">
-        <AnimatedGrid />
-        <FloatingShapes />
+      <MotionConfig reducedMotion="user">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F] relative overflow-hidden">
+          <AnimatedGrid />
+          <FloatingShapes />
 
-        <motion.div
-          className="relative z-10 flex flex-col items-center gap-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <Logo3D />
-          <div className="w-8 h-8 border-2 border-[var(--brand-sky)]/30 border-t-[var(--brand-sky)] rounded-full animate-spin" />
-          <p className="text-white/50 text-sm font-medium tracking-wider uppercase">
-            Loading workspace...
-          </p>
-        </motion.div>
-      </div>
+          <motion.div
+            className="relative z-10 flex flex-col items-center gap-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <Logo3D />
+            <div className="w-8 h-8 border-2 border-[var(--brand-sky)]/30 border-t-[var(--brand-sky)] rounded-full animate-spin" />
+            <p className="text-white/50 text-sm font-medium tracking-wider uppercase">
+              Loading workspace...
+            </p>
+          </motion.div>
+        </div>
+      </MotionConfig>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden relative bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F]">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-lg focus:z-50">
-        Skip to content
-      </a>
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden relative bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F]">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
+          Skip to content
+        </a>
 
-      {/* Background layers */}
-      <AnimatedGrid />
-      <FloatingShapes />
+        {/* Background layers */}
+        <AnimatedGrid />
+        <FloatingShapes />
 
-      {/* Static ambient light effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute -top-1/4 -right-1/4 w-[800px] h-[800px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(114,181,232,0.1) 0%, transparent 60%)' }}
-        />
-        <div
-          className="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(0,51,160,0.15) 0%, transparent 60%)' }}
-        />
-      </div>
+        {/* Static ambient light effects */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div
+            className="absolute -top-1/4 -right-1/4 w-[800px] h-[800px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(114,181,232,0.1) 0%, transparent 60%)' }}
+          />
+          <div
+            className="absolute -bottom-1/4 -left-1/4 w-[600px] h-[600px] rounded-full"
+            style={{ background: 'radial-gradient(circle, rgba(0,51,160,0.15) 0%, transparent 60%)' }}
+          />
+        </div>
 
-      <div className="relative z-10 w-full max-w-6xl">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          {/* Left side - Branding */}
-          <motion.div
-            className="hidden lg:block"
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <div className="max-w-lg">
+        <div className="relative z-10 w-full max-w-6xl">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            {/* Left side - Branding */}
+            <motion.div
+              className="hidden lg:block"
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="max-w-lg">
               {/* Logo and badge */}
               <motion.div
                 className="flex items-center gap-4 mb-8"
@@ -437,14 +450,14 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                 {features.map((feature, i) => (
                   <motion.div
                     key={feature.title}
-                    className="group relative flex items-start gap-4 p-4 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden"
+                    className="group relative flex items-start gap-4 p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03] backdrop-blur-sm overflow-hidden"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.6 + i * 0.1 }}
                     whileHover={{ scale: 1.02, borderColor: 'rgba(114,181,232,0.3)' }}
                   >
                     <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-                    <div className="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center text-[var(--brand-sky)] border border-white/10">
+                    <div className="relative flex-shrink-0 w-10 h-10 rounded-[var(--radius-xl)] bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center text-[var(--brand-sky)] border border-white/10">
                       <feature.Icon className="w-5 h-5" />
                     </div>
                     <div className="relative">
@@ -463,40 +476,40 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.9 }}
                 >
-                  <div className="text-center p-4 rounded-2xl border border-white/10 bg-white/[0.03]">
+                  <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-white">
-                      <AnimatedCounter value={teamStats.totalTasks} />
+                      <AnimatedCounter value={teamStats.totalTasks} reduceMotion={prefersReducedMotion} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">Total Tasks</p>
                   </div>
-                  <div className="text-center p-4 rounded-2xl border border-white/10 bg-white/[0.03]">
+                  <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-sky-light)] to-[var(--brand-sky)]">
-                      <AnimatedCounter value={teamStats.completedThisWeek} />
+                      <AnimatedCounter value={teamStats.completedThisWeek} reduceMotion={prefersReducedMotion} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">This Week</p>
                   </div>
-                  <div className="text-center p-4 rounded-2xl border border-white/10 bg-white/[0.03]">
+                  <div className="text-center p-4 rounded-[var(--radius-2xl)] border border-white/10 bg-white/[0.03]">
                     <p className="text-3xl font-bold text-emerald-400">
-                      <AnimatedCounter value={teamStats.activeUsers} />
+                      <AnimatedCounter value={teamStats.activeUsers} reduceMotion={prefersReducedMotion} />
                     </p>
                     <p className="text-xs text-white/40 uppercase tracking-wider mt-1">Active</p>
                   </div>
                 </motion.div>
               )}
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
 
-          {/* Right side - Login card */}
-          <div id="main-content" className="w-full max-w-md lg:justify-self-end relative">
-            <AnimatePresence mode="wait">
-              {screen === 'users' && (
-                <motion.div
-                  key="users"
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                >
+            {/* Right side - Login card */}
+            <div id="main-content" className="w-full max-w-md lg:justify-self-end relative">
+              <AnimatePresence mode="wait">
+                {screen === 'users' && (
+                  <motion.div
+                    key="users"
+                    initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  >
                   {/* Mobile header */}
                   <motion.div
                     className="mb-6 text-center lg:hidden"
@@ -545,7 +558,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                             placeholder="Search team..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-11 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 focus:border-[var(--brand-sky)]/40 transition-all"
+                            className="w-full pl-11 pr-4 py-3 rounded-[var(--radius-xl)] bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 focus:border-[var(--brand-sky)]/40 transition-all"
                           />
                         </div>
                       </motion.div>
@@ -593,7 +606,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                         transition={{ delay: 0.3 }}
                       >
                         <motion.div
-                          className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center border border-white/10"
+                          className="w-20 h-20 mx-auto mb-6 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center border border-white/10"
                           animate={{ y: [-4, 4, -4] }}
                           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                         >
@@ -604,9 +617,32 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       </motion.div>
                     )}
 
-                    {/* OAuth buttons */}
-                    <div className="p-6 pt-2">
+                    {/* Create Account + OAuth buttons */}
+                    <div className="p-6 pt-2 space-y-3">
+                      {/* Create Account button */}
+                      <button
+                        onClick={() => setShowRegisterModal(true)}
+                        className="w-full py-3 px-4 rounded-[var(--radius-xl)] bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        Create Account
+                      </button>
+
+                      {/* Divider */}
+                      {users.length > 0 && (
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-white/10"></div>
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] px-2 text-white/40">Or</span>
+                          </div>
+                        </div>
+                      )}
+
                       <OAuthLoginButtons />
+
+                      {/* Invite Code Section */}
+                      <InviteCodeSection />
                     </div>
                   </div>
                 </motion.div>
@@ -625,7 +661,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   <div className="relative bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-2xl rounded-[28px] border border-white/10 p-8 shadow-2xl">
                     <motion.button
                       onClick={() => { setScreen('users'); setSearchQuery(''); }}
-                      className="flex items-center gap-2 text-sm text-white/40 hover:text-white mb-8 transition-colors -ml-2 px-3 py-2 rounded-lg hover:bg-white/5"
+                      className="flex items-center gap-2 text-sm text-white/40 hover:text-white mb-8 transition-colors -ml-2 px-3 py-2 rounded-[var(--radius-lg)] hover:bg-white/5"
                       whileHover={{ x: -2 }}
                     >
                       <ChevronLeft className="w-4 h-4" />
@@ -635,7 +671,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <div className="text-center mb-8">
                       <div className="relative inline-block mb-6">
                         <div
-                          className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-2 ring-white/20"
+                          className="w-20 h-20 rounded-[var(--radius-2xl)] flex items-center justify-center text-white text-2xl font-bold shadow-xl ring-2 ring-white/20"
                           style={{ backgroundColor: selectedUser.color }}
                         >
                           {getUserInitials(selectedUser.name)}
@@ -648,7 +684,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                         Enter your 4-digit PIN
                       </p>
 
-                      {lockoutSeconds === 0 && attemptsRemaining < 3 && (
+                      {lockoutSeconds === 0 && attemptsRemaining < 5 && (
                         <motion.div
                           className="mt-4 inline-flex items-center gap-2 text-xs text-amber-400 bg-amber-500/10 px-4 py-2 rounded-full border border-amber-500/20"
                           initial={{ opacity: 0, scale: 0.9 }}
@@ -679,9 +715,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                               onChange={(e) => handlePinChange(index, e.target.value, pinRefs, pin, setPin)}
                               onKeyDown={(e) => handlePinKeyDown(e, index, pinRefs, pin)}
                               disabled={lockoutSeconds > 0 || isSubmitting}
+                              data-testid={index === 0 ? 'pin-input' : undefined}
                               aria-label={`PIN digit ${index + 1} of 4`}
+                              aria-invalid={error ? 'true' : 'false'}
+                              aria-describedby={error ? 'pin-error' : undefined}
                               autoComplete="one-time-code"
-                              className={`w-14 h-16 text-center text-2xl font-bold rounded-xl border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${
+                              className={`w-14 h-16 text-center text-2xl font-bold rounded-[var(--radius-xl)] border-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/50 ${
                                 lockoutSeconds > 0
                                   ? 'border-red-500/50 bg-red-500/10 text-red-400'
                                   : digit
@@ -692,12 +731,24 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                           </div>
                         ))}
                       </div>
+                      <button
+                        type="submit"
+                        data-testid="login-button"
+                        className="sr-only"
+                        tabIndex={-1}
+                      >
+                        Submit PIN
+                      </button>
                     </form>
 
                     <AnimatePresence mode="wait">
                       {(error || lockoutSeconds > 0) && (
                         <motion.div
-                          className="flex items-center justify-center gap-2 text-red-400 text-sm bg-red-500/10 py-3 px-4 rounded-xl border border-red-500/20 mb-4"
+                          id="pin-error"
+                          role="alert"
+                          aria-live="assertive"
+                          aria-atomic="true"
+                          className="flex items-center justify-center gap-2 text-red-400 text-sm bg-red-500/10 py-3 px-4 rounded-[var(--radius-xl)] border border-red-500/20 mb-4"
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
@@ -736,6 +787,321 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           </div>
         </div>
       </div>
+
+      {/* Registration Modal */}
+      <RegisterModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSuccess={(user) => {
+          setStoredSession(user);
+          setShowRegisterModal(false);
+          onLogin(user);
+        }}
+      />
+    </div>
+    </MotionConfig>
+  );
+}
+
+// Invite code section for joining agencies
+function InviteCodeSection() {
+  const [expanded, setExpanded] = useState(false);
+  const [token, setToken] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [validatedInvite, setValidatedInvite] = useState<{
+    agency_name: string;
+    role: string;
+    email: string;
+    expires_at: string;
+  } | null>(null);
+  const [accepted, setAccepted] = useState(false);
+
+  // New user registration fields
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPin, setNewPin] = useState('');
+
+  const handleValidate = async () => {
+    if (!token.trim()) {
+      setInviteError('Please enter an invitation token');
+      return;
+    }
+
+    setIsValidating(true);
+    setInviteError(null);
+    setValidatedInvite(null);
+
+    try {
+      const response = await fetchWithCsrf('/api/invitations/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: token.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.valid) {
+        throw new Error(data.error || 'Invalid or expired invitation');
+      }
+
+      setValidatedInvite({
+        agency_name: data.agency_name,
+        role: data.role,
+        email: data.email,
+        expires_at: data.expires_at,
+      });
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to validate invitation');
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleAccept = async () => {
+    setIsAccepting(true);
+    setInviteError(null);
+
+    try {
+      // Check if user is logged in
+      const session = localStorage.getItem('todoSession');
+      let payload: Record<string, unknown> = { token: token.trim() };
+
+      if (isNewUser) {
+        if (!newName.trim()) {
+          setInviteError('Please enter your name');
+          setIsAccepting(false);
+          return;
+        }
+        if (!newPin || newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+          setInviteError('Please enter a 4-digit PIN');
+          setIsAccepting(false);
+          return;
+        }
+        payload = {
+          ...payload,
+          is_new_user: true,
+          name: newName.trim(),
+          pin: newPin,
+        };
+      } else if (session) {
+        const parsed = JSON.parse(session);
+        payload = {
+          ...payload,
+          is_new_user: false,
+          name: parsed.userName,
+        };
+      } else {
+        // No session and not new user -- prompt to create account
+        setIsNewUser(true);
+        setIsAccepting(false);
+        return;
+      }
+
+      const response = await fetchWithCsrf('/api/invitations/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to accept invitation');
+      }
+
+      setAccepted(true);
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Failed to accept invitation');
+    } finally {
+      setIsAccepting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setToken('');
+    setValidatedInvite(null);
+    setInviteError(null);
+    setAccepted(false);
+    setIsNewUser(false);
+    setNewName('');
+    setNewPin('');
+  };
+
+  if (accepted) {
+    return (
+      <div className="p-4 rounded-[var(--radius-xl)] bg-emerald-500/10 border border-emerald-500/20">
+        <div className="flex items-center gap-2 text-emerald-400 text-sm">
+          <Check className="w-4 h-4" />
+          <span className="font-medium">You have joined {validatedInvite?.agency_name}!</span>
+        </div>
+        <p className="text-xs text-white/40 mt-1">Please log in to access the agency workspace.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-center gap-2 py-2 text-xs text-white/40 hover:text-white/60 transition-colors"
+      >
+        <Ticket className="w-3.5 h-3.5" />
+        Have an invite code?
+        {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 rounded-[var(--radius-xl)] bg-white/[0.04] border border-white/10 space-y-3">
+              {/* Error */}
+              {inviteError && (
+                <div className="flex items-start gap-2 text-red-400 text-xs bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>{inviteError}</span>
+                </div>
+              )}
+
+              {/* Token input + validate */}
+              {!validatedInvite && (
+                <>
+                  <input
+                    type="text"
+                    value={token}
+                    onChange={(e) => { setToken(e.target.value); setInviteError(null); }}
+                    placeholder="Paste invitation token..."
+                    className="w-full px-3 py-2.5 rounded-[var(--radius-lg)] bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 focus:border-[var(--brand-sky)]/40"
+                  />
+                  <button
+                    onClick={handleValidate}
+                    disabled={isValidating || !token.trim()}
+                    className="w-full py-2.5 px-4 rounded-[var(--radius-lg)] bg-white/10 hover:bg-white/15 text-white text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isValidating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Validating...
+                      </>
+                    ) : (
+                      'Validate Invitation'
+                    )}
+                  </button>
+                </>
+              )}
+
+              {/* Validated invite info */}
+              {validatedInvite && !isNewUser && (
+                <>
+                  <div className="p-3 rounded-lg bg-[var(--brand-sky)]/10 border border-[var(--brand-sky)]/20">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Building2 className="w-4 h-4 text-[var(--brand-sky)]" />
+                      <span className="text-sm font-medium text-white">{validatedInvite.agency_name}</span>
+                    </div>
+                    <p className="text-xs text-white/50">
+                      Role: <span className="capitalize text-white/70">{validatedInvite.role}</span>
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleAccept}
+                    disabled={isAccepting}
+                    className="w-full py-2.5 px-4 rounded-[var(--radius-lg)] bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isAccepting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Accept & Join
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleReset}
+                    className="w-full text-xs text-white/40 hover:text-white/60 transition-colors py-1"
+                  >
+                    Use a different code
+                  </button>
+                </>
+              )}
+
+              {/* New user registration fields */}
+              {validatedInvite && isNewUser && (
+                <>
+                  <div className="p-3 rounded-lg bg-[var(--brand-sky)]/10 border border-[var(--brand-sky)]/20">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="w-4 h-4 text-[var(--brand-sky)]" />
+                      <span className="text-sm font-medium text-white">{validatedInvite.agency_name}</span>
+                    </div>
+                    <p className="text-xs text-white/50">Create an account to join</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">Your Name</label>
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => { setNewName(e.target.value); setInviteError(null); }}
+                      placeholder="e.g., John Smith"
+                      className="w-full px-3 py-2.5 rounded-[var(--radius-lg)] bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">4-Digit PIN</label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={newPin}
+                      onChange={(e) => { setNewPin(e.target.value.replace(/\D/g, '')); setInviteError(null); }}
+                      placeholder="****"
+                      className="w-full px-3 py-2.5 rounded-[var(--radius-lg)] bg-white/5 border border-white/10 text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[var(--brand-sky)]/30 tracking-widest text-center font-mono"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleAccept}
+                    disabled={isAccepting}
+                    className="w-full py-2.5 px-4 rounded-[var(--radius-lg)] bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isAccepting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creating account...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Create Account & Join
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setIsNewUser(false)}
+                    className="w-full text-xs text-white/40 hover:text-white/60 transition-colors py-1"
+                  >
+                    I already have an account
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -744,8 +1110,9 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 function UserCard({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (user: AuthUser) => void; delay?: number }) {
   return (
     <motion.button
+      data-testid={`user-card-${user.name}`}
       onClick={() => onSelect(user)}
-      className="group w-full flex items-center gap-4 p-3 rounded-xl hover:bg-white/[0.08] active:bg-white/10 transition-all text-left border border-transparent hover:border-white/10"
+      className="group w-full flex items-center gap-4 p-3 rounded-[var(--radius-xl)] hover:bg-white/[0.08] active:bg-white/10 transition-all text-left border border-transparent hover:border-white/10"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
@@ -753,11 +1120,11 @@ function UserCard({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (us
     >
       <div className="relative flex-shrink-0">
         <motion.div
-          className="absolute inset-0 rounded-xl blur-md opacity-0 group-hover:opacity-50 transition-all duration-300"
+          className="absolute inset-0 rounded-[var(--radius-xl)] blur-md opacity-0 group-hover:opacity-50 transition-all duration-300"
           style={{ backgroundColor: user.color }}
         />
         <div
-          className="relative w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold text-sm shadow-lg ring-1 ring-white/10 group-hover:ring-white/20 transition-all"
+          className="relative w-12 h-12 rounded-[var(--radius-xl)] flex items-center justify-center text-white font-semibold text-sm shadow-lg ring-1 ring-white/10 group-hover:ring-white/20 transition-all"
           style={{ backgroundColor: user.color }}
         >
           {getUserInitials(user.name)}
@@ -774,7 +1141,7 @@ function UserCard({ user, onSelect, delay = 0 }: { user: AuthUser; onSelect: (us
       </div>
 
       <motion.div
-        className="flex-shrink-0 w-8 h-8 rounded-lg bg-white/5 group-hover:bg-gradient-to-br group-hover:from-[var(--brand-sky-light)] group-hover:to-[var(--brand-sky)] flex items-center justify-center transition-all border border-white/5 group-hover:border-transparent"
+        className="flex-shrink-0 w-8 h-8 rounded-[var(--radius-lg)] bg-white/5 group-hover:bg-gradient-to-br group-hover:from-[var(--brand-sky-light)] group-hover:to-[var(--brand-sky)] flex items-center justify-center transition-all border border-white/5 group-hover:border-transparent"
         whileHover={{ scale: 1.1 }}
       >
         <Lock className="w-3.5 h-3.5 text-white/40 group-hover:text-[#00205B] transition-colors" />

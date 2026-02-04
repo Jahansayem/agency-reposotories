@@ -41,6 +41,7 @@ import { Todo, TodoPriority, TodoStatus, Subtask, User as UserType, PRIORITY_CON
 import { fetchWithCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { sanitizeTranscription } from '@/lib/sanitize';
+import { usePermission } from '@/hooks/usePermission';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TASK DETAIL PANEL
@@ -74,7 +75,10 @@ export default function TaskDetailPanel({
   onGenerateEmail,
 }: TaskDetailPanelProps) {
   const { theme } = useTheme();
-  const darkMode = theme === 'dark';
+  const canDeleteTasks = usePermission('can_delete_tasks');
+  const canEditAnyTask = usePermission('can_edit_any_task');
+  const canAssignTasks = usePermission('can_assign_tasks');
+  const canUseAiFeatures = usePermission('can_use_ai_features');
 
   // Editing states
   const [isEditingText, setIsEditingText] = useState(false);
@@ -105,8 +109,13 @@ export default function TaskDetailPanel({
   const handleSaveText = useCallback(async () => {
     if (editedText.trim() && editedText !== task.text) {
       setSaving(true);
-      await onUpdate(task.id, { text: editedText.trim() });
-      setSaving(false);
+      try {
+        await onUpdate(task.id, { text: editedText.trim() });
+      } catch (error) {
+        logger.error('Failed to save task text', error, { component: 'TaskDetailPanel' });
+      } finally {
+        setSaving(false);
+      }
     }
     setIsEditingText(false);
   }, [task.id, task.text, editedText, onUpdate]);
@@ -114,26 +123,47 @@ export default function TaskDetailPanel({
   const handleSaveNotes = useCallback(async () => {
     if (editedNotes !== (task.notes || '')) {
       setSaving(true);
-      await onUpdate(task.id, { notes: editedNotes });
-      setSaving(false);
+      try {
+        await onUpdate(task.id, { notes: editedNotes });
+      } catch (error) {
+        logger.error('Failed to save task notes', error, { component: 'TaskDetailPanel' });
+      } finally {
+        setSaving(false);
+      }
     }
     setIsEditingNotes(false);
   }, [task.id, task.notes, editedNotes, onUpdate]);
 
   const handleToggleComplete = useCallback(async () => {
-    await onUpdate(task.id, { completed: !task.completed });
+    try {
+      await onUpdate(task.id, { completed: !task.completed });
+    } catch (error) {
+      logger.error('Failed to toggle task completion', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.completed, onUpdate]);
 
   const handlePriorityChange = useCallback(async (priority: TodoPriority) => {
-    await onUpdate(task.id, { priority });
+    try {
+      await onUpdate(task.id, { priority });
+    } catch (error) {
+      logger.error('Failed to update task priority', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, onUpdate]);
 
   const handleStatusChange = useCallback(async (status: TodoStatus) => {
-    await onUpdate(task.id, { status });
+    try {
+      await onUpdate(task.id, { status });
+    } catch (error) {
+      logger.error('Failed to update task status', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, onUpdate]);
 
   const handleAssigneeChange = useCallback(async (assignedTo: string | null) => {
-    await onUpdate(task.id, { assigned_to: assignedTo || undefined });
+    try {
+      await onUpdate(task.id, { assigned_to: assignedTo || undefined });
+    } catch (error) {
+      logger.error('Failed to update task assignee', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, onUpdate]);
 
   const handleAddSubtask = useCallback(async () => {
@@ -146,22 +176,34 @@ export default function TaskDetailPanel({
       priority: 'medium',
     };
 
-    await onUpdate(task.id, {
-      subtasks: [...(task.subtasks || []), newSubtaskItem],
-    });
-    setNewSubtask('');
+    try {
+      await onUpdate(task.id, {
+        subtasks: [...(task.subtasks || []), newSubtaskItem],
+      });
+      setNewSubtask('');
+    } catch (error) {
+      logger.error('Failed to add subtask', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.subtasks, newSubtask, onUpdate]);
 
   const handleToggleSubtask = useCallback(async (subtaskId: string) => {
     const updatedSubtasks = task.subtasks?.map(s =>
       s.id === subtaskId ? { ...s, completed: !s.completed } : s
     );
-    await onUpdate(task.id, { subtasks: updatedSubtasks });
+    try {
+      await onUpdate(task.id, { subtasks: updatedSubtasks });
+    } catch (error) {
+      logger.error('Failed to toggle subtask', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.subtasks, onUpdate]);
 
   const handleDeleteSubtask = useCallback(async (subtaskId: string) => {
     const updatedSubtasks = task.subtasks?.filter(s => s.id !== subtaskId);
-    await onUpdate(task.id, { subtasks: updatedSubtasks });
+    try {
+      await onUpdate(task.id, { subtasks: updatedSubtasks });
+    } catch (error) {
+      logger.error('Failed to delete subtask', error, { component: 'TaskDetailPanel' });
+    }
   }, [task.id, task.subtasks, onUpdate]);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -282,7 +324,7 @@ export default function TaskDetailPanel({
       <header
         className={`
           flex items-center justify-between px-6 py-4 border-b flex-shrink-0
-          ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+          ${'border-[var(--border)]'}
         `}
       >
         <div className="flex items-center gap-3">
@@ -292,7 +334,7 @@ export default function TaskDetailPanel({
             aria-label={task.completed ? 'Mark task as incomplete' : 'Mark task as complete'}
             aria-pressed={task.completed}
             className={`
-              w-6 h-6 rounded-lg border-2 flex items-center justify-center
+              w-6 h-6 rounded-[var(--radius-lg)] border-2 flex items-center justify-center
               transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
               ${task.completed
                 ? 'bg-[var(--success)] border-[var(--success)]'
@@ -303,7 +345,7 @@ export default function TaskDetailPanel({
             {task.completed && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
           </button>
 
-          <h2 className={`font-semibold ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+          <h2 className={`font-semibold ${'text-[var(--foreground)]'}`}>
             Task Details
           </h2>
         </div>
@@ -314,13 +356,11 @@ export default function TaskDetailPanel({
             <button
               onClick={() => onGenerateEmail(task)}
               className={`
-                p-2 rounded-lg transition-colors
-                ${darkMode
-                  ? 'text-white/60 hover:text-white hover:bg-white/10'
-                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                }
+                p-2 rounded-[var(--radius-lg)] transition-colors
+                ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
               `}
               title="Generate customer email"
+              aria-label="Generate customer email"
             >
               <Mail className="w-5 h-5" />
             </button>
@@ -331,13 +371,11 @@ export default function TaskDetailPanel({
             <button
               onClick={() => onArchive(task.id)}
               className={`
-                p-2 rounded-lg transition-colors
-                ${darkMode
-                  ? 'text-white/60 hover:text-white hover:bg-white/10'
-                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                }
+                p-2 rounded-[var(--radius-lg)] transition-colors
+                ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
               `}
               title="Archive task"
+              aria-label="Archive task"
             >
               <Archive className="w-5 h-5" />
             </button>
@@ -347,11 +385,8 @@ export default function TaskDetailPanel({
           <button
             aria-label="More options"
             className={`
-              p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-              ${darkMode
-                ? 'text-white/60 hover:text-white hover:bg-white/10'
-                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              p-2 rounded-[var(--radius-lg)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+              ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
           >
             <MoreHorizontal className="w-5 h-5" />
@@ -362,11 +397,8 @@ export default function TaskDetailPanel({
             onClick={onClose}
             aria-label="Close task details"
             className={`
-              p-2 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-              ${darkMode
-                ? 'text-white/60 hover:text-white hover:bg-white/10'
-                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              p-2 rounded-[var(--radius-lg)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+              ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
           >
             <X className="w-5 h-5" />
@@ -396,12 +428,9 @@ export default function TaskDetailPanel({
                   }}
                   autoFocus
                   className={`
-                    w-full px-3 py-2 rounded-lg border text-lg font-medium
+                    w-full px-3 py-2 rounded-[var(--radius-lg)] border text-lg font-medium
                     resize-none
-                    ${darkMode
-                      ? 'bg-white/5 border-white/20 text-white focus:border-[var(--accent)]'
-                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)] focus:border-[var(--accent)]'
-                    }
+                    ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)] focus:border-[var(--accent)]'}
                   `}
                   rows={2}
                 />
@@ -409,7 +438,7 @@ export default function TaskDetailPanel({
                   <button
                     onClick={handleSaveText}
                     disabled={saving}
-                    className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-110"
+                    className="px-3 py-1.5 rounded-[var(--radius-lg)] bg-[var(--accent)] text-white text-sm font-medium hover:brightness-110"
                   >
                     {saving ? 'Saving...' : 'Save'}
                   </button>
@@ -419,11 +448,8 @@ export default function TaskDetailPanel({
                       setIsEditingText(false);
                     }}
                     className={`
-                      px-3 py-1.5 rounded-lg text-sm font-medium
-                      ${darkMode
-                        ? 'bg-white/10 text-white/80'
-                        : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                      }
+                      px-3 py-1.5 rounded-[var(--radius-lg)] text-sm font-medium
+                      ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}
                     `}
                   >
                     Cancel
@@ -432,22 +458,23 @@ export default function TaskDetailPanel({
               </div>
             ) : (
               <button
-                onClick={() => setIsEditingText(true)}
+                onClick={() => canEditAnyTask && setIsEditingText(true)}
+                disabled={!canEditAnyTask}
                 className={`
-                  w-full text-left text-lg font-medium p-2 -m-2 rounded-lg
+                  w-full text-left text-lg font-medium p-2 -m-2 rounded-[var(--radius-lg)]
                   transition-colors group
                   ${task.completed ? 'line-through opacity-60' : ''}
-                  ${darkMode
-                    ? 'text-white hover:bg-white/5'
-                    : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                  }
+                  ${canEditAnyTask ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)] cursor-pointer' : 'text-[var(--foreground)] cursor-default'}
                 `}
+                title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
               >
                 {task.text}
-                <Edit3 className={`
-                  inline-block w-4 h-4 ml-2 opacity-0 group-hover:opacity-50
-                  ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
-                `} />
+                {canEditAnyTask && (
+                  <Edit3 className={`
+                    inline-block w-4 h-4 ml-2 opacity-0 group-hover:opacity-50
+                    ${'text-[var(--foreground)]'}
+                  `} />
+                )}
               </button>
             )}
           </section>
@@ -458,20 +485,17 @@ export default function TaskDetailPanel({
             <PropertyField
               label="Status"
               icon={<Clock className="w-4 h-4" />}
-              darkMode={darkMode}
               htmlFor={`task-status-${task.id}`}
             >
               <select
                 id={`task-status-${task.id}`}
                 value={task.status}
                 onChange={(e) => handleStatusChange(e.target.value as TodoStatus)}
+                disabled={!canEditAnyTask}
                 className={`
-                  w-full px-3 py-2 rounded-lg border text-sm font-medium
-                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-                  ${darkMode
-                    ? 'bg-white/5 border-white/10 text-white'
-                    : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
-                  }
+                  w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
+                  ${canEditAnyTask ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
               >
                 {Object.entries(STATUS_CONFIG).map(([value, config]) => (
@@ -484,20 +508,17 @@ export default function TaskDetailPanel({
             <PropertyField
               label="Priority"
               icon={<Flag className="w-4 h-4" />}
-              darkMode={darkMode}
               htmlFor={`task-priority-${task.id}`}
             >
               <select
                 id={`task-priority-${task.id}`}
                 value={task.priority}
                 onChange={(e) => handlePriorityChange(e.target.value as TodoPriority)}
+                disabled={!canEditAnyTask}
                 className={`
-                  w-full px-3 py-2 rounded-lg border text-sm font-medium
-                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-                  ${darkMode
-                    ? 'bg-white/5 border-white/10 text-white'
-                    : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
-                  }
+                  w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
+                  ${canEditAnyTask ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
                 style={{ color: priorityConfig.color }}
               >
@@ -513,20 +534,17 @@ export default function TaskDetailPanel({
             <PropertyField
               label="Assigned to"
               icon={<User className="w-4 h-4" />}
-              darkMode={darkMode}
               htmlFor={`task-assignee-${task.id}`}
             >
               <select
                 id={`task-assignee-${task.id}`}
                 value={task.assigned_to || ''}
                 onChange={(e) => handleAssigneeChange(e.target.value || null)}
+                disabled={!canAssignTasks}
                 className={`
-                  w-full px-3 py-2 rounded-lg border text-sm font-medium
-                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-                  ${darkMode
-                    ? 'bg-white/5 border-white/10 text-white'
-                    : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
-                  }
+                  w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
+                  ${canAssignTasks ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
               >
                 <option value="">Unassigned</option>
@@ -540,7 +558,6 @@ export default function TaskDetailPanel({
             <PropertyField
               label="Due date"
               icon={<Calendar className="w-4 h-4" />}
-              darkMode={darkMode}
               htmlFor={`task-duedate-${task.id}`}
             >
               <div className="relative">
@@ -552,12 +569,9 @@ export default function TaskDetailPanel({
                     due_date: e.target.value ? new Date(e.target.value).toISOString() : undefined
                   })}
                   className={`
-                    w-full px-3 py-2 rounded-lg border text-sm font-medium
+                    w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
                     cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-                    ${darkMode
-                      ? 'bg-white/5 border-white/10 text-white'
-                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'
-                    }
+                    ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                     ${dueDateInfo?.isOverdue ? 'text-[var(--danger)]' : ''}
                   `}
                 />
@@ -575,7 +589,6 @@ export default function TaskDetailPanel({
             count={totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : undefined}
             isOpen={showSubtasks}
             onToggle={() => setShowSubtasks(!showSubtasks)}
-            darkMode={darkMode}
           >
             <div className="space-y-2">
               {/* Existing subtasks */}
@@ -583,8 +596,8 @@ export default function TaskDetailPanel({
                 <div
                   key={subtask.id}
                   className={`
-                    flex items-center gap-3 px-3 py-2 rounded-lg group
-                    ${darkMode ? 'hover:bg-white/5' : 'hover:bg-[var(--surface-2)]'}
+                    flex items-center gap-3 px-3 py-2 rounded-[var(--radius-lg)] group
+                    ${'hover:bg-[var(--surface-2)]'}
                   `}
                 >
                   <button
@@ -592,7 +605,7 @@ export default function TaskDetailPanel({
                     aria-label={subtask.completed ? `Mark "${subtask.text}" as incomplete` : `Mark "${subtask.text}" as complete`}
                     aria-pressed={subtask.completed}
                     className={`
-                      w-5 h-5 rounded-md border-2 flex items-center justify-center
+                      w-5 h-5 rounded-[var(--radius-md)] border-2 flex items-center justify-center
                       transition-all flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                       ${subtask.completed
                         ? 'bg-[var(--success)] border-[var(--success)]'
@@ -610,7 +623,7 @@ export default function TaskDetailPanel({
                         ? 'line-through opacity-50'
                         : ''
                       }
-                      ${darkMode ? 'text-white/80' : 'text-[var(--foreground)]'}
+                      ${'text-[var(--foreground)]'}
                     `}
                   >
                     {subtask.text}
@@ -621,10 +634,7 @@ export default function TaskDetailPanel({
                     aria-label={`Delete subtask "${subtask.text}"`}
                     className={`
                       p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
-                      ${darkMode
-                        ? 'text-white/40 hover:text-white hover:bg-white/10'
-                        : 'text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)]'
-                      }
+                      ${'text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)]'}
                     `}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -634,7 +644,7 @@ export default function TaskDetailPanel({
 
               {/* Add subtask input */}
               <div className="flex items-center gap-2 pt-2">
-                <Plus className={`w-4 h-4 ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`} />
+                <Plus className={`w-4 h-4 ${'text-[var(--text-muted)]'}`} />
                 <input
                   type="text"
                   value={newSubtask}
@@ -648,10 +658,7 @@ export default function TaskDetailPanel({
                   placeholder="Add a subtask..."
                   className={`
                     flex-1 px-2 py-1.5 text-sm bg-transparent border-none outline-none
-                    ${darkMode
-                      ? 'text-white placeholder-white/40'
-                      : 'text-[var(--foreground)] placeholder-[var(--text-muted)]'
-                    }
+                    ${'text-[var(--foreground)] placeholder-[var(--text-muted)]'}
                   `}
                 />
                 {newSubtask.trim() && (
@@ -672,7 +679,6 @@ export default function TaskDetailPanel({
             icon={<FileText className="w-4 h-4" />}
             isOpen={showNotes}
             onToggle={() => setShowNotes(!showNotes)}
-            darkMode={darkMode}
           >
             {isEditingNotes ? (
               <div className="space-y-2">
@@ -682,12 +688,9 @@ export default function TaskDetailPanel({
                   placeholder="Add notes..."
                   autoFocus
                   className={`
-                    w-full px-3 py-2 rounded-lg border text-sm
+                    w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm
                     resize-none min-h-[100px]
-                    ${darkMode
-                      ? 'bg-white/5 border-white/20 text-white placeholder-white/40 focus:border-[var(--accent)]'
-                      : 'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]'
-                    }
+                    ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]'}
                   `}
                   rows={4}
                 />
@@ -695,7 +698,7 @@ export default function TaskDetailPanel({
                   <button
                     onClick={handleSaveNotes}
                     disabled={saving}
-                    className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-white text-sm font-medium hover:brightness-110"
+                    className="px-3 py-1.5 rounded-[var(--radius-lg)] bg-[var(--accent)] text-white text-sm font-medium hover:brightness-110"
                   >
                     {saving ? 'Saving...' : 'Save'}
                   </button>
@@ -705,11 +708,8 @@ export default function TaskDetailPanel({
                       setIsEditingNotes(false);
                     }}
                     className={`
-                      px-3 py-1.5 rounded-lg text-sm font-medium
-                      ${darkMode
-                        ? 'bg-white/10 text-white/80'
-                        : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                      }
+                      px-3 py-1.5 rounded-[var(--radius-lg)] text-sm font-medium
+                      ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}
                     `}
                   >
                     Cancel
@@ -718,21 +718,20 @@ export default function TaskDetailPanel({
               </div>
             ) : (
               <button
-                onClick={() => setIsEditingNotes(true)}
+                onClick={() => canEditAnyTask && setIsEditingNotes(true)}
+                disabled={!canEditAnyTask}
                 className={`
-                  w-full text-left text-sm p-3 rounded-lg
+                  w-full text-left text-sm p-3 rounded-[var(--radius-lg)]
                   transition-colors
-                  ${task.notes
-                    ? darkMode
-                      ? 'text-white/80 hover:bg-white/5'
-                      : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                    : darkMode
-                      ? 'text-white/40 hover:bg-white/5 italic'
-                      : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] italic'
-                  }
+                  ${!canEditAnyTask
+                    ? 'text-[var(--text-muted)] cursor-default'
+                    : task.notes
+                      ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)] cursor-pointer'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] italic cursor-pointer'}
                 `}
+                title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
               >
-                {task.notes || 'Click to add notes...'}
+                {task.notes || (canEditAnyTask ? 'Click to add notes...' : 'No notes')}
               </button>
             )}
           </CollapsibleSection>
@@ -744,15 +743,11 @@ export default function TaskDetailPanel({
               icon={<Mic className="w-4 h-4" />}
               isOpen={true}
               onToggle={() => {}}
-              darkMode={darkMode}
             >
               <div
                 className={`
-                  p-3 rounded-lg text-sm italic
-                  ${darkMode
-                    ? 'bg-white/5 text-white/70'
-                    : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
-                  }
+                  p-3 rounded-[var(--radius-lg)] text-sm italic
+                  ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}
                 `}
               >
                 &ldquo;{sanitizeTranscription(task.transcription)}&rdquo;
@@ -768,30 +763,29 @@ export default function TaskDetailPanel({
               count={task.attachments.length.toString()}
               isOpen={showAttachments}
               onToggle={() => setShowAttachments(!showAttachments)}
-              darkMode={darkMode}
             >
               <div className="space-y-2">
                 {task.attachments.map(attachment => (
                   <div
                     key={attachment.id}
                     className={`
-                      flex items-center gap-3 px-3 py-2 rounded-lg
-                      ${darkMode ? 'bg-white/5' : 'bg-[var(--surface-2)]'}
+                      flex items-center gap-3 px-3 py-2 rounded-[var(--radius-lg)]
+                      ${'bg-[var(--surface-2)]'}
                     `}
                   >
                     <div
                       className={`
-                        w-8 h-8 rounded-lg flex items-center justify-center
-                        ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-3)]'}
+                        w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center
+                        ${'bg-[var(--surface-3)]'}
                       `}
                     >
-                      <Paperclip className={`w-4 h-4 ${darkMode ? 'text-white/60' : 'text-[var(--text-muted)]'}`} />
+                      <Paperclip className={`w-4 h-4 ${'text-[var(--text-muted)]'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                      <p className={`text-sm font-medium truncate ${'text-[var(--foreground)]'}`}>
                         {attachment.file_name}
                       </p>
-                      <p className={`text-xs ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+                      <p className={`text-xs ${'text-[var(--text-muted)]'}`}>
                         {(attachment.file_size / 1024).toFixed(1)} KB
                       </p>
                     </div>
@@ -805,7 +799,7 @@ export default function TaskDetailPanel({
           <section
             className={`
               pt-4 border-t text-xs space-y-1
-              ${darkMode ? 'border-white/10 text-white/40' : 'border-[var(--border)] text-[var(--text-light)]'}
+              ${'border-[var(--border)] text-[var(--text-light)]'}
             `}
           >
             <p>Created by {task.created_by} {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}</p>
@@ -823,7 +817,6 @@ export default function TaskDetailPanel({
             icon={<Sparkles className="w-4 h-4 text-[var(--accent)]" />}
             isOpen={showAiActions}
             onToggle={() => setShowAiActions(!showAiActions)}
-            darkMode={darkMode}
           >
             <div className="space-y-3">
               {/* AI Action Buttons */}
@@ -833,12 +826,9 @@ export default function TaskDetailPanel({
                   onClick={handleBreakIntoSubtasks}
                   disabled={aiActionLoading !== null}
                   className={`
-                    flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
+                    flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium
                     transition-all
-                    ${darkMode
-                      ? 'bg-white/5 text-white/80 hover:bg-white/10 hover:text-white border border-white/10'
-                      : 'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] border border-[var(--border)]'
-                    }
+                    ${'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] border border-[var(--border)]'}
                     ${aiActionLoading === 'subtasks' ? 'opacity-70' : ''}
                     disabled:opacity-50 disabled:cursor-not-allowed
                   `}
@@ -856,12 +846,9 @@ export default function TaskDetailPanel({
                   onClick={handleImproveDescription}
                   disabled={aiActionLoading !== null}
                   className={`
-                    flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
+                    flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium
                     transition-all
-                    ${darkMode
-                      ? 'bg-white/5 text-white/80 hover:bg-white/10 hover:text-white border border-white/10'
-                      : 'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] border border-[var(--border)]'
-                    }
+                    ${'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] border border-[var(--border)]'}
                     ${aiActionLoading === 'enhance' ? 'opacity-70' : ''}
                     disabled:opacity-50 disabled:cursor-not-allowed
                   `}
@@ -880,12 +867,9 @@ export default function TaskDetailPanel({
                     onClick={() => onGenerateEmail(task)}
                     disabled={aiActionLoading !== null}
                     className={`
-                      flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
+                      flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium
                       transition-all
-                      ${darkMode
-                        ? 'bg-white/5 text-white/80 hover:bg-white/10 hover:text-white border border-white/10'
-                        : 'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] border border-[var(--border)]'
-                      }
+                      ${'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface-3)] border border-[var(--border)]'}
                       disabled:opacity-50 disabled:cursor-not-allowed
                     `}
                   >
@@ -898,12 +882,9 @@ export default function TaskDetailPanel({
                 <button
                   disabled={true}
                   className={`
-                    flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium
+                    flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-lg)] text-sm font-medium
                     transition-all
-                    ${darkMode
-                      ? 'bg-white/5 text-white/80 border border-white/10'
-                      : 'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)]'
-                    }
+                    ${'bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)]'}
                     opacity-50 cursor-not-allowed
                   `}
                   title="Coming soon"
@@ -922,17 +903,14 @@ export default function TaskDetailPanel({
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                     className={`
-                      rounded-lg border overflow-hidden
-                      ${darkMode
-                        ? 'bg-[var(--accent)]/10 border-[var(--accent)]/30'
-                        : 'bg-[var(--accent)]/5 border-[var(--accent)]/20'
-                      }
+                      rounded-[var(--radius-lg)] border overflow-hidden
+                      ${'bg-[var(--accent)]/5 border-[var(--accent)]/20'}
                     `}
                   >
                     <div className="px-3 py-2 border-b border-[var(--accent)]/20">
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-[var(--accent)]" />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                        <span className={`text-sm font-medium ${'text-[var(--foreground)]'}`}>
                           AI suggests {aiSubtasksPreview.length} subtask{aiSubtasksPreview.length !== 1 ? 's' : ''}
                         </span>
                       </div>
@@ -943,13 +921,13 @@ export default function TaskDetailPanel({
                           key={subtask.id}
                           className={`
                             flex items-center gap-2 text-sm
-                            ${darkMode ? 'text-white/80' : 'text-[var(--foreground)]'}
+                            ${'text-[var(--foreground)]'}
                           `}
                         >
                           <CheckCircle2 className="w-4 h-4 text-[var(--accent)] flex-shrink-0" />
                           <span>{subtask.text}</span>
                           {subtask.estimatedMinutes && (
-                            <span className={`text-xs ml-auto ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+                            <span className={`text-xs ml-auto ${'text-[var(--text-muted)]'}`}>
                               ~{subtask.estimatedMinutes}m
                             </span>
                           )}
@@ -960,18 +938,15 @@ export default function TaskDetailPanel({
                       <button
                         onClick={() => setAiSubtasksPreview(null)}
                         className={`
-                          px-3 py-1.5 rounded-lg text-sm font-medium
-                          ${darkMode
-                            ? 'text-white/60 hover:text-white hover:bg-white/10'
-                            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                          }
+                          px-3 py-1.5 rounded-[var(--radius-lg)] text-sm font-medium
+                          ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                         `}
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleApplySubtasks}
-                        className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-[var(--accent)] hover:brightness-110"
+                        className="px-3 py-1.5 rounded-[var(--radius-lg)] text-sm font-semibold text-white bg-[var(--accent)] hover:brightness-110"
                       >
                         Apply
                       </button>
@@ -989,27 +964,24 @@ export default function TaskDetailPanel({
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                     className={`
-                      rounded-lg border overflow-hidden
-                      ${darkMode
-                        ? 'bg-[var(--accent)]/10 border-[var(--accent)]/30'
-                        : 'bg-[var(--accent)]/5 border-[var(--accent)]/20'
-                      }
+                      rounded-[var(--radius-lg)] border overflow-hidden
+                      ${'bg-[var(--accent)]/5 border-[var(--accent)]/20'}
                     `}
                   >
                     <div className="px-3 py-2 border-b border-[var(--accent)]/20">
                       <div className="flex items-center gap-2">
                         <Wand2 className="w-4 h-4 text-[var(--accent)]" />
-                        <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}`}>
+                        <span className={`text-sm font-medium ${'text-[var(--foreground)]'}`}>
                           Improved description
                         </span>
                       </div>
                     </div>
                     <div className="p-3">
-                      <p className={`text-sm ${darkMode ? 'text-white/80' : 'text-[var(--foreground)]'}`}>
+                      <p className={`text-sm ${'text-[var(--foreground)]'}`}>
                         {aiEnhancedText}
                       </p>
                       <div className="mt-2 pt-2 border-t border-[var(--accent)]/10">
-                        <p className={`text-xs ${darkMode ? 'text-white/40' : 'text-[var(--text-muted)]'}`}>
+                        <p className={`text-xs ${'text-[var(--text-muted)]'}`}>
                           Original: {task.text}
                         </p>
                       </div>
@@ -1018,18 +990,15 @@ export default function TaskDetailPanel({
                       <button
                         onClick={() => setAiEnhancedText(null)}
                         className={`
-                          px-3 py-1.5 rounded-lg text-sm font-medium
-                          ${darkMode
-                            ? 'text-white/60 hover:text-white hover:bg-white/10'
-                            : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                          }
+                          px-3 py-1.5 rounded-[var(--radius-lg)] text-sm font-medium
+                          ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                         `}
                       >
                         Cancel
                       </button>
                       <button
                         onClick={handleApplyEnhancedText}
-                        className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-[var(--accent)] hover:brightness-110"
+                        className="px-3 py-1.5 rounded-[var(--radius-lg)] text-sm font-semibold text-white bg-[var(--accent)] hover:brightness-110"
                       >
                         Apply
                       </button>
@@ -1046,46 +1015,44 @@ export default function TaskDetailPanel({
       <footer
         className={`
           flex items-center justify-between px-6 py-4 border-t flex-shrink-0
-          ${darkMode ? 'border-white/10' : 'border-[var(--border)]'}
+          ${'border-[var(--border)]'}
         `}
       >
-        <button
-          onClick={() => onDelete(task.id)}
-          className={`
-            flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-            transition-colors
-            ${darkMode
-              ? 'text-red-400 hover:bg-red-500/10'
-              : 'text-[var(--danger)] hover:bg-[var(--danger-light)]'
-            }
-          `}
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete
-        </button>
+        {canDeleteTasks && (
+          <button
+            onClick={() => {
+              if (!window.confirm('Are you sure you want to delete this task?')) return;
+              onDelete(task.id);
+            }}
+            className={`
+              flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-sm font-medium
+              transition-colors
+              ${'text-[var(--danger)] hover:bg-[var(--danger-light)]'}
+            `}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        )}
 
         <div className="flex items-center gap-2">
           <button
             className={`
-              p-2 rounded-lg transition-colors
-              ${darkMode
-                ? 'text-white/60 hover:text-white hover:bg-white/10'
-                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              p-2 rounded-[var(--radius-lg)] transition-colors
+              ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
             title="Copy link"
+            aria-label="Copy link"
           >
             <Copy className="w-4 h-4" />
           </button>
           <button
             className={`
-              p-2 rounded-lg transition-colors
-              ${darkMode
-                ? 'text-white/60 hover:text-white hover:bg-white/10'
-                : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-              }
+              p-2 rounded-[var(--radius-lg)] transition-colors
+              ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
             title="Share"
+            aria-label="Share task"
           >
             <Share2 className="w-4 h-4" />
           </button>
@@ -1103,13 +1070,11 @@ function PropertyField({
   label,
   icon,
   children,
-  darkMode,
   htmlFor,
 }: {
   label: string;
   icon: React.ReactNode;
   children: React.ReactNode;
-  darkMode: boolean;
   htmlFor?: string;
 }) {
   return (
@@ -1118,7 +1083,7 @@ function PropertyField({
         htmlFor={htmlFor}
         className={`
           flex items-center gap-2 text-xs font-medium
-          ${darkMode ? 'text-white/50' : 'text-[var(--text-muted)]'}
+          ${'text-[var(--text-muted)]'}
         `}
       >
         {icon}
@@ -1136,7 +1101,6 @@ function CollapsibleSection({
   isOpen,
   onToggle,
   children,
-  darkMode,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -1144,7 +1108,6 @@ function CollapsibleSection({
   isOpen: boolean;
   onToggle: () => void;
   children: React.ReactNode;
-  darkMode: boolean;
 }) {
   return (
     <section>
@@ -1153,7 +1116,7 @@ function CollapsibleSection({
         className={`
           w-full flex items-center gap-2 py-2 text-sm font-medium
           transition-colors
-          ${darkMode ? 'text-white/70 hover:text-white' : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'}
+          ${'text-[var(--text-muted)] hover:text-[var(--foreground)]'}
         `}
       >
         {icon}
@@ -1162,7 +1125,7 @@ function CollapsibleSection({
           <span
             className={`
               px-2 py-0.5 rounded-full text-xs
-              ${darkMode ? 'bg-white/10' : 'bg-[var(--surface-2)]'}
+              ${'bg-[var(--surface-2)]'}
             `}
           >
             {count}

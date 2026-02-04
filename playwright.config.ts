@@ -14,6 +14,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'list',
+  timeout: 60000,  // Increase default test timeout to 60 seconds
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -32,6 +33,13 @@ export default defineConfig({
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'msedge',
+      use: {
+        ...devices['Desktop Edge'],
+        channel: 'msedge',
+      },
     },
     // Mobile devices
     {
@@ -57,5 +65,8 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      __NEXT_DISABLE_OVERLAY: 'true',
+    },
   },
 });

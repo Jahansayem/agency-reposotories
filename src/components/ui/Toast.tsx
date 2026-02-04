@@ -115,7 +115,9 @@ function ToastItem({ toast, position, onDismiss }: ToastItemProps) {
   const config = variantConfig[toast.variant];
   const Icon = config.icon;
   const isLoading = toast.variant === 'loading';
-  const duration = toast.duration ?? (isLoading ? 0 : 5000);
+  const isError = toast.variant === 'error';
+  // UX-002: Error toasts persist until dismissed (duration: 0), other toasts auto-dismiss after 5s
+  const duration = toast.duration ?? (isLoading || isError ? 0 : 5000);
   const dismissible = toast.dismissible ?? !isLoading;
   const animation = positionAnimations[position];
 
@@ -153,7 +155,7 @@ function ToastItem({ toast, position, onDismiss }: ToastItemProps) {
       className={`
         relative overflow-hidden
         w-[360px] max-w-[calc(100vw-32px)]
-        rounded-xl border shadow-lg
+        rounded-[var(--radius-xl)] border shadow-lg
         ${config.bgClass}
       `}
       role="alert"
@@ -189,7 +191,7 @@ function ToastItem({ toast, position, onDismiss }: ToastItemProps) {
         {dismissible && (
           <button
             onClick={() => onDismiss(toast.id)}
-            className="flex-shrink-0 p-1 rounded-lg text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
+            className="flex-shrink-0 p-1 rounded-[var(--radius-lg)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
             aria-label="Dismiss"
           >
             <X className="w-4 h-4" />
@@ -338,10 +340,11 @@ export function useToast() {
         });
         return result;
       } catch (err) {
+        // UX-002: Error toasts persist until dismissed (duration: 0)
         updateToast(id, {
           variant: 'error',
           title: typeof error === 'function' ? error(err) : error,
-          duration: 5000,
+          duration: 0,
           dismissible: true,
         });
         throw err;

@@ -3,6 +3,51 @@ import type { NextRequest } from 'next/server';
 import { rateLimiters, withRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
 
 /**
+ * Allowed origins for Outlook add-in CORS.
+ * Duplicated from outlookAuth.ts because middleware runs in Edge Runtime
+ * and cannot import Node.js crypto modules.
+ */
+const OUTLOOK_ALLOWED_ORIGINS = [
+  'https://outlook.office.com',
+  'https://outlook.office365.com',
+  'https://outlook.live.com',
+  'https://outlook-sdf.office.com',
+  'https://outlook-sdf.office365.com',
+  process.env.NEXT_PUBLIC_APP_URL || 'https://shared-todo-list-production.up.railway.app',
+].filter(Boolean) as string[];
+
+/**
+ * Check if the request origin is an allowed Outlook origin and return it.
+ * Returns null if the origin is not in the allowed list.
+ */
+function getMatchingOutlookOrigin(request: NextRequest): string | null {
+  const origin = request.headers.get('Origin');
+  if (!origin) return null;
+  return OUTLOOK_ALLOWED_ORIGINS.includes(origin) ? origin : null;
+}
+
+/**
+ * Apply dynamic CORS origin header for Outlook routes.
+ * Sets Access-Control-Allow-Origin to the single matched origin (not comma-separated).
+ */
+function applyCorsHeaders(response: NextResponse, origin: string | null): NextResponse {
+  if (origin) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Vary', 'Origin');
+  }
+  return response;
+}
+
+/**
+ * Security event logger for middleware
+ * Uses console directly to avoid import issues in Edge Runtime
+ */
+function logSecurityEvent(event: string, details: Record<string, unknown>): void {
+  const timestamp = new Date().toISOString();
+  console.warn(`[SECURITY] ${timestamp} ${event}`, JSON.stringify(details));
+}
+
+/**
  * Routes that require authentication
  */
 const AUTHENTICATED_ROUTES = [
@@ -10,6 +55,11 @@ const AUTHENTICATED_ROUTES = [
   '/api/goals/',
   '/api/templates/',
   '/api/attachments',
+  '/api/push-send',
+  '/api/push-subscribe',
+  '/api/todos/',
+  '/api/patterns/',
+  '/api/activity/',
 ];
 
 /**
@@ -20,6 +70,8 @@ const CSRF_EXEMPT_ROUTES = [
   '/api/digest/', // Uses API key auth (cron endpoints)
   '/api/reminders/', // Uses API key auth (cron endpoints)
   '/api/csp-report', // CSP violation reports
+  '/api/csrf', // CSRF token endpoint (GET only, provides tokens)
+  '/api/health/', // Health check endpoints
 ];
 
 /**
@@ -50,21 +102,85 @@ function needsCsrfProtection(pathname: string, method: string): boolean {
 }
 
 /**
- * Validate CSRF token
+ * Validate CSRF token using Synchronizer Token Pattern
+ *
+ * With HttpOnly cookies, the client cannot read the cookie directly.
+ * Instead, we use a split-token approach:
+ * - One part is stored in an HttpOnly cookie
+ * - Another part is provided via a separate endpoint and sent in the header
+ * - Both parts must be valid for the request to proceed
+ *
  */
-function validateCsrfToken(request: NextRequest): boolean {
-  const cookieToken = request.cookies.get('csrf_token')?.value;
+async function validateCsrfToken(request: NextRequest): Promise<boolean> {
+  // Get the HttpOnly CSRF secret from cookie
+  const csrfSecret = request.cookies.get('csrf_secret')?.value;
+  // Get the CSRF token from header (contains both identifier and signature)
   const headerToken = request.headers.get('X-CSRF-Token');
 
-  if (!cookieToken || !headerToken) {
+  // New HttpOnly pattern validation
+  if (!csrfSecret || !headerToken) {
     return false;
   }
 
-  return cookieToken === headerToken;
+  // The header token should be: `${nonce}:${signature}`
+  // where signature = HMAC(csrfSecret, nonce)
+  const parts = headerToken.split(':');
+  if (parts.length !== 2) {
+    // If it's not in the new format, reject
+    return false;
+  }
+
+  const [nonce, providedSignature] = parts;
+
+  // Compute the expected signature using Web Crypto API
+  // Since middleware runs in Edge Runtime, we use a simple comparison
+  // The signature is computed client-side from the nonce + secret
+  // This validates that the client had access to both pieces
+  const expectedSignature = await computeCsrfSignature(csrfSecret, nonce);
+
+  // Constant-time comparison to prevent timing attacks
+  return constantTimeCompare(providedSignature, expectedSignature);
+}
+
+/**
+ * Compute CSRF signature (simple HMAC-like construction for Edge Runtime)
+ */
+async function computeCsrfSignature(secret: string, nonce: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const data = encoder.encode(nonce);
+  const signature = await crypto.subtle.sign('HMAC', key, data);
+  const hashArray = Array.from(new Uint8Array(signature));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks
+ */
+function constantTimeCompare(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  let result = a.length ^ b.length; // Length difference contributes to mismatch
+  for (let i = 0; i < maxLen; i++) {
+    const charA = i < a.length ? a.charCodeAt(i) : 0;
+    const charB = i < b.length ? b.charCodeAt(i) : 0;
+    result |= charA ^ charB;
+  }
+  return result === 0;
 }
 
 /**
  * Validate session from request headers/cookies
+ *
+ * SECURITY: Only accepts proper session tokens.
+ * The X-User-Name header is NO LONGER accepted as a standalone authentication method.
+ * Full session validation happens in individual API routes via sessionValidator.
  */
 async function validateSessionFromRequest(request: NextRequest): Promise<{
   valid: boolean;
@@ -72,9 +188,15 @@ async function validateSessionFromRequest(request: NextRequest): Promise<{
   userName?: string;
   error?: string;
 }> {
-  // Check for session token in various places
-  let sessionToken = request.headers.get('X-Session-Token');
+  // Check for HttpOnly session_token cookie first (most secure)
+  let sessionToken = request.cookies.get('session_token')?.value || null;
 
+  // Check X-Session-Token header
+  if (!sessionToken) {
+    sessionToken = request.headers.get('X-Session-Token');
+  }
+
+  // Check Authorization: Bearer header
   if (!sessionToken) {
     const authHeader = request.headers.get('Authorization');
     if (authHeader?.startsWith('Bearer ')) {
@@ -82,35 +204,24 @@ async function validateSessionFromRequest(request: NextRequest): Promise<{
     }
   }
 
+  // Check legacy session cookie (for backward compatibility)
   if (!sessionToken) {
     sessionToken = request.cookies.get('session')?.value || null;
   }
 
-  // Also check for legacy userName header (backward compatibility)
-  const legacyUserName = request.headers.get('X-User-Name');
-
-  if (!sessionToken && !legacyUserName) {
-    return { valid: false, error: 'No session token provided' };
-  }
-
-  // Accept legacy auth during migration period
-  // In production, this should validate against database
-  if (!sessionToken && legacyUserName) {
+  if (!sessionToken) {
     return {
-      valid: true,
-      userName: legacyUserName,
+      valid: false,
+      error: 'No session token provided. Please log in.',
     };
   }
 
-  // For now, accept session tokens (full validation would require DB call)
-  // Real validation happens in individual API routes
-  if (sessionToken) {
-    return {
-      valid: true,
-    };
-  }
-
-  return { valid: false, error: 'Invalid session' };
+  // Session token is present - basic validation passed
+  // Full validation (including token hash lookup) happens in API routes
+  // via sessionValidator.validateSession()
+  return {
+    valid: true,
+  };
 }
 
 export async function middleware(request: NextRequest) {
@@ -126,11 +237,25 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================
+  // DYNAMIC CORS FOR OUTLOOK ROUTES
+  // ============================================
+  // Set Access-Control-Allow-Origin to the single matching origin (not comma-separated).
+  // This is needed because Next.js static headers cannot do per-request origin matching.
+  const isOutlookRoute = pathname.startsWith('/api/outlook/') || pathname.startsWith('/outlook/');
+  const matchedOutlookOrigin = isOutlookRoute ? getMatchingOutlookOrigin(request) : null;
+
+  // ============================================
   // CSRF PROTECTION
   // ============================================
 
   if (needsCsrfProtection(pathname, request.method)) {
-    if (!validateCsrfToken(request)) {
+    if (!(await validateCsrfToken(request))) {
+      logSecurityEvent('CSRF validation failed', {
+        pathname,
+        method: request.method,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown',
+      });
       return NextResponse.json(
         {
           error: 'CSRF validation failed',
@@ -149,6 +274,13 @@ export async function middleware(request: NextRequest) {
     const session = await validateSessionFromRequest(request);
 
     if (!session.valid) {
+      logSecurityEvent('Authentication failure', {
+        pathname,
+        method: request.method,
+        error: session.error,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown',
+      });
       return NextResponse.json(
         {
           error: 'Authentication required',
@@ -181,32 +313,58 @@ export async function middleware(request: NextRequest) {
     // No rate limit for other routes
     const response = NextResponse.next();
 
-    // Set CSRF cookie on page loads
+    // Set CSRF cookies on page loads
     if (!pathname.startsWith('/api/')) {
-      const existingToken = request.cookies.get('csrf_token')?.value;
-      if (!existingToken) {
+      const existingSecret = request.cookies.get('csrf_secret')?.value;
+      if (!existingSecret) {
         // Use Web Crypto API (Edge Runtime compatible)
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
-        const newToken = btoa(String.fromCharCode(...array))
+        const newSecret = btoa(String.fromCharCode(...array))
           .replace(/\+/g, '-')
           .replace(/\//g, '_')
           .replace(/=+$/, '');
-        response.cookies.set('csrf_token', newToken, {
-          httpOnly: false,
+
+        // Set HttpOnly CSRF secret - cannot be read by JavaScript
+        response.cookies.set('csrf_secret', newSecret, {
+          httpOnly: true,  // SECURITY: HttpOnly prevents XSS from reading this
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
           path: '/',
           maxAge: 60 * 60 * 24, // 24 hours
         });
+
+        // Also set a public nonce that JS can read for building the token
+        const nonceArray = new Uint8Array(16);
+        crypto.getRandomValues(nonceArray);
+        const publicNonce = btoa(String.fromCharCode(...nonceArray))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+
+        response.cookies.set('csrf_nonce', publicNonce, {
+          httpOnly: false,  // JS needs to read this to build the header token
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          path: '/',
+          maxAge: 60 * 60 * 24, // 24 hours
+        });
+
       }
     }
 
-    return response;
+    return applyCorsHeaders(response, matchedOutlookOrigin);
   }
 
   // Check if rate limit exceeded
   if (rateLimitResult && !rateLimitResult.success) {
+    logSecurityEvent('Rate limit exceeded', {
+      pathname,
+      method: request.method,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      limit: rateLimitResult.limit,
+      reset: rateLimitResult.reset,
+    });
     return createRateLimitResponse(rateLimitResult);
   }
 
@@ -226,26 +384,45 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Set CSRF cookie on all responses if not present
-  // This ensures the cookie is available for subsequent requests
-  const existingCsrfToken = request.cookies.get('csrf_token')?.value;
-  if (!existingCsrfToken) {
+  // Set CSRF cookies on all responses if not present
+  // This ensures the cookies are available for subsequent requests
+  const existingSecret = request.cookies.get('csrf_secret')?.value;
+  if (!existingSecret) {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
-    const newToken = btoa(String.fromCharCode(...array))
+    const newSecret = btoa(String.fromCharCode(...array))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
-    response.cookies.set('csrf_token', newToken, {
+
+    // HttpOnly CSRF secret
+    response.cookies.set('csrf_secret', newSecret, {
+      httpOnly: true,  // SECURITY: HttpOnly prevents XSS from reading this
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 24 hours
+    });
+
+    // Public nonce for JS
+    const nonceArray = new Uint8Array(16);
+    crypto.getRandomValues(nonceArray);
+    const publicNonce = btoa(String.fromCharCode(...nonceArray))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    response.cookies.set('csrf_nonce', publicNonce, {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
       maxAge: 60 * 60 * 24, // 24 hours
     });
+
   }
 
-  return response;
+  return applyCorsHeaders(response, matchedOutlookOrigin);
 }
 
 export const config = {

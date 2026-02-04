@@ -79,7 +79,8 @@ describe('Rate Limiting', () => {
 
       const result = await checkRateLimit('user-123', mockLimiter);
 
-      expect(result.success).toBe(true); // Fail open for availability
+      // SECURITY: fail-closed to prevent bypass during Redis outages
+      expect(result.success).toBe(false);
     });
   });
 
@@ -119,7 +120,7 @@ describe('Rate Limiting', () => {
   });
 
   describe('withRateLimit', () => {
-    it('should use user ID as identifier when available', async () => {
+    it('should use IP as identifier even when user ID header is present', async () => {
       const mockLimiter = {
         limit: vi.fn().mockResolvedValue({
           success: true,
@@ -141,7 +142,7 @@ describe('Rate Limiting', () => {
 
       await withRateLimit(mockRequest, mockLimiter);
 
-      expect(mockLimiter.limit).toHaveBeenCalledWith('user-123');
+      expect(mockLimiter.limit).toHaveBeenCalledWith('1.2.3.4');
     });
 
     it('should fallback to x-forwarded-for IP', async () => {

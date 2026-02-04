@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckSquare,
@@ -13,8 +13,8 @@ import {
   CheckCircle,
   List,
 } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAppShell, ActiveView } from './AppShell';
+import { DURATION, EASE } from '@/lib/animations';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENHANCED BOTTOM NAVIGATION
@@ -36,13 +36,12 @@ interface NavTab {
 }
 
 export default function EnhancedBottomNav() {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const {
     activeView,
     setActiveView,
     openMobileSheet,
     currentUser,
+    triggerNewTask,
   } = useAppShell();
 
   // Stats for badges (these would come from props or context in real implementation)
@@ -81,29 +80,32 @@ export default function EnhancedBottomNav() {
     },
   ];
 
-  const handleTabPress = (tabId: ActiveView | 'add') => {
+  const handleTabPress = useCallback((tabId: ActiveView | 'add') => {
     if (tabId === 'add') {
-      // Open quick add modal or focus task input
-      setActiveView('tasks');
-      // TODO: Trigger add task focus
+      triggerNewTask();
     } else if (tabId === 'activity') {
       // Open more menu sheet
       openMobileSheet('menu');
     } else {
       setActiveView(tabId);
     }
+  }, [triggerNewTask, openMobileSheet, setActiveView]);
+
+  // View transition animation variants
+  const tabButtonVariants = {
+    idle: { scale: 1 },
+    pressed: { scale: 0.95 },
+    active: { scale: 1.05 },
+  };
+
+  const iconVariants = {
+    idle: { y: 0 },
+    active: { y: -2 },
   };
 
   return (
     <nav
-      className={`
-        fixed bottom-0 left-0 right-0 z-40 md:hidden
-        pb-safe
-        ${darkMode
-          ? 'bg-[var(--surface)]/95 backdrop-blur-xl border-t border-white/10'
-          : 'bg-white/95 backdrop-blur-xl border-t border-[var(--border)]'
-        }
-      `}
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-safe bg-[var(--surface)] backdrop-blur-xl border-t border-[var(--border)]"
       role="navigation"
       aria-label="Main navigation"
     >
@@ -117,100 +119,104 @@ export default function EnhancedBottomNav() {
           // Floating add button in center
           if (isAddButton) {
             return (
-              <button
+              <motion.button
                 key={tab.id}
                 onClick={() => handleTabPress(tab.id)}
-                className={`
-                  relative -mt-6 w-14 h-14 rounded-2xl
-                  flex items-center justify-center
-                  bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)]
-                  text-white shadow-lg shadow-[var(--brand-blue)]/30
-                  active:scale-95 transition-transform
-                `}
+                className="relative -mt-6 w-14 h-14 rounded-[var(--radius-2xl)] flex items-center justify-center bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white shadow-lg shadow-[var(--brand-blue)]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
                 aria-label="Create new task"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ duration: DURATION.fast, ease: EASE.default }}
               >
-                <Plus className="w-6 h-6" strokeWidth={2.5} />
+                <Plus className="w-6 h-6" strokeWidth={2.5} aria-hidden="true" />
 
                 {/* Subtle glow effect */}
-                <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 hover:opacity-100 transition-opacity" />
-              </button>
+                <motion.div
+                  className="absolute inset-0 rounded-[var(--radius-2xl)] bg-white/20"
+                  initial={{ opacity: 0 }}
+                  whileHover={{ opacity: 1 }}
+                  transition={{ duration: DURATION.fast }}
+                />
+              </motion.button>
             );
           }
 
           return (
-            <button
+            <motion.button
               key={tab.id}
               onClick={() => handleTabPress(tab.id)}
               className={`
                 relative flex flex-col items-center justify-center
-                min-w-[64px] h-16 px-3
-                transition-all duration-200
+                min-w-[64px] min-h-[48px] h-16 px-3
+                touch-manipulation
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-inset rounded-[var(--radius-lg)]
                 ${isActive
-                  ? 'scale-105'
-                  : 'opacity-60 active:opacity-100 active:scale-95'
+                  ? ''
+                  : 'opacity-60'
                 }
               `}
               role="tab"
               aria-selected={isActive}
               aria-label={tab.label}
+              variants={tabButtonVariants}
+              initial="idle"
+              animate={isActive ? 'active' : 'idle'}
+              whileTap="pressed"
+              transition={{ duration: DURATION.fast, ease: EASE.default }}
             >
               {/* Active indicator pill */}
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className={`
-                    absolute top-1 w-8 h-1 rounded-full
-                    bg-[var(--accent)]
-                  `}
+                  className="absolute top-1 w-8 h-1 rounded-full bg-[var(--accent)]"
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
 
               {/* Icon with badge */}
-              <div className="relative">
+              <motion.div
+                className="relative"
+                variants={iconVariants}
+                animate={isActive ? 'active' : 'idle'}
+                transition={{ duration: DURATION.fast }}
+              >
                 <Icon
                   className={`
-                    w-6 h-6 transition-colors
+                    w-6 h-6 transition-colors duration-200
                     ${isActive
                       ? 'text-[var(--accent)]'
-                      : darkMode
-                        ? 'text-white/60'
-                        : 'text-[var(--text-muted)]'
-                    }
+                      : 'text-[var(--text-muted)]'}
                   `}
+                  aria-hidden="true"
                 />
 
                 {/* Badge */}
-                {tab.badge && tab.badge > 0 && (
-                  <span
-                    className={`
-                      absolute -top-1.5 -right-1.5
-                      min-w-[18px] h-[18px] px-1
-                      flex items-center justify-center
-                      rounded-full text-[10px] font-bold
-                      bg-[var(--danger)] text-white
-                    `}
-                  >
-                    {tab.badge > 99 ? '99+' : tab.badge}
-                  </span>
-                )}
-              </div>
+                <AnimatePresence>
+                  {tab.badge && tab.badge > 0 && (
+                    <motion.span
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-badge bg-[var(--danger)] text-white"
+                    >
+                      {tab.badge > 99 ? '99+' : tab.badge}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.div>
 
               {/* Label */}
-              <span
+              <motion.span
                 className={`
-                  text-[10px] font-medium mt-1 transition-colors
+                  text-xs mt-1 transition-colors duration-200
                   ${isActive
-                    ? 'text-[var(--accent)]'
-                    : darkMode
-                      ? 'text-white/40'
-                      : 'text-[var(--text-muted)]'
-                  }
+                    ? 'text-[var(--accent)] font-medium'
+                    : 'text-[var(--text-muted)]'}
                 `}
               >
                 {tab.label}
-              </span>
-            </button>
+              </motion.span>
+            </motion.button>
           );
         })}
       </div>
@@ -239,9 +245,6 @@ export function QuickFilterPills({
   onFilterChange,
   stats,
 }: QuickFilterPillsProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
-
   const filters = [
     { id: 'all', label: 'All', count: stats.all, icon: List },
     { id: 'due_today', label: 'Today', count: stats.dueToday, icon: Calendar, color: 'var(--warning)' },
@@ -250,7 +253,11 @@ export function QuickFilterPills({
   ];
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto px-4 py-2 -mx-4 scrollbar-hide">
+    <div
+      className="flex items-center gap-2 overflow-x-auto px-4 py-2 -mx-4 scrollbar-hide"
+      role="tablist"
+      aria-label="Task filter options"
+    >
       {filters.map(filter => {
         const isActive = currentFilter === filter.id;
         const Icon = filter.icon;
@@ -260,44 +267,51 @@ export function QuickFilterPills({
         if (filter.id === 'overdue' && !hasItems) return null;
 
         return (
-          <button
+          <motion.button
             key={filter.id}
             onClick={() => onFilterChange(filter.id)}
+            role="tab"
+            aria-selected={isActive}
+            aria-label={`${filter.label} tasks: ${filter.count}`}
             className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-full
+              relative flex items-center gap-1.5 px-3 py-1.5 rounded-full
               text-sm font-medium whitespace-nowrap
-              transition-all
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]
               ${isActive
-                ? `${darkMode ? 'bg-white/15 text-white' : 'bg-[var(--accent-light)] text-[var(--accent)]'}`
-                : `${darkMode ? 'bg-white/5 text-white/60' : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`
+                ? `bg-[var(--accent-light)] text-[var(--accent)]`
+                : `bg-[var(--surface-2)] text-[var(--text-muted)]`
               }
             `}
             style={isActive && filter.color ? { color: filter.color } : undefined}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            animate={isActive ? { scale: 1.02 } : { scale: 1 }}
+            transition={{ duration: DURATION.fast, ease: EASE.default }}
           >
-            <Icon className="w-3.5 h-3.5" />
+            <Icon className="w-3.5 h-3.5" aria-hidden="true" />
             <span>{filter.label}</span>
-            {filter.count > 0 && (
-              <span
-                className={`
-                  min-w-[20px] h-5 flex items-center justify-center
-                  px-1.5 rounded-full text-xs
-                  ${isActive
-                    ? darkMode
-                      ? 'bg-white/20'
-                      : 'bg-[var(--accent)]/15'
-                    : darkMode
-                      ? 'bg-white/10'
-                      : 'bg-[var(--surface-3)]'
-                  }
-                `}
-                style={isActive && filter.color ? {
-                  backgroundColor: `color-mix(in srgb, ${filter.color} 15%, transparent)`,
-                } : undefined}
-              >
-                {filter.count > 99 ? '99+' : filter.count}
-              </span>
-            )}
-          </button>
+            <AnimatePresence mode="wait">
+              {filter.count > 0 && (
+                <motion.span
+                  key={filter.count}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className={`
+                    min-w-[20px] h-5 flex items-center justify-center
+                    px-1.5 rounded-full text-xs
+                    ${isActive
+                      ? 'bg-[var(--accent)]/15': 'bg-[var(--surface-3)]'}
+                  `}
+                  style={isActive && filter.color ? {
+                    backgroundColor: `${filter.color}26`,
+                  } : undefined}
+                >
+                  {filter.count > 99 ? '99+' : filter.count}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
         );
       })}
     </div>

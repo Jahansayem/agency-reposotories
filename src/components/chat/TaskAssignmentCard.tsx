@@ -175,7 +175,7 @@ export const TaskAssignmentCard = memo(function TaskAssignmentCard({
       className={`
         w-full sm:max-w-xs
         bg-[var(--surface)] dark:bg-[var(--surface)]
-        rounded-xl
+        rounded-[var(--radius-xl)]
         border border-[var(--border)]
         overflow-hidden
         shadow-sm hover:shadow-md
@@ -311,7 +311,7 @@ export const TaskAssignmentCard = memo(function TaskAssignmentCard({
               text-xs font-medium
               text-[var(--accent)]
               bg-[var(--accent-light)]
-              rounded-lg
+              rounded-[var(--radius-lg)]
               hover:bg-[var(--accent)]/20
               transition-colors
               focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1 dark:focus:ring-offset-[var(--surface)]

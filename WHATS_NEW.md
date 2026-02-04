@@ -1,5 +1,27 @@
 # What's New
 
+## 🧭 Web UX Polish (Unreleased)
+
+**Status:** ✅ Implemented
+
+### Streamlined Web Task Creation + Filters
+
+- New primary **New Task** CTA in the sticky header (web-first)
+- Unified create triggers (header, command palette, and mobile FAB)
+- Active filter chips with one-click clearing
+- Reduced-motion handling for login and empty-state animations
+
+**Files:**
+- `src/components/todo/TodoHeader.tsx`
+- `src/components/TodoList.tsx`
+- `src/components/layout/CommandPalette.tsx`
+- `src/components/layout/EnhancedBottomNav.tsx`
+- `src/components/todo/TodoFiltersBar.tsx`
+- `src/components/LoginScreen.tsx`
+- `src/components/EmptyState.tsx`
+
+---
+
 ## 🗃️ Archive Experience Overhaul (January 20, 2026)
 
 **Status:** ✅ Implemented and Tested

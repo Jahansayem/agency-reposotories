@@ -6,7 +6,14 @@ const CACHE_NAME = 'bealer-tasks-v1';
 // Handle push notifications
 self.addEventListener('push', function(event) {
   if (!event.data) {
-    console.log('Push event but no data');
+    // Must show a notification even without data to avoid Chrome revoking subscription
+    event.waitUntil(
+      self.registration.showNotification('Task Reminder', {
+        body: 'You have a new notification',
+        icon: '/icon-192.png',
+        badge: '/badge-72.png',
+      })
+    );
     return;
   }
 
@@ -82,12 +89,12 @@ self.addEventListener('notificationclick', function(event) {
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async function(clientList) {
       // Check if there's already a window open
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
-          // Navigate existing window to the target
-          client.navigate(targetUrl);
+          // Navigate existing window to the target, then focus
+          await client.navigate(targetUrl);
           return client.focus();
         }
       }
@@ -114,6 +121,8 @@ self.addEventListener('activate', function(event) {
           return caches.delete(cacheName);
         })
       );
+    }).then(function() {
+      return clients.claim();
     })
   );
 });

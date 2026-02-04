@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Check } from 'lucide-react';
 
 interface CelebrationEffectProps {
@@ -10,18 +10,22 @@ interface CelebrationEffectProps {
 }
 
 export default function CelebrationEffect({ show, onComplete, taskText }: CelebrationEffectProps) {
+  // Use a ref so the timer doesn't reset when onComplete reference changes between renders
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   useEffect(() => {
     if (show) {
-      const timer = setTimeout(onComplete, 1500);
+      const timer = setTimeout(() => onCompleteRef.current(), 1500);
       return () => clearTimeout(timer);
     }
-  }, [show, onComplete]);
+  }, [show]);
 
   if (!show) return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-      <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-700 p-6 text-center animate-[fadeIn_0.2s_ease-out]">
+      <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-lg border border-[var(--border)] p-6 text-center animate-[fadeIn_0.2s_ease-out]">
         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
           <Check className="w-6 h-6 text-green-600" />
         </div>

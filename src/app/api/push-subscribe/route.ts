@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
+import { logger } from '@/lib/logger';
 
 // Create Supabase client lazily to avoid build-time initialization
 function getSupabase() {
@@ -13,41 +15,41 @@ function getSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-// Helper to extract user name from request
-function extractUserName(request: NextRequest): string | null {
-  return request.headers.get('X-User-Name');
-}
-
-// Validate user name is present
-function validateUserName(userName: string | null): NextResponse | null {
-  if (!userName) {
-    return NextResponse.json(
-      { success: false, error: 'X-User-Name header required' },
-      { status: 401 }
-    );
-  }
-  return null;
-}
-
 /**
  * POST /api/push-subscribe
- * Store a web push subscription for a user
+ * Store a web push subscription for a user.
+ * Push tokens are user-scoped (not agency-scoped) since a device token
+ * is valid regardless of which agency the user is viewing.
  */
-export async function POST(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
-  if (authError) return authError;
-
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
-    const { subscription, userId } = body;
+    const { subscription } = body;
 
-    if (!subscription || !userId) {
+    if (!subscription) {
       return NextResponse.json(
-        { success: false, error: 'Missing subscription or userId' },
+        { success: false, error: 'Missing subscription' },
         { status: 400 }
       );
     }
+
+    const supabase = getSupabase();
+
+    // Look up the authenticated user's ID from the database
+    const { data: userRecord, error: userLookupError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('name', ctx.userName)
+      .single();
+
+    if (userLookupError || !userRecord) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = userRecord.id;
 
     // Validate subscription has required fields
     if (!subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
@@ -60,24 +62,31 @@ export async function POST(request: NextRequest) {
     // Store the full subscription as JSON string in the token field
     const subscriptionToken = JSON.stringify(subscription);
 
-    // Upsert the device token (update if endpoint already exists for this user)
-    const { error } = await getSupabase()
+    // Delete existing web tokens for this user, then insert the new one
+    const { error: deleteError } = await supabase
       .from('device_tokens')
-      .upsert(
-        {
-          user_id: userId,
-          token: subscriptionToken,
-          platform: 'web',
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: 'user_id,platform',
-          ignoreDuplicates: false,
-        }
-      );
+      .delete()
+      .eq('user_id', userId)
+      .eq('platform', 'web');
+
+    if (deleteError) {
+      logger.error('Error deleting old subscription', deleteError, { component: 'push-subscribe' });
+    }
+
+    const { error } = await supabase
+      .from('device_tokens')
+      .insert({
+        user_id: userId,
+        token: subscriptionToken,
+        platform: 'web',
+        updated_at: new Date().toISOString(),
+      });
 
     if (error) {
-      console.error('Error storing push subscription:', error);
+      if (error.code === '23505') {
+        return NextResponse.json({ success: true });
+      }
+      logger.error('Error storing push subscription', error, { component: 'push-subscribe' });
       return NextResponse.json(
         { success: false, error: 'Failed to store subscription' },
         { status: 500 }
@@ -86,40 +95,45 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in POST /api/push-subscribe:', error);
+    logger.error('Error in POST /api/push-subscribe', error, { component: 'push-subscribe' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/push-subscribe
  * Remove a web push subscription for a user
  */
-export async function DELETE(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
-  if (authError) return authError;
-
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body = await request.json();
-    const { subscription, userId } = body;
+    const { subscription } = body;
 
-    if (!userId) {
+    const supabase = getSupabase();
+
+    // Look up the authenticated user's ID
+    const { data: userRecord, error: userLookupError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('name', ctx.userName)
+      .single();
+
+    if (userLookupError || !userRecord) {
       return NextResponse.json(
-        { success: false, error: 'Missing userId' },
-        { status: 400 }
+        { success: false, error: 'User not found' },
+        { status: 404 }
       );
     }
 
-    // If subscription provided, delete that specific one
-    // Otherwise, delete all web subscriptions for user
+    const userId = userRecord.id;
+
     if (subscription) {
       const subscriptionToken = JSON.stringify(subscription);
 
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from('device_tokens')
         .delete()
         .eq('user_id', userId)
@@ -127,7 +141,7 @@ export async function DELETE(request: NextRequest) {
         .eq('platform', 'web');
 
       if (error) {
-        console.error('Error removing push subscription:', error);
+        logger.error('Error removing push subscription', error, { component: 'push-subscribe' });
         return NextResponse.json(
           { success: false, error: 'Failed to remove subscription' },
           { status: 500 }
@@ -135,14 +149,14 @@ export async function DELETE(request: NextRequest) {
       }
     } else {
       // Remove all web subscriptions for user
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from('device_tokens')
         .delete()
         .eq('user_id', userId)
         .eq('platform', 'web');
 
       if (error) {
-        console.error('Error removing push subscriptions:', error);
+        logger.error('Error removing push subscriptions', error, { component: 'push-subscribe' });
         return NextResponse.json(
           { success: false, error: 'Failed to remove subscriptions' },
           { status: 500 }
@@ -152,35 +166,38 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in DELETE /api/push-subscribe:', error);
+    logger.error('Error in DELETE /api/push-subscribe', error, { component: 'push-subscribe' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/push-subscribe
  * Check if user has an active web push subscription
  */
-export async function GET(request: NextRequest) {
-  const userName = extractUserName(request);
-  const authError = validateUserName(userName);
-  if (authError) return authError;
-
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get('userId');
-
-  if (!userId) {
-    return NextResponse.json(
-      { success: false, error: 'Missing userId parameter' },
-      { status: 400 }
-    );
-  }
-
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
-    const { data, error } = await getSupabase()
+    const supabase = getSupabase();
+
+    // Look up the authenticated user's ID
+    const { data: userRecord, error: userLookupError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('name', ctx.userName)
+      .single();
+
+    if (userLookupError || !userRecord) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = userRecord.id;
+    const { data, error } = await supabase
       .from('device_tokens')
       .select('id, platform, updated_at')
       .eq('user_id', userId)
@@ -189,8 +206,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      // PGRST116 = no rows returned, which is fine
-      console.error('Error checking subscription:', error);
+      logger.error('Error checking subscription', error, { component: 'push-subscribe' });
       return NextResponse.json(
         { success: false, error: 'Failed to check subscription' },
         { status: 500 }
@@ -203,10 +219,10 @@ export async function GET(request: NextRequest) {
       lastUpdated: data?.updated_at || null,
     });
   } catch (error) {
-    console.error('Error in GET /api/push-subscribe:', error);
+    logger.error('Error in GET /api/push-subscribe', error, { component: 'push-subscribe' });
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
-}
+});

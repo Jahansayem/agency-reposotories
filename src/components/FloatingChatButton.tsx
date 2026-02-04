@@ -5,12 +5,33 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAppShell } from './layout/AppShell';
 import { ChatPanelSkeleton } from './LoadingSkeletons';
 import { AuthUser, ChatConversation } from '@/types/todo';
+import { logger } from '@/lib/logger';
 
 const CHAT_STATE_KEY = 'floating_chat_last_conversation';
+
+/**
+ * Runtime validation for ChatConversation type
+ * Ensures parsed JSON matches expected structure before casting
+ */
+function isValidChatConversation(value: unknown): value is ChatConversation {
+  if (!value || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+
+  // Validate 'team' conversation type
+  if (obj.type === 'team') {
+    return true;
+  }
+
+  // Validate 'dm' conversation type
+  if (obj.type === 'dm' && typeof obj.userName === 'string' && obj.userName.length > 0) {
+    return true;
+  }
+
+  return false;
+}
 
 // Lazy load ChatPanel for better performance
 const ChatPanel = dynamic(() => import('./ChatPanel'), {
@@ -29,8 +50,6 @@ export default function FloatingChatButton({
   users,
   onTaskLinkClick,
 }: FloatingChatButtonProps) {
-  const { theme } = useTheme();
-  const darkMode = theme === 'dark';
   const { activeView } = useAppShell();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -43,9 +62,9 @@ export default function FloatingChatButton({
       const stored = localStorage.getItem(CHAT_STATE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Validate the structure
-        if (parsed && parsed.conversation) {
-          return parsed.conversation as ChatConversation;
+        // Validate the structure with runtime type checking
+        if (parsed && parsed.conversation && isValidChatConversation(parsed.conversation)) {
+          return parsed.conversation;
         }
       }
     } catch {
@@ -126,7 +145,7 @@ export default function FloatingChatButton({
 
         setUnreadCount(unread);
       } catch (err) {
-        console.error('Error fetching unread count:', err);
+        logger.error('Error fetching unread count', err as Error, { component: 'FloatingChatButton', action: 'fetchUnreadCount', userName: currentUser.name });
       }
     };
 
@@ -173,10 +192,7 @@ export default function FloatingChatButton({
           flex items-center justify-center
           shadow-lg hover:shadow-xl
           transition-shadow duration-200
-          ${darkMode
-            ? 'bg-[var(--accent)] hover:bg-[var(--accent)]/90'
-            : 'bg-[var(--accent)] hover:bg-[var(--accent)]/90'
-          }
+          ${'bg-[var(--accent)] hover:bg-[var(--accent)]/90'}
         `}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -209,11 +225,8 @@ export default function FloatingChatButton({
                 fixed bottom-24 right-6 z-50
                 w-[360px] sm:w-[400px] h-[500px] max-h-[70vh]
                 flex flex-col
-                rounded-xl overflow-hidden
-                ${darkMode
-                  ? 'bg-[var(--surface)] border border-white/10'
-                  : 'bg-white border border-[var(--border)]'
-                }
+                rounded-[var(--radius-xl)] overflow-hidden
+                ${'bg-[var(--surface)] border border-[var(--border)]'}
                 shadow-2xl
               `}
             >
@@ -222,15 +235,15 @@ export default function FloatingChatButton({
                 className={`
                   flex items-center justify-between
                   px-4 py-2.5 border-b
-                  ${darkMode ? 'border-white/10 bg-[var(--surface-2)]' : 'border-[var(--border)] bg-[var(--surface)]'}
+                  ${'border-[var(--border)] bg-[var(--surface)]'}
                 `}
               >
                 <div className="flex items-center gap-2">
-                  <MessageCircle className={`w-4 h-4 ${darkMode ? 'text-[var(--accent)]' : 'text-[var(--accent)]'}`} />
+                  <MessageCircle className={`w-4 h-4 ${'text-[var(--accent)]'}`} />
                   <h2
                     className={`
                       font-medium text-sm
-                      ${darkMode ? 'text-white' : 'text-[var(--foreground)]'}
+                      ${'text-[var(--foreground)]'}
                     `}
                   >
                     Team Chat
@@ -239,11 +252,8 @@ export default function FloatingChatButton({
                 <button
                   onClick={() => setIsOpen(false)}
                   className={`
-                    p-1.5 rounded-md transition-colors
-                    ${darkMode
-                      ? 'text-white/60 hover:text-white hover:bg-white/10'
-                      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
-                    }
+                    p-1.5 rounded-[var(--radius-md)] transition-colors
+                    ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
                   `}
                   aria-label="Close chat"
                 >

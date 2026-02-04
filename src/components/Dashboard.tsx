@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle2,
@@ -26,7 +26,6 @@ interface DashboardProps {
   onFilterOverdue: () => void;
   onFilterDueToday: () => void;
   onFilterMyTasks: () => void;
-  darkMode?: boolean;
 }
 
 interface WeekDay {
@@ -44,6 +43,75 @@ interface UpcomingTask {
   priority: string;
 }
 
+/**
+ * Memoized greeting component that handles its own time-based updates.
+ * Only re-renders at hour boundaries when the greeting actually changes:
+ * - 12:00 (morning -> afternoon)
+ * - 17:00 (afternoon -> evening)
+ * - 00:00 (evening -> morning)
+ * This reduces unnecessary re-renders from ~60/hour to 1/hour maximum.
+ */
+const GreetingDisplay = memo(function GreetingDisplay() {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    // Calculate milliseconds until the next greeting change
+    // Greetings change at: 12:00 (morning -> afternoon), 17:00 (afternoon -> evening), 00:00 (evening -> morning)
+    const calculateMsUntilNextGreetingChange = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      const nextChangeHour = hour < 12 ? 12 : hour < 17 ? 17 : 24;
+
+      const nextChange = new Date(now);
+      if (nextChangeHour === 24) {
+        // Set to midnight of next day
+        nextChange.setDate(nextChange.getDate() + 1);
+        nextChange.setHours(0, 0, 0, 0);
+      } else {
+        nextChange.setHours(nextChangeHour, 0, 0, 0);
+      }
+
+      return nextChange.getTime() - now.getTime();
+    };
+
+    let timeoutId: NodeJS.Timeout;
+
+    const scheduleNextUpdate = () => {
+      const msUntilChange = calculateMsUntilNextGreetingChange();
+      timeoutId = setTimeout(() => {
+        setCurrentTime(new Date());
+        scheduleNextUpdate(); // Schedule the next hour boundary update
+      }, msUntilChange);
+    };
+
+    scheduleNextUpdate();
+
+    return () => clearTimeout(timeoutId);
+  }, []);
+
+  const hour = currentTime.getHours();
+  let text: string;
+  let Icon: typeof Sunrise;
+  
+  if (hour < 12) {
+    text = 'Good morning';
+    Icon = Sunrise;
+  } else if (hour < 17) {
+    text = 'Good afternoon';
+    Icon = Sun;
+  } else {
+    text = 'Good evening';
+    Icon = Moon;
+  }
+
+  return (
+    <div className="flex items-center gap-2 mb-1">
+      <Icon className="w-4 h-4 text-white/60" />
+      <span className="text-white/60 text-sm font-medium">{text}</span>
+    </div>
+  );
+});
+
 export default function Dashboard({
   todos,
   currentUser,
@@ -51,15 +119,7 @@ export default function Dashboard({
   onAddTask,
   onFilterOverdue,
   onFilterDueToday,
-  darkMode = false,
 }: DashboardProps) {
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(interval);
-  }, []);
-
   const stats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -154,15 +214,6 @@ export default function Dashboard({
     };
   }, [todos]);
 
-  const getGreeting = () => {
-    const hour = currentTime.getHours();
-    if (hour < 12) return { text: 'Good morning', Icon: Sunrise };
-    if (hour < 17) return { text: 'Good afternoon', Icon: Sun };
-    return { text: 'Good evening', Icon: Moon };
-  };
-
-  const greeting = getGreeting();
-
   const formatDueDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const today = new Date();
@@ -177,24 +228,16 @@ export default function Dashboard({
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-[#0A1628]' : 'bg-slate-50'}`}>
+    <div className="min-h-screen bg-[var(--background)]">
       {/* Header */}
       <div className="relative overflow-hidden">
         <div
-          className="absolute inset-0"
-          style={{
-            background: darkMode
-              ? 'linear-gradient(135deg, #0A1628 0%, #0033A0 50%, #1E3A5F 100%)'
-              : 'linear-gradient(135deg, #0033A0 0%, #0047CC 50%, #1E3A5F 100%)',
-          }}
+          className="absolute inset-0 bg-[var(--gradient-hero)]"
         />
 
         <div className="relative max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto px-5 sm:px-6 py-8 sm:py-10">
-          {/* Greeting row */}
-          <div className="flex items-center gap-2 mb-1">
-            <greeting.Icon className="w-4 h-4 text-white/60" />
-            <span className="text-white/60 text-sm font-medium">{greeting.text}</span>
-          </div>
+          {/* Greeting row - uses memoized component to isolate time-based re-renders */}
+          <GreetingDisplay />
 
           {/* Name */}
           <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-2">
@@ -221,7 +264,7 @@ export default function Dashboard({
         {/* Overdue Alert - Primary CTA when there are overdue tasks */}
         {stats.overdue > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
           >
             <Button
@@ -253,7 +296,7 @@ export default function Dashboard({
                 <button
                   key={task.id}
                   onClick={onFilterDueToday}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors hover:bg-[var(--surface-2)]"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-colors hover:bg-[var(--surface-2)]"
                 >
                   <Badge
                     variant={
@@ -280,12 +323,25 @@ export default function Dashboard({
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-3 py-2">
-              <CheckCircle2 className="w-5 h-5 text-[var(--success)]" />
-              <span className="text-sm text-[var(--text-secondary)]">
-                No tasks due today
-              </span>
-            </div>
+            <motion.div
+              initial={false}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center gap-2 py-4 text-center"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-6 h-6 text-[var(--success)]" />
+                <span className="text-lg font-semibold text-[var(--foreground)]">
+                  You&apos;re all caught up!
+                </span>
+                <span role="img" aria-label="celebration" className="text-xl">
+                  🎉
+                </span>
+              </div>
+              <p className="text-sm text-[var(--text-muted)]">
+                No tasks due today. Enjoy your free time!
+              </p>
+            </motion.div>
           )}
         </Card>
 
@@ -298,7 +354,7 @@ export default function Dashboard({
 
             <button
               onClick={onNavigateToTasks}
-              className="w-full flex items-start gap-3 px-4 py-3 rounded-xl text-left transition-colors hover:bg-[var(--surface-2)]"
+              className="w-full flex items-start gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-colors hover:bg-[var(--surface-2)]"
             >
               <div className="mt-1">
                 <Badge
@@ -365,7 +421,7 @@ export default function Dashboard({
                 <motion.div
                   key={day.dayName}
                   className="flex-1 flex flex-col items-center gap-1.5"
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={false}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
@@ -379,7 +435,7 @@ export default function Dashboard({
 
                   <div className="w-full flex-1 flex flex-col justify-end min-h-[20px]">
                     <motion.div
-                      initial={{ height: 0 }}
+                      initial={false}
                       animate={{ height: `${Math.max(height, 8)}%` }}
                       transition={{ delay: 0.2 + index * 0.05, duration: 0.4 }}
                       className={`w-full rounded-sm ${

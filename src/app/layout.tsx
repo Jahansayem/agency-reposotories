@@ -3,12 +3,16 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ToastProvider } from "@/components/ui";
+import { AnnouncementProvider } from "@/components/LiveRegion";
+import { ReactQueryProvider } from "@/lib/queryClient";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: "cover",
 };
 
@@ -44,11 +48,17 @@ export default function RootLayout({
       <body
         className={`${plusJakarta.variable} font-sans antialiased`}
       >
-        <ThemeProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </ThemeProvider>
+        <ServiceWorkerRegistration />
+        <OfflineIndicator />
+        <ReactQueryProvider>
+          <ThemeProvider>
+            <AnnouncementProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </AnnouncementProvider>
+          </ThemeProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );

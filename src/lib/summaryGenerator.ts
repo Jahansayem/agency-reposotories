@@ -9,6 +9,7 @@
 
 import { Todo, Subtask, Attachment, TaskCompletionSummaryData } from '@/types/todo';
 import { format, isValid, parseISO } from 'date-fns';
+import { logger } from './logger';
 
 export type SummaryFormat = 'text' | 'markdown' | 'json' | 'csv';
 
@@ -601,8 +602,8 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     const success = document.execCommand('copy');
     document.body.removeChild(textArea);
     return success;
-  } catch {
-    console.error('Failed to copy to clipboard');
+  } catch (error) {
+    logger.error('Failed to copy to clipboard', error as Error, { component: 'summaryGenerator', action: 'copyToClipboard' });
     return false;
   }
 }

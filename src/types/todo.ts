@@ -4,6 +4,27 @@ export type TodoPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export type RecurrencePattern = 'daily' | 'weekly' | 'monthly' | null;
 
+// Waiting for customer response types
+export type WaitingContactType = 'call' | 'email' | 'other';
+
+// Attachment category type (defined before Attachment interface for clarity)
+// Note: 'other' is a catch-all for unknown file types
+export type AttachmentCategory = 'document' | 'image' | 'audio' | 'video' | 'archive' | 'other';
+
+// ============================================
+// Dashboard-Related Insurance Workflow Types
+// ============================================
+
+// Task categories for insurance workflows (dashboard view)
+// Note: This is separate from TaskCategory which is used for pattern analysis
+export type DashboardTaskCategory = 'quote' | 'renewal' | 'claim' | 'service' | 'follow-up' | 'prospecting' | 'other';
+
+// Policy types
+export type PolicyType = 'auto' | 'home' | 'life' | 'commercial' | 'bundle';
+
+// Renewal status tracking
+export type RenewalStatus = 'pending' | 'contacted' | 'confirmed' | 'at-risk';
+
 export interface Subtask {
   id: string;
   text: string;
@@ -15,7 +36,7 @@ export interface Subtask {
 export interface Attachment {
   id: string;
   file_name: string;
-  file_type: string;
+  file_type: AttachmentCategory;
   file_size: number;
   storage_path: string;
   mime_type: string;
@@ -58,7 +79,6 @@ export const ALLOWED_ATTACHMENT_TYPES = {
 } as const;
 
 export type AttachmentMimeType = keyof typeof ALLOWED_ATTACHMENT_TYPES;
-export type AttachmentCategory = 'document' | 'image' | 'audio' | 'video' | 'archive';
 
 // Max file size: 25MB
 export const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024;
@@ -86,6 +106,19 @@ export interface Todo {
   reminder_at?: string; // Simple single reminder timestamp
   reminder_sent?: boolean; // Whether simple reminder has been sent
   reminders?: TaskReminder[]; // Multiple reminders (from task_reminders table)
+  agency_id?: string; // Multi-tenancy: which agency this task belongs to
+  display_order?: number; // Manual sort order for list view (lower numbers appear first)
+  // Waiting for customer response tracking
+  waiting_for_response?: boolean;
+  waiting_since?: string;
+  waiting_contact_type?: WaitingContactType;
+  follow_up_after_hours?: number; // Default 48 hours
+  // Dashboard-related insurance workflow fields
+  category?: DashboardTaskCategory;
+  premium_amount?: number;
+  customer_name?: string;
+  policy_type?: PolicyType;
+  renewal_status?: RenewalStatus;
 }
 
 // ============================================
@@ -186,7 +219,7 @@ export const REMINDER_PRESETS: Record<ReminderPreset, ReminderPresetConfig> = {
 };
 
 export type SortOption = 'created' | 'due_date' | 'priority' | 'alphabetical' | 'custom' | 'urgency';
-export type QuickFilter = 'all' | 'my_tasks' | 'due_today' | 'overdue';
+export type QuickFilter = 'all' | 'my_tasks' | 'due_today' | 'overdue' | 'waiting' | 'needs_followup';
 
 export type ViewMode = 'list' | 'kanban';
 
@@ -195,22 +228,51 @@ export interface User {
   name: string;
   color: string;
   pin_hash?: string;
+  email?: string;
+  global_role?: GlobalRole;
   created_at?: string;
   last_login?: string;
 }
 
-export type UserRole = 'admin' | 'member';
+/**
+ * User role within an agency context.
+ * Aligned with AgencyRole from agency.ts.
+ *
+ * - `owner`: Agency owner with full permissions
+ * - `manager`: Team manager with oversight capabilities
+ * - `staff`: Regular team member with limited permissions
+ */
+export type UserRole = 'owner' | 'manager' | 'staff';
+
+/**
+ * Global platform role (cross-agency).
+ *
+ * - `user`: Standard user (most users)
+ * - `super_admin`: Platform administrator with cross-agency access
+ */
+export type GlobalRole = 'user' | 'super_admin';
+
+// Import agency types for re-export
+import type { AgencyMembership, AgencyRole, AgencyPermissions } from './agency';
+export type { AgencyMembership, AgencyRole, AgencyPermissions };
 
 export interface AuthUser {
   id: string;
   name: string;
   color: string;
+  email?: string;
   role: UserRole;
+  global_role?: GlobalRole;
   created_at: string;
   last_login?: string;
   streak_count?: number;
   streak_last_date?: string;
   welcome_shown_at?: string;
+  // Multi-tenancy fields
+  agencies?: AgencyMembership[];
+  current_agency_id?: string;
+  current_agency_role?: AgencyRole;
+  current_agency_permissions?: AgencyPermissions;
 }
 
 export const PRIORITY_CONFIG: Record<TodoPriority, { label: string; color: string; bgColor: string; icon: string }> = {
@@ -226,6 +288,45 @@ export const STATUS_CONFIG: Record<TodoStatus, { label: string; color: string; b
   done: { label: 'Done', color: '#10b981', bgColor: 'rgba(16, 185, 129, 0.1)' },
 };
 
+// Waiting for customer response configuration
+export const WAITING_CONTACT_CONFIG: Record<WaitingContactType, { label: string; icon: string; color: string }> = {
+  call: { label: 'Phone Call', icon: '📞', color: '#8b5cf6' },
+  email: { label: 'Email', icon: '✉️', color: '#3b82f6' },
+  other: { label: 'Other', icon: '💬', color: '#6b7280' },
+};
+
+// Default follow-up time in hours
+export const DEFAULT_FOLLOW_UP_HOURS = 48;
+
+// Helper to calculate waiting duration
+export function getWaitingDuration(waitingSince: string): { hours: number; days: number; isOverdue: boolean; followUpHours?: number } {
+  const since = new Date(waitingSince);
+  const now = new Date();
+  const diffMs = now.getTime() - since.getTime();
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  return { hours, days, isOverdue: false }; // isOverdue determined by follow_up_after_hours
+}
+
+// Helper to check if follow-up is overdue
+export function isFollowUpOverdue(todo: Pick<Todo, 'waiting_for_response' | 'waiting_since' | 'follow_up_after_hours'>): boolean {
+  if (!todo.waiting_for_response || !todo.waiting_since) return false;
+  const since = new Date(todo.waiting_since);
+  const now = new Date();
+  const diffHours = (now.getTime() - since.getTime()) / (1000 * 60 * 60);
+  const threshold = todo.follow_up_after_hours ?? DEFAULT_FOLLOW_UP_HOURS;
+  return diffHours >= threshold;
+}
+
+// Format waiting duration for display
+export function formatWaitingDuration(waitingSince: string): string {
+  const { hours, days } = getWaitingDuration(waitingSince);
+  if (days > 0) {
+    return days === 1 ? '1 day' : `${days} days`;
+  }
+  return hours === 1 ? '1 hour' : `${hours} hours`;
+}
+
 // Tapback reaction types (iMessage-style)
 export type TapbackType = 'heart' | 'thumbsup' | 'thumbsdown' | 'haha' | 'exclamation' | 'question';
 
@@ -235,25 +336,59 @@ export interface MessageReaction {
   created_at: string;
 }
 
-// Chat message types
+// Chat attachment types
+// Note: Uses a subset of AttachmentCategory since chat doesn't support archives
+export type ChatAttachmentType = 'image' | 'video' | 'audio' | 'document';
+
+export interface ChatAttachment {
+  id: string;
+  file_name: string;
+  file_type: ChatAttachmentType;
+  file_size: number; // bytes
+  mime_type: string;
+  storage_path: string;
+  thumbnail_path?: string; // For images/videos
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
+/**
+ * Chat message types
+ *
+ * Nullable pattern convention:
+ * - `field?: T` = Optional field, may not exist in payload
+ * - `field: T | null` = Required field that can be explicitly null (null has semantic meaning)
+ *
+ * For fields that may not exist in legacy data BUT where null is meaningful when present,
+ * we use `field?: T | null`. This is intentional to handle both cases.
+ */
 export interface ChatMessage {
+  // Required fields (always present)
   id: string;
   text: string;
   created_by: string;
   created_at: string;
+
+  // Truly optional fields (absence means "not applicable")
   related_todo_id?: string;
-  recipient?: string | null; // null = team chat, username = DM
-  reactions?: MessageReaction[]; // Tapback reactions
-  read_by?: string[]; // Users who have read this message
-  reply_to_id?: string | null; // ID of message being replied to
-  reply_to_text?: string | null; // Cached text of replied message
-  reply_to_user?: string | null; // Cached user of replied message
-  edited_at?: string | null; // Timestamp when message was edited
-  deleted_at?: string | null; // Timestamp when message was deleted (soft delete)
-  is_pinned?: boolean; // Whether message is pinned
-  pinned_by?: string | null; // User who pinned the message
-  pinned_at?: string | null; // When it was pinned
-  mentions?: string[]; // Array of mentioned usernames
+  reactions?: MessageReaction[];
+  read_by?: string[];
+  mentions?: string[];
+  agency_id?: string;
+  attachments?: ChatAttachment[];
+  is_pinned?: boolean;
+
+  // Nullable fields where null has semantic meaning:
+  // - null = explicit absence of value (e.g., no recipient = team chat)
+  // - undefined = field not in payload (legacy data)
+  recipient?: string | null;       // null = team chat, string = DM recipient
+  reply_to_id?: string | null;     // null = not a reply
+  reply_to_text?: string | null;   // null = not a reply
+  reply_to_user?: string | null;   // null = not a reply
+  edited_at?: string | null;       // null = never edited
+  deleted_at?: string | null;      // null = not deleted (soft delete)
+  pinned_by?: string | null;       // null = not pinned
+  pinned_at?: string | null;       // null = not pinned
 }
 
 // User presence status
@@ -267,9 +402,18 @@ export interface UserPresence {
 }
 
 // Muted conversation settings
+/**
+ * Nullable pattern convention:
+ * - `muted_until: string` = muted until this date
+ * - `muted_until: null` = muted forever (permanent)
+ * - `is_muted: false` = not muted (field explicitly false)
+ *
+ * We use a separate boolean to avoid the confusing undefined vs null pattern.
+ */
 export interface MutedConversation {
   conversation_key: string; // 'team' or username
-  muted_until?: string | null; // null = forever, date = until then
+  is_muted: boolean; // true = muted, false = not muted
+  muted_until: string | null; // string = muted until date, null = muted forever (only relevant when is_muted=true)
 }
 
 // Chat conversation type
@@ -295,6 +439,7 @@ export interface TaskTemplate {
   is_shared: boolean;
   created_at: string;
   updated_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this template belongs to
 }
 
 // Activity Log types
@@ -319,9 +464,67 @@ export type ActivityAction =
   | 'tasks_merged'
   | 'reminder_added'
   | 'reminder_removed'
-  | 'reminder_sent';
+  | 'reminder_sent'
+  | 'marked_waiting'
+  | 'customer_responded'
+  | 'follow_up_overdue'
+  | 'task_reordered';
 
-export interface ActivityLogEntry {
+/**
+ * Action-specific detail types for type-safe activity logging.
+ * Each action type has a corresponding detail shape.
+ */
+export interface ActivityDetailsMap {
+  task_created: { priority?: TodoPriority; assigned_to?: string };
+  task_updated: { fields_changed?: string[] };
+  task_deleted: Record<string, never>;
+  task_completed: { was_overdue?: boolean };
+  task_reopened: Record<string, never>;
+  status_changed: { from: TodoStatus; to: TodoStatus };
+  priority_changed: { from: TodoPriority; to: TodoPriority };
+  assigned_to_changed: { from: string | null; to: string | null };
+  due_date_changed: { from: string | null; to: string | null };
+  subtask_added: { subtask_text: string; subtask_id: string };
+  subtask_completed: { subtask_text: string; subtask_id: string };
+  subtask_deleted: { subtask_text: string; subtask_id: string };
+  notes_updated: { notes_length?: number };
+  template_created: { template_name: string };
+  template_used: { template_name: string; template_id: string };
+  attachment_added: { file_name: string; file_type: AttachmentCategory };
+  attachment_removed: { file_name: string };
+  tasks_merged: { merged_task_ids: string[]; merged_count: number };
+  reminder_added: { reminder_time: string };
+  reminder_removed: { reminder_id: string };
+  reminder_sent: { reminder_type: ReminderType };
+  marked_waiting: { contact_type: WaitingContactType };
+  customer_responded: { waiting_hours?: number };
+  follow_up_overdue: { hours_overdue: number };
+  task_reordered: { from_position: number; to_position: number };
+}
+
+/**
+ * Type-safe activity log entry.
+ * The `details` field is typed based on the `action` type.
+ *
+ * For runtime flexibility (e.g., database returns), use ActivityLogEntryLoose.
+ */
+export interface ActivityLogEntry<A extends ActivityAction = ActivityAction> {
+  id: string;
+  action: A;
+  todo_id?: string;
+  todo_text?: string;
+  user_name: string;
+  details: A extends keyof ActivityDetailsMap ? ActivityDetailsMap[A] : Record<string, unknown>;
+  created_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this activity belongs to
+}
+
+/**
+ * Loose version of ActivityLogEntry for database queries where the action
+ * type isn't known at compile time. Use ActivityLogEntry<A> when you know
+ * the specific action type for better type safety.
+ */
+export interface ActivityLogEntryLoose {
   id: string;
   action: ActivityAction;
   todo_id?: string;
@@ -329,13 +532,11 @@ export interface ActivityLogEntry {
   user_name: string;
   details: Record<string, unknown>;
   created_at: string;
+  agency_id?: string;
 }
 
-// Activity feed is now accessible to all users (legacy constants kept for compatibility)
-export const ACTIVITY_FEED_USERS: string[] = [];
-
-// All users can now see all todos (legacy constants kept for compatibility)
-export const FULL_VISIBILITY_USERS: string[] = [];
+// Legacy constants removed in Phase 4E multi-tenancy migration.
+// Use usePermission('can_view_activity_feed') and usePermission('can_view_all_tasks') instead.
 
 // Notification settings for activity feed
 export interface ActivityNotificationSettings {
@@ -364,6 +565,7 @@ export interface GoalCategory {
   icon: string;
   display_order: number;
   created_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this category belongs to
 }
 
 export interface StrategicGoal {
@@ -382,6 +584,7 @@ export interface StrategicGoal {
   created_by: string;
   created_at: string;
   updated_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this goal belongs to
   // Joined data
   category?: GoalCategory;
   milestones?: GoalMilestone[];
@@ -395,6 +598,20 @@ export interface GoalMilestone {
   target_date?: string;
   display_order: number;
   created_at: string;
+}
+
+// Agency metrics for dashboard
+export interface AgencyMetrics {
+  id: string;
+  agency_id: string;
+  month: string;
+  retention_rate?: number;
+  premium_goal?: number;
+  premium_actual?: number;
+  policies_goal?: number;
+  policies_actual?: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export const GOAL_STATUS_CONFIG: Record<GoalStatus, { label: string; color: string; bgColor: string; icon: string }> = {
@@ -412,8 +629,9 @@ export const GOAL_PRIORITY_CONFIG: Record<GoalPriority, { label: string; color: 
   low: { label: 'Low', color: '#6b7280', bgColor: 'rgba(107, 114, 128, 0.1)' },
 };
 
-// Owner username for dashboard access
-export const OWNER_USERNAME = 'Derrick';
+// Legacy isOwner(), isAdmin(), canViewStrategicGoals() functions deleted in Phase 4E.
+// Use usePermission() hook or useRoleCheck() hook instead.
+// See src/hooks/usePermission.ts and src/hooks/useRoleCheck.ts.
 
 // ============================================
 // Task Completion & Celebration Types

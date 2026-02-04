@@ -211,6 +211,34 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     };
   }, [enabled, handleKeyDown]);
 
+  // Prevent mouse clicks outside from stealing focus (enhanced focus trap)
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleMouseDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const container = containerRef.current;
+
+      if (container && !container.contains(target)) {
+        // Prevent click from stealing focus
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Restore focus to container if it was lost
+        if (!container.contains(document.activeElement)) {
+          focusPrimaryOrFirst();
+        }
+      }
+    };
+
+    // Use capture phase to intercept clicks before they reach the target
+    document.addEventListener('mousedown', handleMouseDown, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown, true);
+    };
+  }, [enabled, focusPrimaryOrFirst]);
+
   // Restore focus on unmount
   useEffect(() => {
     // Capture the ref value at effect creation time for cleanup
