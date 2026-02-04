@@ -240,11 +240,12 @@ export function DockedChatPanel({
                       )}
                       {!isOwn && !showAvatar && <div className="w-7" />}
                       <div
-                        className={`max-w-[80%] px-3 py-2 rounded-[var(--radius-2xl)] text-sm ${
+                        className={`max-w-[80%] px-3 py-2 rounded-[var(--radius-2xl)] text-sm overflow-hidden ${
                           isOwn
                             ? 'bg-[var(--accent)] text-white'
                             : 'bg-white/10 text-white'
                         }`}
+                        style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
                       >
                         {renderMessageText(message.text)}
                       </div>

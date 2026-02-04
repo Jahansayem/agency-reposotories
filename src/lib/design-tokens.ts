@@ -144,6 +144,55 @@ export const SEMANTIC_COLORS = {
 export type SemanticColorToken = keyof typeof SEMANTIC_COLORS;
 
 // ============================================================================
+// ACTION COLORS (activity feed, notifications - consistent semantic mapping)
+// ============================================================================
+/**
+ * Action colors for activity feed and notifications.
+ * Maps action types to semantic colors for consistent visual language.
+ * These use CSS variables to respect light/dark mode.
+ */
+export const ACTION_COLORS = {
+  // Creation actions - success green
+  created: 'var(--success-vivid)',       // #10B981 light, #34D399 dark
+  added: 'var(--success-vivid)',
+  completed: 'var(--success-vivid)',
+
+  // Update actions - primary blue
+  updated: 'var(--accent-vivid)',        // #2563EB light, #60A5FA dark
+  assigned: 'var(--accent-vivid)',
+  reordered: 'var(--accent-vivid)',
+  used: 'var(--accent-vivid)',           // template used
+
+  // Delete/remove actions - danger red
+  deleted: 'var(--danger)',              // #DC2626 light, #F87171 dark
+  removed: 'var(--danger)',
+
+  // Warning/change actions - warning amber
+  reopened: 'var(--warning)',            // #D97706 light, #FBBF24 dark
+  priorityChanged: 'var(--warning)',
+  overdue: 'var(--danger)',
+
+  // Neutral/info actions - purple for special states
+  statusChanged: 'var(--state-info)',     // Uses purple accent
+  notesUpdated: 'var(--state-info)',
+  reminderAdded: 'var(--state-info)',
+  waiting: 'var(--state-info)',
+
+  // Merge action - brand color
+  merged: 'var(--accent)',               // Brand blue
+} as const;
+
+export type ActionColorToken = keyof typeof ACTION_COLORS;
+
+/**
+ * Get action color value
+ * @example getActionColor('created') // 'var(--success-vivid)'
+ */
+export function getActionColor(token: ActionColorToken): string {
+  return ACTION_COLORS[token];
+}
+
+// ============================================================================
 // ELEVATION (shadow system)
 // ============================================================================
 export const ELEVATION = {

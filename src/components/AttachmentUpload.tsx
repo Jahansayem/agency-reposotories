@@ -56,7 +56,6 @@ export default function AttachmentUpload({
     }
 
     setUploading(true);
-    setProgress(10);
 
     try {
       const formData = new FormData();
@@ -64,24 +63,62 @@ export default function AttachmentUpload({
       formData.append('todoId', todoId);
       formData.append('userName', userName);
 
-      setProgress(30);
+      // UX-005: Use XMLHttpRequest to track actual upload progress
+      const result = await new Promise<{ success: boolean; attachment?: import('@/types/todo').Attachment; error?: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
 
-      const response = await fetchWithCsrf('/api/attachments', {
-        method: 'POST',
-        body: formData,
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            // Upload progress is 0-90%, leave 10% for server processing
+            const uploadProgress = Math.round((event.loaded / event.total) * 90);
+            setProgress(uploadProgress);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              setProgress(100);
+              resolve(data);
+            } catch {
+              reject(new Error('Invalid response from server'));
+            }
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(errorData.error || 'Upload failed'));
+            } catch {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error during upload'));
+        });
+
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload cancelled'));
+        });
+
+        xhr.open('POST', '/api/attachments');
+        // Note: fetchWithCsrf adds CSRF token, we need to add it manually here
+        // The CSRF token is fetched from cookies or a meta tag
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken) {
+          xhr.setRequestHeader('X-CSRF-Token', csrfToken);
+        }
+        xhr.send(formData);
       });
 
-      setProgress(70);
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || 'Upload failed');
       }
 
-      setProgress(100);
       // Pass the new attachment back to parent for state update and activity logging
-      onUploadComplete(result.attachment);
+      onUploadComplete(result.attachment!);
       onClose();
     } catch (err) {
       const errorMsg = ContextualErrorMessages.attachmentUpload(err);
@@ -181,13 +218,18 @@ export default function AttachmentUpload({
             {uploading ? (
               <div className="space-y-3">
                 <Loader2 className="w-10 h-10 mx-auto text-[var(--accent)] animate-spin" />
-                <p className="text-sm font-medium text-[var(--foreground)]">Uploading...</p>
+                <p className="text-sm font-medium text-[var(--foreground)]">
+                  Uploading... {progress}%
+                </p>
                 <div className="w-full h-2 bg-[var(--surface-3)] rounded-full overflow-hidden">
                   <div
                     className="h-full bg-[var(--accent)] transition-all duration-300"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {progress < 90 ? 'Uploading file...' : 'Processing...'}
+                </p>
               </div>
             ) : (
               <>

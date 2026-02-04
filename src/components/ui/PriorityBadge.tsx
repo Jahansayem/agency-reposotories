@@ -25,6 +25,9 @@ export interface PriorityBadgeProps {
  * - HIGH:   Solid orange fill + Flag icon
  * - MEDIUM: Light accent fill + border
  * - LOW:    Ghost/outline only, muted text
+ *
+ * Uses CSS variables from design system for consistent light/dark mode support.
+ * @see src/lib/design-tokens.ts for color definitions
  */
 const priorityConfig: Record<
   PriorityLevel,
@@ -41,7 +44,7 @@ const priorityConfig: Record<
     label: 'Urgent',
     icon: AlertTriangle,
     containerClass:
-      'bg-[#DC2626] border-[#DC2626] text-white priority-badge-urgent-pulse',
+      'bg-[var(--danger)] border-[var(--danger)] text-white priority-badge-urgent-pulse',
     iconClass: 'text-white',
     textClass: 'text-white font-semibold',
     pulse: true,
@@ -50,7 +53,7 @@ const priorityConfig: Record<
     label: 'High',
     icon: Flag,
     containerClass:
-      'bg-[#D97706] border-[#D97706] text-white',
+      'bg-[var(--warning)] border-[var(--warning)] text-white',
     iconClass: 'text-white',
     textClass: 'text-white font-semibold',
     pulse: false,
@@ -133,6 +136,7 @@ export function PriorityBadge({
       <Icon
         className={`${sizeStyle.icon} ${config.iconClass} flex-shrink-0`}
         strokeWidth={priority === 'urgent' ? 2.5 : 2}
+        aria-hidden="true"
       />
       {showLabel && (
         <span className={config.textClass}>{config.label}</span>

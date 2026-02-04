@@ -184,9 +184,9 @@ export default function DoerDashboard({
 
   const getUrgencyBadge = (urgency: NeglectedTask['urgencyLevel']) => {
     switch (urgency) {
-      case 'critical': return { bg: 'bg-red-500', text: 'text-white', label: 'CRITICAL' };
-      case 'warning': return { bg: 'bg-amber-500', text: 'text-white', label: 'STALLED' };
-      case 'notice': return { bg: 'bg-blue-500', text: 'text-white', label: 'NEEDS ATTENTION' };
+      case 'critical': return { bg: 'bg-[var(--danger)]', text: 'text-white', label: 'CRITICAL' };
+      case 'warning': return { bg: 'bg-[var(--warning)]', text: 'text-white', label: 'STALLED' };
+      case 'notice': return { bg: 'bg-[var(--accent-vivid)]', text: 'text-white', label: 'NEEDS ATTENTION' };
     }
   };
 

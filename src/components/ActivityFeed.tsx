@@ -45,32 +45,37 @@ function saveNotificationSettings(settings: ActivityNotificationSettings): void 
   localStorage.setItem(NOTIFICATION_SETTINGS_KEY, JSON.stringify(settings));
 }
 
+/**
+ * Action configuration using semantic color tokens from design system.
+ * Colors use CSS variables for consistent light/dark mode support.
+ * @see src/lib/design-tokens.ts for ACTION_COLORS definitions
+ */
 const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: string; color: string }> = {
-  task_created: { icon: Circle, label: 'created task', color: '#10b981' },
-  task_updated: { icon: RefreshCw, label: 'updated task', color: '#3b82f6' },
-  task_deleted: { icon: Trash2, label: 'deleted task', color: '#ef4444' },
-  task_completed: { icon: CheckCircle2, label: 'completed task', color: '#10b981' },
-  task_reopened: { icon: Circle, label: 'reopened task', color: '#f59e0b' },
-  status_changed: { icon: ArrowRight, label: 'changed status', color: '#8b5cf6' },
-  priority_changed: { icon: Flag, label: 'changed priority', color: '#f59e0b' },
-  assigned_to_changed: { icon: User, label: 'reassigned task', color: '#3b82f6' },
-  due_date_changed: { icon: Calendar, label: 'updated due date', color: '#3b82f6' },
-  subtask_added: { icon: ListTodo, label: 'added subtask', color: '#10b981' },
-  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: '#10b981' },
-  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: '#ef4444' },
-  notes_updated: { icon: StickyNote, label: 'updated notes', color: '#8b5cf6' },
-  template_created: { icon: FileText, label: 'created template', color: '#10b981' },
-  template_used: { icon: FileText, label: 'used template', color: '#3b82f6' },
-  attachment_added: { icon: Paperclip, label: 'added attachment', color: '#10b981' },
-  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: '#ef4444' },
+  task_created: { icon: Circle, label: 'created task', color: 'var(--success-vivid)' },
+  task_updated: { icon: RefreshCw, label: 'updated task', color: 'var(--accent-vivid)' },
+  task_deleted: { icon: Trash2, label: 'deleted task', color: 'var(--danger)' },
+  task_completed: { icon: CheckCircle2, label: 'completed task', color: 'var(--success-vivid)' },
+  task_reopened: { icon: Circle, label: 'reopened task', color: 'var(--warning)' },
+  status_changed: { icon: ArrowRight, label: 'changed status', color: 'var(--state-info)' },
+  priority_changed: { icon: Flag, label: 'changed priority', color: 'var(--warning)' },
+  assigned_to_changed: { icon: User, label: 'reassigned task', color: 'var(--accent-vivid)' },
+  due_date_changed: { icon: Calendar, label: 'updated due date', color: 'var(--accent-vivid)' },
+  subtask_added: { icon: ListTodo, label: 'added subtask', color: 'var(--success-vivid)' },
+  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: 'var(--success-vivid)' },
+  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: 'var(--danger)' },
+  notes_updated: { icon: StickyNote, label: 'updated notes', color: 'var(--state-info)' },
+  template_created: { icon: FileText, label: 'created template', color: 'var(--success-vivid)' },
+  template_used: { icon: FileText, label: 'used template', color: 'var(--accent-vivid)' },
+  attachment_added: { icon: Paperclip, label: 'added attachment', color: 'var(--success-vivid)' },
+  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: 'var(--danger)' },
   tasks_merged: { icon: GitMerge, label: 'merged tasks', color: 'var(--accent)' },
-  reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6' },
-  reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444' },
-  reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981' },
-  marked_waiting: { icon: Clock, label: 'marked waiting for response', color: '#8b5cf6' },
-  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: '#10b981' },
-  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: '#ef4444' },
-  task_reordered: { icon: ArrowRight, label: 'reordered task', color: '#3b82f6' },
+  reminder_added: { icon: Bell, label: 'added reminder', color: 'var(--state-info)' },
+  reminder_removed: { icon: BellOff, label: 'removed reminder', color: 'var(--danger)' },
+  reminder_sent: { icon: BellRing, label: 'sent reminder', color: 'var(--success-vivid)' },
+  marked_waiting: { icon: Clock, label: 'marked waiting for response', color: 'var(--state-info)' },
+  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)' },
+  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)' },
+  task_reordered: { icon: ArrowRight, label: 'reordered task', color: 'var(--accent-vivid)' },
 };
 
 // Activity type filter options

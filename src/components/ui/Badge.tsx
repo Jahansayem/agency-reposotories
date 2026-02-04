@@ -159,7 +159,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 
         {/* Icon */}
         {!dot && icon && (
-          <span className={`${sizeStyle.icon} flex-shrink-0`}>
+          <span className={`${sizeStyle.icon} flex-shrink-0`} aria-hidden="true">
             {icon}
           </span>
         )}

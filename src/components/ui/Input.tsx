@@ -266,11 +266,12 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
       <Input
         ref={ref}
         type="search"
-        leftIcon={<Search />}
+        leftIcon={<Search aria-hidden="true" />}
         clearable
         value={value}
         onClear={onClear}
         onKeyDown={handleKeyDown}
+        aria-label="Search tasks"
         {...props}
       />
     );

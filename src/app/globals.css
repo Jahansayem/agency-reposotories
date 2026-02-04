@@ -54,8 +54,8 @@
   --chat-surface: rgba(0, 0, 0, 0.04);
   --chat-surface-hover: rgba(0, 0, 0, 0.06);
   --chat-border: rgba(0, 0, 0, 0.08);
-  --chat-text-secondary: rgba(0, 0, 0, 0.4);
-  --chat-text-muted: rgba(0, 0, 0, 0.3);
+  --chat-text-secondary: rgba(0, 0, 0, 0.6); /* WCAG AA: 4.5:1 contrast ratio on white */
+  --chat-text-muted: rgba(0, 0, 0, 0.55); /* WCAG AA: 4.5:1 contrast ratio on white */
 
   /* ─── Semantic Colors ─── */
   --success: #059669;
@@ -71,6 +71,7 @@
   --state-due-soon: var(--warning);
   --state-on-track: var(--border-subtle);
   --state-completed: var(--success);
+  --state-info: #8B5CF6;  /* Purple for status changes, notes, reminders */
 
   /* ─── Effects ─── */
   --shadow-color: 31, 41, 55;
@@ -98,16 +99,18 @@
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  --duration-instant: 100ms;
   --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 400ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
 
   /* ─── Radius ─── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 28px;
+  /* IMPORTANT: These values MUST match src/lib/design-tokens.ts RADIUS */
+  --radius-sm: 6px;   /* Pills, small badges */
+  --radius-md: 8px;   /* Inputs, buttons */
+  --radius-lg: 10px;  /* Standard cards */
+  --radius-xl: 12px;  /* Large cards */
+  --radius-2xl: 16px; /* Modals */
 }
 
 /* ─── Dark Theme (via class toggle) ─── */
@@ -145,8 +148,8 @@
   --chat-surface: rgba(255, 255, 255, 0.04);
   --chat-surface-hover: rgba(255, 255, 255, 0.06);
   --chat-border: rgba(255, 255, 255, 0.08);
-  --chat-text-secondary: rgba(255, 255, 255, 0.4);
-  --chat-text-muted: rgba(255, 255, 255, 0.3);
+  --chat-text-secondary: rgba(255, 255, 255, 0.7); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
+  --chat-text-muted: rgba(255, 255, 255, 0.6); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
 
   --success: #34D399;
   --success-light: rgba(52, 211, 153, 0.15);
@@ -155,6 +158,7 @@
   --warning-light: rgba(251, 191, 36, 0.15);
   --danger: #F87171;
   --danger-light: rgba(248, 113, 113, 0.15);
+  --state-info: #A78BFA;  /* Lighter purple for dark mode */
 
   --shadow-color: 10, 15, 31;
   --gradient-hero: linear-gradient(160deg, #0A1628 0%, #162236 40%, #1E2D47 100%);
@@ -196,8 +200,8 @@
     --chat-surface: rgba(255, 255, 255, 0.04);
     --chat-surface-hover: rgba(255, 255, 255, 0.06);
     --chat-border: rgba(255, 255, 255, 0.08);
-    --chat-text-secondary: rgba(255, 255, 255, 0.4);
-    --chat-text-muted: rgba(255, 255, 255, 0.3);
+    --chat-text-secondary: rgba(255, 255, 255, 0.7); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
+    --chat-text-muted: rgba(255, 255, 255, 0.6); /* WCAG AA: 4.5:1 contrast ratio on dark bg */
 
     --success: #34D399;
     --success-light: rgba(52, 211, 153, 0.15);
@@ -206,6 +210,7 @@
     --warning-light: rgba(251, 191, 36, 0.15);
     --danger: #F87171;
     --danger-light: rgba(248, 113, 113, 0.15);
+    --state-info: #A78BFA;  /* Lighter purple for dark mode */
 
     --shadow-color: 10, 15, 31;
     --gradient-hero: linear-gradient(160deg, #0A1628 0%, #162236 40%, #1E2D47 100%);

@@ -45,6 +45,7 @@ import { Todo, TodoStatus, TodoPriority, PRIORITY_CONFIG, Subtask, RecurrencePat
 import Celebration from './Celebration';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 import { usePermission } from '@/hooks/usePermission';
+import { haptics } from '@/lib/haptics';
 
 // Import from kanban submodules
 import { KanbanCard } from './kanban/KanbanCard';
@@ -788,6 +789,8 @@ export default function KanbanBoard({
   const [celebrating, setCelebrating] = useState(false);
   const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
   const [dragAnnouncement, setDragAnnouncement] = useState<string>('');
+  // Mobile status filter - shows only one column at a time on small screens
+  const [mobileActiveColumn, setMobileActiveColumn] = useState<TodoStatus>('todo');
 
   // Derive selectedTodo from todos prop to avoid stale reference when todos update via real-time sync
   const selectedTodo = useMemo(
@@ -832,6 +835,7 @@ export default function KanbanBoard({
   const handleDragStart = (event: DragStartEvent) => {
     const todoId = event.active.id as string;
     setActiveId(todoId);
+    haptics.selection(); // Light haptic feedback when picking up a task
     const draggedTodo = todos.find((t) => t.id === todoId);
     if (draggedTodo) {
       const currentColumn = columns.find(c => c.id === draggedTodo.status);
@@ -874,11 +878,15 @@ export default function KanbanBoard({
         // Celebrate if moving to done column
         if (column.id === 'done') {
           setCelebrating(true);
+          haptics.success(); // Success haptic for completing task
+        } else {
+          haptics.medium(); // Medium haptic for successful drop
         }
         onStatusChange(todoId, column.id);
         setDragAnnouncement(`Moved task to ${column.title} column.`);
       } else {
         logger.debug('Same column, no change needed', { component: 'KanbanBoard' });
+        haptics.light(); // Light haptic for drop with no change
         setDragAnnouncement(`Task remains in ${column.title} column.`);
       }
       return;
@@ -896,14 +904,19 @@ export default function KanbanBoard({
         // Celebrate if moving to done column
         if (targetStatus === 'done') {
           setCelebrating(true);
+          haptics.success(); // Success haptic for completing task
+        } else {
+          haptics.medium(); // Medium haptic for successful drop
         }
         onStatusChange(todoId, targetStatus);
         setDragAnnouncement(`Moved task to ${targetColumn?.title || targetStatus} column.`);
       } else {
+        haptics.light(); // Light haptic for drop with no change
         setDragAnnouncement(`Task remains in ${targetColumn?.title || targetStatus} column.`);
       }
     } else {
       logger.debug('No matching column or card found for targetId', { component: 'KanbanBoard', targetId });
+      haptics.light(); // Light haptic for invalid drop
       setDragAnnouncement('Task dropped. No change.');
     }
   };
@@ -922,6 +935,36 @@ export default function KanbanBoard({
         {dragAnnouncement}
       </div>
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
+
+      {/* Mobile status filter tabs - visible only on small screens */}
+      <div className="flex md:hidden mb-4 bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-1">
+        {columns.map((column) => {
+          const columnTodos = getTodosByStatus(todos, column.id);
+          const isActive = mobileActiveColumn === column.id;
+          return (
+            <button
+              key={column.id}
+              onClick={() => setMobileActiveColumn(column.id)}
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-[var(--radius-md)] transition-all ${
+                isActive
+                  ? 'bg-[var(--accent)] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)]'
+              }`}
+              aria-pressed={isActive}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                {column.title}
+                <span className={`min-w-[20px] h-5 px-1.5 rounded-full text-xs flex items-center justify-center ${
+                  isActive ? 'bg-white/20' : 'bg-[var(--surface-3)]'
+                }`}>
+                  {columnTodos.length}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <DndContext
         sensors={sensors}
         collisionDetection={collisionDetection}
@@ -929,7 +972,8 @@ export default function KanbanBoard({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        {/* Desktop: 3-column grid; Mobile: Single column based on active tab */}
+        <div className="hidden md:grid md:grid-cols-3 gap-3 sm:gap-4">
         {columns.map((column) => {
           const columnTodos = getTodosByStatus(todos, column.id);
 
@@ -953,6 +997,33 @@ export default function KanbanBoard({
             />
           );
         })}
+        </div>
+
+        {/* Mobile: Show only the active column */}
+        <div className="md:hidden">
+          {columns.filter(col => col.id === mobileActiveColumn).map((column) => {
+            const columnTodos = getTodosByStatus(todos, column.id);
+
+            return (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                columnTodos={columnTodos}
+                users={users}
+                activeId={activeId}
+                overId={overId}
+                onDelete={onDelete}
+                onAssign={onAssign}
+                onSetDueDate={onSetDueDate}
+                onSetPriority={onSetPriority}
+                onCardClick={onOpenDetail ? (todo: Todo) => onOpenDetail(todo.id) : (todo: Todo) => setSelectedTodoId(todo.id)}
+                showBulkActions={showBulkActions}
+                selectedTodos={selectedTodos}
+                onSelectTodo={onSelectTodo}
+                useSectionedView={useSectionedView}
+              />
+            );
+          })}
         </div>
 
         {/* Drag overlay */}

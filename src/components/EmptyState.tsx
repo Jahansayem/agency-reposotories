@@ -10,6 +10,7 @@ interface EmptyStateProps {
   searchQuery?: string;
   onAddTask?: () => void;
   onClearSearch?: () => void;
+  onViewAllTasks?: () => void;
   userName?: string;
 }
 
@@ -45,7 +46,7 @@ const variants = {
     icon: Calendar,
     title: 'Nothing due today',
     description: 'Enjoy your free time or plan ahead',
-    action: null,
+    action: 'View All Tasks',
     color: 'var(--accent-gold)',
     bgColor: 'var(--accent-gold-light)',
     gradient: 'from-amber-500/20 to-yellow-500/20',
@@ -54,7 +55,7 @@ const variants = {
     icon: CheckCircle2,
     title: 'No overdue tasks',
     description: 'You\'re on top of your deadlines',
-    action: null,
+    action: 'View All Tasks',
     color: 'var(--success)',
     bgColor: 'var(--success-light)',
     gradient: 'from-emerald-500/20 to-teal-500/20',
@@ -445,6 +446,7 @@ export default function EmptyState({
   searchQuery,
   onAddTask,
   onClearSearch,
+  onViewAllTasks,
   userName,
 }: EmptyStateProps) {
   const prefersReducedMotion = useReducedMotion() ?? false;
@@ -454,6 +456,8 @@ export default function EmptyState({
   const handleAction = () => {
     if (variant === 'no-results' && onClearSearch) {
       onClearSearch();
+    } else if ((variant === 'no-due-today' || variant === 'no-overdue') && onViewAllTasks) {
+      onViewAllTasks();
     } else if (onAddTask) {
       onAddTask();
     }

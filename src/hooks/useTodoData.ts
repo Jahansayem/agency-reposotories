@@ -5,7 +5,7 @@
  * Encapsulates all Supabase interactions for todos.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { useTodoStore } from '@/store/todoStore';
 import { Todo, TodoPriority, Subtask } from '@/types/todo';
@@ -19,6 +19,7 @@ import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 import { createAutoReminders, updateAutoReminders } from '@/lib/reminderService';
 import { useAgency } from '@/contexts/AgencyContext';
 import { parseTodo } from '@/lib/validators';
+import { useToast } from '@/components/ui/Toast';
 
 // Number of todos to fetch per page
 const TODOS_PER_PAGE = 200;
@@ -49,6 +50,9 @@ export function useTodoData(currentUser: AuthUser) {
   } = useTodoStore();
 
   const { currentAgencyId, isMultiTenancyEnabled, hasPermission } = useAgency();
+
+  // UX-008: Toast for rollback notifications on optimistic update failures
+  const toast = useToast();
   const canViewAllTasks = hasPermission('can_view_all_tasks');
   const userName = currentUser.name;
 
@@ -273,7 +277,11 @@ export function useTodoData(currentUser: AuthUser) {
 
     if (insertError) {
       logger.error('Error adding todo', insertError, { component: 'useTodoData' });
-      // Rollback optimistic update
+      // UX-008: Show rollback toast and revert optimistic update
+      toast.warning('Reverting...', {
+        description: 'Failed to create task. Changes have been reverted.',
+        duration: 5000,
+      });
       deleteTodoFromStore(newTodo.id);
       return null;
     }
@@ -354,7 +362,7 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return newTodo;
-  }, [userName, addTodoToStore, deleteTodoFromStore]);
+  }, [userName, addTodoToStore, deleteTodoFromStore, toast]);
 
   // Update an existing todo
   const updateTodo = useCallback(async (id: string, updates: Partial<Todo>) => {
@@ -380,7 +388,11 @@ export function useTodoData(currentUser: AuthUser) {
 
     if (error) {
       logger.error('Error updating todo', error, { component: 'useTodoData' });
-      // Rollback
+      // UX-008: Show rollback toast and revert optimistic update
+      toast.warning('Reverting...', {
+        description: 'Failed to update task. Changes have been reverted.',
+        duration: 5000,
+      });
       updateTodoInStore(id, currentTodo);
       return false;
     }
@@ -419,7 +431,7 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return true;
-  }, [userName, updateTodoInStore]);
+  }, [userName, updateTodoInStore, toast]);
 
   // Delete a todo
   const deleteTodo = useCallback(async (id: string) => {
@@ -434,7 +446,11 @@ export function useTodoData(currentUser: AuthUser) {
 
     if (error) {
       logger.error('Error deleting todo', error, { component: 'useTodoData' });
-      // Rollback
+      // UX-008: Show rollback toast and revert optimistic delete
+      toast.warning('Reverting...', {
+        description: 'Failed to delete task. The task has been restored.',
+        duration: 5000,
+      });
       addTodoToStore(currentTodo);
       return false;
     }
@@ -448,7 +464,7 @@ export function useTodoData(currentUser: AuthUser) {
     });
 
     return true;
-  }, [userName, deleteTodoFromStore, addTodoToStore]);
+  }, [userName, deleteTodoFromStore, addTodoToStore, toast]);
 
   // Toggle todo completion
   const toggleComplete = useCallback(async (id: string) => {

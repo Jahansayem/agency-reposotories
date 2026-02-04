@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO, WaitingContactType } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
@@ -13,6 +14,8 @@ import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 import { WaitingStatusBadge, WaitingBadge } from './WaitingStatusBadge';
 import { sanitizeTranscription } from '@/lib/sanitize';
 import { haptics } from '@/lib/haptics';
+import { triggerHaptic } from '@/lib/microInteractions';
+import { checkboxVariants, checkmarkPathVariants, DURATION } from '@/lib/animations';
 import { usePermission } from '@/hooks/usePermission';
 
 // Map priority levels to Badge variants
@@ -65,13 +68,13 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
         role="checkbox"
         aria-checked={subtask.completed}
         aria-label={`${subtask.completed ? 'Completed' : 'Incomplete'}: ${subtask.text}`}
-        className={`w-6 h-6 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
+        className={`w-7 h-7 sm:w-5 sm:h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all touch-manipulation ${
           subtask.completed
             ? 'bg-[var(--accent)] border-[var(--accent)]'
             : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
         }`}
       >
-        {subtask.completed && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />}
+        {subtask.completed && <Check className="w-4 h-4 sm:w-3 sm:h-3 text-white" strokeWidth={3} aria-hidden="true" />}
       </button>
 
       {/* Text or edit input */}
@@ -109,7 +112,7 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
           className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--text-light)] hover:text-[var(--accent)] active:text-[var(--accent-hover)] rounded transition-colors touch-manipulation opacity-0 group-hover:opacity-100 sm:opacity-100"
           aria-label="Edit subtask"
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}
 
@@ -119,7 +122,7 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
         className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--text-light)] hover:text-[var(--danger)] active:text-[var(--danger)] rounded transition-colors touch-manipulation"
         aria-label="Delete subtask"
       >
-        <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" aria-hidden="true" />
       </button>
     </div>
   );
@@ -703,24 +706,44 @@ function TodoItemComponent({
         )}
 
         {/* Completion checkbox - prominent one-click complete with 44x44px touch target */}
-        <button
+        <motion.button
           onClick={handleToggle}
           disabled={!canEdit}
-          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-200 ${canEdit ? 'hover:scale-110 active:scale-95' : 'opacity-50 cursor-not-allowed'}`}
+          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${canEdit ? '' : 'opacity-50 cursor-not-allowed'}`}
           style={{ touchAction: 'manipulation' }}
           title={!canEdit ? 'You do not have permission to modify this task' : todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
+          whileHover={canEdit ? { scale: 1.1 } : undefined}
+          whileTap={canEdit ? { scale: 0.95 } : undefined}
+          transition={{ duration: DURATION.fast }}
         >
-          {/* Visual checkbox */}
-          <span className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-            todo.completed
-              ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
-              : canEdit
-                ? 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
-                : 'border-[var(--border)]'
-          }`}>
-            {todo.completed && <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} />}
-          </span>
-        </button>
+          {/* Visual checkbox with animation */}
+          <motion.span
+            className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center ${
+              todo.completed
+                ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
+                : canEdit
+                  ? 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
+                  : 'border-[var(--border)]'
+            }`}
+            initial={false}
+            animate={todo.completed ? 'checked' : 'unchecked'}
+            variants={checkboxVariants}
+          >
+            <AnimatePresence mode="wait">
+              {todo.completed && (
+                <motion.span
+                  key="checkmark"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  transition={{ duration: DURATION.fast, ease: [0.4, 0, 0.2, 1] }}
+                >
+                  <Check className="w-5 h-5 sm:w-4 sm:h-4 text-white" strokeWidth={3} aria-hidden="true" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.span>
+        </motion.button>
 
         {/* Content - clickable div (not button) to avoid nesting buttons */}
         <div
@@ -1015,10 +1038,10 @@ function TodoItemComponent({
                   aria-label="Set due date"
                 />
                 {savingDate && (
-                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin" />
+                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin" aria-hidden="true" />
                 )}
                 {savedField === 'date' && !savingDate && (
-                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)]" />
+                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)]" aria-hidden="true" />
                 )}
               </div>
 
@@ -1052,10 +1075,10 @@ function TodoItemComponent({
                   ))}
                 </select>
                 {savingAssignee && (
-                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin pointer-events-none" />
+                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin pointer-events-none" aria-hidden="true" />
                 )}
                 {savedField === 'assignee' && !savingAssignee && (
-                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)] pointer-events-none" />
+                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)] pointer-events-none" aria-hidden="true" />
                 )}
               </div>
 
@@ -1089,10 +1112,10 @@ function TodoItemComponent({
                   <option value="urgent">Urgent</option>
                 </select>
                 {savingPriority && (
-                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin pointer-events-none" />
+                  <Loader2 className="absolute right-1 w-3 h-3 text-[var(--accent)] animate-spin pointer-events-none" aria-hidden="true" />
                 )}
                 {savedField === 'priority' && !savingPriority && (
-                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)] pointer-events-none" />
+                  <CheckCircle2 className="absolute right-1 w-3 h-3 text-[var(--success)] pointer-events-none" aria-hidden="true" />
                 )}
               </div>
             </div>
@@ -1310,7 +1333,7 @@ function TodoItemComponent({
       {showTranscription && todo.transcription && (
         <div className="mx-3 sm:mx-4 mb-3 p-3 bg-[var(--accent)]/5 rounded-[var(--radius-lg)] border border-[var(--accent)]/10">
           <div className="flex items-center gap-2 mb-2">
-            <Mic className="w-4 h-4 text-[var(--accent)]" />
+            <Mic className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
             <span className="text-sm font-medium text-[var(--accent)]">Voicemail Transcription</span>
           </div>
           <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap leading-relaxed">
@@ -1355,7 +1378,7 @@ function TodoItemComponent({
       {!expanded && showAttachments && Array.isArray(todo.attachments) && todo.attachments.length > 0 && (
         <div className="mx-3 sm:mx-4 mb-3 p-3 bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] border border-[var(--accent-gold)]/10">
           <div className="flex items-center gap-2 mb-3">
-            <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" />
+            <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" aria-hidden="true" />
             <span className="text-sm font-medium text-[var(--accent-gold)]">Attachments</span>
             <span className="text-xs text-[var(--accent-gold)]/70">({todo.attachments.length})</span>
           </div>
@@ -1461,7 +1484,7 @@ function TodoItemComponent({
                   Due Date
                   {dueDateStatus === 'overdue' && !todo.completed && (
                     <span className="inline-flex items-center gap-0.5 text-red-500">
-                      <AlertTriangle className="w-3 h-3" />
+                      <AlertTriangle className="w-3 h-3" aria-hidden="true" />
                       <span className="text-badge normal-case">Overdue</span>
                     </span>
                   )}
@@ -1545,7 +1568,7 @@ function TodoItemComponent({
           {onUpdateNotes && (
             <div className="mb-4">
               <label className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] mb-2">
-                <FileText className="w-4 h-4 text-[var(--accent)]" />
+                <FileText className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
                 Notes
               </label>
               <textarea
@@ -1565,7 +1588,7 @@ function TodoItemComponent({
               {/* Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <ListTree className="w-4 h-4 text-[var(--accent)]" />
+                  <ListTree className="w-4 h-4 text-[var(--accent)]" aria-hidden="true" />
                   <span className="text-sm font-medium text-[var(--accent)]">Subtasks</span>
                   {subtasks.length > 0 && (
                     <span className="text-xs text-[var(--accent)]/70">({completedSubtasks}/{subtasks.length})</span>
@@ -1575,7 +1598,7 @@ function TodoItemComponent({
                   onClick={() => setShowContentImporter(true)}
                   className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent-gold-light)] hover:bg-[var(--accent-gold)]/20 text-[var(--accent-gold)] font-medium flex items-center gap-1.5 transition-colors"
                 >
-                  <Mail className="w-3.5 h-3.5" />
+                  <Mail className="w-3.5 h-3.5" aria-hidden="true" />
                   Import
                 </button>
               </div>
@@ -1628,7 +1651,7 @@ function TodoItemComponent({
             <div className="mb-4 p-3 bg-[var(--accent-gold-light)] rounded-[var(--radius-lg)] border border-[var(--accent-gold)]/10">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" />
+                  <Paperclip className="w-4 h-4 text-[var(--accent-gold)]" aria-hidden="true" />
                   <span className="text-sm font-medium text-[var(--accent-gold)]">Attachments</span>
                   {Array.isArray(todo.attachments) && todo.attachments.length > 0 && (
                     <span className="text-xs text-[var(--accent-gold)]/70">
@@ -1641,7 +1664,7 @@ function TodoItemComponent({
                     onClick={() => setShowAttachmentUpload(true)}
                     className="text-xs px-2.5 py-1.5 rounded-[var(--radius-sm)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-medium flex items-center gap-1.5 transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5" aria-hidden="true" />
                     Add
                   </button>
                 )}
@@ -1663,7 +1686,7 @@ function TodoItemComponent({
                   onClick={() => setShowAttachmentUpload(true)}
                   className="w-full p-4 border-2 border-dashed border-[var(--accent-gold)]/30 rounded-[var(--radius-md)] text-center hover:border-[var(--accent-gold)]/50 hover:bg-[var(--accent-gold)]/5 transition-colors cursor-pointer"
                 >
-                  <Paperclip className="w-5 h-5 text-[var(--accent-gold)]/50 mx-auto mb-1" />
+                  <Paperclip className="w-5 h-5 text-[var(--accent-gold)]/50 mx-auto mb-1" aria-hidden="true" />
                   <p className="text-xs text-[var(--accent-gold)]/70">
                     Drop files here or click to browse
                   </p>

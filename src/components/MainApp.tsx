@@ -290,6 +290,13 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const handleArchiveClose = useCallback(() => setActiveView('tasks'), [setActiveView]);
   const handleChatBack = useCallback(() => setActiveView('tasks'), [setActiveView]);
 
+  // Get the agency name being switched to
+  // NOTE: Must be defined BEFORE any conditional returns to follow Rules of Hooks
+  const switchingToAgencyName = useMemo(() => {
+    if (!isSwitchingAgency || !currentAgency) return '';
+    return currentAgency.name;
+  }, [isSwitchingAgency, currentAgency]);
+
   // Memoized view rendering to prevent unnecessary re-renders
   // NOTE: Must be defined BEFORE any conditional returns to follow Rules of Hooks
   const activeViewContent = useMemo(() => {
@@ -448,18 +455,23 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     );
   }
 
-  // Get the agency name being switched to
-  const switchingToAgencyName = useMemo(() => {
-    if (!isSwitchingAgency || !currentAgency) return '';
-    return currentAgency.name;
-  }, [isSwitchingAgency, currentAgency]);
-
   return (
     <>
       <SkipLink />
 
       <main id="main-content" tabIndex={-1}>
-        {activeViewContent}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeView}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+            className="min-h-full"
+          >
+            {activeViewContent}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Agency Switching Overlay */}

@@ -168,9 +168,9 @@ export default function ManagerDashboard({
 
   const getUrgencyBadge = (urgency: NeglectedTask['urgencyLevel']) => {
     switch (urgency) {
-      case 'critical': return { bg: 'bg-red-500', text: 'text-white' };
-      case 'warning': return { bg: 'bg-amber-500', text: 'text-white' };
-      case 'notice': return { bg: 'bg-blue-500', text: 'text-white' };
+      case 'critical': return { bg: 'bg-[var(--danger)]', text: 'text-white' };
+      case 'warning': return { bg: 'bg-[var(--warning)]', text: 'text-white' };
+      case 'notice': return { bg: 'bg-[var(--accent-vivid)]', text: 'text-white' };
     }
   };
 

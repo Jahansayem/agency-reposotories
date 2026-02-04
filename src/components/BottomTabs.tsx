@@ -142,8 +142,8 @@ export default function BottomTabs({
                 )}
               </div>
 
-              {/* Label */}
-              <span className={`text-tab-label ${active ? '' : 'opacity-60'}`}>
+              {/* Label - using text-xs (12px) for WCAG minimum readable text */}
+              <span className={`text-xs font-medium ${active ? '' : 'opacity-60'}`}>
                 {tab.label}
               </span>
             </button>

@@ -47,32 +47,37 @@ interface NotificationModalProps {
   onViewAllActivity?: () => void;
 }
 
+/**
+ * Action configuration using semantic color tokens from design system.
+ * Colors use CSS variables for consistent light/dark mode support.
+ * @see src/lib/design-tokens.ts for ACTION_COLORS definitions
+ */
 const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: string; color: string; verb: string }> = {
-  task_created: { icon: Circle, label: 'created task', color: '#10b981', verb: 'created' },
-  task_updated: { icon: RefreshCw, label: 'updated task', color: '#3b82f6', verb: 'updated' },
-  task_deleted: { icon: Trash2, label: 'deleted task', color: '#ef4444', verb: 'deleted' },
-  task_completed: { icon: CheckCircle2, label: 'completed task', color: '#10b981', verb: 'completed' },
-  task_reopened: { icon: Circle, label: 'reopened task', color: '#f59e0b', verb: 'reopened' },
-  status_changed: { icon: ArrowRight, label: 'changed status', color: '#8b5cf6', verb: 'moved' },
-  priority_changed: { icon: Flag, label: 'changed priority', color: '#f59e0b', verb: 'reprioritized' },
-  assigned_to_changed: { icon: User, label: 'reassigned task', color: '#3b82f6', verb: 'assigned' },
-  due_date_changed: { icon: Calendar, label: 'updated due date', color: '#3b82f6', verb: 'rescheduled' },
-  subtask_added: { icon: ListTodo, label: 'added subtask', color: '#10b981', verb: 'added subtask to' },
-  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: '#10b981', verb: 'completed subtask in' },
-  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: '#ef4444', verb: 'removed subtask from' },
-  notes_updated: { icon: StickyNote, label: 'updated notes', color: '#8b5cf6', verb: 'noted on' },
-  template_created: { icon: Activity, label: 'created template', color: '#10b981', verb: 'created template' },
-  template_used: { icon: Activity, label: 'used template', color: '#3b82f6', verb: 'used template on' },
-  attachment_added: { icon: Paperclip, label: 'added attachment', color: '#10b981', verb: 'attached to' },
-  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: '#ef4444', verb: 'removed attachment from' },
-  tasks_merged: { icon: GitMerge, label: 'merged tasks', color: '#0033A0', verb: 'merged' },
-  reminder_added: { icon: Bell, label: 'added reminder', color: '#8b5cf6', verb: 'set reminder for' },
-  reminder_removed: { icon: BellOff, label: 'removed reminder', color: '#ef4444', verb: 'removed reminder from' },
-  reminder_sent: { icon: BellRing, label: 'sent reminder', color: '#10b981', verb: 'reminder sent for' },
-  marked_waiting: { icon: Clock, label: 'marked waiting', color: '#8b5cf6', verb: 'waiting for response on' },
-  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: '#10b981', verb: 'got response on' },
-  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: '#ef4444', verb: 'needs follow-up on' },
-  task_reordered: { icon: RefreshCw, label: 'reordered task', color: '#3b82f6', verb: 'reordered' },
+  task_created: { icon: Circle, label: 'created task', color: 'var(--success-vivid)', verb: 'created' },
+  task_updated: { icon: RefreshCw, label: 'updated task', color: 'var(--accent-vivid)', verb: 'updated' },
+  task_deleted: { icon: Trash2, label: 'deleted task', color: 'var(--danger)', verb: 'deleted' },
+  task_completed: { icon: CheckCircle2, label: 'completed task', color: 'var(--success-vivid)', verb: 'completed' },
+  task_reopened: { icon: Circle, label: 'reopened task', color: 'var(--warning)', verb: 'reopened' },
+  status_changed: { icon: ArrowRight, label: 'changed status', color: 'var(--state-info)', verb: 'moved' },
+  priority_changed: { icon: Flag, label: 'changed priority', color: 'var(--warning)', verb: 'reprioritized' },
+  assigned_to_changed: { icon: User, label: 'reassigned task', color: 'var(--accent-vivid)', verb: 'assigned' },
+  due_date_changed: { icon: Calendar, label: 'updated due date', color: 'var(--accent-vivid)', verb: 'rescheduled' },
+  subtask_added: { icon: ListTodo, label: 'added subtask', color: 'var(--success-vivid)', verb: 'added subtask to' },
+  subtask_completed: { icon: CheckCircle2, label: 'completed subtask', color: 'var(--success-vivid)', verb: 'completed subtask in' },
+  subtask_deleted: { icon: Trash2, label: 'removed subtask', color: 'var(--danger)', verb: 'removed subtask from' },
+  notes_updated: { icon: StickyNote, label: 'updated notes', color: 'var(--state-info)', verb: 'noted on' },
+  template_created: { icon: Activity, label: 'created template', color: 'var(--success-vivid)', verb: 'created template' },
+  template_used: { icon: Activity, label: 'used template', color: 'var(--accent-vivid)', verb: 'used template on' },
+  attachment_added: { icon: Paperclip, label: 'added attachment', color: 'var(--success-vivid)', verb: 'attached to' },
+  attachment_removed: { icon: Paperclip, label: 'removed attachment', color: 'var(--danger)', verb: 'removed attachment from' },
+  tasks_merged: { icon: GitMerge, label: 'merged tasks', color: 'var(--accent)', verb: 'merged' },
+  reminder_added: { icon: Bell, label: 'added reminder', color: 'var(--state-info)', verb: 'set reminder for' },
+  reminder_removed: { icon: BellOff, label: 'removed reminder', color: 'var(--danger)', verb: 'removed reminder from' },
+  reminder_sent: { icon: BellRing, label: 'sent reminder', color: 'var(--success-vivid)', verb: 'reminder sent for' },
+  marked_waiting: { icon: Clock, label: 'marked waiting', color: 'var(--state-info)', verb: 'waiting for response on' },
+  customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)', verb: 'got response on' },
+  follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)', verb: 'needs follow-up on' },
+  task_reordered: { icon: RefreshCw, label: 'reordered task', color: 'var(--accent-vivid)', verb: 'reordered' },
 };
 
 // Local storage key for last seen notification

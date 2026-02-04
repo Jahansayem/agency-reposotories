@@ -439,11 +439,12 @@ export const ChatMessageList = memo(function ChatMessageList({
                             onTouchStart={() => handleTouchStart(msg.id)}
                             onTouchEnd={handleTouchEnd}
                             onTouchCancel={handleTouchEnd}
-                            className={`px-4 py-2.5 rounded-[var(--radius-2xl)] break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed ${
+                            className={`px-4 py-2.5 rounded-[var(--radius-2xl)] break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed overflow-hidden ${
                               isOwn
                                 ? 'bg-[var(--accent)] text-white rounded-br-md shadow-lg shadow-[var(--accent)]/20'
                                 : 'bg-[var(--chat-border)] text-white rounded-bl-md border border-[var(--chat-surface-hover)]'
                             } ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''} ${longPressMessageId === msg.id ? 'ring-2 ring-yellow-400/50' : ''} ${swipingMessageId === msg.id ? 'shadow-2xl' : ''}`}
+                            style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
                             whileHover={{ scale: 1.01 }}
                           >
                             {renderMessageText(msg.text)}

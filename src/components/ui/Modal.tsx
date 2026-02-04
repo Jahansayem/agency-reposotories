@@ -38,13 +38,16 @@ export interface ModalProps {
   ariaDescribedBy?: string;
 }
 
+// Size classes with mobile-first responsive design
+// On narrow screens (<640px), use calc(100vw-2rem) to prevent overflow on 320px screens
+// On larger screens, use the specified max-width
 const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  '2xl': 'max-w-3xl',
-  full: 'max-w-4xl',
+  sm: 'max-w-[calc(100vw-2rem)] sm:max-w-sm',
+  md: 'max-w-[calc(100vw-2rem)] sm:max-w-md',
+  lg: 'max-w-[calc(100vw-2rem)] sm:max-w-lg',
+  xl: 'max-w-[calc(100vw-2rem)] sm:max-w-xl',
+  '2xl': 'max-w-[calc(100vw-2rem)] sm:max-w-3xl',
+  full: 'max-w-[calc(100vw-2rem)] sm:max-w-4xl',
 };
 
 /**
