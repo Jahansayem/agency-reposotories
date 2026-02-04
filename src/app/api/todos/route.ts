@@ -44,6 +44,12 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       query = query.eq('agency_id', ctx.agencyId);
     }
 
+    // Staff data scoping: if user lacks can_view_all_tasks permission,
+    // only show tasks they created or are assigned to (defense-in-depth)
+    if (!ctx.permissions?.can_view_all_tasks) {
+      query = query.or(`created_by.eq.${ctx.userName},assigned_to.eq.${ctx.userName}`);
+    }
+
     if (id) {
       // Fetch single todo
       query = query.eq('id', id);
