@@ -166,6 +166,16 @@ export async function POST(request: NextRequest) {
     }
 
     // ---- Check if user is already a member ----
+    // SECURITY: Verify agency_id is present to prevent duplicate memberships
+    // when invitation has null agency_id (data integrity issue)
+    if (!invitation.agency_id) {
+      logger.error('Invitation has null agency_id', null, {
+        invitationId: invitation.id,
+        userId,
+      });
+      return apiErrorResponse('INVALID_STATE', 'Invalid invitation: missing agency association', 500);
+    }
+
     const { data: existingMember } = await supabase
       .from('agency_members')
       .select('id, status')

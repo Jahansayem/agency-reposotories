@@ -137,7 +137,8 @@ async function handleSuggestCategory(request: NextRequest): Promise<NextResponse
     }
 
     // Handle other errors
-    console.error('Category suggestion error:', error);
+    const { logger } = await import('@/lib/logger');
+    logger.error('Category suggestion error', error, { component: 'suggest-category', action: 'POST' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

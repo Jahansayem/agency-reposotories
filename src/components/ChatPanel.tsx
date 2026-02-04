@@ -555,6 +555,8 @@ export default function ChatPanel({
   const playNotificationSoundRef = useRef(playNotificationSound);
   const mutedConversationsRef = useRef(mutedConversations);
   const isDndModeRef = useRef(isDndMode);
+  // BUGFIX REACT-005: Store fetchMessages in ref to avoid subscription teardown on conversation change
+  const fetchMessagesRef = useRef(fetchMessages);
 
   useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
@@ -563,6 +565,7 @@ export default function ChatPanel({
   useEffect(() => { playNotificationSoundRef.current = playNotificationSound; }, [playNotificationSound]);
   useEffect(() => { mutedConversationsRef.current = mutedConversations; }, [mutedConversations]);
   useEffect(() => { isDndModeRef.current = isDndMode; }, [isDndMode]);
+  useEffect(() => { fetchMessagesRef.current = fetchMessages; }, [fetchMessages]);
 
   // Initialize audio
   // BUGFIX REACT-002: Clear onerror handler to prevent closure memory leak
@@ -724,7 +727,9 @@ export default function ChatPanel({
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
-    fetchMessages();
+    // BUGFIX REACT-005: Use ref to call fetchMessages to avoid subscription teardown
+    // when fetchMessages identity changes due to conversation changes
+    fetchMessagesRef.current();
 
     // Build channel name and filter based on multi-tenancy status
     const messagesChannelName = isMultiTenancyEnabled && currentAgencyId
@@ -813,16 +818,24 @@ export default function ChatPanel({
         setConnected(status === 'SUBSCRIBED');
       });
 
+    // REACT-006: Track typing timeouts properly to prevent memory leaks
     const typingChannel = supabase
       .channel('typing-channel')
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.user !== currentUser.name) {
           setTypingUsers(prev => ({ ...prev, [payload.user]: true }));
+          // Clear existing timeout before creating new one
           const existingTimeout = typingTimeoutsRef.current.get(payload.user);
-          if (existingTimeout) clearTimeout(existingTimeout);
-          const timeout = setTimeout(() => {
-            setTypingUsers(prev => ({ ...prev, [payload.user]: false }));
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
             typingTimeoutsRef.current.delete(payload.user);
+          }
+          const timeout = setTimeout(() => {
+            // Guard against unmounted component - only update if ref map still has this timeout
+            if (typingTimeoutsRef.current.has(payload.user)) {
+              setTypingUsers(prev => ({ ...prev, [payload.user]: false }));
+              typingTimeoutsRef.current.delete(payload.user);
+            }
           }, 3000);
           typingTimeoutsRef.current.set(payload.user, timeout);
         }
@@ -865,7 +878,16 @@ export default function ChatPanel({
       typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
       typingTimeoutsRef.current.clear();
     };
-  }, [fetchMessages, currentUser.name, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentAgencyId, isMultiTenancyEnabled]);
+  // BUGFIX REACT-005: Removed fetchMessages from deps - using fetchMessagesRef instead
+  // to prevent subscription teardown on every conversation change
+  }, [currentUser.name, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentAgencyId, isMultiTenancyEnabled]);
+
+  // BUGFIX REACT-005: Separate effect to refetch messages when conversation changes
+  // This ensures messages are refetched without tearing down the realtime subscriptions
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !conversation) return;
+    fetchMessagesRef.current();
+  }, [conversation]);
 
   // Auto-scroll on new messages
   useEffect(() => {

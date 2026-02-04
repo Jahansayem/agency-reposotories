@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -37,6 +37,12 @@ export interface OnlineUser {
 export function usePresence(currentUser?: { name: string; id: string; color: string }, location?: string) {
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
+
+  // Memoize location object to prevent re-tracking on every render
+  const memoizedLocation = useMemo(() => location || 'tasks', [location]);
+
+  // Track if location update is in progress to prevent overlapping calls
+  const isTrackingRef = useRef(false);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -107,14 +113,35 @@ export function usePresence(currentUser?: { name: string; id: string; color: str
   useEffect(() => {
     if (!channel || !currentUser) return;
 
-    channel.track({
-      user: currentUser.name,
-      userId: currentUser.id,
-      color: currentUser.color,
-      online_at: new Date().toISOString(),
-      location: location || 'tasks',
-    });
-  }, [location, channel, currentUser]);
+    // Prevent overlapping track calls
+    if (isTrackingRef.current) return;
+
+    let isCancelled = false;
+
+    const updateLocation = async () => {
+      if (isCancelled || isTrackingRef.current) return;
+
+      isTrackingRef.current = true;
+      try {
+        await channel.track({
+          user: currentUser.name,
+          userId: currentUser.id,
+          color: currentUser.color,
+          online_at: new Date().toISOString(),
+          location: memoizedLocation,
+        });
+      } finally {
+        isTrackingRef.current = false;
+      }
+    };
+
+    updateLocation();
+
+    // Cleanup: prevent updates after unmount
+    return () => {
+      isCancelled = true;
+    };
+  }, [memoizedLocation, channel, currentUser?.id, currentUser?.name, currentUser?.color]);
 
   return {
     onlineUsers,

@@ -155,11 +155,17 @@ Respond with ONLY the JSON object, no other text.`;
 }
 
 async function handleSmartParse(request: NextRequest) {
+  // API-010: Input length limit to prevent excessive token usage
+  const MAX_INPUT_LENGTH = 10000;
+
   // Validate request
   const validation = await validateAiRequest(request, {
     customValidator: (body) => {
       if (!body.text || typeof body.text !== 'string') {
         return 'Text is required';
+      }
+      if (body.text.length > MAX_INPUT_LENGTH) {
+        return `Input text exceeds maximum length of ${MAX_INPUT_LENGTH} characters`;
       }
       return null;
     },

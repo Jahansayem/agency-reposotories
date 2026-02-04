@@ -277,12 +277,12 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     // Filter userIds to only include agency members
     const filteredUserIds = userIds.filter(id => agencyMemberIds.has(id));
 
+    // API-009: Return early with error if target list is empty after filtering
     if (filteredUserIds.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'No agency members to notify',
-        sent: 0,
-      });
+      return NextResponse.json(
+        { success: false, error: 'No valid target users found in this agency' },
+        { status: 400 }
+      );
     }
 
     // Get web push subscriptions for agency-filtered users

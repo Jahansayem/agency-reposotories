@@ -7,11 +7,25 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// API-008: Pagination constants
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 500;
+
 // GET - Fetch all strategic goals with categories and milestones
 export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId');
+
+    // API-008: Parse and validate limit parameter
+    const limitParam = searchParams.get('limit');
+    let limit = DEFAULT_LIMIT;
+    if (limitParam) {
+      const parsedLimit = parseInt(limitParam, 10);
+      if (!isNaN(parsedLimit) && parsedLimit > 0) {
+        limit = Math.min(parsedLimit, MAX_LIMIT);
+      }
+    }
 
     let query = supabase
       .from('strategic_goals')
@@ -21,7 +35,8 @@ export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
         milestones:goal_milestones(*)
       `)
       .eq('agency_id', ctx.agencyId)
-      .order('display_order', { ascending: true });
+      .order('display_order', { ascending: true })
+      .limit(limit);
 
     if (categoryId) {
       query = query.eq('category_id', categoryId);

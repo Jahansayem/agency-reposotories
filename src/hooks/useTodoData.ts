@@ -24,14 +24,18 @@ import { useToast } from '@/components/ui/Toast';
 // Number of todos to fetch per page
 const TODOS_PER_PAGE = 200;
 
-// Reorder guard: when true, real-time UPDATE events that only change
-// display_order are suppressed to prevent snap-back during drag-and-drop.
+// REACT-007: Legacy module-level flag - kept for backward compatibility
+// but new code should use the ref returned from useTodoData
 let _isReordering = false;
 export function setReorderingFlag(value: boolean) {
   _isReordering = value;
 }
 
 export function useTodoData(currentUser: AuthUser) {
+  // REACT-007: Reorder guard as ref - scoped per component instance
+  // When true, real-time UPDATE events that only change display_order
+  // are suppressed to prevent snap-back during drag-and-drop.
+  const isReorderingRef = useRef(false);
   const {
     setTodos,
     addTodo: addTodoToStore,
@@ -196,7 +200,8 @@ export function useTodoData(currentUser: AuthUser) {
             }
             // During reorder, suppress updates that only change display_order/updated_at
             // to prevent the list from reshuffling mid-drag
-            if (_isReordering) {
+            // REACT-007: Check both module-level flag (legacy) and instance ref
+            if (_isReordering || isReorderingRef.current) {
               const existing = useTodoStore.getState().todos.find(t => t.id === updatedTodo.id);
               if (existing) {
                 const isReorderOnly =
@@ -541,6 +546,13 @@ export function useTodoData(currentUser: AuthUser) {
     }
   }, [setLoadingMore, appendTodos, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId, canViewAllTasks, userName]);
 
+  // REACT-007: Setter for the reordering ref (scoped per component instance)
+  const setReordering = useCallback((value: boolean) => {
+    isReorderingRef.current = value;
+    // Also set module-level flag for backward compatibility
+    _isReordering = value;
+  }, []);
+
   return {
     createTodo,
     updateTodo,
@@ -548,5 +560,6 @@ export function useTodoData(currentUser: AuthUser) {
     toggleComplete,
     refresh,
     loadMoreTodos,
+    setReordering, // REACT-007: Prefer this over module-level setReorderingFlag
   };
 }

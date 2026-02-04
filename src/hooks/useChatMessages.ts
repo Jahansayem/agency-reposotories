@@ -349,9 +349,10 @@ export function useChatMessages({
     if (messageIds.length === 0) return;
 
     // Filter to only unread messages not created by current user
-    const originalMessages = messagesRef.current;
+    // BUGFIX REACT-004: Read from ref at filter time, but use ref again in fallback loop
+    // to get fresh read_by values and avoid race conditions
     const unreadIds = messageIds.filter(id => {
-      const msg = originalMessages.find(m => m.id === id);
+      const msg = messagesRef.current.find(m => m.id === id);
       return msg && msg.created_by !== currentUser.name && !(msg.read_by || []).includes(currentUser.name);
     });
 
@@ -378,9 +379,9 @@ export function useChatMessages({
 
       if (rpcError) {
         // RPC not available - use batched fallback for all messages at once
-        // For messages that need read_by updated, we batch by their current read_by values
+        // BUGFIX REACT-004: Read fresh from messagesRef.current inside loop to avoid stale closure
         for (const id of unreadIds) {
-          const msg = originalMessages.find(m => m.id === id);
+          const msg = messagesRef.current.find(m => m.id === id);
           const currentReadBy = msg?.read_by || [];
           await supabase
             .from('messages')

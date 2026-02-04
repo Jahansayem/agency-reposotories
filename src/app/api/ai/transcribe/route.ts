@@ -33,7 +33,36 @@ type ProcessingMode = 'transcribe' | 'tasks' | 'subtasks';
 async function handleTranscribe(request: NextRequest): Promise<NextResponse> {
   try {
     const formData = await request.formData();
-    const audioFile = formData.get('audio') as File | null;
+    const audioFileRaw = formData.get('audio');
+
+    // SECURITY: Validate that audio is actually a File object (not a string or null)
+    // FormData.get() can return string | File | null, so we need runtime validation
+    if (!audioFileRaw) {
+      return NextResponse.json(
+        { success: false, error: 'No audio file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Check if it's actually a File object (not a string value)
+    if (typeof audioFileRaw === 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid audio file: expected file upload, received string' },
+        { status: 400 }
+      );
+    }
+
+    // At this point, TypeScript knows audioFileRaw is File
+    const audioFile: File = audioFileRaw;
+
+    // Validate file has required properties
+    if (!audioFile.name || typeof audioFile.size !== 'number') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid audio file: missing required properties' },
+        { status: 400 }
+      );
+    }
+
     const usersJson = formData.get('users') as string | null;
     let users: string[] = [];
     if (usersJson) {
@@ -53,13 +82,6 @@ async function handleTranscribe(request: NextRequest): Promise<NextResponse> {
       mode = 'subtasks';
     } else if (users.length > 0 || formData.has('parseTasks')) {
       mode = 'tasks';
-    }
-
-    if (!audioFile) {
-      return NextResponse.json(
-        { success: false, error: 'No audio file provided' },
-        { status: 400 }
-      );
     }
 
     logger.debug('Received audio file', {

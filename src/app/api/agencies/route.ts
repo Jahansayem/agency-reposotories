@@ -38,6 +38,15 @@ export async function POST(request: NextRequest) {
     // Generate slug if not provided
     const slug = body.slug || generateAgencySlug(body.name);
 
+    // API-007: Validate slug format (alphanumeric, lowercase, hyphens, max 50 chars)
+    const slugRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
+    if (slug.length < 1 || slug.length > 50) {
+      return apiErrorResponse('VALIDATION_ERROR', 'Slug must be between 1 and 50 characters');
+    }
+    if (!slugRegex.test(slug)) {
+      return apiErrorResponse('VALIDATION_ERROR', 'Slug must be lowercase alphanumeric with hyphens only (no leading/trailing hyphens)');
+    }
+
     // Check if slug already exists
     const { data: existingAgency } = await supabase
       .from('agencies')

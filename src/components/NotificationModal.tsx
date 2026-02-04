@@ -95,6 +95,7 @@ export default function NotificationModal({
   const { theme } = useTheme();
   const modalRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -151,28 +152,52 @@ export default function NotificationModal({
     wasOpenRef.current = isOpen;
   }, [isOpen, activities.length, onMarkAllRead]);
 
-  // Subscribe to real-time updates
+  // Subscribe to real-time updates with debounce to prevent overlapping channels
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      // Clean up channel when modal closes
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      return;
+    }
 
-    const channel = supabase
-      .channel(`notification-modal-${currentUserName}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activity_log',
-        },
-        (payload) => {
-          const newActivity = payload.new as ActivityLogEntry;
-          setActivities((prev) => [newActivity, ...prev].slice(0, 30));
-        }
-      )
-      .subscribe();
+    // Prevent creating duplicate channel if one already exists
+    if (channelRef.current) {
+      return;
+    }
+
+    // Small debounce to prevent rapid open/close creating multiple channels
+    const debounceTimer = setTimeout(() => {
+      // Double-check modal is still open and no channel exists
+      if (!isOpen || channelRef.current) return;
+
+      const channel = supabase
+        .channel(`notification-modal-${currentUserName}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'activity_log',
+          },
+          (payload) => {
+            const newActivity = payload.new as ActivityLogEntry;
+            setActivities((prev) => [newActivity, ...prev].slice(0, 30));
+          }
+        )
+        .subscribe();
+
+      channelRef.current = channel;
+    }, 100);
 
     return () => {
-      supabase.removeChannel(channel);
+      clearTimeout(debounceTimer);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [isOpen, currentUserName]);
 

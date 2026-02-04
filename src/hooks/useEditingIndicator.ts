@@ -53,6 +53,12 @@ export function useEditingIndicator(
     currentUserRef.current = currentUser;
   }, [currentUser]);
 
+  // BUGFIX REACT-003: Store timeoutMs in ref to avoid stale closure in setTimeout callbacks
+  const timeoutMsRef = useRef(timeoutMs);
+  useEffect(() => {
+    timeoutMsRef.current = timeoutMs;
+  }, [timeoutMs]);
+
   /**
    * Broadcast editing status
    */
@@ -102,17 +108,18 @@ export function useEditingIndicator(
         broadcastEditing(task_id, field, true);
 
         // Auto-clear after timeout
+        // BUGFIX REACT-003: Use timeoutMsRef.current to avoid stale closure
         activityTimerRef.current = setTimeout(() => {
           currentEditingRef.current = null;
           broadcastEditing(task_id, field, false);
-        }, timeoutMs);
+        }, timeoutMsRef.current);
       } else {
         // Stop editing
         currentEditingRef.current = null;
         broadcastEditing(task_id, field, false);
       }
     },
-    [broadcastEditing, timeoutMs]
+    [broadcastEditing] // timeoutMs removed - using ref instead
   );
 
   /**
@@ -129,13 +136,14 @@ export function useEditingIndicator(
         clearTimeout(activityTimerRef.current);
       }
 
+      // BUGFIX REACT-003: Use timeoutMsRef.current to avoid stale closure
       activityTimerRef.current = setTimeout(() => {
         if (currentEditingRef.current) {
           setEditing(currentEditingRef.current.task_id, currentEditingRef.current.field, false);
         }
-      }, timeoutMs);
+      }, timeoutMsRef.current);
     }
-  }, [broadcastEditing, setEditing, timeoutMs]);
+  }, [broadcastEditing, setEditing]); // timeoutMs removed - using ref instead
 
   /**
    * Get users currently editing a task
@@ -253,7 +261,8 @@ export function useEditingIndicator(
         newMap.forEach((editors, task_id) => {
           const filtered = editors.filter((e) => {
             const age = now - new Date(e.started_at).getTime();
-            return age < timeoutMs + 5000; // 5s grace period
+            // BUGFIX REACT-003: Use timeoutMsRef.current to avoid stale closure
+            return age < timeoutMsRef.current + 5000; // 5s grace period
           });
 
           if (filtered.length !== editors.length) {
@@ -285,8 +294,9 @@ export function useEditingIndicator(
       channelRef.current = null;
     };
   // BUGFIX: Use currentUser?.id instead of entire object/callbacks to prevent infinite re-subscriptions
+  // BUGFIX REACT-003: timeoutMs removed from deps - using timeoutMsRef instead to avoid stale closures
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id, timeoutMs]);
+  }, [currentUser?.id]);
 
   return {
     /**

@@ -303,7 +303,20 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
         'postgres_changes',
         subscriptionConfig,
         (payload) => {
-          const newActivity = payload.new as ActivityLogEntry;
+          const newActivity = payload.new as ActivityLogEntry & { agency_id?: string };
+
+          // Validate agency_id matches current agency (defense in depth)
+          // This prevents data leakage if the server-side filter doesn't work
+          if (isMultiTenancyEnabled && currentAgencyId) {
+            if (newActivity.agency_id && newActivity.agency_id !== currentAgencyId) {
+              logger.warn('Received activity for different agency, ignoring', {
+                component: 'ActivityFeed',
+                receivedAgencyId: newActivity.agency_id,
+                currentAgencyId,
+              });
+              return;
+            }
+          }
 
           // Check if this is from another user
           const isOtherUser = newActivity.user_name !== currentUserName;

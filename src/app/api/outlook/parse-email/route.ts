@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
 import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 // Create Supabase client for server-side operations
 const supabase = createClient(
@@ -72,6 +73,16 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Unauthorized' },
       { status: 401 }
     );
+  }
+
+  // SECURITY: Rate limit AI operations to prevent abuse
+  // Uses the 'ai' limiter: 10 requests per minute per IP
+  const rateLimitResult = await withRateLimit(request, rateLimiters.ai);
+  if (!rateLimitResult.success) {
+    logger.warn('Rate limit exceeded for Outlook parse-email', {
+      component: 'OutlookParseEmailAPI',
+    });
+    return createRateLimitResponse(rateLimitResult);
   }
 
   try {
