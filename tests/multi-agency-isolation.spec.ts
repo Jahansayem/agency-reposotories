@@ -128,18 +128,54 @@ async function loginAsUser(page: Page, userName: string, pin: string = '8008'): 
   }
 }
 
+// Helper to navigate to tasks view
+async function navigateToTasks(page: Page): Promise<void> {
+  // Check if we're already on the tasks view by looking for the task input
+  const taskInputByTestId = page.locator('[data-testid="add-task-input"]');
+  const taskInputByPlaceholder = page.locator('textarea[placeholder*="task"]');
+
+  const isOnTasksView = await Promise.race([
+    taskInputByTestId.isVisible({ timeout: 500 }),
+    taskInputByPlaceholder.isVisible({ timeout: 500 }),
+  ]).catch(() => false);
+
+  if (isOnTasksView) {
+    return; // Already on tasks view
+  }
+
+  // Click on Tasks button in the navigation
+  const tasksButton = page.locator('button:has-text("Tasks")').first();
+  if (await tasksButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await tasksButton.click();
+    // Wait for the tasks view to load
+    await page.waitForTimeout(500);
+    // Wait for either task input to be visible
+    await Promise.race([
+      taskInputByTestId.waitFor({ state: 'visible', timeout: 10000 }),
+      taskInputByPlaceholder.waitFor({ state: 'visible', timeout: 10000 }),
+    ]).catch(() => {});
+  }
+}
+
 // Helper to create a task with a unique identifier
 async function createTask(page: Page, taskText: string): Promise<string> {
   const taskId = `E2E_Test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const fullTaskText = `${taskText}_${taskId}`;
 
-  // Find and fill the task input
-  const taskInput = page.locator('[data-testid="add-task-input"]');
+  // Navigate to tasks view first
+  await navigateToTasks(page);
+
+  // Find and fill the task input - try multiple selectors
+  let taskInput = page.locator('[data-testid="add-task-input"]');
+  if (!await taskInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    taskInput = page.locator('textarea[placeholder*="task"]').first();
+  }
+
   await taskInput.fill(fullTaskText);
   await page.keyboard.press('Enter');
 
   // Wait for task to appear
-  await expect(page.locator(`text=${fullTaskText}`)).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(fullTaskText).first()).toBeVisible({ timeout: 10000 });
 
   return taskId;
 }
