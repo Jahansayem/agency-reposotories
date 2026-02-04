@@ -1,10 +1,21 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAgency } from '@/contexts/AgencyContext';
 import { logger } from '@/lib/logger';
 import type { AgencyMetrics, Todo } from '@/types/todo';
+
+// ============================================
+// Constants
+// ============================================
+
+/** Maximum retry attempts for fetching metrics */
+const MAX_RETRIES = 3;
+/** Initial delay for exponential backoff (ms) */
+const INITIAL_RETRY_DELAY = 1000;
+/** Error codes that indicate "no data" rather than a real error */
+const NO_DATA_ERROR_CODES = ['PGRST116', '42P01']; // No rows, table doesn't exist
 
 // ============================================
 // Types
@@ -17,6 +28,10 @@ interface UseAgencyMetricsReturn {
   loading: boolean;
   /** Error message if any */
   error: string | null;
+  /** Whether metrics data is available (not loading, no error, agency exists) */
+  isAvailable: boolean;
+  /** Whether the current agency has no metrics yet (new agency) */
+  isNewAgency: boolean;
   /** Refresh metrics from database */
   refreshMetrics: () => Promise<void>;
   /** Calculate pipeline value from open quotes */
@@ -71,8 +86,14 @@ export function useAgencyMetrics(): UseAgencyMetricsReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Track retry count to prevent infinite retry loops
+  const retryCountRef = useRef(0);
+  // Track if we've already logged an error for this agency to prevent console spam
+  const hasLoggedErrorRef = useRef<string | null>(null);
+
   /**
    * Fetch metrics from agency_metrics table for current month
+   * Includes retry logic with exponential backoff for transient errors
    */
   const fetchMetrics = useCallback(async () => {
     if (!currentAgencyId) {
@@ -81,39 +102,80 @@ export function useAgencyMetrics(): UseAgencyMetricsReturn {
       return;
     }
 
+    // Reset retry count when agency changes
+    if (hasLoggedErrorRef.current !== currentAgencyId) {
+      retryCountRef.current = 0;
+      hasLoggedErrorRef.current = null;
+    }
+
     setLoading(true);
     setError(null);
 
-    try {
-      const currentMonth = getCurrentMonth();
+    const attemptFetch = async (attempt: number): Promise<void> => {
+      try {
+        const currentMonth = getCurrentMonth();
 
-      const { data, error: fetchError } = await supabase
-        .from('agency_metrics')
-        .select('*')
-        .eq('agency_id', currentAgencyId)
-        .eq('month', currentMonth)
-        .single();
+        const { data, error: fetchError } = await supabase
+          .from('agency_metrics')
+          .select('*')
+          .eq('agency_id', currentAgencyId)
+          .eq('month', currentMonth)
+          .single();
 
-      if (fetchError) {
-        // PGRST116 = no rows returned, which is fine for new agencies
-        if (fetchError.code === 'PGRST116') {
-          setMetrics(null);
-        } else {
+        if (fetchError) {
+          // Handle expected "no data" cases gracefully (no error, no retry)
+          if (NO_DATA_ERROR_CODES.includes(fetchError.code || '')) {
+            setMetrics(null);
+            setLoading(false);
+            return;
+          }
+
+          // RLS permission errors - don't retry, just handle gracefully
+          if (fetchError.code === '42501' || fetchError.message?.includes('permission denied')) {
+            setMetrics(null);
+            setLoading(false);
+            // Only log once per agency to prevent console spam
+            if (hasLoggedErrorRef.current !== currentAgencyId) {
+              hasLoggedErrorRef.current = currentAgencyId;
+              logger.warn('Agency metrics access denied (RLS policy)', {
+                component: 'useAgencyMetrics',
+                agencyId: currentAgencyId,
+              });
+            }
+            return;
+          }
+
           throw fetchError;
+        } else {
+          setMetrics(data as AgencyMetrics);
+          setLoading(false);
         }
-      } else {
-        setMetrics(data as AgencyMetrics);
+      } catch (err) {
+        // Retry logic for transient errors
+        if (attempt < MAX_RETRIES) {
+          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return attemptFetch(attempt + 1);
+        }
+
+        // Max retries exhausted - set error state
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch metrics';
+        setError(errorMessage);
+        setLoading(false);
+
+        // Only log error once per agency to prevent console spam
+        if (hasLoggedErrorRef.current !== currentAgencyId) {
+          hasLoggedErrorRef.current = currentAgencyId;
+          logger.error('Failed to fetch agency metrics after retries', err as Error, {
+            component: 'useAgencyMetrics',
+            agencyId: currentAgencyId,
+            attempts: attempt + 1,
+          });
+        }
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch metrics';
-      setError(errorMessage);
-      logger.error('Failed to fetch agency metrics', err as Error, {
-        component: 'useAgencyMetrics',
-        agencyId: currentAgencyId,
-      });
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    await attemptFetch(0);
   }, [currentAgencyId]);
 
   /**
@@ -212,10 +274,16 @@ export function useAgencyMetrics(): UseAgencyMetricsReturn {
     };
   }, [currentAgencyId]);
 
+  // Computed properties for UI feedback
+  const isAvailable = !loading && !error && currentAgencyId !== null;
+  const isNewAgency = isAvailable && metrics === null;
+
   return {
     metrics,
     loading,
     error,
+    isAvailable,
+    isNewAgency,
     refreshMetrics,
     calculatePipelineValue,
     calculatePoliciesThisWeek,

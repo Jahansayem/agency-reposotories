@@ -295,10 +295,17 @@ export default function StrategicDashboard({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Loading strategic goals"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
+          onClick={(e) => e.stopPropagation()}
           className={`p-8 rounded-2xl ${darkMode ? 'bg-slate-900' : 'bg-white'}`}
         >
           <div className="flex flex-col items-center gap-4">
@@ -316,11 +323,18 @@ export default function StrategicDashboard({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 overflow-hidden"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Strategic Goals"
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
         className={`w-full h-full max-w-6xl max-h-[95vh] my-4 mx-4 rounded-2xl shadow-2xl overflow-hidden flex ${
           darkMode ? 'bg-slate-900' : 'bg-white'
         }`}
