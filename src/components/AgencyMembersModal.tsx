@@ -8,6 +8,7 @@ import type { AgencyRole } from '@/types/agency';
 import { InvitationForm } from '@/components/InvitationForm';
 import { PendingInvitationsList } from '@/components/PendingInvitationsList';
 import { logger } from '@/lib/logger';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 // ============================================
 // Types
@@ -177,9 +178,8 @@ export function AgencyMembersModal({
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/agencies/${currentAgency.id}/members`, {
+      const response = await fetchWithCsrf(`/api/agencies/${currentAgency.id}/members`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_name: selectedUser,
           role: selectedRole,
@@ -216,7 +216,7 @@ export function AgencyMembersModal({
     setSuccess(null);
 
     try {
-      const response = await fetch(
+      const response = await fetchWithCsrf(
         `/api/agencies/${currentAgency.id}/members?memberId=${memberId}&requested_by=${currentUserName}`,
         { method: 'DELETE' }
       );
@@ -250,9 +250,8 @@ export function AgencyMembersModal({
     setSuccess(null);
 
     try {
-      const response = await fetch(`/api/agencies/${currentAgency.id}/members`, {
+      const response = await fetchWithCsrf(`/api/agencies/${currentAgency.id}/members`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           memberId,
           newRole,

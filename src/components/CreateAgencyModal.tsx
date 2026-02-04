@@ -6,6 +6,7 @@ import { X, Building2, Loader2, Check, AlertCircle } from 'lucide-react';
 import { generateAgencySlug } from '@/types/agency';
 import type { Agency } from '@/types/agency';
 import { logger } from '@/lib/logger';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 // ============================================
 // Types
@@ -128,9 +129,8 @@ export function CreateAgencyModal({
     setErrors({});
 
     try {
-      const response = await fetch('/api/agencies', {
+      const response = await fetchWithCsrf('/api/agencies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name.trim(),
           slug: formData.slug.trim(),
