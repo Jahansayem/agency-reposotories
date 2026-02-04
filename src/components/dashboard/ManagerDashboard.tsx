@@ -20,8 +20,9 @@ import {
   TrendingUp,
   AlertCircle,
   UserCheck,
+  X,
 } from 'lucide-react';
-import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
+import { Todo, AuthUser, ActivityLogEntry, User } from '@/types/todo';
 import { useAppShell } from '../layout';
 import {
   generateDashboardAIData,
@@ -34,16 +35,25 @@ import {
   getInsuranceWorkloadSummary,
   InsuranceTaskCategory,
 } from '@/lib/orchestratorIntegration';
+import { QuickStatsBar } from './QuickStatsBar';
+import PipelineHealthPanel from './PipelineHealthPanel';
+import RenewalsCalendarPanel from './RenewalsCalendarPanel';
+import TeamProductionPanel from './TeamProductionPanel';
+import CalendarView from '../calendar/CalendarView';
 
 interface ManagerDashboardProps {
   currentUser: AuthUser;
   todos: Todo[];
   activityLog?: ActivityLogEntry[];
   users: string[];
+  allUsers?: User[];
   onNavigateToTasks?: () => void;
   onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;
+  onFilterByCategory?: (category: string) => void;
+  onFilterByUser?: (userName: string) => void;
+  onRefreshTodos?: () => void;
 }
 
 export default function ManagerDashboard({
@@ -51,14 +61,33 @@ export default function ManagerDashboard({
   todos,
   activityLog = [],
   users,
+  allUsers,
   onNavigateToTasks,
   onTaskClick,
   onFilterOverdue,
   onFilterDueToday,
+  onFilterByCategory,
+  onFilterByUser,
+  onRefreshTodos,
 }: ManagerDashboardProps) {
   const { setActiveView } = useAppShell();
   const [showAllTeamMembers, setShowAllTeamMembers] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+
+  // Convert string[] users to User[] for TeamProductionPanel
+  const usersAsUserObjects: User[] = useMemo(() => {
+    if (allUsers && allUsers.length > 0) {
+      return allUsers;
+    }
+    // Fallback: convert string names to User objects with default colors
+    const defaultColors = ['#0033A0', '#72B5E8', '#C9A227', '#003D7A', '#6E8AA7', '#5BA8A0', '#E87722', '#98579B'];
+    return users.map((name, index) => ({
+      id: `user-${index}`,
+      name,
+      color: defaultColors[index % defaultColors.length],
+    }));
+  }, [users, allUsers]);
 
   // Generate manager/team insights
   const managerData = useMemo(() => {
@@ -166,6 +195,58 @@ export default function ManagerDashboard({
     }
   }, [onFilterDueToday, setActiveView]);
 
+  // Handler for when a sale is logged - refresh todo data
+  const handleSaleLogged = useCallback(() => {
+    if (onRefreshTodos) {
+      onRefreshTodos();
+    }
+  }, [onRefreshTodos]);
+
+  // Handler for viewing quotes (filter to quote category)
+  const handleViewQuotes = useCallback(() => {
+    if (onFilterByCategory) {
+      onFilterByCategory('quote');
+    } else {
+      setActiveView('tasks');
+    }
+  }, [onFilterByCategory, setActiveView]);
+
+  // Handler for viewing full calendar
+  const handleViewCalendar = useCallback(() => {
+    setShowCalendar(true);
+  }, []);
+
+  // Handler for clicking a renewal task
+  const handleRenewalClick = useCallback((todo: Todo) => {
+    if (onTaskClick) {
+      onTaskClick(todo.id);
+    }
+  }, [onTaskClick]);
+
+  // Handler for clicking a user in TeamProductionPanel
+  const handleUserClick = useCallback((userName: string) => {
+    if (userName && onFilterByUser) {
+      onFilterByUser(userName);
+    } else {
+      setActiveView('tasks');
+    }
+  }, [onFilterByUser, setActiveView]);
+
+  // Handler for clicking a task in CalendarView
+  const handleCalendarTaskClick = useCallback((todo: Todo) => {
+    if (onTaskClick) {
+      onTaskClick(todo.id);
+    }
+  }, [onTaskClick]);
+
+  // Handler for clicking a date in CalendarView
+  const handleCalendarDateClick = useCallback((_date: Date) => {
+    // Could filter tasks by this date or open a date picker
+    // For now, just close the calendar
+    setShowCalendar(false);
+    setActiveView('tasks');
+  }, [setActiveView]);
+
   const getUrgencyBadge = (urgency: NeglectedTask['urgencyLevel']) => {
     switch (urgency) {
       case 'critical': return { bg: 'bg-[var(--danger)]', text: 'text-white' };
@@ -254,23 +335,103 @@ export default function ManagerDashboard({
   );
 
   return (
-    <div className="space-y-6">
-      {/* Team Alert Banner - Show if team has overdue items */}
-      {teamStats.totalOverdue > 0 && (
-        <motion.div
-          initial={prefersReducedMotion ? false : { opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <button
-            onClick={handleFilterOverdue}
-            aria-label={`View ${teamStats.totalOverdue} overdue team task${teamStats.totalOverdue > 1 ? 's' : ''}`}
-            className={`w-full flex items-center gap-4 p-4 rounded-[var(--radius-2xl)] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${
-              'bg-red-50 hover:bg-red-100 border border-red-200 focus-visible:ring-offset-white'}`}
+    <>
+      {/* Calendar View Modal/Overlay */}
+      <AnimatePresence>
+        {showCalendar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            onClick={() => setShowCalendar(false)}
           >
-            <div className="flex items-center justify-center w-12 h-12 rounded-[var(--radius-xl)] bg-red-500/20">
-              <AlertTriangle className="w-6 h-6 text-red-500" />
-            </div>
-            <div className="flex-1 text-left">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-6xl h-[80vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Calendar Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+                  Renewals Calendar
+                </h2>
+                <button
+                  onClick={() => setShowCalendar(false)}
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Close calendar"
+                >
+                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                </button>
+              </div>
+              {/* Calendar Content */}
+              <div className="h-[calc(80vh-72px)]">
+                <CalendarView
+                  todos={todos}
+                  onTaskClick={handleCalendarTaskClick}
+                  onDateClick={handleCalendarDateClick}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="space-y-6">
+        {/* =============================================== */}
+        {/* NEW OWNER DASHBOARD COMPONENTS                 */}
+        {/* =============================================== */}
+
+        {/* QuickStatsBar - Full width greeting + stats + Log Sale */}
+        <QuickStatsBar
+          userName={currentUser.name}
+          todos={todos}
+          onSaleLogged={handleSaleLogged}
+        />
+
+        {/* Pipeline Health & Renewals Calendar - 2 column grid */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <PipelineHealthPanel
+            todos={todos}
+            onViewQuotes={handleViewQuotes}
+          />
+          <RenewalsCalendarPanel
+            todos={todos}
+            onViewCalendar={handleViewCalendar}
+            onRenewalClick={handleRenewalClick}
+          />
+        </div>
+
+        {/* Team Production Panel - Full width */}
+        <TeamProductionPanel
+          todos={todos}
+          users={usersAsUserObjects}
+          onUserClick={handleUserClick}
+        />
+
+        {/* =============================================== */}
+        {/* EXISTING DASHBOARD CONTENT BELOW               */}
+        {/* =============================================== */}
+
+        {/* Team Alert Banner - Show if team has overdue items */}
+        {teamStats.totalOverdue > 0 && (
+          <motion.div
+            initial={prefersReducedMotion ? false : { opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <button
+              onClick={handleFilterOverdue}
+              aria-label={`View ${teamStats.totalOverdue} overdue team task${teamStats.totalOverdue > 1 ? 's' : ''}`}
+              className={`w-full flex items-center gap-4 p-4 rounded-[var(--radius-2xl)] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${
+                'bg-red-50 hover:bg-red-100 border border-red-200 focus-visible:ring-offset-white'}`}
+            >
+              <div className="flex items-center justify-center w-12 h-12 rounded-[var(--radius-xl)] bg-red-500/20">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <div className="flex-1 text-left">
               <p className={`text-lg font-bold ${'text-slate-900'}`}>
                 {teamStats.totalOverdue} team task{teamStats.totalOverdue > 1 ? 's' : ''} overdue
               </p>
@@ -672,6 +833,7 @@ export default function ManagerDashboard({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
