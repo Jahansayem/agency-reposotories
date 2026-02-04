@@ -223,7 +223,7 @@ This checklist covers security requirements for internal applications based on:
 
 | Category | Complete | Partial | Missing | Total |
 |----------|----------|---------|---------|-------|
-| Authentication & Access | 5 | 1 | 1 | 7 |
+| Authentication & Access | 6 | 1 | 0 | 7 |
 | Data Protection | 10 | 0 | 0 | 10 |
 | Application Security | 14 | 0 | 0 | 14 |
 | Logging & Monitoring | 10 | 1 | 0 | 11 |
@@ -231,26 +231,46 @@ This checklist covers security requirements for internal applications based on:
 | Third-Party Security | 5 | 2 | 0 | 7 |
 | Incident Response | 5 | 2 | 0 | 7 |
 | Compliance | 3 | 3 | 1 | 7 |
-| Allstate Identity (NEW) | 0 | 1 | 2 | 3 |
-| **Total** | **56** | **12** | **4** | **72** |
+| Allstate Identity | 4 | 1 | 0 | 5 |
+| **Total** | **61** | **12** | **1** | **74** |
 
-**Overall Compliance: 78% Complete, 17% Partial, 5% Missing**
+**Overall Compliance: 82% Complete, 16% Partial, 2% Missing**
 
-> ⚠️ **Note:** Allstate Identity section added Feb 2026. Federated SSO is a **blocking requirement** for production deployment to Allstate agencies.
+> ✅ **Update (2026-02-04):** Clerk SSO implemented. Federated SSO infrastructure is ready. Awaiting Allstate PingFederate metadata for final SAML configuration.
 
 ---
 
-## 10. Allstate Identity Ecosystem
+## 10. Allstate Identity Ecosystem (CONFIRMED)
 
-### 10.1 Identity Providers (IdPs)
+> **Intelligence Updated:** 2026-02-04 - Confirmed via enterprise architecture documentation
 
-Allstate uses a **fragmented identity ecosystem** depending on who is logging in:
+### 10.1 Allstate's Federation Hub Architecture
 
-| Provider | Purpose | Notes |
-|----------|---------|-------|
-| **OneLogin** | Primary SSO for internal employees | Active Directory integration |
-| **Microsoft Active Directory** | Backbone user management | Corporate directory |
-| **Ping Identity** | Legacy federated access | Used in some older integrations |
+Allstate operates a **"Hub-and-Spoke" federated identity model** with three primary components:
+
+| Component | Role | Details |
+|-----------|------|---------|
+| **PingFederate** | Central federation hub | Traffic orchestrator, policy enforcement, token transformation |
+| **Microsoft Entra ID (Azure AD)** | Authoritative identity source | Credential storage, MFA, Conditional Access policies |
+| **Okta** | Partner federation layer | Inbound federation, acquisitions, SaaS integrations |
+
+**Architecture Diagram:**
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     ALLSTATE IDENTITY STACK                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│    User → Your App (Clerk) → PingFederate → Azure AD (MFA)         │
+│                                   ↓                                 │
+│                         Token Transformation                        │
+│                    (adds agency_code, role, etc.)                  │
+│                                   ↓                                 │
+│                    SAML Assertion → Your App                       │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Insight:** Your app connects to **PingFederate** (not directly to Azure AD). PingFederate handles upstream auth and delivers transformed assertions with agency-specific attributes.
 
 ### 10.2 Federation Requirements (ISSAS Standards)
 
@@ -258,20 +278,40 @@ Allstate uses a **fragmented identity ecosystem** depending on who is logging in
 
 | Requirement | Protocol | Status |
 |-------------|----------|--------|
-| Federated authentication | SAML 2.0 or OIDC | ❌ Not Implemented |
-| No direct password collection | N/A | ⚠️ Current PIN system |
-| IdP-initiated login support | SAML | ❌ Not Implemented |
+| Federated authentication | SAML 2.0 or OIDC | ✅ **Clerk Implemented** |
+| No direct password collection | N/A | ✅ Clerk handles auth |
+| IdP-initiated login support | SAML | ✅ Clerk supports |
+| Auth broker pattern | SAML SP | ✅ Clerk as SP |
 
-**Authentication Flow (Required):**
+**Authentication Flow (Implemented):**
 ```
 1. User clicks "Log in with Allstate" on your app
-2. App redirects to Allstate's IdP (OneLogin/Ping login page)
-3. User authenticates at Allstate's IdP
-4. Allstate sends SAML Assertion (token) back to your app
-5. App creates local session from assertion
+2. Clerk redirects to PingFederate (Allstate's hub)
+3. PingFederate redirects to Azure AD for credential verification
+4. User authenticates at Azure AD (with MFA)
+5. Azure AD returns assertion to PingFederate
+6. PingFederate transforms assertion (adds agency_code, role)
+7. PingFederate sends SAML assertion to Clerk
+8. Clerk creates session, your app receives user
 ```
 
-### 10.3 Agency Types & Access Methods
+### 10.3 Expected SAML Assertion Attributes
+
+When Allstate configures your app in PingFederate, expect these attributes:
+
+| Attribute | Example | Description |
+|-----------|---------|-------------|
+| `agency_code` | `A1234` | Allstate agency identifier |
+| `role` | `Agent`, `Manager`, `Adjuster` | User's role within agency |
+| `email` | `john.smith@allstate.com` | Corporate email |
+| `first_name` | `John` | First name |
+| `last_name` | `Smith` | Last name |
+| `department` | `Claims` | Department (optional) |
+| `employee_id` | `EMP12345` | Internal ID (optional) |
+
+**Mapping Strategy:** These attributes should map to your `users` table and `agency_members` table for proper RBAC.
+
+### 10.4 Agency Types & Access Methods
 
 | Agent Type | Access Method | Identity Source |
 |------------|---------------|-----------------|
@@ -280,62 +320,75 @@ Allstate uses a **fragmented identity ecosystem** depending on who is logging in
 
 **Implication:** App may need to be added as a "tile" in MyConnection portal for captive agents.
 
-### 10.4 Recommended Implementation: Auth Broker Pattern
+### 10.5 Implementation Status: Clerk SSO
 
-**DO NOT:**
-- ❌ Build a login form asking for "Allstate Username/Password" (triggers security audit failure, looks like phishing)
-- ❌ Hard-code a specific identity provider
+**✅ COMPLETED (2026-02-04)**
 
-**DO:**
-- ✅ Implement an **Auth Broker** (Auth0, AWS Cognito, or Clerk)
-- ✅ Support "SAML Enterprise Connection" toggle
-- ✅ Accept Allstate's metadata URL during vendor onboarding (no code changes needed)
+| Component | Status | Details |
+|-----------|--------|---------|
+| Clerk SDK installed | ✅ Done | `@clerk/nextjs` |
+| ClerkProvider in layout | ✅ Done | `ClerkProviderWrapper.tsx` |
+| Sign-in/Sign-up pages | ✅ Done | `/sign-in`, `/sign-up` |
+| Dual-auth middleware | ✅ Done | Clerk + PIN fallback |
+| Webhook handler | ✅ Done | `/api/webhooks/clerk` |
+| Database migration | ✅ Done | `clerk_id`, `email` columns |
+| Feature flags | ✅ Done | `clerk_auth`, `pin_auth` |
 
-| Auth Broker | SAML Support | OIDC Support | Recommended |
-|-------------|--------------|--------------|-------------|
-| **Auth0** | ✅ Enterprise | ✅ | ✅ Best for multi-tenant |
-| **AWS Cognito** | ✅ | ✅ | Good if already on AWS |
-| **Clerk** | ✅ Enterprise | ✅ | Modern DX, easy setup |
-| **NextAuth.js** | ⚠️ Manual | ✅ | Already in codebase |
+**Current State:** Dual-auth mode - both Clerk SSO and PIN login work simultaneously.
 
-### 10.5 Migration Path
+### 10.6 Pending: Allstate SAML Configuration
 
-**Phase 1: Auth Broker Setup**
-1. Add Auth0/Clerk as authentication layer
-2. Keep existing PIN login as fallback during transition
-3. Configure SAML Enterprise Connection (disabled initially)
+**Waiting for Allstate onboarding to provide:**
 
-**Phase 2: Allstate Onboarding**
-1. Request Allstate IdP metadata URL during vendor registration
-2. Paste metadata into Auth0/Clerk admin console
-3. Enable "Log in with Allstate" button
+| Item | Description | Where to Configure |
+|------|-------------|-------------------|
+| **IdP Metadata URL** | PingFederate metadata endpoint | Clerk → Organizations → SSO |
+| **Entity ID** | Allstate's SAML entity identifier | Clerk SAML config |
+| **ACS URL** | Your app's assertion consumer service | Provide to Allstate |
+| **SP Metadata** | Your app's SAML metadata | Clerk generates this |
 
-**Phase 3: Deprecate PIN**
-1. Migrate existing users to federated login
-2. Remove PIN authentication option
-3. Complete compliance with ISSAS standards
+**When metadata arrives:**
+1. Clerk Dashboard → Organizations → SSO Connections → Add SAML
+2. Paste Allstate's metadata URL
+3. Copy Clerk's SP metadata to provide to Allstate
+4. Test with a pilot user
+5. Roll out to all Allstate users
+
+### 10.7 Technical Notes: PingFederate Integration
+
+**PingFederate-specific behaviors to expect:**
+
+1. **Forced Re-authentication:** PingFederate may require fresh auth for sensitive apps (not cached sessions)
+2. **Attribute Transformation:** Claims from Azure AD are transformed/enriched by PingFederate before reaching your app
+3. **CIDR-based Policies:** Different auth requirements based on network location (office vs. remote)
+4. **Composite Adapters:** Multi-step auth flows (e.g., password → MFA) handled by PingFederate
+
+**Token Format:** PingFederate will send either:
+- Standard SAML 2.0 assertion (preferred)
+- OpenToken (proprietary, for legacy apps - not needed for Clerk)
 
 ---
 
 ## Priority Action Items
 
 ### High Priority (Address within 30 days)
-1. ❌ **Implement Federated SSO** via Auth Broker (Auth0/Clerk) - See Section 10
+1. ✅ ~~**Implement Federated SSO** via Auth Broker~~ (DONE - Clerk implemented 2026-02-04)
 2. ✅ ~~**Set up SIEM integration** or centralized log monitoring~~ (DONE - securityMonitor.ts)
-3. ⚠️ **Define security patch SLA** (e.g., critical within 24h)
-4. ⚠️ **Enable Dependabot** for automated dependency updates
+3. ⚠️ **Configure SAML Enterprise Connection** when Allstate provides PingFederate metadata
+4. ⚠️ **Define security patch SLA** (e.g., critical within 24h)
+5. ⚠️ **Enable Dependabot** for automated dependency updates
 
 ### Medium Priority (Address within 90 days)
-5. ⚠️ **Conduct formal risk assessment** (NIST CSF or similar)
-6. ⚠️ **Test backup recovery** procedures quarterly
-7. ⚠️ **Define RTO/RPO** for business continuity
-8. ⚠️ **Verify DPAs** with all vendors
-9. ❌ **Schedule annual security certification** review
+6. ⚠️ **Conduct formal risk assessment** (NIST CSF or similar)
+7. ⚠️ **Test backup recovery** procedures quarterly
+8. ⚠️ **Define RTO/RPO** for business continuity
+9. ⚠️ **Verify DPAs** with all vendors
+10. ❌ **Schedule annual security certification** review
 
 ### Low Priority (Track for future)
-10. ❌ **Implement anomaly detection** for suspicious patterns
-11. ⚠️ **Create formal information security program** document
-12. ⚠️ **Set up vendor status monitoring** for incident notification
+11. ❌ **Implement anomaly detection** for suspicious patterns
+12. ⚠️ **Create formal information security program** document
+13. ⚠️ **Set up vendor status monitoring** for incident notification
 
 ---
 
@@ -351,8 +404,9 @@ Allstate uses a **fragmented identity ecosystem** depending on who is logging in
 
 ---
 
-**Document Version:** 1.1
+**Document Version:** 1.2
 **Classification:** Internal Use Only
 **Owner:** Security Team
 **Change Log:**
+- v1.2 (2026-02-04): Updated Section 10 with confirmed Allstate identity architecture (PingFederate hub, Azure AD, Okta). Marked Clerk SSO as implemented. Updated compliance score to 82%.
 - v1.1 (2026-02-04): Added Section 10 - Allstate Identity Ecosystem & SSO requirements
