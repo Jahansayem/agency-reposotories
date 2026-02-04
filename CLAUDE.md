@@ -893,7 +893,9 @@ src/components/
 │   ├── FormField.tsx                # Form field wrapper
 │   ├── AIFeaturesMenu.tsx           # AI features dropdown
 │   ├── SaveIndicator.tsx            # Save status indicator
-│   └── CountUp.tsx                  # Animated counters
+│   ├── CountUp.tsx                  # Animated counters
+│   ├── FilterBottomSheet.tsx        # Mobile filter bottom sheet
+│   └── FilterChip.tsx               # Animated filter chip pills
 │
 ├── layout/                          # Layout components (9)
 │   ├── AppShell.tsx                 # Main app shell
@@ -1061,7 +1063,7 @@ App Entry: page.tsx (auth state)
 | `useChatMessages` | Chat message management | Messages, reactions, threading |
 | `useDailyDigest` | AI daily digest | Fetch/generate digest |
 | **State Management** |
-| `useFilters` | Filter state | Search, sort, quick filters |
+| `useFilters` | Filter state | Search, sort, quick filters, keyboard shortcuts |
 | `useBulkActions` | Multi-select operations | Select, bulk update/delete |
 | `useTodoModals` | Modal state management | Open/close, active task |
 | `useModalState` | Generic modal state | Context-based modal control |
@@ -1106,6 +1108,27 @@ if (hasPermission('canDeleteTasks')) {
   await deleteTodo(id);
 }
 ```
+
+### Filter Keyboard Shortcuts
+
+The filter bar (`TodoFiltersBar.tsx`) includes built-in keyboard shortcuts for power users:
+
+| Key | Action | Notes |
+|-----|--------|-------|
+| `/` | Focus search input | Quick access to search |
+| `f` | Toggle advanced filters panel | Open/close filter drawer |
+| `m` | Toggle "My Tasks" filter | Filters to assigned tasks |
+| `t` | Toggle "Due Today" filter | Shows tasks due today |
+| `o` | Toggle "Overdue" filter | Shows overdue tasks |
+| `a` | Show all tasks | Resets quick filter to "all" |
+| `p` | Toggle high-priority filter | Shows urgent/high priority only |
+| `Escape` | Close panels / clear search | Contextual close action |
+
+**Mobile Filter Experience:**
+- On mobile (`< 768px`), advanced filters use a **bottom sheet** instead of inline panel
+- Bottom sheet supports drag-to-dismiss gesture
+- Filter chips show max 2 on mobile with "+N more" overflow indicator
+- All filter controls have 44px minimum touch targets (WCAG 2.5.5)
 
 ### Key Component Patterns
 

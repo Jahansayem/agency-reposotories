@@ -22,8 +22,8 @@ test.describe('Chat Image Attachments', () => {
       await page.waitForTimeout(100);
     }
 
-    // Wait for app to load
-    await expect(page.locator('text=Welcome back')).toBeVisible({ timeout: 10000 });
+    // Wait for app to load - main navigation sidebar appears after successful login
+    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 
     // Open chat panel
     const chatButton = page.locator('button:has-text("Chat")');

@@ -24,6 +24,7 @@ Security hardening has been completed to meet Allstate internal application requ
 ### Core Task Management
 - **Real-time sync** - Changes appear instantly across all connected clients
 - **Multiple views** - Kanban board and filterable list view with advanced sorting
+- **Advanced filtering** - Quick filter chips with keyboard shortcuts, live result counts, and mobile-optimized bottom sheet
 - **Task priorities** - Low, Medium, High, and Urgent with color-coded indicators
 - **Due dates & reminders** - Set deadlines with overdue warnings and notification reminders
 - **Assignees** - Assign tasks to team members with quick filters
@@ -96,7 +97,8 @@ Security hardening has been completed to meet Allstate internal application requ
 - **PIN-based authentication** - Secure 4-digit PIN login per user
 - **User switching** - Quickly switch between team members on shared devices
 - **Dark mode** - Full dark/light theme toggle
-- **Keyboard shortcuts** - Power user shortcuts for quick actions (Cmd/Ctrl+K command palette)
+- **Keyboard shortcuts** - Power user shortcuts including command palette (Cmd/Ctrl+K), filter shortcuts (`/` to search, `f` for filters, `m`/`t`/`o`/`a`/`p` for quick filters)
+- **Mobile-optimized filters** - Bottom sheet filter panel with drag-to-dismiss on mobile devices
 - **Pull-to-refresh** - Mobile-optimized refresh gesture
 - **Celebration effects** - Visual feedback on task completion
 - **Empty states** - Contextual guidance when lists are empty
