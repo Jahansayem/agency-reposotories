@@ -319,7 +319,7 @@ This week: 12  |  This month: 45  |  Top: Derrick (45)  [×]
 
 ### Kanban Card (Board View)
 
-#### Before
+#### Before (Pre-Feb 2026)
 ```
 ┌────────────────────────────┐
 │ OVERDUE (3)                │ ← Redundant header
@@ -327,28 +327,29 @@ This week: 12  |  This month: 45  |  Top: Derrick (45)  [×]
 │ │ ☑ Task title             │ │
 │ │ 🔴HIGH 📅Dec 29 👤D      │ │ ← Badge soup
 │ │ 📝 🎤 📎3 💬 ✓2/5        │ │
+│ │ [Expands on hover...]    │ │ ← Confusing animation
 │ └──────────────────────────┬─┘
 │ UPCOMING (2)               │
 │ ...                        │
 └────────────────────────────┘
 ```
 
-#### After
+#### After (Feb 2026 Update)
 ```
-┌─ To Do (5) ────────────────┐
-│                            │
-│ ☑ Task title (2 lines max) │
-│ Due Dec 29 • Overdue 33d   │
-│ ━━━━░░ 2/5                 │
-│ 📝🎤📎💬 (hover)            │
-┃                            │
-└┼───────────────────────────┘
- └── 4px status strip
+┃
+┃ Task title (2 lines max)
+┃ 🔴 High • 📅 Jan 15 • 👤 Derrick   ← Primary (always visible)
+┃ 📝 📎 ✓2/5                          ← Secondary (always visible)
+┃
+└────────────────────────────────────
+ └── 4px priority color bar (left edge)
 ```
-**Improvements:**
-- No redundant sub-headers
-- Count in header: "To Do (5)"
-- Clean progressive disclosure
+**Improvements (Feb 2026):**
+- **Removed hover-to-expand animation** - all info visible at a glance
+- **Priority color bar** on left edge (replaces top strip) for instant scanning
+- **No hidden quick actions** - click card to open detail modal for editing
+- **Secondary metadata always visible** (notes, subtasks, attachments)
+- **Cleaner, more scannable** design without hover state dependencies
 - Done column never shows "Overdue"
 
 ---

@@ -374,16 +374,23 @@ User Reviews → Edits (optional) → Clicks "Add Task + 3 Subtasks"
 3. Priority badge (colored pill)
 4. Due date badge (with overdue warning)
 5. Assignee badge
-6. **Hidden on hover:** Subtasks, notes, attachments, transcription
+6. **Secondary metadata:** Subtasks, notes, attachments, transcription
+
+> **⚠️ UPDATE (Feb 2026):** TodoItem now has improved narrow-width responsiveness:
+> - Priority badge shows single letter on mobile (H/M/L/U)
+> - "Overdue" text hidden on narrow screens (icon remains)
+> - Badge rows use `flex-wrap` and `min-w-0` to prevent overflow
+> - Added 'xs' size variant to Badge component for compact display
 
 ✅ **Strengths:**
 - **Progressive disclosure** - Secondary info revealed on hover/focus
 - **Visual priority system** - Left border color indicates priority at a glance
 - **Overdue urgency** - Red background, pulse animation for urgent overdue tasks
 - **Touch-friendly** - Expand button, checkbox, actions all 44px+
+- **Responsive badges** - Graceful degradation at narrow widths (Feb 2026)
 
 ❌ **Weaknesses:**
-1. **Critical info hidden** - Subtasks/attachments not visible until hover (mobile users miss this)
+1. ~~**Critical info hidden** - Subtasks/attachments not visible until hover (mobile users miss this)~~ *(Partially addressed with Kanban changes)*
 2. **Overdue tasks blend in** - Despite red background, can scroll past without noticing
 3. **Inline edit confusion** - Text is clickable but not obvious it's editable
 4. **Action overflow** - Three-dot menu has 8+ actions (too many)
@@ -545,6 +552,8 @@ User Reviews → Edits (optional) → Clicks "Add Task + 3 Subtasks"
 
 ## 4. KanbanBoard.tsx - Drag-and-Drop Interface
 
+> **⚠️ UPDATE (Feb 2026):** KanbanCard hover-to-expand animation has been **removed**. Cards now show all metadata at a glance without hover interaction. Secondary info (notes, subtasks, attachments) is always visible. Quick actions (date/assignee/priority pickers) were removed from cards - users click to open the detail modal for editing instead. Priority is indicated by a 4px color bar on the left edge.
+
 **Component Size:** 979 lines
 **Complexity:** High (dnd-kit integration, collision detection, responsive columns)
 
@@ -571,7 +580,8 @@ Time: ~2 seconds | Success Rate: High
 3. **Accidental drags** - Activates after only 8px movement (too sensitive)
 4. **No drag preview customization** - Uses default card appearance
 
-**Recommendation 4.1: Add Drag Handle**
+**Recommendation 4.1: Add Drag Handle** *(Partially implemented - Feb 2026)*
+> Note: `GripVertical` icon import added to KanbanCard.tsx. Full drag handle implementation is a future enhancement.
 ```tsx
 // In KanbanCard component
 <div className="flex items-center gap-2">
