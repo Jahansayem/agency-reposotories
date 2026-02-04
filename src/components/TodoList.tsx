@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { Todo, TodoStatus, TodoPriority, ViewMode, SortOption, QuickFilter, RecurrencePattern, Subtask, Attachment, WaitingContactType, DEFAULT_FOLLOW_UP_HOURS } from '@/types/todo';
@@ -180,6 +180,26 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
       onInitialFilterApplied?.();
     }
   }, [initialFilter, setQuickFilter, onInitialFilterApplied]);
+
+  // Track previous filter to announce changes (A11Y-006)
+  const prevFilterRef = useRef(quickFilter);
+  useEffect(() => {
+    if (prevFilterRef.current !== quickFilter && !loading) {
+      const filterLabels: Record<string, string> = {
+        all: 'all tasks',
+        my_tasks: 'my tasks',
+        assigned_by_me: 'tasks I assigned',
+        due_today: 'tasks due today',
+        overdue: 'overdue tasks',
+        high_priority: 'high priority tasks',
+        unassigned: 'unassigned tasks',
+      };
+      const label = filterLabels[quickFilter] || quickFilter;
+      const count = visibleTodos.length;
+      announce(`Showing ${label}: ${count} task${count !== 1 ? 's' : ''}`);
+      prevFilterRef.current = quickFilter;
+    }
+  }, [quickFilter, visibleTodos.length, announce, loading]);
 
   // Open add task modal when autoFocusAddTask is true
   useEffect(() => {
@@ -1439,10 +1459,25 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
     });
   };
 
-  // Direct wrappers for hook bulk actions
-  const bulkAssign = hookBulkAssign;
-  const bulkComplete = hookBulkComplete;
-  const bulkReschedule = hookBulkReschedule;
+  // Wrappers for hook bulk actions with screen reader announcements
+  const bulkAssign = useCallback(async (assignedTo: string) => {
+    const count = selectedTodos.size;
+    await hookBulkAssign(assignedTo);
+    announce(`${count} task${count > 1 ? 's' : ''} reassigned to ${assignedTo}`);
+  }, [hookBulkAssign, selectedTodos.size, announce]);
+
+  const bulkComplete = useCallback(async () => {
+    const count = selectedTodos.size;
+    await hookBulkComplete();
+    announce(`${count} task${count > 1 ? 's' : ''} marked as complete`);
+  }, [hookBulkComplete, selectedTodos.size, announce]);
+
+  const bulkReschedule = useCallback(async (newDueDate: string) => {
+    const count = selectedTodos.size;
+    await hookBulkReschedule(newDueDate);
+    const dateLabel = new Date(newDueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    announce(`${count} task${count > 1 ? 's' : ''} rescheduled to ${dateLabel}`);
+  }, [hookBulkReschedule, selectedTodos.size, announce]);
 
   // Merge selected todos into one
   const initiateMerge = () => {
@@ -1553,6 +1588,9 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
           merged_ids: secondaryTodos.map(t => t.id),
         },
       });
+
+      // Announce success
+      announce(`${secondaryTodos.length + 1} tasks merged successfully`);
 
       // Clear selection and close modal
       clearSelection();

@@ -130,8 +130,8 @@ export default function RenewalsCalendarPanel({
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
-        <div className="p-2 rounded-lg bg-[#0033A0]/10 dark:bg-[#72B5E8]/20">
-          <RefreshCw className="w-5 h-5 text-[#0033A0] dark:text-[#72B5E8]" />
+        <div className="p-2 rounded-lg bg-[var(--brand-blue)]/10 dark:bg-[var(--accent)]/20">
+          <RefreshCw className="w-5 h-5 text-[var(--brand-blue)] dark:text-[var(--accent)]" />
         </div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
           Renewals - Next 30 Days
@@ -221,7 +221,7 @@ export default function RenewalsCalendarPanel({
             <span className="text-slate-600 dark:text-slate-400">renewals</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="font-semibold text-[#0033A0] dark:text-[#72B5E8]">
+            <span className="font-semibold text-[var(--brand-blue)] dark:text-[var(--accent)]">
               {formatCurrency(stats.totalPremium)}
             </span>
           </div>
@@ -253,7 +253,7 @@ export default function RenewalsCalendarPanel({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={onViewCalendar}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[#0033A0] hover:bg-[#002580] dark:bg-[#72B5E8] dark:hover:bg-[#5DA3D6] text-white font-medium transition-colors"
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--brand-blue)] hover:bg-[var(--accent-hover)] dark:bg-[var(--accent)] dark:hover:bg-[var(--accent-hover)] text-white font-medium transition-colors"
       >
         View Full Calendar
         <ChevronRight className="w-4 h-4" />

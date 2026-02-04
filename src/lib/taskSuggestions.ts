@@ -64,7 +64,7 @@ export function calculateCompletionStreak(
     .filter(entry =>
       entry.user_name === userName &&
       (entry.action === 'task_completed' ||
-       (entry.action === 'status_changed' && entry.details?.to === 'done'))
+       (entry.action === 'status_changed' && (entry.details as { to?: string })?.to === 'done'))
     )
     .sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

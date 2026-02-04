@@ -337,10 +337,13 @@ export interface MessageReaction {
 }
 
 // Chat attachment types
+// Note: Uses a subset of AttachmentCategory since chat doesn't support archives
+export type ChatAttachmentType = 'image' | 'video' | 'audio' | 'document';
+
 export interface ChatAttachment {
   id: string;
   file_name: string;
-  file_type: 'image' | 'video' | 'audio' | 'document';
+  file_type: ChatAttachmentType;
   file_size: number; // bytes
   mime_type: string;
   storage_path: string;
@@ -399,9 +402,18 @@ export interface UserPresence {
 }
 
 // Muted conversation settings
+/**
+ * Nullable pattern convention:
+ * - `muted_until: string` = muted until this date
+ * - `muted_until: null` = muted forever (permanent)
+ * - `is_muted: false` = not muted (field explicitly false)
+ *
+ * We use a separate boolean to avoid the confusing undefined vs null pattern.
+ */
 export interface MutedConversation {
   conversation_key: string; // 'team' or username
-  muted_until?: string | null; // null = muted forever, string = muted until date, undefined = not muted
+  is_muted: boolean; // true = muted, false = not muted
+  muted_until: string | null; // string = muted until date, null = muted forever (only relevant when is_muted=true)
 }
 
 // Chat conversation type
@@ -458,7 +470,61 @@ export type ActivityAction =
   | 'follow_up_overdue'
   | 'task_reordered';
 
-export interface ActivityLogEntry {
+/**
+ * Action-specific detail types for type-safe activity logging.
+ * Each action type has a corresponding detail shape.
+ */
+export interface ActivityDetailsMap {
+  task_created: { priority?: TodoPriority; assigned_to?: string };
+  task_updated: { fields_changed?: string[] };
+  task_deleted: Record<string, never>;
+  task_completed: { was_overdue?: boolean };
+  task_reopened: Record<string, never>;
+  status_changed: { from: TodoStatus; to: TodoStatus };
+  priority_changed: { from: TodoPriority; to: TodoPriority };
+  assigned_to_changed: { from: string | null; to: string | null };
+  due_date_changed: { from: string | null; to: string | null };
+  subtask_added: { subtask_text: string; subtask_id: string };
+  subtask_completed: { subtask_text: string; subtask_id: string };
+  subtask_deleted: { subtask_text: string; subtask_id: string };
+  notes_updated: { notes_length?: number };
+  template_created: { template_name: string };
+  template_used: { template_name: string; template_id: string };
+  attachment_added: { file_name: string; file_type: AttachmentCategory };
+  attachment_removed: { file_name: string };
+  tasks_merged: { merged_task_ids: string[]; merged_count: number };
+  reminder_added: { reminder_time: string };
+  reminder_removed: { reminder_id: string };
+  reminder_sent: { reminder_type: ReminderType };
+  marked_waiting: { contact_type: WaitingContactType };
+  customer_responded: { waiting_hours?: number };
+  follow_up_overdue: { hours_overdue: number };
+  task_reordered: { from_position: number; to_position: number };
+}
+
+/**
+ * Type-safe activity log entry.
+ * The `details` field is typed based on the `action` type.
+ *
+ * For runtime flexibility (e.g., database returns), use ActivityLogEntryLoose.
+ */
+export interface ActivityLogEntry<A extends ActivityAction = ActivityAction> {
+  id: string;
+  action: A;
+  todo_id?: string;
+  todo_text?: string;
+  user_name: string;
+  details: A extends keyof ActivityDetailsMap ? ActivityDetailsMap[A] : Record<string, unknown>;
+  created_at: string;
+  agency_id?: string; // Multi-tenancy: which agency this activity belongs to
+}
+
+/**
+ * Loose version of ActivityLogEntry for database queries where the action
+ * type isn't known at compile time. Use ActivityLogEntry<A> when you know
+ * the specific action type for better type safety.
+ */
+export interface ActivityLogEntryLoose {
   id: string;
   action: ActivityAction;
   todo_id?: string;
@@ -466,7 +532,7 @@ export interface ActivityLogEntry {
   user_name: string;
   details: Record<string, unknown>;
   created_at: string;
-  agency_id?: string; // Multi-tenancy: which agency this activity belongs to
+  agency_id?: string;
 }
 
 // Legacy constants removed in Phase 4E multi-tenancy migration.

@@ -9,6 +9,7 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { hideDevOverlay } from './helpers/test-base';
 
 test.describe('Smoke Test - App Loads Successfully', () => {
   test('should load and allow login', async ({ page }) => {
@@ -48,6 +49,9 @@ test.describe('Smoke Test - App Loads Successfully', () => {
   test('should complete login flow', async ({ page }) => {
     await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 15000 });
 
+    // Hide the Next.js dev overlay to prevent pointer event interception on mobile
+    await hideDevOverlay(page);
+
     // Wait for login screen
     await page.waitForTimeout(1000);
 
@@ -68,8 +72,16 @@ test.describe('Smoke Test - App Loads Successfully', () => {
       await page.waitForTimeout(100);
     }
 
-    // Wait for main app - sidebar navigation landmark
-    await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
+    // Wait for main app - check for either sidebar (desktop) or bottom nav (mobile)
+    const isMobile = await page.evaluate(() => window.innerWidth < 768);
+
+    if (isMobile) {
+      // On mobile, wait for bottom navigation bar
+      await expect(page.locator('nav[aria-label="Main navigation"]')).toBeVisible({ timeout: 15000 });
+    } else {
+      // On desktop, wait for sidebar navigation landmark
+      await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
+    }
     console.log('✅ Login successful, app loaded');
   });
 

@@ -18,13 +18,6 @@ export default defineConfig({
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    // Disable Next.js dev overlay during tests to prevent click interception
-    launchOptions: {
-      env: {
-        ...process.env,
-        __NEXT_DISABLE_OVERLAY: 'true',
-      },
-    },
   },
   projects: [
     // Desktop browsers

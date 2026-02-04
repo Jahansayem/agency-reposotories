@@ -96,7 +96,7 @@ export default function CalendarDayCell({
           transition-all duration-200 border
           ${
             isToday
-              ? 'ring-2 ring-[#0033A0] dark:ring-[#72B5E8] bg-[#0033A0]/5 dark:bg-[#72B5E8]/10 border-[#0033A0]/20 dark:border-[#72B5E8]/30'
+              ? 'ring-2 ring-[var(--brand-blue)] dark:ring-[var(--accent)] bg-[var(--brand-blue)]/5 dark:bg-[var(--accent)]/10 border-[var(--brand-blue)]/20 dark:border-[var(--accent)]/30'
               : isCurrentMonth
                 ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600'
                 : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50'
@@ -109,7 +109,7 @@ export default function CalendarDayCell({
             text-sm font-semibold mb-1
             ${
               isToday
-                ? 'text-[#0033A0] dark:text-[#72B5E8]'
+                ? 'text-[var(--brand-blue)] dark:text-[var(--accent)]'
                 : isCurrentMonth
                   ? 'text-slate-900 dark:text-white'
                   : 'text-slate-400 dark:text-slate-500'

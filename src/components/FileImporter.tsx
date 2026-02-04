@@ -522,30 +522,26 @@ export default function FileImporter({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className={`rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden ${
-        'bg-[var(--surface)]'}`}>
+      <div className="rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden bg-[var(--surface)]">
         {/* Header */}
-        <div className={`p-4 border-b flex items-center justify-between flex-shrink-0 ${
-          'border-slate-200'}`}>
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-              'bg-[var(--accent)]/10'}`}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[var(--accent)]/10">
               <FileIcon className="w-5 h-5 text-[var(--accent)]" />
             </div>
             <div>
-              <h2 className={`text-lg font-semibold ${'text-slate-800'}`}>Import File</h2>
-              <p className={`text-sm ${'text-slate-500'}`}>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Import File</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
                 Upload a voicemail, PDF, or image to create a task
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className={`p-2 rounded-[var(--radius-lg)] transition-colors ${
-              'hover:bg-slate-100'}`}
+            className="p-2 rounded-[var(--radius-lg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             aria-label="Close"
           >
-            <X className={`w-5 h-5 ${'text-slate-500'}`} />
+            <X className="w-5 h-5 text-[var(--text-muted)]" aria-hidden="true" />
           </button>
         </div>
 
@@ -561,31 +557,28 @@ export default function FileImporter({
               className={`border-2 border-dashed rounded-[var(--radius-xl)] p-12 text-center transition-all cursor-pointer
                 ${isDragging
                   ? 'border-[var(--accent)] bg-[var(--accent)]/10'
-                  : 'border-slate-300 hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'}`}
+                  : 'border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/5'}`}
             >
-              <Upload className={`w-12 h-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-[var(--accent)]' : 'text-slate-400'}`} />
-              <p className={`font-medium text-lg ${'text-slate-700'}`}>
+              <Upload className={`w-12 h-12 mx-auto mb-4 transition-colors ${isDragging ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} aria-hidden="true" />
+              <p className="font-medium text-lg text-[var(--foreground)]">
                 {isDragging ? 'Drop your file here' : 'Drop your file here'}
               </p>
-              <p className={`mt-2 ${'text-slate-500'}`}>or click to browse</p>
+              <p className="mt-2 text-[var(--text-secondary)]">or click to browse</p>
               <div className="flex flex-wrap gap-2 justify-center mt-4">
-                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
-                  'bg-[var(--accent)]/10 text-[var(--accent)]'}`}>
-                  <FileAudio className="w-4 h-4" />
+                <span className="px-3 py-1 rounded-full text-sm flex items-center gap-1 bg-[var(--accent)]/10 text-[var(--accent)]">
+                  <FileAudio className="w-4 h-4" aria-hidden="true" />
                   Audio
                 </span>
-                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
-                  'bg-blue-100 text-blue-700'}`}>
-                  <FileText className="w-4 h-4" />
+                <span className="px-3 py-1 rounded-full text-sm flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                  <FileText className="w-4 h-4" aria-hidden="true" />
                   PDF
                 </span>
-                <span className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
-                  'bg-green-100 text-green-700'}`}>
-                  <File className="w-4 h-4" />
+                <span className="px-3 py-1 rounded-full text-sm flex items-center gap-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                  <File className="w-4 h-4" aria-hidden="true" />
                   Image
                 </span>
               </div>
-              <p className={`text-sm mt-3 ${'text-slate-400'}`}>
+              <p className="text-sm mt-3 text-[var(--text-muted)]">
                 Max 25MB
               </p>
               <input
@@ -602,7 +595,7 @@ export default function FileImporter({
           {status === 'idle' && selectedFile && (
             <div className="space-y-4">
               {/* File preview */}
-              <div className={`p-4 rounded-[var(--radius-xl)] ${'bg-slate-50'}`}>
+              <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--surface-2)]">
                 <div className="flex items-center gap-4">
                   {fileType === 'audio' ? (
                     <button
@@ -615,23 +608,23 @@ export default function FileImporter({
                   ) : (
                     <div className={`w-12 h-12 rounded-[var(--radius-xl)] flex items-center justify-center
                                   ${fileType === 'pdf'
-                                    ? 'bg-red-100': 'bg-blue-100'}`}>
-                      <FileIcon className={`w-6 h-6 ${fileType === 'pdf' ? 'text-red-500' : 'text-blue-500'}`} />
+                                    ? 'bg-red-100 dark:bg-red-900/30': 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                      <FileIcon className={`w-6 h-6 ${fileType === 'pdf' ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`} aria-hidden="true" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${'text-slate-700'}`}>{selectedFile.name}</p>
-                    <p className={`text-sm ${'text-slate-500'}`}>
+                    <p className="font-medium truncate text-[var(--foreground)]">{selectedFile.name}</p>
+                    <p className="text-sm text-[var(--text-secondary)]">
                       {(selectedFile.size / 1024 / 1024).toFixed(1)} MB •{' '}
                       {fileType === 'audio' ? 'Audio' : fileType === 'pdf' ? 'PDF' : 'Image'}
                     </p>
                   </div>
                   <button
                     onClick={handleClear}
-                    className={`p-2 transition-colors ${'text-slate-400 hover:text-red-500'}`}
+                    className="p-2 transition-colors text-[var(--text-muted)] hover:text-[var(--danger)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-[var(--radius-lg)]"
                     aria-label="Remove file"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
                 {audioUrl && (
@@ -661,14 +654,13 @@ export default function FileImporter({
             <div className="py-8 px-4">
               {/* Header with icon */}
               <div className="text-center mb-8">
-                <div className={`w-16 h-16 rounded-[var(--radius-2xl)] mx-auto mb-4 flex items-center justify-center ${
-                  'bg-[var(--accent)]/10'}`}>
-                  <Wand2 className="w-8 h-8 text-[var(--accent)] animate-pulse" />
+                <div className="w-16 h-16 rounded-[var(--radius-2xl)] mx-auto mb-4 flex items-center justify-center bg-[var(--accent)]/10">
+                  <Wand2 className="w-8 h-8 text-[var(--accent)] animate-pulse" aria-hidden="true" />
                 </div>
-                <h3 className={`text-xl font-semibold ${'text-slate-800'}`}>
+                <h3 className="text-xl font-semibold text-[var(--foreground)]">
                   AI is processing your file
                 </h3>
-                <p className={`text-sm mt-1 ${'text-slate-500'}`}>
+                <p className="text-sm mt-1 text-[var(--text-secondary)]">
                   This usually takes 10-30 seconds
                 </p>
               </div>
@@ -681,8 +673,8 @@ export default function FileImporter({
                     className={`flex items-center gap-4 p-3 rounded-[var(--radius-xl)] transition-all ${
                       step.status === 'active'
                         ? 'bg-[var(--accent)]/5 ring-2 ring-[var(--accent)]/30': step.status === 'completed'
-                          ? 'bg-green-50': step.status === 'error'
-                            ? 'bg-red-50': 'bg-slate-50'}`}
+                          ? 'bg-green-50 dark:bg-green-900/20': step.status === 'error'
+                            ? 'bg-red-50 dark:bg-red-900/20': 'bg-[var(--surface-2)]'}`}
                   >
                     {/* Step indicator */}
                     <div className="flex-shrink-0">
@@ -693,7 +685,7 @@ export default function FileImporter({
                       ) : step.status === 'error' ? (
                         <XCircle className="w-6 h-6 text-red-500" />
                       ) : (
-                        <Circle className={`w-6 h-6 ${'text-slate-300'}`} />
+                        <Circle className="w-6 h-6 text-[var(--text-muted)]" aria-hidden="true" />
                       )}
                     </div>
 
@@ -703,14 +695,14 @@ export default function FileImporter({
                         step.status === 'active'
                           ? 'text-[var(--accent)]'
                           : step.status === 'completed'
-                            ? 'text-green-700': step.status === 'error'
-                              ? 'text-red-500'
-                              : 'text-slate-500'}`}>
+                            ? 'text-green-700 dark:text-green-400': step.status === 'error'
+                              ? 'text-red-500 dark:text-red-400'
+                              : 'text-[var(--text-secondary)]'}`}>
                         {step.label}
                       </p>
                       <p className={`text-sm ${
                         step.status === 'active'
-                          ? 'text-[var(--accent)]': 'text-slate-400'}`}>
+                          ? 'text-[var(--accent)]': 'text-[var(--text-muted)]'}`}>
                         {step.description}
                       </p>
                     </div>
@@ -723,7 +715,7 @@ export default function FileImporter({
                           ? 'bg-[var(--accent)]/50 text-white'
                           : step.status === 'error'
                             ? 'bg-red-500 text-white'
-                            : 'bg-slate-200 text-slate-500'}`}>
+                            : 'bg-[var(--surface-3)] text-[var(--text-secondary)]'}`}>
                       {index + 1}
                     </div>
                   </div>
@@ -731,8 +723,8 @@ export default function FileImporter({
               </div>
 
               {/* Helpful tip */}
-              <p className={`text-center text-xs mt-6 flex items-center justify-center gap-1.5 ${'text-slate-400'}`}>
-                <Sparkles className="w-3.5 h-3.5 text-[var(--brand-sky)]" />
+              <p className="text-center text-xs mt-6 flex items-center justify-center gap-1.5 text-[var(--text-muted)]">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--brand-sky)]" aria-hidden="true" />
                 AI is analyzing your content and extracting actionable tasks
               </p>
             </div>
@@ -741,18 +733,16 @@ export default function FileImporter({
           {/* Error state */}
           {status === 'error' && (
             <div className="space-y-4">
-              <div className={`p-4 border rounded-[var(--radius-xl)] flex items-start gap-3 ${
-                'bg-red-50 border-red-200'}`}>
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="p-4 border rounded-[var(--radius-xl)] flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
-                  <p className={`font-medium ${'text-red-700'}`}>Error processing file</p>
-                  <p className={`text-sm mt-1 ${'text-red-600'}`}>{error}</p>
+                  <p className="font-medium text-red-700 dark:text-red-400">Error processing file</p>
+                  <p className="text-sm mt-1 text-red-600 dark:text-red-300">{error}</p>
                 </div>
               </div>
               <button
                 onClick={handleClear}
-                className={`w-full py-3 rounded-[var(--radius-xl)] font-medium transition-colors ${
-                  'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
+                className="w-full py-3 rounded-[var(--radius-xl)] font-medium transition-colors bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 Try Again
               </button>
@@ -764,20 +754,20 @@ export default function FileImporter({
             <div className="space-y-6">
               {/* Extracted text/transcript section */}
               {extractedText && (
-                <div className={`p-4 rounded-[var(--radius-xl)] ${'bg-slate-50'}`}>
+                <div className="p-4 rounded-[var(--radius-xl)] bg-[var(--surface-2)]">
                   <div className="flex items-center justify-between mb-2">
-                    <p className={`text-sm font-medium ${'text-slate-600'}`}>
+                    <p className="text-sm font-medium text-[var(--text-secondary)]">
                       {fileType === 'audio' ? 'Transcript' : 'Extracted Content'}
                     </p>
                     <button
                       onClick={() => setShowFullText(!showFullText)}
-                      className="text-sm text-[var(--accent)] hover:text-[var(--brand-sky)] flex items-center gap-1"
+                      className="text-sm text-[var(--accent)] hover:text-[var(--brand-sky)] flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-[var(--radius-md)]"
                     >
                       {showFullText ? 'Show less' : 'Show more'}
-                      {showFullText ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      {showFullText ? <ChevronUp className="w-4 h-4" aria-hidden="true" /> : <ChevronDown className="w-4 h-4" aria-hidden="true" />}
                     </button>
                   </div>
-                  <p className={`text-sm italic ${showFullText ? '' : 'line-clamp-3'} ${'text-slate-600'}`}>
+                  <p className={`text-sm italic ${showFullText ? '' : 'line-clamp-3'} text-[var(--text-secondary)]`}>
                     &ldquo;{extractedText}&rdquo;
                   </p>
                 </div>
@@ -785,23 +775,23 @@ export default function FileImporter({
 
               {/* Summary */}
               {summary && (
-                <div className={`p-3 rounded-[var(--radius-lg)] ${'bg-[var(--accent)]/5'}`}>
-                  <p className={`text-sm ${'text-[var(--accent)]'}`}>{summary}</p>
+                <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--accent)]/5">
+                  <p className="text-sm text-[var(--accent)]">{summary}</p>
                 </div>
               )}
 
               {/* Main task editor */}
               <div className="space-y-4">
-                <h3 className={`font-medium ${'text-slate-800'}`}>Main Task</h3>
+                <h3 className="font-medium text-[var(--foreground)]">Main Task</h3>
 
                 <input
                   type="text"
                   value={mainTask.text}
                   onChange={(e) => setMainTask(prev => ({ ...prev, text: e.target.value }))}
                   placeholder="Task description..."
-                  className={`w-full px-4 py-3 border rounded-[var(--radius-xl)]
-                           focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] ${
-                             'bg-[var(--surface)] border-[var(--border)] text-slate-800 placeholder-slate-400'}`}
+                  className="w-full px-4 py-3 border rounded-[var(--radius-xl)]
+                           focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)]
+                           bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-muted)]"
                 />
 
                 <div className="flex flex-wrap gap-3">
@@ -810,9 +800,8 @@ export default function FileImporter({
                     <select
                       value={mainTask.priority}
                       onChange={(e) => setMainTask(prev => ({ ...prev, priority: e.target.value as TodoPriority }))}
-                      className={`appearance-none pl-8 pr-8 py-2 rounded-[var(--radius-lg)] text-sm font-medium cursor-pointer
-                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 border ${
-                                 'border-slate-200'}`}
+                      className="appearance-none pl-8 pr-8 py-2 rounded-[var(--radius-lg)] text-sm font-medium cursor-pointer
+                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 border border-[var(--border)]"
                       style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}
                     >
                       <option value="low">Low</option>
@@ -821,8 +810,8 @@ export default function FileImporter({
                       <option value="urgent">Urgent</option>
                     </select>
                     <Flag className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                          style={{ color: priorityConfig.color }} />
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-50" />
+                          style={{ color: priorityConfig.color }} aria-hidden="true" />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-50" aria-hidden="true" />
                   </div>
 
                   {/* Due date */}
@@ -831,11 +820,11 @@ export default function FileImporter({
                       type="date"
                       value={mainTask.dueDate}
                       onChange={(e) => setMainTask(prev => ({ ...prev, dueDate: e.target.value }))}
-                      className={`pl-8 pr-3 py-2 rounded-[var(--radius-lg)] text-sm border
-                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${
-                                 'bg-[var(--surface)] border-[var(--border)] text-slate-700'}`}
+                      className="pl-8 pr-3 py-2 rounded-[var(--radius-lg)] text-sm border
+                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30
+                               bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]"
                     />
-                    <Calendar className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${'text-slate-400'}`} />
+                    <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" aria-hidden="true" />
                   </div>
 
                   {/* Assignee */}
@@ -843,17 +832,17 @@ export default function FileImporter({
                     <select
                       value={mainTask.assignedTo}
                       onChange={(e) => setMainTask(prev => ({ ...prev, assignedTo: e.target.value }))}
-                      className={`appearance-none pl-8 pr-8 py-2 rounded-[var(--radius-lg)] text-sm border
-                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${
-                                 'bg-[var(--surface)] border-[var(--border)] text-slate-700'}`}
+                      className="appearance-none pl-8 pr-8 py-2 rounded-[var(--radius-lg)] text-sm border
+                               focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30
+                               bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]"
                     >
                       <option value="">Unassigned</option>
                       {users.map((user) => (
                         <option key={user} value={user}>{user}</option>
                       ))}
                     </select>
-                    <User className={`absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${'text-slate-400'}`} />
-                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-50" />
+                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[var(--text-muted)]" aria-hidden="true" />
+                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none opacity-50" aria-hidden="true" />
                   </div>
                 </div>
               </div>
@@ -861,20 +850,20 @@ export default function FileImporter({
               {/* Subtasks section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className={`font-medium ${'text-slate-800'}`}>
-                    Subtasks {subtasks.length > 0 && <span className={'text-slate-400'}>({totalSelected} selected)</span>}
+                  <h3 className="font-medium text-[var(--foreground)]">
+                    Subtasks {subtasks.length > 0 && <span className="text-[var(--text-muted)]">({totalSelected} selected)</span>}
                   </h3>
                   <button
                     onClick={addSubtask}
-                    className="text-sm text-[var(--accent)] hover:text-[var(--brand-sky)] flex items-center gap-1"
+                    className="text-sm text-[var(--accent)] hover:text-[var(--brand-sky)] flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-[var(--radius-md)]"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4" aria-hidden="true" />
                     Add subtask
                   </button>
                 </div>
 
                 {subtasks.length === 0 ? (
-                  <p className={`text-sm py-4 text-center ${'text-slate-400'}`}>
+                  <p className="text-sm py-4 text-center text-[var(--text-muted)]">
                     No subtasks extracted. Click &ldquo;Add subtask&rdquo; to create one manually.
                   </p>
                 ) : (
@@ -884,17 +873,18 @@ export default function FileImporter({
                         key={index}
                         className={`p-3 rounded-[var(--radius-lg)] border transition-colors ${
                           subtask.selected
-                            ? 'border-[var(--accent)]/30 bg-[var(--accent)]/5/50': 'border-slate-200 bg-slate-50 opacity-60'}`}
+                            ? 'border-[var(--accent)]/30 bg-[var(--accent)]/5': 'border-[var(--border)] bg-[var(--surface-2)] opacity-60'}`}
                       >
                         <div className="flex items-start gap-3">
                           <button
                             onClick={() => toggleSubtask(index)}
-                            className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                            className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
                               subtask.selected
                                 ? 'bg-[var(--accent)]/50 border-[var(--accent)] text-white'
-                                : 'border-slate-300'}`}
+                                : 'border-[var(--border)]'}`}
+                            aria-label={subtask.selected ? 'Deselect subtask' : 'Select subtask'}
                           >
-                            {subtask.selected && <Check className="w-3 h-3" />}
+                            {subtask.selected && <Check className="w-3 h-3" aria-hidden="true" />}
                           </button>
 
                           <div className="flex-1 min-w-0">
@@ -903,20 +893,20 @@ export default function FileImporter({
                               value={subtask.text}
                               onChange={(e) => updateSubtask(index, { text: e.target.value })}
                               placeholder="Subtask description..."
-                              className={`w-full border rounded-[var(--radius-lg)] px-3 py-1.5 text-sm
-                                       focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)] ${
-                                         'bg-[var(--surface)] border-[var(--border)] text-slate-800 placeholder-slate-400'}`}
+                              className="w-full border rounded-[var(--radius-lg)] px-3 py-1.5 text-sm
+                                       focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 focus:border-[var(--accent)]
+                                       bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-muted)]"
                             />
 
                             <div className="flex items-center gap-3 mt-2 flex-wrap">
                               <div className="flex items-center gap-1">
-                                <Flag className={`w-3 h-3 ${'text-slate-400'}`} />
+                                <Flag className="w-3 h-3 text-[var(--text-muted)]" aria-hidden="true" />
                                 <select
                                   value={subtask.priority}
                                   onChange={(e) => updateSubtask(index, { priority: e.target.value as TodoPriority })}
-                                  className={`text-xs px-2 py-1 rounded border
-                                           focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${
-                                             'bg-[var(--surface)] border-[var(--border)] text-slate-700'}`}
+                                  className="text-xs px-2 py-1 rounded border
+                                           focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30
+                                           bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]"
                                 >
                                   <option value="low">Low</option>
                                   <option value="medium">Medium</option>
@@ -926,8 +916,8 @@ export default function FileImporter({
                               </div>
 
                               {subtask.estimatedMinutes && (
-                                <div className={`flex items-center gap-1 text-xs ${'text-slate-500'}`}>
-                                  <Clock className="w-3 h-3" />
+                                <div className="flex items-center gap-1 text-xs text-[var(--text-secondary)]">
+                                  <Clock className="w-3 h-3" aria-hidden="true" />
                                   {subtask.estimatedMinutes}m
                                 </div>
                               )}
@@ -936,10 +926,10 @@ export default function FileImporter({
 
                           <button
                             onClick={() => removeSubtask(index)}
-                            className={`p-1 transition-colors ${
-                              'text-slate-400 hover:text-red-500'}`}
+                            className="p-1 transition-colors text-[var(--text-muted)] hover:text-[var(--danger)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-[var(--radius-md)]"
+                            aria-label="Remove subtask"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -952,8 +942,7 @@ export default function FileImporter({
 
           {/* General error display */}
           {error && status !== 'error' && (
-            <div className={`mt-4 p-3 border rounded-[var(--radius-lg)] text-sm ${
-              'bg-red-50 border-red-200 text-red-600'}`}>
+            <div className="mt-4 p-3 border rounded-[var(--radius-lg)] text-sm bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-300">
               {error}
             </div>
           )}
@@ -961,31 +950,29 @@ export default function FileImporter({
 
         {/* Footer */}
         {status === 'ready' && (
-          <div className={`p-4 border-t flex items-center justify-between flex-shrink-0 ${
-            'border-slate-200'}`}>
+          <div className="p-4 border-t border-[var(--border)] flex items-center justify-between flex-shrink-0">
             <button
               onClick={handleClear}
-              className={`text-sm transition-colors ${
-                'text-slate-500 hover:text-slate-700'}`}
+              className="text-sm transition-colors text-[var(--text-secondary)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-[var(--radius-md)]"
             >
               Start over
             </button>
             <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className={`px-4 py-2 rounded-[var(--radius-lg)] font-medium transition-colors ${
-                  'text-slate-600 hover:bg-slate-100'}`}
+                className="px-4 py-2 rounded-[var(--radius-lg)] font-medium transition-colors text-[var(--text-secondary)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreate}
                 disabled={!mainTask.text.trim()}
-                className={`px-4 py-2 bg-[var(--accent)] hover:bg-[var(--brand-navy)] rounded-[var(--radius-lg)] font-medium transition-colors
-                         disabled:cursor-not-allowed flex items-center gap-2 ${
-                           'text-white disabled:bg-slate-200 disabled:text-slate-400'}`}
+                className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--brand-navy)] rounded-[var(--radius-lg)] font-medium transition-colors
+                         disabled:cursor-not-allowed flex items-center gap-2
+                         text-white disabled:bg-[var(--surface-3)] disabled:text-[var(--text-muted)]
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
               >
-                <Check className="w-4 h-4" />
+                <Check className="w-4 h-4" aria-hidden="true" />
                 Create Task
                 {totalSelected > 0 && ` with ${totalSelected} Subtask${totalSelected !== 1 ? 's' : ''}`}
               </button>
