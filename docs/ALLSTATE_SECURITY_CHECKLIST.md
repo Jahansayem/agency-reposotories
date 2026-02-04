@@ -6,7 +6,7 @@ This checklist covers security requirements for internal applications based on:
 - Industry best practices for insurance applications
 
 **Application:** Bealer Agency Todo List
-**Last Review:** 2026-01-26
+**Last Review:** 2026-02-04
 **Reviewer:** Security Team
 
 ---
@@ -231,16 +231,96 @@ This checklist covers security requirements for internal applications based on:
 | Third-Party Security | 5 | 2 | 0 | 7 |
 | Incident Response | 5 | 2 | 0 | 7 |
 | Compliance | 3 | 3 | 1 | 7 |
-| **Total** | **56** | **11** | **2** | **69** |
+| Allstate Identity (NEW) | 0 | 1 | 2 | 3 |
+| **Total** | **56** | **12** | **4** | **72** |
 
-**Overall Compliance: 81% Complete, 16% Partial, 3% Missing**
+**Overall Compliance: 78% Complete, 17% Partial, 5% Missing**
+
+> ⚠️ **Note:** Allstate Identity section added Feb 2026. Federated SSO is a **blocking requirement** for production deployment to Allstate agencies.
+
+---
+
+## 10. Allstate Identity Ecosystem
+
+### 10.1 Identity Providers (IdPs)
+
+Allstate uses a **fragmented identity ecosystem** depending on who is logging in:
+
+| Provider | Purpose | Notes |
+|----------|---------|-------|
+| **OneLogin** | Primary SSO for internal employees | Active Directory integration |
+| **Microsoft Active Directory** | Backbone user management | Corporate directory |
+| **Ping Identity** | Legacy federated access | Used in some older integrations |
+
+### 10.2 Federation Requirements (ISSAS Standards)
+
+**CRITICAL:** You cannot directly connect to Allstate's internal AD. Their **ISSAS** security standards require vendors to support **Federated SSO**.
+
+| Requirement | Protocol | Status |
+|-------------|----------|--------|
+| Federated authentication | SAML 2.0 or OIDC | ❌ Not Implemented |
+| No direct password collection | N/A | ⚠️ Current PIN system |
+| IdP-initiated login support | SAML | ❌ Not Implemented |
+
+**Authentication Flow (Required):**
+```
+1. User clicks "Log in with Allstate" on your app
+2. App redirects to Allstate's IdP (OneLogin/Ping login page)
+3. User authenticates at Allstate's IdP
+4. Allstate sends SAML Assertion (token) back to your app
+5. App creates local session from assertion
+```
+
+### 10.3 Agency Types & Access Methods
+
+| Agent Type | Access Method | Identity Source |
+|------------|---------------|-----------------|
+| **Exclusive Agents (Captive)** | Allstate Gateway (MyConnection) | SAML via portal tile |
+| **Independent Agents** | NOT Allstate corporate login | Ivans ID or own Microsoft 365 |
+
+**Implication:** App may need to be added as a "tile" in MyConnection portal for captive agents.
+
+### 10.4 Recommended Implementation: Auth Broker Pattern
+
+**DO NOT:**
+- ❌ Build a login form asking for "Allstate Username/Password" (triggers security audit failure, looks like phishing)
+- ❌ Hard-code a specific identity provider
+
+**DO:**
+- ✅ Implement an **Auth Broker** (Auth0, AWS Cognito, or Clerk)
+- ✅ Support "SAML Enterprise Connection" toggle
+- ✅ Accept Allstate's metadata URL during vendor onboarding (no code changes needed)
+
+| Auth Broker | SAML Support | OIDC Support | Recommended |
+|-------------|--------------|--------------|-------------|
+| **Auth0** | ✅ Enterprise | ✅ | ✅ Best for multi-tenant |
+| **AWS Cognito** | ✅ | ✅ | Good if already on AWS |
+| **Clerk** | ✅ Enterprise | ✅ | Modern DX, easy setup |
+| **NextAuth.js** | ⚠️ Manual | ✅ | Already in codebase |
+
+### 10.5 Migration Path
+
+**Phase 1: Auth Broker Setup**
+1. Add Auth0/Clerk as authentication layer
+2. Keep existing PIN login as fallback during transition
+3. Configure SAML Enterprise Connection (disabled initially)
+
+**Phase 2: Allstate Onboarding**
+1. Request Allstate IdP metadata URL during vendor registration
+2. Paste metadata into Auth0/Clerk admin console
+3. Enable "Log in with Allstate" button
+
+**Phase 3: Deprecate PIN**
+1. Migrate existing users to federated login
+2. Remove PIN authentication option
+3. Complete compliance with ISSAS standards
 
 ---
 
 ## Priority Action Items
 
 ### High Priority (Address within 30 days)
-1. ❌ **Implement MFA** for owner/admin accounts (OAuth 2.0 or TOTP)
+1. ❌ **Implement Federated SSO** via Auth Broker (Auth0/Clerk) - See Section 10
 2. ✅ ~~**Set up SIEM integration** or centralized log monitoring~~ (DONE - securityMonitor.ts)
 3. ⚠️ **Define security patch SLA** (e.g., critical within 24h)
 4. ⚠️ **Enable Dependabot** for automated dependency updates
@@ -271,6 +351,8 @@ This checklist covers security requirements for internal applications based on:
 
 ---
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Classification:** Internal Use Only
 **Owner:** Security Team
+**Change Log:**
+- v1.1 (2026-02-04): Added Section 10 - Allstate Identity Ecosystem & SSO requirements
