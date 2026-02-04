@@ -64,3 +64,7 @@ export {
 
 // Dashboard Hooks
 export { useAgencyMetrics } from './useAgencyMetrics';
+
+// Auth & Permissions
+export { usePermission, usePermissions } from './usePermission';
+export { useRoleCheck } from './useRoleCheck';
