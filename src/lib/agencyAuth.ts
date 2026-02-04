@@ -276,7 +276,7 @@ export async function verifyAgencyAccess(
     context: {
       userId: session.userId,
       userName: session.userName,
-      userRole: session.userRole || 'member',
+      userRole: session.userRole || 'staff',
       agencyId: agency.id,
       agencySlug: agency.slug,
       agencyName: agency.name,

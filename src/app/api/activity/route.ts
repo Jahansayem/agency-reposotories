@@ -8,6 +8,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // GET - Fetch activity log (accessible to all authenticated users within their agency)
+// Staff users without can_view_all_tasks only see activities for tasks they created or are assigned to
 export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     // Set RLS context for defense-in-depth
@@ -16,17 +17,73 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const { searchParams } = new URL(request.url);
     const userName = searchParams.get('userName');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 500);
+    const offset = parseInt(searchParams.get('offset') || '0');
     const todoId = searchParams.get('todoId');
 
     if (!userName) {
       return NextResponse.json({ error: 'userName is required' }, { status: 400 });
     }
 
+    // Check if user has permission to view all tasks
+    const canViewAllTasks = ctx.permissions?.can_view_all_tasks ?? true;
+
+    // If staff without can_view_all_tasks, we need to filter activities
+    // to only show activities for tasks they created or are assigned to
+    if (!canViewAllTasks && !todoId) {
+      // First, get the list of todo IDs the user can see
+      let todosQuery = supabase
+        .from('todos')
+        .select('id')
+        .or(`created_by.eq.${ctx.userName},assigned_to.eq.${ctx.userName}`);
+
+      if (ctx.agencyId) {
+        todosQuery = todosQuery.eq('agency_id', ctx.agencyId);
+      }
+
+      const { data: userTodos, error: todosError } = await todosQuery;
+
+      if (todosError) {
+        logger.error('Error fetching user todos for activity filter', todosError, {
+          component: 'api/activity',
+          action: 'GET',
+        });
+        throw todosError;
+      }
+
+      const userTodoIds = (userTodos || []).map(t => t.id);
+
+      // Now fetch activities only for those todos (or activities without a todo_id like their own actions)
+      let query = supabase
+        .from('activity_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (ctx.agencyId) {
+        query = query.eq('agency_id', ctx.agencyId);
+      }
+
+      // Filter to: activities for user's tasks OR activities by the user themselves
+      if (userTodoIds.length > 0) {
+        query = query.or(`todo_id.in.(${userTodoIds.join(',')}),user_name.eq.${ctx.userName}`);
+      } else {
+        // User has no tasks, only show their own activities
+        query = query.eq('user_name', ctx.userName);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      return NextResponse.json(data || []);
+    }
+
+    // Standard query for users with can_view_all_tasks or when filtering by specific todoId
     let query = supabase
       .from('activity_log')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     // Scope to agency
     if (ctx.agencyId) {
