@@ -48,6 +48,53 @@ This document provides comprehensive context for AI assistants (like Claude Code
 
 ---
 
+## ⚠️ MANDATORY: Pre-Push Build Check
+
+**CRITICAL RULE: Always run `npm run build` before pushing ANY code changes.**
+
+This project has CI/CD TypeScript checking. Pushing code that fails TypeScript compilation will break the build for everyone.
+
+### Before Every Push
+
+```bash
+# REQUIRED before every git push:
+npm run build
+
+# If build fails, fix ALL errors before pushing
+# Common issues:
+# - Missing type exports (add to src/types/todo.ts)
+# - Using properties not defined on interfaces
+# - Importing types that don't exist
+```
+
+### Why This Matters
+
+1. **CI runs `tsc --noEmit`** - If your code doesn't compile locally, it will fail CI
+2. **Blocks all PRs** - TypeScript errors prevent merging
+3. **Wastes time** - Failed CI takes minutes to report what you could check in seconds
+4. **Type mismatches** - New components MUST use types that exist in `src/types/todo.ts`
+
+### Common Type Errors
+
+| Error | Fix |
+|-------|-----|
+| `Module has no exported member 'X'` | Add the type/interface to `src/types/todo.ts` and export it |
+| `Property 'X' does not exist on type 'Y'` | Add the property to the interface in `src/types/todo.ts` |
+| `Cannot find module` | Verify import path is correct |
+
+### Adding New Types
+
+When creating new features that need new types:
+
+1. **Add types FIRST** to `src/types/todo.ts`
+2. **Commit and push the types**
+3. **Then add components** that use those types
+4. **Run `npm run build`** before pushing
+
+**Never push components that reference types you haven't pushed yet.**
+
+---
+
 ## 🔒 Security Hardening Status (January 2026)
 
 **Allstate security compliance work completed.** The following has been implemented:
@@ -87,23 +134,24 @@ src/app/api/todos/            # Encrypted todo API
 
 ## Table of Contents
 
-1. [Sprint 3 Features (February 2026)](#sprint-3-features-february-2026) 🎉 **NEW**
-2. [Project Overview](#project-overview)
-3. [Architecture](#architecture)
-4. [Tech Stack Details](#tech-stack-details)
-5. [Database Schema Deep Dive](#database-schema-deep-dive)
-6. [Component Architecture](#component-architecture)
-7. [API Endpoints Reference](#api-endpoints-reference)
-8. [Real-Time Sync Patterns](#real-time-sync-patterns)
-9. [AI Integration](#ai-integration)
-10. [Authentication & Security](#authentication--security)
-11. [Common Patterns & Conventions](#common-patterns--conventions)
-12. [Browser Compatibility](#browser-compatibility) 🌐
-13. [Debugging & Troubleshooting](#debugging--troubleshooting)
-14. [Testing Strategy](#testing-strategy)
-15. [Deployment](#deployment)
-16. [**🚀 Refactoring Plan**](#refactoring-plan) ⭐
-17. [**🤖 Orchestrator Agent Guide**](#orchestrator-agent-guide) ⭐
+1. [⚠️ MANDATORY: Pre-Push Build Check](#️-mandatory-pre-push-build-check) ⛔ **READ FIRST**
+2. [Sprint 3 Features (February 2026)](#sprint-3-features-february-2026) 🎉
+3. [Project Overview](#project-overview)
+4. [Architecture](#architecture)
+5. [Tech Stack Details](#tech-stack-details)
+6. [Database Schema Deep Dive](#database-schema-deep-dive)
+7. [Component Architecture](#component-architecture)
+8. [API Endpoints Reference](#api-endpoints-reference)
+9. [Real-Time Sync Patterns](#real-time-sync-patterns)
+10. [AI Integration](#ai-integration)
+11. [Authentication & Security](#authentication--security)
+12. [Common Patterns & Conventions](#common-patterns--conventions)
+13. [Browser Compatibility](#browser-compatibility) 🌐
+14. [Debugging & Troubleshooting](#debugging--troubleshooting)
+15. [Testing Strategy](#testing-strategy)
+16. [Deployment](#deployment)
+17. [**🚀 Refactoring Plan**](#refactoring-plan) ⭐
+18. [**🤖 Orchestrator Agent Guide**](#orchestrator-agent-guide) ⭐
 
 ---
 
