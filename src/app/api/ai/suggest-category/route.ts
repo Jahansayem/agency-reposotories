@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { DashboardTaskCategory } from '@/types/todo';
+import { withSessionAuth } from '@/lib/agencyAuth';
 
 /**
  * Keyword patterns for each dashboard task category.
@@ -101,7 +102,7 @@ function suggestCategory(text: string): CategorySuggestion {
  * - confidence: number - Confidence score (0-1)
  * - reasoning: string - Explanation for the suggestion
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+async function handleSuggestCategory(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
 
@@ -143,3 +144,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 }
+
+// Export wrapped handler with session auth
+export const POST = withSessionAuth(async (request) => {
+  return handleSuggestCategory(request);
+});

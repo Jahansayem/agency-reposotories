@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
-import { extractAndValidateUserName } from '@/lib/apiAuth';
+import { withAiAuth } from '@/lib/agencyAuth';
 
 function getAnthropicClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -10,10 +10,7 @@ function getAnthropicClient(): Anthropic {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
-export async function POST(request: NextRequest) {
-  const { userName, error: authError } = await extractAndValidateUserName(request);
-  if (authError) return authError;
-
+async function handleParseFile(request: NextRequest): Promise<NextResponse> {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -189,3 +186,8 @@ Respond with ONLY the JSON object, no other text.`,
     );
   }
 }
+
+// Export wrapped handler with session auth and AI-specific error handling
+export const POST = withAiAuth('ParseFileAPI', async (request) => {
+  return handleParseFile(request);
+});

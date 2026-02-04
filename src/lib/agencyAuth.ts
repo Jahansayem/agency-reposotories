@@ -582,6 +582,71 @@ export function withSessionAuth(
 }
 
 /**
+ * Auth wrapper for AI routes that combines:
+ * 1. Session authentication (validates user session)
+ * 2. AI-specific error handling (rate limits, API errors)
+ *
+ * This is a lightweight auth wrapper specifically for AI routes that don't need
+ * full agency context. It validates the session and provides user identity,
+ * with AI-specific error handling for rate limits and other AI service errors.
+ *
+ * Usage:
+ * ```typescript
+ * export const POST = withAiAuth('ai-smart-parse', async (request, userId, userName) => {
+ *   // ... handler code
+ *   return NextResponse.json({ success: true });
+ * });
+ * ```
+ */
+export function withAiAuth(
+  component: string,
+  handler: (request: NextRequest, userId: string, userName: string) => Promise<NextResponse>
+): (request: NextRequest) => Promise<NextResponse> {
+  return async (request: NextRequest) => {
+    // First validate the session
+    const session = await validateSession(request);
+
+    if (!session.valid || !session.userId || !session.userName) {
+      return NextResponse.json(
+        { error: 'Unauthorized', message: session.error || 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    try {
+      return await handler(request, session.userId, session.userName);
+    } catch (error) {
+      // AI-specific error handling
+      if (error instanceof Error) {
+        // Handle rate limit errors from AI providers
+        if (error.message.includes('rate limit') || error.message.includes('Rate limit')) {
+          logger.warn('AI rate limit exceeded', {
+            component,
+            userId: session.userId,
+          });
+          return NextResponse.json(
+            { error: 'AI rate limit exceeded. Please try again in a moment.', code: 'AI_RATE_LIMIT' },
+            { status: 429 }
+          );
+        }
+
+        // Handle quota/credit errors
+        if (error.message.includes('quota') || error.message.includes('insufficient_quota')) {
+          logger.error('AI quota exceeded', error, { component });
+          return NextResponse.json(
+            { error: 'AI service temporarily unavailable.', code: 'AI_QUOTA_EXCEEDED' },
+            { status: 503 }
+          );
+        }
+      }
+
+      // Re-throw for general error handling
+      throw error;
+    }
+  };
+}
+
+/**
  * Get agency scope for database queries
  *
  * Returns an object with agency_id if multi-tenancy is enabled,
