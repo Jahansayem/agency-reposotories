@@ -1,24 +1,23 @@
 'use client';
 
-import React, { useState, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { memo } from 'react';
+import { motion } from 'framer-motion';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Flag,
   User,
-  Trash2,
   Clock,
   AlertCircle,
   FileText,
-  Edit3,
   CheckSquare,
   Paperclip,
   Music,
   Mic,
+  GripVertical,
 } from 'lucide-react';
 import { Todo, TodoPriority, PRIORITY_CONFIG } from '@/types/todo';
-import { formatDueDate, isOverdue, isDueToday, isDueSoon, getSnoozeDate } from './kanbanUtils';
+import { formatDueDate, isOverdue, isDueToday, isDueSoon } from './kanbanUtils';
 
 // ============================================
 // SortableCard Props & Memo Comparison
@@ -92,13 +91,7 @@ function areSortableCardPropsEqual(
 // ============================================
 
 export const SortableCard = memo(function SortableCard({ todo, users, onDelete, onAssign, onSetDueDate, onSetPriority, onCardClick, showBulkActions, isSelected, onSelectTodo }: SortableCardProps) {
-  const [showActions, setShowActions] = useState(false);
-  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
-
-  const handleSnooze = (days: number) => {
-    onSetDueDate(todo.id, getSnoozeDate(days));
-    setShowSnoozeMenu(false);
-  };
+  // Removed hover-based showActions state - cards no longer expand on hover
 
   const {
     attributes,
@@ -138,20 +131,18 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
     <motion.div
       id={`todo-${todo.id}`}
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, borderLeftColor: priorityConfig.color }}
       {...attributes}
       {...listeners}
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`group rounded-[var(--radius-xl)] border-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing bg-[var(--surface)] touch-manipulation ${
+      className={`group rounded-[var(--radius-xl)] border-l-4 border-y-2 border-r-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing bg-[var(--surface)] touch-manipulation ${
         isDragging
           ? 'shadow-2xl ring-2 ring-[var(--accent)] border-[var(--accent)]'
           : 'shadow-[var(--shadow-sm)] border-[var(--border-subtle)] hover:shadow-[var(--shadow-md)] hover:border-[var(--border-hover)]'
       }`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
       onClick={handleCardClick}
     >
       <div className="p-3 sm:p-3">
@@ -221,18 +212,11 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
               </span>
             )}
 
-            {/* "Has more" indicator - subtle dot when task has hidden content */}
-            {(hasNotes || subtaskCount > 0 || attachmentCount > 0 || hasTranscription) && (
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] opacity-40 group-hover:opacity-0 transition-opacity"
-                title="Hover for more details"
-              />
-            )}
           </div>
 
-          {/* SECONDARY ROW: Hidden by default, revealed on hover - Progressive Disclosure */}
+          {/* SECONDARY ROW: Always visible - shows additional task metadata */}
           {(hasNotes || subtaskCount > 0 || attachmentCount > 0 || hasTranscription) && (
-            <div className="flex items-center gap-2 mt-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
               {hasTranscription && (
                 <span className="inline-flex items-center gap-1 text-xs text-[var(--accent)]">
                   <Mic className="w-3 h-3" />
@@ -263,123 +247,8 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
             </div>
           )}
 
-          {/* Footer row - edit indicator */}
-          <div className="flex items-center justify-end mt-2">
-            <Edit3 className="w-3 h-3 text-[var(--text-light)] opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
           </div>
         </div>
-
-        {/* Quick actions */}
-        <AnimatePresence>
-          {showActions && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-3 pt-3 border-t border-[var(--border-subtle)] overflow-hidden"
-            >
-              {/* Row 1: Date and Assignee */}
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="date"
-                  value={todo.due_date ? todo.due_date.split('T')[0] : ''}
-                  onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
-                />
-                <select
-                  value={todo.assigned_to || ''}
-                  onChange={(e) => onAssign(todo.id, e.target.value || null)}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
-                >
-                  <option value="">Unassigned</option>
-                  {users.map((user) => (
-                    <option key={user} value={user}>{user}</option>
-                  ))}
-                </select>
-              </div>
-              {/* Row 2: Priority and Action Buttons */}
-              <div className="flex items-center gap-2">
-                <select
-                  value={priority}
-                  onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="flex-1 min-w-0 text-sm sm:text-xs px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] touch-manipulation"
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-                {/* Snooze button */}
-                {!todo.completed && (
-                  <div className="relative flex-shrink-0">
-                    <motion.button
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowSnoozeMenu(!showSnoozeMenu);
-                      }}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      className="p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-[var(--radius-lg)] hover:bg-amber-50 dark:hover:bg-amber-900/30 text-[var(--text-muted)] hover:text-amber-500 transition-colors touch-manipulation flex items-center justify-center"
-                      aria-label="Snooze task"
-                      title="Snooze (reschedule)"
-                    >
-                      <Clock className="w-5 h-5 sm:w-4 sm:h-4" />
-                    </motion.button>
-                    {showSnoozeMenu && (
-                      <div
-                        className="absolute right-0 bottom-full mb-1 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-50 py-1 min-w-[140px]"
-                        onPointerDown={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSnooze(1); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
-                        >
-                          Tomorrow
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSnooze(2); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
-                        >
-                          In 2 Days
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSnooze(7); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
-                        >
-                          Next Week
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleSnooze(30); }}
-                          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] text-[var(--foreground)]"
-                        >
-                          Next Month
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <motion.button
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(todo.id);
-                  }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="flex-shrink-0 p-2.5 sm:p-1.5 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-[var(--radius-lg)] hover:bg-red-50 dark:hover:bg-red-900/30 text-[var(--text-muted)] hover:text-red-500 transition-colors touch-manipulation flex items-center justify-center"
-                  aria-label="Delete task"
-                >
-                  <Trash2 className="w-5 h-5 sm:w-4 sm:h-4" />
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </motion.div>
   );
