@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, BellOff, Check, X, AlertCircle, Loader2 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -40,22 +40,44 @@ export function PushNotificationSettings({
   } = usePushNotifications(currentUser);
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleToggle = async () => {
+  // Cleanup timeout on unmount to prevent setState after unmount
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleToggle = useCallback(async () => {
+    // Clear any existing timeout
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = null;
+    }
+
     if (isSubscribed) {
       const success = await unsubscribe();
       if (success) {
         setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+        successTimeoutRef.current = setTimeout(() => {
+          setShowSuccess(false);
+          successTimeoutRef.current = null;
+        }, 3000);
       }
     } else {
       const success = await subscribe();
       if (success) {
         setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+        successTimeoutRef.current = setTimeout(() => {
+          setShowSuccess(false);
+          successTimeoutRef.current = null;
+        }, 3000);
       }
     }
-  };
+  }, [isSubscribed, subscribe, unsubscribe]);
 
   // Not supported
   if (!supported) {

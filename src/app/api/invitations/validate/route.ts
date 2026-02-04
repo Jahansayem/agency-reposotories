@@ -15,12 +15,40 @@ function hashToken(token: string): string {
  * Simple in-memory rate limiter for token validation.
  * Prevents brute-force token scanning.
  * Max 10 requests per minute per IP.
+ *
+ * Uses lazy cleanup on access instead of setInterval to avoid memory leaks
+ * in serverless/edge environments where module-level intervals persist.
  */
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const CLEANUP_THRESHOLD = 100; // Clean up when map exceeds this size
+let lastCleanupTime = 0;
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Lazy cleanup of expired rate limit entries.
+ * Called during rate limit checks instead of using setInterval.
+ */
+function lazyCleanup(): void {
+  const now = Date.now();
+  // Only run cleanup if enough time has passed and map is large enough
+  if (now - lastCleanupTime < CLEANUP_INTERVAL_MS && rateLimitMap.size < CLEANUP_THRESHOLD) {
+    return;
+  }
+
+  lastCleanupTime = now;
+  for (const [key, entry] of rateLimitMap.entries()) {
+    if (now >= entry.resetAt) {
+      rateLimitMap.delete(key);
+    }
+  }
+}
 
 function checkInMemoryRateLimit(ip: string): boolean {
+  // Perform lazy cleanup on each check
+  lazyCleanup();
+
   const now = Date.now();
   const entry = rateLimitMap.get(ip);
 
@@ -36,16 +64,6 @@ function checkInMemoryRateLimit(ip: string): boolean {
   entry.count++;
   return true;
 }
-
-// Periodically clean up expired entries (every 5 minutes)
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap.entries()) {
-    if (now >= entry.resetAt) {
-      rateLimitMap.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
 
 /**
  * POST /api/invitations/validate

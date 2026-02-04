@@ -347,8 +347,11 @@ export function playSuccessSound() {
   if (typeof Audio !== 'undefined') {
     const audio = new Audio('/sounds/success.mp3');
     audio.volume = 0.3;
-    audio.play().catch(() => {
-      // Ignore - user might not have interacted yet
+    audio.play().catch((err) => {
+      // Audio play may fail if user hasn't interacted yet (autoplay policy)
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[microInteractions] playSuccessSound failed:', err?.message || err);
+      }
     });
   }
 }
@@ -360,8 +363,11 @@ export function playErrorSound() {
   if (typeof Audio !== 'undefined') {
     const audio = new Audio('/sounds/error.mp3');
     audio.volume = 0.3;
-    audio.play().catch(() => {
-      // Ignore
+    audio.play().catch((err) => {
+      // Audio play may fail if user hasn't interacted yet (autoplay policy)
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[microInteractions] playErrorSound failed:', err?.message || err);
+      }
     });
   }
 }
@@ -373,8 +379,11 @@ export function playNotificationSound() {
   if (typeof Audio !== 'undefined') {
     const audio = new Audio('/sounds/notification-chime.wav');
     audio.volume = 0.5;
-    audio.play().catch(() => {
-      // Ignore
+    audio.play().catch((err) => {
+      // Audio play may fail if user hasn't interacted yet (autoplay policy)
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('[microInteractions] playNotificationSound failed:', err?.message || err);
+      }
     });
   }
 }

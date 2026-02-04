@@ -55,18 +55,24 @@ export function ServiceWorkerRegistration() {
         }
       });
 
-      // Listen for offline/online events
-      window.addEventListener('online', () => {
+      // Listen for offline/online events with named handlers for cleanup
+      const handleOnline = () => {
         console.log('App is online');
         // Dispatch custom event for components to listen to
         window.dispatchEvent(new CustomEvent('app-online'));
-      });
+      };
 
-      window.addEventListener('offline', () => {
+      const handleOffline = () => {
         console.log('App is offline');
         // Dispatch custom event for components to listen to
         window.dispatchEvent(new CustomEvent('app-offline'));
-      });
+      };
+
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+
+      // Store interval ID for cleanup
+      let updateIntervalId: ReturnType<typeof setInterval> | undefined;
 
       // Register the service worker
       wb.register()
@@ -74,7 +80,7 @@ export function ServiceWorkerRegistration() {
           console.log('Service Worker registered:', registration);
 
           // Check for updates every hour
-          setInterval(() => {
+          updateIntervalId = setInterval(() => {
             registration?.update();
           }, 60 * 60 * 1000);
         })
@@ -82,8 +88,14 @@ export function ServiceWorkerRegistration() {
           logger.error('Service Worker registration failed', error as Error, { component: 'ServiceWorkerRegistration', action: 'register' });
         });
 
-      // Cleanup happens automatically when component unmounts
-      // Workbox manages event listeners internally
+      // Cleanup function to clear interval and remove event listeners on unmount
+      return () => {
+        if (updateIntervalId) {
+          clearInterval(updateIntervalId);
+        }
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
     }
   }, []);
 

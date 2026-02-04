@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SupabaseClient, PostgrestSingleResponse } from '@supabase/supabase-js';
 import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import { logger } from '@/lib/logger';
+import type { Todo } from '@/types/todo';
+
+/**
+ * Type guard to check if Supabase response has data
+ */
+function hasData<T>(response: PostgrestSingleResponse<T>): response is PostgrestSingleResponse<T> & { data: T } {
+  return response.data !== null;
+}
 
 /**
  * POST /api/todos/reorder
@@ -29,7 +38,7 @@ async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
     const body = await request.json();
     const { todoId, newOrder, direction, targetTodoId, orderedIds } = body;
 
-    let updatedTasks: any[] = [];
+    let updatedTasks: Todo[] = [];
 
     // Mode 4: Explicit ordered list (preferred for drag-and-drop)
     if (orderedIds && Array.isArray(orderedIds)) {
@@ -121,12 +130,12 @@ export const POST = withAgencyAuth(handleReorder);
  * Move task to a specific position — scoped to agency
  */
 async function moveToPosition(
-  supabase: any,
+  supabase: SupabaseClient,
   todoId: string,
   currentOrder: number,
   newOrder: number,
-  agencyId: string
-): Promise<any[]> {
+  agencyId: string | null
+): Promise<Todo[]> {
   // Get all tasks ordered by display_order — scoped to agency
   let query = supabase
     .from('todos')
@@ -141,21 +150,23 @@ async function moveToPosition(
 
   if (!allTasks) return [];
 
+  const typedTasks = allTasks as Todo[];
+
   // Remove task from current position
-  const task = allTasks.find((t: any) => t.id === todoId);
-  const otherTasks = allTasks.filter((t: any) => t.id !== todoId);
+  const task = typedTasks.find((t) => t.id === todoId);
+  const otherTasks = typedTasks.filter((t) => t.id !== todoId);
 
   // Insert task at new position
   otherTasks.splice(newOrder, 0, task!);
 
   // Reassign display_order — only update tasks whose order actually changed
   const updates = otherTasks
-    .map((t: any, index: number) => ({ id: t.id, display_order: index, oldOrder: t.display_order }))
-    .filter((u: any) => u.display_order !== u.oldOrder);
+    .map((t, index) => ({ id: t.id, display_order: index, oldOrder: t.display_order }))
+    .filter((u) => u.display_order !== u.oldOrder);
 
   // Don't touch updated_at — avoids triggering real-time content-change events
   // BUGFIX API-006: Use Promise.all for parallel updates instead of sequential N+1 queries
-  const updatePromises = updates.map((update: { id: string; display_order: number }) =>
+  const updatePromises = updates.map((update) =>
     supabase
       .from('todos')
       .update({ display_order: update.display_order })
@@ -166,8 +177,8 @@ async function moveToPosition(
 
   const results = await Promise.all(updatePromises);
   const updatedTasks = results
-    .filter((r: { data: unknown }) => r.data)
-    .map((r: { data: unknown }) => r.data);
+    .filter(hasData)
+    .map((r) => r.data as Todo);
 
   return updatedTasks;
 }
@@ -176,12 +187,12 @@ async function moveToPosition(
  * Move task up or down one position — scoped to agency
  */
 async function moveUpOrDown(
-  supabase: any,
+  supabase: SupabaseClient,
   todoId: string,
   currentOrder: number,
   direction: 'up' | 'down',
-  agencyId: string
-): Promise<any[]> {
+  agencyId: string | null
+): Promise<Todo[]> {
   const offset = direction === 'up' ? -1 : 1;
   const targetOrder = currentOrder + offset;
 
@@ -202,6 +213,8 @@ async function moveUpOrDown(
     return [];
   }
 
+  const typedTargetTask = targetTask as Todo;
+
   // Swap display_order
   const updates = [
     {
@@ -209,7 +222,7 @@ async function moveUpOrDown(
       display_order: targetOrder,
     },
     {
-      id: targetTask.id,
+      id: typedTargetTask.id,
       display_order: currentOrder,
     },
   ];
@@ -226,8 +239,8 @@ async function moveUpOrDown(
 
   const results = await Promise.all(updatePromises);
   const updatedTasks = results
-    .filter((r) => r.data)
-    .map((r) => r.data);
+    .filter(hasData)
+    .map((r) => r.data as Todo);
 
   return updatedTasks;
 }
@@ -235,7 +248,12 @@ async function moveUpOrDown(
 /**
  * Swap two tasks — verifies both belong to same agency
  */
-async function swapTasks(supabase: any, todoId: string, targetTodoId: string, agencyId: string): Promise<any[]> {
+async function swapTasks(
+  supabase: SupabaseClient,
+  todoId: string,
+  targetTodoId: string,
+  agencyId: string | null
+): Promise<Todo[]> {
   let query = supabase
     .from('todos')
     .select('*')
@@ -251,7 +269,8 @@ async function swapTasks(supabase: any, todoId: string, targetTodoId: string, ag
     return [];
   }
 
-  const [task1, task2] = tasks;
+  const typedTasks = tasks as Todo[];
+  const [task1, task2] = typedTasks;
 
   // Swap display_order
   const updates = [
@@ -271,8 +290,8 @@ async function swapTasks(supabase: any, todoId: string, targetTodoId: string, ag
 
   const results = await Promise.all(updatePromises);
   const updatedTasks = results
-    .filter((r) => r.data)
-    .map((r) => r.data);
+    .filter(hasData)
+    .map((r) => r.data as Todo);
 
   return updatedTasks;
 }
@@ -283,10 +302,10 @@ async function swapTasks(supabase: any, todoId: string, targetTodoId: string, ag
  * Only updates tasks whose display_order actually changed.
  */
 async function setExplicitOrder(
-  supabase: any,
+  supabase: SupabaseClient,
   orderedIds: string[],
-  agencyId: string
-): Promise<any[]> {
+  agencyId: string | null
+): Promise<Todo[]> {
   if (orderedIds.length === 0) return [];
 
   // Fetch current display_order for these tasks (to skip unchanged ones)
@@ -302,8 +321,9 @@ async function setExplicitOrder(
   const { data: currentTasks } = await query;
   if (!currentTasks) return [];
 
-  const currentOrderMap = new Map<string, number | null>(
-    currentTasks.map((t: any) => [t.id, t.display_order])
+  const typedCurrentTasks = currentTasks as Pick<Todo, 'id' | 'display_order'>[];
+  const currentOrderMap = new Map<string, number | undefined>(
+    typedCurrentTasks.map((t) => [t.id, t.display_order])
   );
 
   // Only update tasks whose display_order actually changed
@@ -326,8 +346,8 @@ async function setExplicitOrder(
 
   const results = await Promise.all(updatePromises);
   const updatedTasks = results
-    .filter((r) => r.data)
-    .map((r) => r.data);
+    .filter(hasData)
+    .map((r) => r.data as Todo);
 
   return updatedTasks;
 }

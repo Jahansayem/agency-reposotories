@@ -18,6 +18,18 @@ import { withSystemAuth } from '@/lib/agencyAuth';
 import type { Todo, ActivityLogEntry } from '@/types/todo';
 
 /**
+ * Type for agency_members join with users table
+ * Used when fetching members with their user details for digest generation
+ */
+interface AgencyMemberWithUser {
+  user_id: string;
+  users: {
+    id: string;
+    name: string;
+  };
+}
+
+/**
  * Get today's date in Pacific Time (YYYY-MM-DD format).
  * This is important because cron jobs run in Pacific Time.
  */
@@ -474,8 +486,8 @@ export const POST = withSystemAuth(async (request: NextRequest) => {
         }
 
         for (const member of members) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const user = (member as any).users;
+          const typedMember = member as unknown as AgencyMemberWithUser;
+          const user = typedMember.users;
           if (!user) continue;
 
           try {

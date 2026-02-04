@@ -81,7 +81,10 @@ export function useTodoData(currentUser: AuthUser) {
     // Staff data scoping (M6 fix): when user lacks can_view_all_tasks,
     // only fetch tasks they created or are assigned to.
     if (!canViewAllTasks) {
-      const scopeFilter = `created_by.eq.${userName},assigned_to.eq.${userName}`;
+      // Sanitize userName for PostgREST filter syntax (escape special chars that could break filter)
+      const sanitizeForFilter = (str: string) => str.replace(/[,().]/g, '');
+      const safeUserName = sanitizeForFilter(userName);
+      const scopeFilter = `created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`;
       countQuery = countQuery.or(scopeFilter);
       todosQuery = todosQuery.or(scopeFilter);
     }
@@ -271,6 +274,11 @@ export function useTodoData(currentUser: AuthUser) {
       created_by: newTodo.created_by,
     };
 
+    // Set agency_id for multi-tenancy data isolation
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
+
     if (newTodo.status && newTodo.status !== 'todo') insertData.status = newTodo.status;
     if (newTodo.priority && newTodo.priority !== 'medium') insertData.priority = newTodo.priority;
     if (newTodo.due_date) insertData.due_date = newTodo.due_date;
@@ -367,7 +375,7 @@ export function useTodoData(currentUser: AuthUser) {
     }
 
     return newTodo;
-  }, [userName, addTodoToStore, deleteTodoFromStore, toast]);
+  }, [userName, addTodoToStore, deleteTodoFromStore, toast, currentAgencyId]);
 
   // Update an existing todo
   const updateTodo = useCallback(async (id: string, updates: Partial<Todo>) => {
@@ -529,7 +537,10 @@ export function useTodoData(currentUser: AuthUser) {
 
       // Staff data scoping for pagination too
       if (!canViewAllTasks) {
-        query = query.or(`created_by.eq.${userName},assigned_to.eq.${userName}`);
+        // Sanitize userName for PostgREST filter syntax (escape special chars that could break filter)
+        const sanitizeForFilter = (str: string) => str.replace(/[,().]/g, '');
+        const safeUserName = sanitizeForFilter(userName);
+        query = query.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
       }
 
       const { data, error } = await query;

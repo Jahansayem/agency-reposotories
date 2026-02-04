@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAgency } from '@/contexts/AgencyContext';
 import { useAppShell } from './layout/AppShell';
 import { logActivity } from '@/lib/activityLogger';
 import { useAnnouncement } from './LiveRegion';
@@ -79,6 +80,7 @@ const getCompletedAtMs = (todo: Todo): number | null => {
 export default function TodoList({ currentUser, onUserChange, initialFilter, autoFocusAddTask, onAddTaskModalOpened, onInitialFilterApplied, selectedTaskId, onSelectedTaskHandled }: TodoListProps) {
   const userName = currentUser.name;
   const { theme } = useTheme();
+  const { currentAgencyId } = useAgency();
   const canViewArchive = usePermission('can_view_archive');
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
   const canManageTemplates = usePermission('can_manage_templates');
@@ -517,6 +519,11 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
     if (newTodo.notes) insertData.notes = newTodo.notes;
     if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
 
+    // Set agency_id for multi-tenancy
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
+
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
     if (insertError) {
@@ -755,6 +762,11 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
     if (newTodo.notes) insertData.notes = newTodo.notes;
     if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
 
+    // Set agency_id for multi-tenancy
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
+
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
     if (insertError) {
@@ -904,6 +916,11 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
     if (newTodo.priority && newTodo.priority !== 'medium') insertData.priority = newTodo.priority;
     if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
     if (newTodo.notes) insertData.notes = newTodo.notes;
+
+    // Set agency_id for multi-tenancy
+    if (currentAgencyId) {
+      insertData.agency_id = currentAgencyId;
+    }
 
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 

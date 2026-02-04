@@ -29,30 +29,97 @@ const MAX_RETRIES = 3;
 const SYNC_INTERVAL = 5000; // 5 seconds
 const FETCH_INTERVAL = 30000; // 30 seconds
 
-let syncIntervalId: NodeJS.Timeout | null = null;
-let fetchIntervalId: NodeJS.Timeout | null = null;
-let isSyncing = false;
+/**
+ * Singleton state manager for offline sync
+ * Ensures thread-safe state access and proper initialization
+ */
+class SyncStateManager {
+  private static instance: SyncStateManager | null = null;
+  private _syncIntervalId: NodeJS.Timeout | null = null;
+  private _fetchIntervalId: NodeJS.Timeout | null = null;
+  private _isSyncing = false;
+  private _initialized = false;
+
+  private constructor() {
+    // Private constructor for singleton pattern
+  }
+
+  static getInstance(): SyncStateManager {
+    if (!SyncStateManager.instance) {
+      SyncStateManager.instance = new SyncStateManager();
+    }
+    return SyncStateManager.instance;
+  }
+
+  get syncIntervalId(): NodeJS.Timeout | null {
+    return this._syncIntervalId;
+  }
+
+  set syncIntervalId(value: NodeJS.Timeout | null) {
+    this._syncIntervalId = value;
+  }
+
+  get fetchIntervalId(): NodeJS.Timeout | null {
+    return this._fetchIntervalId;
+  }
+
+  set fetchIntervalId(value: NodeJS.Timeout | null) {
+    this._fetchIntervalId = value;
+  }
+
+  get isSyncing(): boolean {
+    return this._isSyncing;
+  }
+
+  set isSyncing(value: boolean) {
+    this._isSyncing = value;
+  }
+
+  get initialized(): boolean {
+    return this._initialized;
+  }
+
+  markInitialized(): void {
+    this._initialized = true;
+  }
+
+  reset(): void {
+    if (this._syncIntervalId) {
+      clearInterval(this._syncIntervalId);
+      this._syncIntervalId = null;
+    }
+    if (this._fetchIntervalId) {
+      clearInterval(this._fetchIntervalId);
+      this._fetchIntervalId = null;
+    }
+    this._isSyncing = false;
+  }
+}
+
+// Get singleton instance for controlled state access
+const syncState = SyncStateManager.getInstance();
 
 /**
  * Start periodic sync (when app comes online)
  */
 export function startPeriodicSync(): void {
-  if (syncIntervalId) {
+  if (syncState.syncIntervalId) {
     return; // Already running
   }
 
   console.log('Starting periodic sync...');
+  syncState.markInitialized();
 
   // Sync immediately on start
   syncOfflineData();
 
   // Then sync every 5 seconds
-  syncIntervalId = setInterval(() => {
+  syncState.syncIntervalId = setInterval(() => {
     syncOfflineData();
   }, SYNC_INTERVAL);
 
   // Fetch fresh data every 30 seconds
-  fetchIntervalId = setInterval(() => {
+  syncState.fetchIntervalId = setInterval(() => {
     fetchAndCacheData();
   }, FETCH_INTERVAL);
 }
@@ -61,16 +128,7 @@ export function startPeriodicSync(): void {
  * Stop periodic sync (when app goes offline)
  */
 export function stopPeriodicSync(): void {
-  if (syncIntervalId) {
-    clearInterval(syncIntervalId);
-    syncIntervalId = null;
-  }
-
-  if (fetchIntervalId) {
-    clearInterval(fetchIntervalId);
-    fetchIntervalId = null;
-  }
-
+  syncState.reset();
   console.log('Stopped periodic sync');
 }
 
@@ -79,7 +137,7 @@ export function stopPeriodicSync(): void {
  * Processes the sync queue and uploads pending changes
  */
 export async function syncOfflineData(): Promise<void> {
-  if (isSyncing) {
+  if (syncState.isSyncing) {
     return; // Already syncing
   }
 
@@ -88,7 +146,7 @@ export async function syncOfflineData(): Promise<void> {
     return;
   }
 
-  isSyncing = true;
+  syncState.isSyncing = true;
 
   try {
     // Get all pending sync operations
@@ -129,7 +187,7 @@ export async function syncOfflineData(): Promise<void> {
   } catch (error) {
     logger.error('Sync error', error as Error, { component: 'offlineSync', action: 'syncOfflineData' });
   } finally {
-    isSyncing = false;
+    syncState.isSyncing = false;
   }
 }
 
@@ -156,6 +214,15 @@ async function syncTodoOperation(item: {
   data: Todo;
 }): Promise<void> {
   if (item.type === 'create') {
+    // Warn if todo is missing agency_id (data isolation risk)
+    if (!item.data.agency_id) {
+      logger.warn('[offlineSync] Todo missing agency_id - data isolation risk', {
+        component: 'offlineSync',
+        action: 'syncTodoOperation',
+        todoId: item.data.id,
+        todoText: item.data.text?.substring(0, 50),
+      });
+    }
     const { error } = await supabase.from('todos').insert(item.data);
     if (error) throw error;
   } else if (item.type === 'update') {

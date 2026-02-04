@@ -48,6 +48,8 @@ export function useTypingIndicator(
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const channelRef = useRef<any>(null);
+  const isTypingRef = useRef(false);
+  const broadcastTypingRef = useRef<((typing: boolean) => Promise<void>) | null>(null);
 
   /**
    * Broadcast typing status
@@ -75,6 +77,10 @@ export function useTypingIndicator(
     },
     [currentUser, channel]
   );
+
+  // Keep refs in sync with current values for cleanup
+  isTypingRef.current = isTyping;
+  broadcastTypingRef.current = broadcastTyping;
 
   /**
    * Set typing status (debounced)
@@ -163,9 +169,9 @@ export function useTypingIndicator(
     }, 1000);
 
     return () => {
-      // Stop typing on unmount
-      if (isTyping) {
-        broadcastTyping(false);
+      // Stop typing on unmount using refs to avoid stale closures
+      if (isTypingRef.current && broadcastTypingRef.current) {
+        broadcastTypingRef.current(false);
       }
 
       // Clear timers
@@ -182,7 +188,7 @@ export function useTypingIndicator(
       supabase.removeChannel(typingChannel);
       channelRef.current = null;
     };
-  }, [currentUser, channel, timeoutMs, isTyping, broadcastTyping]);
+  }, [currentUser, channel, timeoutMs]);
 
   return {
     /**

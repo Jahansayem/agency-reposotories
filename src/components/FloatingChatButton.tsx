@@ -12,6 +12,27 @@ import { logger } from '@/lib/logger';
 
 const CHAT_STATE_KEY = 'floating_chat_last_conversation';
 
+/**
+ * Runtime validation for ChatConversation type
+ * Ensures parsed JSON matches expected structure before casting
+ */
+function isValidChatConversation(value: unknown): value is ChatConversation {
+  if (!value || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+
+  // Validate 'team' conversation type
+  if (obj.type === 'team') {
+    return true;
+  }
+
+  // Validate 'dm' conversation type
+  if (obj.type === 'dm' && typeof obj.userName === 'string' && obj.userName.length > 0) {
+    return true;
+  }
+
+  return false;
+}
+
 // Lazy load ChatPanel for better performance
 const ChatPanel = dynamic(() => import('./ChatPanel'), {
   ssr: false,
@@ -41,9 +62,9 @@ export default function FloatingChatButton({
       const stored = localStorage.getItem(CHAT_STATE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Validate the structure
-        if (parsed && parsed.conversation) {
-          return parsed.conversation as ChatConversation;
+        // Validate the structure with runtime type checking
+        if (parsed && parsed.conversation && isValidChatConversation(parsed.conversation)) {
+          return parsed.conversation;
         }
       }
     } catch {

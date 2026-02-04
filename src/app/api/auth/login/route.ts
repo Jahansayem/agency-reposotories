@@ -10,6 +10,21 @@ import { apiErrorResponse } from '@/lib/apiResponse';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+/**
+ * Type for agency_members join with agencies table
+ * Used when fetching user's agency membership with agency details
+ */
+interface AgencyMembershipWithAgency {
+  agency_id: string;
+  role: string;
+  is_default_agency?: boolean;
+  agencies: {
+    id?: string;
+    name: string;
+    slug?: string;
+  };
+}
+
 // Lazy initialization - only validate at runtime, not build time
 // TYPE-012 Fix: Use SupabaseClient type instead of any
 let supabase: SupabaseClient | null = null;
@@ -138,10 +153,10 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (defaultMembership?.agency_id) {
-      agencyId = defaultMembership.agency_id;
-      agencyRole = defaultMembership.role;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      agencyName = (defaultMembership.agencies as any)?.name || null;
+      const membership = defaultMembership as unknown as AgencyMembershipWithAgency;
+      agencyId = membership.agency_id;
+      agencyRole = membership.role;
+      agencyName = membership.agencies?.name || null;
     } else {
       // Fallback: any active agency
       const { data: anyMembership } = await getSupabase()
@@ -153,10 +168,10 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (anyMembership?.agency_id) {
-        agencyId = anyMembership.agency_id;
-        agencyRole = anyMembership.role;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        agencyName = (anyMembership.agencies as any)?.name || null;
+        const membership = anyMembership as unknown as AgencyMembershipWithAgency;
+        agencyId = membership.agency_id;
+        agencyRole = membership.role;
+        agencyName = membership.agencies?.name || null;
       }
     }
 
@@ -170,14 +185,16 @@ export async function POST(request: NextRequest) {
         .eq('status', 'active');
 
       if (membershipRows && Array.isArray(membershipRows)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        agencies = membershipRows.map((row: any) => ({
-          id: row.agency_id,
-          name: row.agencies?.name || '',
-          slug: row.agencies?.slug || '',
-          role: row.role,
-          is_default: row.is_default_agency || false,
-        }));
+        agencies = membershipRows.map((row) => {
+          const membership = row as unknown as AgencyMembershipWithAgency;
+          return {
+            id: membership.agency_id,
+            name: membership.agencies?.name || '',
+            slug: membership.agencies?.slug || '',
+            role: membership.role,
+            is_default: membership.is_default_agency || false,
+          };
+        });
       }
     }
 

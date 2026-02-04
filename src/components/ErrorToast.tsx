@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, X, RefreshCw, LogIn, Edit, Mail } from 'lucide-react';
 import { ErrorMessage, ErrorCategory } from '@/lib/errorMessages';
@@ -39,12 +40,33 @@ export default function ErrorToast({
   onLogin,
   autoHideDuration = 8000,
 }: ErrorToastProps) {
-  // Auto-hide after duration
-  if (error && autoHideDuration > 0) {
-    setTimeout(() => {
-      onDismiss();
-    }, autoHideDuration);
-  }
+  const autoHideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-hide after duration - properly managed with useEffect to prevent
+  // multiple timeouts and setState after unmount
+  useEffect(() => {
+    // Clear any existing timeout when error changes or component re-renders
+    if (autoHideTimeoutRef.current) {
+      clearTimeout(autoHideTimeoutRef.current);
+      autoHideTimeoutRef.current = null;
+    }
+
+    // Set up new timeout only if error exists and autoHide is enabled
+    if (error && autoHideDuration > 0) {
+      autoHideTimeoutRef.current = setTimeout(() => {
+        onDismiss();
+        autoHideTimeoutRef.current = null;
+      }, autoHideDuration);
+    }
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      if (autoHideTimeoutRef.current) {
+        clearTimeout(autoHideTimeoutRef.current);
+        autoHideTimeoutRef.current = null;
+      }
+    };
+  }, [error, autoHideDuration, onDismiss]);
 
   // Determine which action buttons to show based on error category
   const getActionButtons = () => {

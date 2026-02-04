@@ -105,16 +105,19 @@ export async function verifyAgencyAccess(
     };
   }
 
-  // If multi-tenancy is disabled, return success with null agency context
+  // If multi-tenancy is disabled, return success with minimal agency context
   if (!isFeatureEnabled('multi_tenancy')) {
-    // Return a minimal context for backward compatibility
+    // Return a minimal context for backward compatibility.
+    // NOTE: agencyId is empty string (falsy) in single-tenant mode.
+    // Consumers MUST check with `if (ctx.agencyId)` before using in queries
+    // like `.eq('agency_id', ctx.agencyId)` to avoid matching empty strings.
     return {
       success: true,
       context: {
         userId: session.userId,
         userName: session.userName,
         userRole: session.userRole || 'staff',
-        agencyId: '', // No agency in single-tenant mode
+        agencyId: '', // Empty string is intentional - checked with `if (ctx.agencyId)` before use
         agencySlug: '',
         agencyName: '',
         agencyRole: (session.userRole as AgencyRole) || 'staff',

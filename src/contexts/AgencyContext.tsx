@@ -18,6 +18,23 @@ import type {
 } from '@/types/agency';
 import { DEFAULT_PERMISSIONS } from '@/types/agency';
 import { useCurrentUser } from '@/contexts/UserContext';
+
+/**
+ * Type for the raw data returned from Supabase agency_members join with agencies
+ * Used when fetching user's agency memberships with agency details
+ */
+interface AgencyMembershipQueryResult {
+  agency_id: string;
+  role: string;
+  permissions: AgencyPermissions;
+  is_default_agency: boolean;
+  agencies: {
+    id: string;
+    name: string;
+    slug: string;
+    is_active: boolean;
+  };
+}
 import { useTodoStore } from '@/store/todoStore';
 import { useToast } from '@/components/ui/Toast';
 import { logger } from '@/lib/logger';
@@ -152,16 +169,15 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
       }
 
       // Transform the data - Supabase returns joined data as nested objects
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawData = data as any[];
-      const memberships: AgencyMembership[] = (rawData || [])
+      const rawData = (data || []) as unknown as AgencyMembershipQueryResult[];
+      const memberships: AgencyMembership[] = rawData
         .filter((m) => m.agencies?.is_active)
         .map((m) => ({
           agency_id: m.agency_id,
           agency_name: m.agencies.name,
           agency_slug: m.agencies.slug,
           role: m.role as AgencyRole,
-          permissions: m.permissions as AgencyPermissions,
+          permissions: m.permissions,
           is_default: m.is_default_agency,
         }));
 
@@ -273,9 +289,14 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
     return currentMembership.permissions[permission] === true;
   }, [currentMembership, isMultiTenancyEnabled, currentUserFromContext]);
 
-  // Computed values
-  const isAgencyOwner = currentMembership?.role === 'owner';
-  const isAgencyAdmin = currentMembership?.role === 'owner' || currentMembership?.role === 'manager';
+  // Computed values - with single-tenant fallback
+  const userRoleFromContext = currentUserFromContext?.role as AgencyRole | undefined;
+  const isAgencyOwner = isMultiTenancyEnabled
+    ? currentMembership?.role === 'owner'
+    : userRoleFromContext === 'owner';
+  const isAgencyAdmin = isMultiTenancyEnabled
+    ? currentMembership?.role === 'owner' || currentMembership?.role === 'manager'
+    : userRoleFromContext === 'owner' || userRoleFromContext === 'manager';
 
   // Subscribe to real-time agency updates
   useEffect(() => {

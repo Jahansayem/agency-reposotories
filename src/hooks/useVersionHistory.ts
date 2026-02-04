@@ -30,7 +30,7 @@ export interface TodoVersion {
   assigned_to: string | null;
   due_date: string | null;
   notes: string | null;
-  subtasks: any[];
+  subtasks: Array<{ id: string; text: string; completed: boolean; priority: string; estimatedMinutes?: number }>;
   recurrence: string | null;
 
   // Change metadata
@@ -41,6 +41,11 @@ export interface TodoVersion {
 
   created_at: string;
 }
+
+/**
+ * Keys that can be compared between TodoVersion objects for diffing
+ */
+type ComparableVersionKey = 'text' | 'status' | 'priority' | 'assigned_to' | 'due_date' | 'completed' | 'notes' | 'subtasks' | 'recurrence';
 
 export function useVersionHistory(todoId?: string) {
   const [versions, setVersions] = useState<TodoVersion[]>([]);
@@ -155,11 +160,11 @@ export function useVersionHistory(todoId?: string) {
   ): {
     field: string;
     label: string;
-    oldValue: any;
-    newValue: any;
+    oldValue: TodoVersion[ComparableVersionKey];
+    newValue: TodoVersion[ComparableVersionKey];
     changed: boolean;
   }[] => {
-    const fields = [
+    const fields: Array<{ key: ComparableVersionKey; label: string }> = [
       { key: 'text', label: 'Title' },
       { key: 'status', label: 'Status' },
       { key: 'priority', label: 'Priority' },
@@ -172,8 +177,8 @@ export function useVersionHistory(todoId?: string) {
     ];
 
     return fields.map(({ key, label }) => {
-      const oldValue = (version1 as any)[key];
-      const newValue = (version2 as any)[key];
+      const oldValue = version1[key];
+      const newValue = version2[key];
 
       let changed = false;
       if (key === 'subtasks') {

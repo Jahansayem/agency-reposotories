@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown, Minus, X, Target, Sparkles, AlertCircle } from 'lucide-react';
 import { Todo } from '@/types/todo';
@@ -30,21 +30,38 @@ export default function WeeklyProgressChart({
 }: WeeklyProgressChartProps) {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<number | null>(null);
+  const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close on Escape key press
   useEscapeKey(onClose, { enabled: show });
 
   // Touch handler for mobile (Issue #22: Touch Event Handlers for Charts)
-  const handleBarTouch = (index: number) => {
+  // Uses useCallback and ref-based timeout tracking to prevent setState after unmount
+  const handleBarTouch = useCallback((index: number) => {
     setActiveTooltip(index);
     setHoveredDay(index);
 
+    // Clear any existing timeout
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+    }
+
     // Auto-hide tooltip after 2 seconds
-    setTimeout(() => {
+    tooltipTimeoutRef.current = setTimeout(() => {
       setActiveTooltip(null);
       setHoveredDay(null);
+      tooltipTimeoutRef.current = null;
     }, 2000);
-  };
+  }, []);
+
+  // Cleanup timeout on unmount to prevent setState after unmount
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const weekData = useMemo(() => {
     const today = new Date();
