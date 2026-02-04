@@ -1,4 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
+import {
+  processSamlClaims,
+  getAgencyForSession,
+  type ClerkUserMetadata,
+  type SamlClaimResult,
+} from './samlClaimHandler';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -27,6 +34,16 @@ interface ClerkUserData {
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  /** Clerk user metadata containing SAML claims from Allstate PingFederate */
+  publicMetadata?: Record<string, unknown>;
+  privateMetadata?: Record<string, unknown>;
+  unsafeMetadata?: Record<string, unknown>;
+  /** External accounts (for SAML providers) */
+  externalAccounts?: Array<{
+    provider?: string;
+    providerUserId?: string;
+    samlAttributes?: Record<string, string | string[]>;
+  }>;
 }
 
 interface LinkedUser {
@@ -38,13 +55,52 @@ interface LinkedUser {
 }
 
 /**
+ * Extended result including SAML claim processing
+ */
+interface LinkClerkUserResult {
+  user: LinkedUser;
+  /** Result of SAML claim processing (agency assignment) */
+  samlResult?: SamlClaimResult;
+  /** Agency ID to use for the session */
+  sessionAgencyId?: string | null;
+}
+
+/**
  * Link a Clerk user to an existing database user or create a new one
  *
- * @param clerkData - User data from Clerk
- * @returns The linked or created user
+ * This function also processes SAML claims from Allstate PingFederate:
+ * - Extracts agency_code from Clerk user metadata
+ * - Auto-creates agency if it doesn't exist
+ * - Assigns user to agency with appropriate role
+ *
+ * @param clerkData - User data from Clerk (including SAML metadata)
+ * @returns The linked or created user with SAML processing result
  */
 export async function linkClerkUser(clerkData: ClerkUserData): Promise<LinkedUser> {
-  const { clerkUserId, email, firstName, lastName } = clerkData;
+  const result = await linkClerkUserWithSaml(clerkData);
+  return result.user;
+}
+
+/**
+ * Link a Clerk user with full SAML claim processing
+ *
+ * @param clerkData - User data from Clerk (including SAML metadata)
+ * @returns The linked user, SAML result, and session agency ID
+ */
+export async function linkClerkUserWithSaml(clerkData: ClerkUserData): Promise<LinkClerkUserResult> {
+  const {
+    clerkUserId,
+    email,
+    firstName,
+    lastName,
+    publicMetadata,
+    privateMetadata,
+    unsafeMetadata,
+    externalAccounts,
+  } = clerkData;
+
+  let user: LinkedUser;
+  let isNewUser = false;
 
   // First, check if this Clerk user is already linked
   const { data: existingClerkUser } = await supabase
@@ -54,12 +110,10 @@ export async function linkClerkUser(clerkData: ClerkUserData): Promise<LinkedUse
     .single();
 
   if (existingClerkUser) {
-    // User already linked, return them
-    return existingClerkUser as LinkedUser;
-  }
-
-  // Check if there's an existing user with this email
-  if (email) {
+    // User already linked, use them
+    user = existingClerkUser as LinkedUser;
+  } else if (email) {
+    // Check if there's an existing user with this email
     const { data: existingEmailUser } = await supabase
       .from('users')
       .select('*')
@@ -76,15 +130,87 @@ export async function linkClerkUser(clerkData: ClerkUserData): Promise<LinkedUse
         .single();
 
       if (error) {
-        console.error('Failed to link existing user to Clerk:', error);
+        logger.error('Failed to link existing user to Clerk', error, {
+          component: 'LinkClerkUser',
+          clerkUserId,
+          email,
+        });
         throw new Error('Failed to link user account');
       }
 
-      return linkedUser as LinkedUser;
+      user = linkedUser as LinkedUser;
+    } else {
+      // Create a new user
+      user = await createNewClerkUser(clerkUserId, email, firstName, lastName);
+      isNewUser = true;
     }
+  } else {
+    // No email, create new user
+    user = await createNewClerkUser(clerkUserId, email, firstName, lastName);
+    isNewUser = true;
   }
 
-  // Create a new user
+  // Build Clerk metadata for SAML processing
+  const clerkMetadata: ClerkUserMetadata = {
+    publicMetadata,
+    privateMetadata,
+    unsafeMetadata,
+    externalAccounts,
+  };
+
+  // Process SAML claims (non-blocking - errors don't prevent login)
+  let samlResult: SamlClaimResult | undefined;
+  let sessionAgencyId: string | null = null;
+
+  try {
+    // Only process SAML claims if there's metadata to process
+    if (publicMetadata || privateMetadata || externalAccounts?.length) {
+      samlResult = await processSamlClaims(user.id, clerkMetadata);
+
+      if (samlResult.success) {
+        logger.info('SAML claims processed successfully', {
+          component: 'LinkClerkUser',
+          userId: user.id,
+          agencyId: samlResult.agencyId,
+          isNewAgency: samlResult.isNewAgency,
+          isNewMembership: samlResult.isNewMembership,
+          isNewUser,
+        });
+      } else {
+        logger.warn('SAML claim processing failed (login continues)', {
+          component: 'LinkClerkUser',
+          userId: user.id,
+          error: samlResult.error,
+        });
+      }
+    }
+
+    // Get the agency ID to use for this session
+    sessionAgencyId = await getAgencyForSession(user.id, clerkMetadata);
+  } catch (error) {
+    // SAML processing errors should not block login
+    logger.error('Error during SAML claim processing (login continues)', error as Error, {
+      component: 'LinkClerkUser',
+      userId: user.id,
+    });
+  }
+
+  return {
+    user,
+    samlResult,
+    sessionAgencyId,
+  };
+}
+
+/**
+ * Create a new user from Clerk data
+ */
+async function createNewClerkUser(
+  clerkUserId: string,
+  email: string | null | undefined,
+  firstName: string | null | undefined,
+  lastName: string | null | undefined
+): Promise<LinkedUser> {
   const displayName = firstName
     ? `${firstName}${lastName ? ` ${lastName.charAt(0)}.` : ''}`
     : email?.split('@')[0] || 'User';
@@ -103,9 +229,18 @@ export async function linkClerkUser(clerkData: ClerkUserData): Promise<LinkedUse
     .single();
 
   if (error) {
-    console.error('Failed to create user for Clerk:', error);
+    logger.error('Failed to create user for Clerk', error, {
+      component: 'LinkClerkUser',
+      clerkUserId,
+    });
     throw new Error('Failed to create user account');
   }
+
+  logger.info('Created new user from Clerk', {
+    component: 'LinkClerkUser',
+    userId: newUser.id,
+    clerkUserId,
+  });
 
   return newUser as LinkedUser;
 }
@@ -121,7 +256,11 @@ export async function getUserByClerkId(clerkUserId: string) {
     .single();
 
   if (error) {
-    console.error('Failed to get user by Clerk ID:', error);
+    logger.debug('Failed to get user by Clerk ID', {
+      component: 'LinkClerkUser',
+      clerkUserId,
+      error: error.message,
+    });
     return null;
   }
 
@@ -130,9 +269,11 @@ export async function getUserByClerkId(clerkUserId: string) {
 
 /**
  * Update a user's Clerk data (e.g., when they update their profile in Clerk)
+ *
+ * Also re-processes SAML claims to handle role/agency changes
  */
 export async function updateUserFromClerk(clerkUserId: string, updates: Partial<ClerkUserData>) {
-  const { email, firstName, lastName } = updates;
+  const { email, firstName, lastName, publicMetadata, privateMetadata, externalAccounts } = updates;
 
   const updateData: Record<string, unknown> = {};
 
@@ -149,17 +290,46 @@ export async function updateUserFromClerk(clerkUserId: string, updates: Partial<
     }
   }
 
-  if (Object.keys(updateData).length === 0) {
-    return; // Nothing to update
+  // Update user record if there are changes
+  if (Object.keys(updateData).length > 0) {
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('clerk_id', clerkUserId);
+
+    if (error) {
+      logger.error('Failed to update user from Clerk', error, {
+        component: 'LinkClerkUser',
+        clerkUserId,
+      });
+      throw new Error('Failed to update user');
+    }
   }
 
-  const { error } = await supabase
-    .from('users')
-    .update(updateData)
-    .eq('clerk_id', clerkUserId);
-
-  if (error) {
-    console.error('Failed to update user from Clerk:', error);
-    throw new Error('Failed to update user');
+  // Re-process SAML claims if metadata is provided
+  // This handles role changes from the IdP
+  if (publicMetadata || privateMetadata || externalAccounts?.length) {
+    const user = await getUserByClerkId(clerkUserId);
+    if (user) {
+      try {
+        const clerkMetadata: ClerkUserMetadata = {
+          publicMetadata,
+          privateMetadata,
+          externalAccounts,
+        };
+        await processSamlClaims(user.id, clerkMetadata);
+      } catch (error) {
+        // Log but don't fail the update
+        logger.warn('Failed to re-process SAML claims on user update', {
+          component: 'LinkClerkUser',
+          userId: user.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    }
   }
 }
+
+// Re-export types for consumers
+export type { ClerkUserMetadata, SamlClaimResult } from './samlClaimHandler';
+export { extractSamlClaims, mapAllstateRoleToInternal } from './samlClaimHandler';
