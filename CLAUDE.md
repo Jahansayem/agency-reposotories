@@ -1973,6 +1973,20 @@ export enum Priority {
 }
 ```
 
+**Framer Motion Animation Objects:** Always explicitly type animation variant objects with `Variants` from framer-motion. Without explicit typing, TypeScript infers `transition.type` as `string` instead of the required literal union type, causing CI failures.
+```typescript
+// ❌ WRONG - causes TypeScript error in CI
+const variants = {
+  animate: { opacity: 1, transition: { type: 'spring' } }
+};
+
+// ✅ CORRECT - explicit Variants type
+import { type Variants } from 'framer-motion';
+const variants: Variants = {
+  animate: { opacity: 1, transition: { type: 'spring' } }
+};
+```
+
 ### Styling Conventions
 - Tailwind utility classes for all styling
 - CSS variables for theme colors:

@@ -227,9 +227,11 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       );
     }
 
-    if (reminderDate <= new Date()) {
+    // Minimum buffer time to prevent race conditions
+    const MIN_FUTURE_BUFFER = 60 * 1000; // 60 seconds
+    if (reminderDate.getTime() - Date.now() < MIN_FUTURE_BUFFER) {
       return NextResponse.json(
-        { success: false, error: 'Reminder time must be in the future' },
+        { success: false, error: 'Reminder must be at least 1 minute in the future' },
         { status: 400 }
       );
     }
@@ -256,6 +258,17 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
         { success: false, error: 'Task not found' },
         { status: 404 }
       );
+    }
+
+    // Validate that reminder is before the due date
+    if (todo.due_date) {
+      const dueDate = new Date(todo.due_date);
+      if (!isNaN(dueDate.getTime()) && reminderDate > dueDate) {
+        return NextResponse.json(
+          { success: false, error: 'Reminder should be set before the due date' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if task is already completed

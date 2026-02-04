@@ -525,13 +525,13 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   </motion.div>
 
                   {/* Card glow */}
-                  <div className="absolute -inset-[1px] bg-gradient-to-b from-[var(--brand-sky)]/40 via-white/10 to-white/5 rounded-[28px] blur-sm" />
+                  <div className="absolute -inset-[1px] bg-gradient-to-b from-[var(--brand-sky)]/40 via-white/10 to-white/5 rounded-[28px] blur-sm pointer-events-none" />
 
                   {/* Main card */}
                   <div className="relative bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-2xl rounded-[28px] border border-white/10 overflow-hidden shadow-2xl">
                     {/* Card header */}
                     <div className="relative px-6 pt-8 pb-6 text-center">
-                      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
                       <motion.div
                         className="relative"
                         initial={{ opacity: 0, y: 10 }}
@@ -656,7 +656,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                   exit={{ opacity: 0, y: -20, scale: 0.95 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="absolute -inset-[1px] bg-gradient-to-b from-[var(--brand-sky)]/40 via-white/10 to-white/5 rounded-[28px] blur-sm" />
+                  <div className="absolute -inset-[1px] bg-gradient-to-b from-[var(--brand-sky)]/40 via-white/10 to-white/5 rounded-[28px] blur-sm pointer-events-none" />
 
                   <div className="relative bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-2xl rounded-[28px] border border-white/10 p-8 shadow-2xl">
                     <motion.button

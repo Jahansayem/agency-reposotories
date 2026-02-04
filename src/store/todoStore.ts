@@ -35,18 +35,38 @@ const getTodayMidnight = (() => {
 })();
 
 // Helper functions — use the cached midnight value
+// Parse date string consistently to avoid timezone issues
+const parseDateToLocal = (dueDate: string): { year: number; month: number; day: number } | null => {
+  // Extract just the date part (YYYY-MM-DD) to avoid timezone parsing issues
+  const datePart = dueDate.split('T')[0];
+  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return {
+    year: parseInt(match[1], 10),
+    month: parseInt(match[2], 10) - 1, // JS months are 0-indexed
+    day: parseInt(match[3], 10),
+  };
+};
+
 const isDueToday = (dueDate?: string) => {
   if (!dueDate) return false;
-  const d = new Date(dueDate);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime() === getTodayMidnight();
+  const parsed = parseDateToLocal(dueDate);
+  if (!parsed) return false;
+
+  // Create date at midnight in local timezone for comparison
+  const dueDateMidnight = new Date(parsed.year, parsed.month, parsed.day, 0, 0, 0, 0);
+  return dueDateMidnight.getTime() === getTodayMidnight();
 };
 
 const isOverdue = (dueDate?: string, completed?: boolean) => {
   if (!dueDate || completed) return false;
-  const d = new Date(dueDate);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime() < getTodayMidnight();
+  const parsed = parseDateToLocal(dueDate);
+  if (!parsed) return false;
+
+  // A task is overdue if the end of its due date has passed
+  // Create date at end of day (23:59:59.999) in local timezone
+  const dueDateEndOfDay = new Date(parsed.year, parsed.month, parsed.day, 23, 59, 59, 999);
+  return dueDateEndOfDay.getTime() < Date.now();
 };
 
 const priorityOrder: Record<TodoPriority, number> = {

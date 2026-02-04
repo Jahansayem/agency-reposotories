@@ -134,9 +134,8 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
       style={{ ...style, borderLeftColor: priorityConfig.color }}
       {...attributes}
       {...listeners}
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
+      initial={false}
+      animate={{ opacity: isDragging ? 0.5 : 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={`group rounded-[var(--radius-xl)] border-l-4 border-y-2 border-r-2 overflow-hidden transition-all cursor-grab active:cursor-grabbing bg-[var(--surface)] touch-manipulation ${
         isDragging

@@ -876,6 +876,14 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
     if (!completedTodo.recurrence || !completedTodo.due_date) return;
 
     const currentDue = new Date(completedTodo.due_date);
+
+    // Validate the due date is valid before proceeding
+    if (isNaN(currentDue.getTime())) {
+      console.error('Invalid due date in recurring task:', completedTodo.id, completedTodo.due_date);
+      alert('Could not create next recurring task: Invalid due date format.');
+      return;
+    }
+
     const nextDue = new Date(currentDue);
 
     switch (completedTodo.recurrence) {
@@ -924,19 +932,25 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
 
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 
-    if (!insertError) {
-      // Send notification for recurring task if assigned to someone else
-      if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
-        sendTaskAssignmentNotification({
-          taskId: newTodo.id,
-          taskText: newTodo.text,
-          assignedTo: newTodo.assigned_to,
-          assignedBy: userName,
-          dueDate: newTodo.due_date,
-          priority: newTodo.priority,
-          notes: newTodo.notes,
-        });
-      }
+    if (insertError) {
+      console.error('Failed to create next recurring task:', insertError);
+      // Roll back the optimistically added todo
+      deleteTodoFromStore(newTodo.id);
+      alert('Failed to create next recurring task. Please try again.');
+      return;
+    }
+
+    // Send notification for recurring task if assigned to someone else
+    if (newTodo.assigned_to && newTodo.assigned_to !== userName) {
+      sendTaskAssignmentNotification({
+        taskId: newTodo.id,
+        taskText: newTodo.text,
+        assignedTo: newTodo.assigned_to,
+        assignedBy: userName,
+        dueDate: newTodo.due_date,
+        priority: newTodo.priority,
+        notes: newTodo.notes,
+      });
     }
   };
 

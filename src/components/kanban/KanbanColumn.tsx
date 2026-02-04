@@ -92,9 +92,7 @@ export function KanbanColumn({
   useSectionedView,
 }: KanbanColumnProps) {
   return (
-    <motion.div
-      key={column.id}
-      layout
+    <div
       className="flex flex-col bg-[var(--surface)] rounded-[var(--radius-xl)] sm:rounded-[var(--radius-2xl)] shadow-[var(--shadow-sm)] border-2 border-[var(--border-subtle)] overflow-hidden"
     >
       {/* Column header - format: Title (count) */}
@@ -139,7 +137,7 @@ export function KanbanColumn({
                     return (
                       <div key={sectionKey} className="mb-2">
                         {/* Cards - no section headers (clean layout) */}
-                        <AnimatePresence mode="popLayout">
+                        <AnimatePresence mode="sync">
                           {sectionTodos.map((todo) => (
                             <SortableCard
                               key={todo.id}
@@ -168,7 +166,7 @@ export function KanbanColumn({
           ) : (
             // Flat view - no sections
             <>
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence mode="sync">
                 {columnTodos.map((todo) => (
                   <SortableCard
                     key={todo.id}
@@ -193,7 +191,7 @@ export function KanbanColumn({
           )}
         </DroppableColumn>
       </SortableContext>
-    </motion.div>
+    </div>
   );
 }
 

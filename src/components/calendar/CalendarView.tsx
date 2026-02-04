@@ -122,7 +122,9 @@ export default function CalendarView({
         return selectedCategories.has(category);
       })
       .forEach((todo) => {
-        const dateKey = format(new Date(todo.due_date!), 'yyyy-MM-dd');
+        // Extract date portion directly from ISO string to avoid timezone issues
+        // If due_date is "2026-02-05T00:00:00Z", we want "2026-02-05"
+        const dateKey = todo.due_date!.split('T')[0];
         const existing = map.get(dateKey) || [];
         map.set(dateKey, [...existing, todo]);
       });
