@@ -19,6 +19,33 @@ Security hardening has been completed to meet Allstate internal application requ
 
 ---
 
+## Multi-Agency Production Readiness (February 2026)
+
+✅ **READY FOR PRODUCTION** - Multi-agency launch preparation complete (14/14 tasks).
+
+The application has been fully verified for multi-agency deployment supporting 5,000+ Allstate agencies:
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| **Phase 1: Critical Fixes** | ✅ Complete | RLS policies verified, setAgencyContext audit, AI endpoint auth, debug endpoint check |
+| **Phase 2: API Hardening** | ✅ Complete | Goals endpoints audit, data routes audit, agencies endpoint verification |
+| **Phase 3: Frontend Permissions** | ✅ Complete | Navigation PermissionGates, staff data scoping, invitation UI verification |
+| **Phase 4: Testing** | ✅ Complete | E2E multi-agency isolation tests, manual verification checklist |
+
+**Security Findings:**
+- All 47 API routes properly protected with auth wrappers
+- All 10 data tables have agency_id columns with proper RLS
+- 21 granular permissions across owner/manager/staff roles
+- Defense-in-depth: application-level + database-level filtering
+
+**New Test Coverage:**
+- `tests/multi-agency-isolation.spec.ts` - 12 E2E test cases for data isolation
+- `docs/MULTI_AGENCY_MANUAL_VERIFICATION.md` - 45 manual test cases
+
+See `docs/MULTI_AGENCY_LAUNCH_PLAN.md` for complete audit results.
+
+---
+
 ## Features
 
 ### Core Task Management
@@ -459,10 +486,14 @@ See `DEPLOYMENT_GUIDE.md` for detailed instructions.
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | VAPID public key | For push |
 | `VAPID_PRIVATE_KEY` | VAPID private key | For push |
 | `VAPID_SUBJECT` | Contact email for VAPID | For push |
-| `REDIS_URL` | Redis connection URL | For rate limiting |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST URL | Optional (rate limiting) |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis REST token | Optional (rate limiting) |
 | `SECURITY_WEBHOOK_URL` | Slack/Discord webhook | For alerts |
-| `RESEND_API_KEY` | Resend email API key | For invitation emails |
+| `RESEND_API_KEY` | Resend email API key | Yes (for invitations) |
+| `FIELD_ENCRYPTION_KEY` | 32-byte hex key for AES-256-GCM | Yes (for PII encryption) |
 | `NEXT_PUBLIC_APP_URL` | Public application URL | For email links |
+
+**Note:** Upstash Redis is optional for rate limiting on PIN lockout. If not configured, the app will fall back to in-memory rate limiting. Generate `FIELD_ENCRYPTION_KEY` with: `openssl rand -hex 32`
 
 ---
 

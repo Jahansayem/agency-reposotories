@@ -26,25 +26,40 @@ This document provides comprehensive context for AI assistants (like Claude Code
 
 ---
 
-## 🏢 Multi-Tenancy Execution Plan (February 2026)
+## 🏢 Multi-Agency Launch Complete (February 2026)
 
-**A 6-phase plan to enable 5,000+ Allstate agencies** with owner/manager/staff role hierarchy, invitation-based onboarding, and full data isolation. This is a multi-context-window effort.
+✅ **READY FOR PRODUCTION** - All 14 launch preparation tasks complete for 5,000+ Allstate agencies.
 
-> **📋 Full Plan:** See [docs/MULTI_TENANCY_EXECUTION_PLAN.md](./docs/MULTI_TENANCY_EXECUTION_PLAN.md) for the complete execution plan with file inventories, SQL migrations, verification checklists, and the 42-route API audit.
+> **📋 Full Audit Results:** See [docs/MULTI_AGENCY_LAUNCH_PLAN.md](./docs/MULTI_AGENCY_LAUNCH_PLAN.md) for complete security audit findings and verification results.
 
-**Phases:**
-1. **Database & Type Foundation** -- Fix RLS conflicts, upgrade roles (`admin`→`manager`, `member`→`staff`), expand permissions to 20 flags
-2. **Auth Plumbing** -- Thread `agencyId` through session validator → login → API auth → frontend hooks
-3. **API Route Hardening** -- Close 14 unauthenticated routes, add `agency_id` filtering to all data routes
-4. **Frontend Permission Migration** -- Replace all `isOwner()`/`isAdmin()` with `usePermission()` hook and `PermissionGate` component
-5. **Onboarding & Invitations** -- Self-service agency creation, invitation-based team building, server-side registration
-6. **Polish & Email** -- Resend integration, error standardization, final verification
+**Completed Phases:**
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| **Phase 1: Critical Verification** | RLS policies, setAgencyContext audit, AI endpoint auth, debug endpoint check | ✅ 4/4 Pass |
+| **Phase 2: API Hardening** | Goals endpoints, remaining data routes, agencies endpoint | ✅ 3/3 Pass |
+| **Phase 3: Frontend Permissions** | Navigation PermissionGates, staff data scoping, invitation UI | ✅ 3/3 Pass |
+| **Phase 4: Testing** | E2E multi-agency isolation tests, manual verification checklist | ✅ 2/2 Complete |
+| **Minor Fixes** | Staff filtering on GET /api/todos, create agency permission check | ✅ 2/2 Implemented |
 
-**Key findings:**
-- RLS is neutralized (v3 `ELSE true` policies override agency policies)
-- `currentUser.current_agency_role` is NEVER populated → `isOwner()` always falls to `name === 'Derrick'`
-- 14 API routes have zero auth (including `todos/reorder`, all 7 AI routes, 2 debug endpoints)
-- `withAgencyAuth` wrapper exists but only 1 of 42 routes uses it
+**Security Audit Results:**
+- ✅ All 47 API routes properly protected with auth wrappers (`withAgencyAuth`, `withSessionAuth`, `withSystemAuth`)
+- ✅ All 10 data tables have `agency_id` columns with proper RLS policies
+- ✅ 21 granular permissions across owner/manager/staff roles
+- ✅ `can_view_all_tasks` permission correctly restricts staff data visibility
+- ✅ Defense-in-depth: application-level AND database-level filtering
+- ✅ Invitation system complete with token hashing, rate limiting, expiration
+
+**New Test Coverage:**
+- `tests/multi-agency-isolation.spec.ts` - 12 E2E test cases for data isolation
+- `docs/MULTI_AGENCY_MANUAL_VERIFICATION.md` - 45 manual test cases with step-by-step instructions
+
+**Environment Variables Required for Production:**
+```bash
+RESEND_API_KEY=<from resend.com>         # Required for invitation emails
+FIELD_ENCRYPTION_KEY=<32-byte hex>       # Required for PII encryption (openssl rand -hex 32)
+UPSTASH_REDIS_REST_URL=<from upstash>    # Optional: rate limiting (fallback to in-memory)
+UPSTASH_REDIS_REST_TOKEN=<from upstash>  # Optional: rate limiting (fallback to in-memory)
+```
 
 ---
 
@@ -2817,8 +2832,8 @@ await logActivity({
 
 ---
 
-**Last Updated:** 2026-01-20
-**Version:** 2.3 (Multi-Agent Enhanced)
+**Last Updated:** 2026-02-04
+**Version:** 2.4 (Multi-Agency Production Ready)
 **Maintained by:** Development Team
 
 ## Related Documentation
@@ -2833,6 +2848,8 @@ await logActivity({
 | [SETUP.md](./SETUP.md) | Installation instructions | New developers |
 | [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) | Deploy process | DevOps |
 | [SECURITY_IMPROVEMENT_CHECKLIST.md](./SECURITY_IMPROVEMENT_CHECKLIST.md) | Security tasks | Security Reviewers |
+| [docs/MULTI_AGENCY_LAUNCH_PLAN.md](./docs/MULTI_AGENCY_LAUNCH_PLAN.md) | Multi-agency security audit results | All agents |
+| [docs/MULTI_AGENCY_MANUAL_VERIFICATION.md](./docs/MULTI_AGENCY_MANUAL_VERIFICATION.md) | 45 manual test cases | QA Engineers |
 | [docs/MULTI_TENANCY_EXECUTION_PLAN.md](./docs/MULTI_TENANCY_EXECUTION_PLAN.md) | 6-phase multi-tenancy plan | All agents (multi-context) |
 
 For questions or issues, refer to this document first, then check the table above for specialized documentation.
