@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import type { TaskReminder, ReminderType } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { sanitizeForPostgrestFilter } from '@/lib/sanitize';
 
 // Create Supabase client lazily to avoid build-time errors
 function getSupabaseClient() {
@@ -140,6 +141,8 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
   if (!todoId && !userId) {
     // Also include reminders for todos where this user is involved but didn't create the reminder
+    // SECURITY: Sanitize userName to prevent PostgREST filter injection
+    const safeUserName = sanitizeForPostgrestFilter(ctx.userName);
     const { data: involvedReminders } = await supabase
       .from('task_reminders')
       .select(`
@@ -158,7 +161,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       `)
       .eq('todos.agency_id', ctx.agencyId)
       .neq('created_by', ctx.userName)
-      .or(`assigned_to.eq.${ctx.userName},created_by.eq.${ctx.userName}`, { referencedTable: 'todos' })
+      .or(`assigned_to.eq.${safeUserName},created_by.eq.${safeUserName}`, { referencedTable: 'todos' })
       .order('reminder_time', { ascending: true });
 
     if (involvedReminders && involvedReminders.length > 0) {

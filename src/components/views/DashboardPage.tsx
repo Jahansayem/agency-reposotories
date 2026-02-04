@@ -244,16 +244,16 @@ export default function DashboardPage({
     };
   }, [todos]);
 
-  const getGreeting = () => {
+  // PERFORMANCE FIX: Memoize greeting to avoid recalculating on every render
+  const greeting = useMemo(() => {
     const hour = currentTime.getHours();
     if (hour < 12) return { text: 'Good morning', Icon: Sunrise };
     if (hour < 17) return { text: 'Good afternoon', Icon: Sun };
     return { text: 'Good evening', Icon: Moon };
-  };
+  }, [currentTime]);
 
-  const greeting = getGreeting();
-
-  const formatDueDate = (dateStr: string) => {
+  // PERFORMANCE FIX: Memoize formatDueDate to avoid recreating function on every render
+  const formatDueDate = useMemo(() => (dateStr: string) => {
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) {
       return 'Invalid date';
@@ -267,45 +267,47 @@ export default function DashboardPage({
     }
 
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
+  }, []);
 
-  const getInsightIconComponent = (iconName: InsightIconName) => {
-    switch (iconName) {
-      case 'clock': return Clock;
-      case 'calendar': return CalendarDays;
-      case 'trophy': return Award;
-      case 'star': return Sparkles;
-      case 'trending-up': return TrendingUp;
-      case 'activity': return BarChart3;
-      case 'check-circle': return CheckCircle2;
-      case 'sunrise': return Sunrise;
-      case 'sun': return Sun;
-      case 'moon': return Moon;
-      case 'calendar-days': return CalendarDays;
-      case 'lightbulb': return Lightbulb;
-      case 'bar-chart': return BarChart3;
-      case 'sparkles': return Sparkles;
-      case 'target': return Target;
-      case 'zap': return Zap;
-      default: return Brain;
-    }
-  };
+  // PERFORMANCE FIX: Use static map for icon lookups instead of recreating function
+  const insightIconMap: Record<InsightIconName, typeof Clock> = useMemo(() => ({
+    'clock': Clock,
+    'calendar': CalendarDays,
+    'trophy': Award,
+    'star': Sparkles,
+    'trending-up': TrendingUp,
+    'activity': BarChart3,
+    'check-circle': CheckCircle2,
+    'sunrise': Sunrise,
+    'sun': Sun,
+    'moon': Moon,
+    'calendar-days': CalendarDays,
+    'lightbulb': Lightbulb,
+    'bar-chart': BarChart3,
+    'sparkles': Sparkles,
+    'target': Target,
+    'zap': Zap,
+  }), []);
 
-  const getUrgencyColor = (urgency: NeglectedTask['urgencyLevel']) => {
-    switch (urgency) {
-      case 'critical': return 'text-red-500';
-      case 'warning': return 'text-amber-500';
-      case 'notice': return 'text-blue-400';
-    }
-  };
+  const getInsightIconComponent = useMemo(() => (iconName: InsightIconName) => {
+    return insightIconMap[iconName] || Brain;
+  }, [insightIconMap]);
 
-  const getUrgencyBg = (urgency: NeglectedTask['urgencyLevel']) => {
-    switch (urgency) {
-      case 'critical': return darkMode ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200';
-      case 'warning': return darkMode ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200';
-      case 'notice': return darkMode ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200';
-    }
-  };
+  // PERFORMANCE FIX: Use static urgency mappings instead of recreating functions
+  const urgencyColors: Record<NeglectedTask['urgencyLevel'], string> = useMemo(() => ({
+    critical: 'text-red-500',
+    warning: 'text-amber-500',
+    notice: 'text-blue-400',
+  }), []);
+
+  const urgencyBgs: Record<NeglectedTask['urgencyLevel'], string> = useMemo(() => ({
+    critical: darkMode ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200',
+    warning: darkMode ? 'bg-amber-500/10 border-amber-500/30' : 'bg-amber-50 border-amber-200',
+    notice: darkMode ? 'bg-blue-500/10 border-blue-500/30' : 'bg-blue-50 border-blue-200',
+  }), [darkMode]);
+
+  const getUrgencyColor = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyColors[urgency], [urgencyColors]);
+  const getUrgencyBg = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyBgs[urgency], [urgencyBgs]);
 
   return (
     <div className="min-h-full bg-[var(--background)]">

@@ -4,6 +4,8 @@
  * Enforces consistent design language across all components
  */
 
+import { TIME, DATE_THRESHOLDS } from './constants';
+
 // ============================================================================
 // SPACING SCALE (8pt system with 4pt substeps)
 // ============================================================================
@@ -328,7 +330,7 @@ export function getTaskStatusStyle(
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
 
-  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / TIME.DAY);
 
   // Overdue - red strip + explicit text
   if (diffDays < 0) {
@@ -340,8 +342,8 @@ export function getTaskStatusStyle(
     };
   }
 
-  // Due soon (≤ 2 days) - orange strip + warning text
-  if (diffDays <= 2) {
+  // Due soon (≤ threshold days) - orange strip + warning text
+  if (diffDays <= DATE_THRESHOLDS.DUE_SOON_DAYS) {
     return {
       strip: 'bg-[var(--state-due-soon)]',
       dueDateText: diffDays === 0 ? 'Due today' : `Due in ${diffDays}d`,
@@ -369,7 +371,7 @@ export function formatDueDate(dueDate: string | null, completed: boolean): strin
   now.setHours(0, 0, 0, 0);
   date.setHours(0, 0, 0, 0);
 
-  const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.ceil((date.getTime() - now.getTime()) / TIME.DAY);
 
   const formattedDate = date.toLocaleDateString('en-US', {
     month: 'short',
@@ -388,7 +390,7 @@ export function formatDueDate(dueDate: string | null, completed: boolean): strin
     return `Due ${formattedDate} • Today`;
   }
 
-  if (diffDays <= 7) {
+  if (diffDays <= DATE_THRESHOLDS.RELATIVE_DATE_MAX_DAYS) {
     return `Due ${formattedDate} • ${diffDays}d left`;
   }
 

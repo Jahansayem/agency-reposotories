@@ -7,6 +7,8 @@
  * and reduced motion detection.
  */
 
+import { ANIMATION_THROTTLE, FRAME_TIME_60FPS } from './constants';
+
 /**
  * Properties that can be GPU-accelerated
  */
@@ -61,8 +63,25 @@ export function forceGPUAcceleration(element: HTMLElement) {
  * - User's reduced motion preference
  * - Device performance (battery saver, low-end device)
  * - Browser support for GPU acceleration
+ *
+ * Note: Battery check is async and cannot affect the synchronous return value.
+ * For battery-aware animation control, use shouldUseReducedMotionAsync() instead.
  */
 export function shouldUseReducedMotion(): boolean {
+  if (typeof window === 'undefined') return true;
+
+  // Check prefers-reduced-motion
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReducedMotion) return true;
+
+  return false;
+}
+
+/**
+ * Async version of shouldUseReducedMotion that includes battery status check.
+ * Use this when you can await the result before starting animations.
+ */
+export async function shouldUseReducedMotionAsync(): Promise<boolean> {
   if (typeof window === 'undefined') return true;
 
   // Check prefers-reduced-motion
@@ -72,11 +91,14 @@ export function shouldUseReducedMotion(): boolean {
   // Check if battery saver is enabled (experimental)
   const navigator = window.navigator as any;
   if (navigator.getBattery) {
-    navigator.getBattery().then((battery: any) => {
+    try {
+      const battery = await navigator.getBattery();
       if (battery.charging === false && battery.level < 0.2) {
         return true; // Low battery, reduce animations
       }
-    });
+    } catch {
+      // Battery API not available or failed - continue with animations
+    }
   }
 
   return false;
@@ -107,7 +129,7 @@ export function getOptimalDuration(baseDuration: number): number {
  */
 let isThrottling = false;
 
-export function throttleAnimations(callback: () => void, duration: number = 100) {
+export function throttleAnimations(callback: () => void, duration: number = ANIMATION_THROTTLE) {
   if (isThrottling) return;
 
   isThrottling = true;
@@ -382,7 +404,7 @@ class FrameScheduler {
 
   private processTasks = () => {
     const startTime = performance.now();
-    const frameTime = 16; // ~60fps
+    const frameTime = FRAME_TIME_60FPS; // ~60fps
 
     // Process high priority first
     for (const priority of ['high', 'normal', 'low'] as Priority[]) {

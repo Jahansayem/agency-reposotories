@@ -4,6 +4,17 @@
 import type { AuthUser } from '@/types/todo';
 export type { AuthUser } from '@/types/todo';
 
+// Import centralized constants
+import {
+  SESSION_TIMEOUTS,
+  getRandomUserColor,
+  getUserInitials,
+  isValidPin,
+} from './constants';
+
+// Re-export utilities from constants for backward compatibility
+export { getRandomUserColor, getUserInitials, isValidPin };
+
 export interface StoredSession {
   userId: string;
   userName: string;
@@ -11,7 +22,6 @@ export interface StoredSession {
 }
 
 const SESSION_KEY = 'todoSession';
-const LOCKOUT_KEY = 'authLockout';
 
 // Hash PIN using SHA-256
 export async function hashPin(pin: string): Promise<string> {
@@ -36,7 +46,7 @@ export function getStoredSession(): StoredSession | null {
   try {
     const session: StoredSession = JSON.parse(raw);
 
-    // Check 8-hour expiry
+    // Check session expiry using centralized timeout constant
     // BUGFIX UTIL-001: Handle invalid timestamps and use >= for exact boundary
     if (session.loginAt) {
       const loginTime = new Date(session.loginAt).getTime();
@@ -45,9 +55,8 @@ export function getStoredSession(): StoredSession | null {
         localStorage.removeItem(SESSION_KEY);
         return null;
       }
-      const eightHours = 8 * 60 * 60 * 1000;
       // Use >= to ensure exact expiry time is also considered expired
-      if (Date.now() - loginTime >= eightHours) {
+      if (Date.now() - loginTime >= SESSION_TIMEOUTS.MAX_AGE) {
         localStorage.removeItem(SESSION_KEY);
         return null;
       }
@@ -122,32 +131,5 @@ export function isLockedOut(_userId: string): { locked: false; remainingSeconds:
   return { locked: false, remainingSeconds: 0 };
 }
 
-// Generate a random color for new users
-const USER_COLORS = [
-  '#0033A0', // Allstate Blue
-  '#059669', // Green
-  '#7c3aed', // Purple
-  '#dc2626', // Red
-  '#ea580c', // Orange
-  '#0891b2', // Cyan
-  '#be185d', // Pink
-  '#4f46e5', // Indigo
-];
-
-export function getRandomUserColor(): string {
-  return USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
-}
-
-// Get user initials for avatar
-export function getUserInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
-
-// Validate PIN format (4 digits)
-export function isValidPin(pin: string): boolean {
-  return /^\d{4}$/.test(pin);
-}
+// Note: getRandomUserColor, getUserInitials, and isValidPin are now
+// imported from './constants' and re-exported above for backward compatibility

@@ -18,6 +18,7 @@ import { logger } from '@/lib/logger';
 import { encryptTodoPII, decryptTodoPII } from '@/lib/fieldEncryption';
 import { verifyTodoAccess } from '@/lib/apiAuth';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { sanitizeForPostgrestFilter } from '@/lib/sanitize';
 
 // Use service role key for server-side operations
 const supabase = createClient(
@@ -46,8 +47,10 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     // Staff data scoping: if user lacks can_view_all_tasks permission,
     // only show tasks they created or are assigned to (defense-in-depth)
+    // SECURITY: Sanitize userName to prevent PostgREST filter injection
     if (!ctx.permissions?.can_view_all_tasks) {
-      query = query.or(`created_by.eq.${ctx.userName},assigned_to.eq.${ctx.userName}`);
+      const safeUserName = sanitizeForPostgrestFilter(ctx.userName);
+      query = query.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
     }
 
     if (id) {

@@ -10,6 +10,7 @@ import { logger } from './logger';
 import { format, formatDistanceToNow, startOfDay } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import type { TaskReminder, ReminderType, TodoPriority } from '@/types/todo';
+import { TIME, REMINDER_OFFSETS, getPriorityEmoji } from './constants';
 
 /**
  * Returns the service role client for server-side DB operations,
@@ -25,13 +26,7 @@ function getServerSupabase() {
 
 const SYSTEM_SENDER = 'System';
 
-// Priority emoji mapping
-const PRIORITY_EMOJI: Record<TodoPriority, string> = {
-  low: '🟢',
-  medium: '🟡',
-  high: '🟠',
-  urgent: '🔴',
-};
+// Note: Priority emoji is now imported from './constants' via getPriorityEmoji()
 
 interface DueReminder {
   reminder_id: string;
@@ -81,7 +76,7 @@ function buildReminderMessage(
   lines.push('━━━━━━━━━━━━━━━━━━━━');
 
   // Task title with priority
-  const priorityEmoji = PRIORITY_EMOJI[priority] || '🟡';
+  const priorityEmoji = getPriorityEmoji(priority);
   const priorityLabel = priority
     ? ` (${priority.charAt(0).toUpperCase() + priority.slice(1)})`
     : '';
@@ -122,7 +117,7 @@ function formatReminderDueDate(dateString: string): string {
   const todayStart = startOfDay(new Date());
   const dateStart = startOfDay(date);
   const diffDays = Math.ceil(
-    (dateStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24)
+    (dateStart.getTime() - todayStart.getTime()) / TIME.DAY
   );
 
   if (diffDays < 0) {
@@ -363,14 +358,14 @@ export async function createAutoReminders(
   const due = new Date(dueDate);
   const now = new Date();
 
-  // Define the automatic reminder times
+  // Define the automatic reminder times using centralized constants
   const reminderConfigs = [
     {
-      time: new Date(due.getTime() - 24 * 60 * 60 * 1000), // 1 day before
+      time: new Date(due.getTime() - TIME.DAY), // 1 day before
       message: 'Task due tomorrow',
     },
     {
-      time: new Date(due.getTime() - 60 * 60 * 1000), // 1 hour before
+      time: new Date(due.getTime() - TIME.HOUR), // 1 hour before
       message: 'Task due in 1 hour',
     },
   ];
@@ -492,23 +487,23 @@ export function calculateReminderTime(
       return customTime || null;
     case '5_min_before':
       return dueDate
-        ? new Date(dueDate.getTime() - 5 * 60 * 1000)
+        ? new Date(dueDate.getTime() - REMINDER_OFFSETS['5_min_before'])
         : null;
     case '15_min_before':
       return dueDate
-        ? new Date(dueDate.getTime() - 15 * 60 * 1000)
+        ? new Date(dueDate.getTime() - REMINDER_OFFSETS['15_min_before'])
         : null;
     case '30_min_before':
       return dueDate
-        ? new Date(dueDate.getTime() - 30 * 60 * 1000)
+        ? new Date(dueDate.getTime() - REMINDER_OFFSETS['30_min_before'])
         : null;
     case '1_hour_before':
       return dueDate
-        ? new Date(dueDate.getTime() - 60 * 60 * 1000)
+        ? new Date(dueDate.getTime() - REMINDER_OFFSETS['1_hour_before'])
         : null;
     case '1_day_before':
       return dueDate
-        ? new Date(dueDate.getTime() - 24 * 60 * 60 * 1000)
+        ? new Date(dueDate.getTime() - REMINDER_OFFSETS['1_day_before'])
         : null;
     case 'morning_of':
       if (!dueDate) return null;

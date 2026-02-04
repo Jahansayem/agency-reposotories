@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AuthUser } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { TIME, getPriorityColor as getConstantPriorityColor } from '@/lib/constants';
 
 // Types based on the API response
 export interface DailyDigestTask {
@@ -202,12 +203,17 @@ export function useDailyDigest({
   // Note: error check prevents retry loops, lastFetched prevents initial re-triggers
   useEffect(() => {
     if (autoFetch && enabled && !digest && !loading && !generating && !lastFetched && !error) {
-      fetchDigest().then((found) => {
-        if (!found && !autoGenerateAttempted.current) {
-          autoGenerateAttempted.current = true;
-          generateNow();
-        }
-      });
+      fetchDigest()
+        .then((found) => {
+          if (!found && !autoGenerateAttempted.current) {
+            autoGenerateAttempted.current = true;
+            generateNow();
+          }
+        })
+        .catch((err) => {
+          // Error already handled in fetchDigest, but catch to prevent unhandled rejection
+          logger.error('Auto-fetch digest failed', err as Error, { component: 'useDailyDigest', action: 'autoFetch' });
+        });
     }
   }, [autoFetch, enabled, digest, loading, generating, lastFetched, error, fetchDigest, generateNow]);
 
@@ -226,27 +232,17 @@ export function useDailyDigest({
   };
 }
 
-// Priority color mapping helper
-export const getPriorityColor = (priority: string): string => {
-  switch (priority) {
-    case 'urgent':
-      return 'bg-red-500';
-    case 'high':
-      return 'bg-orange-500';
-    case 'medium':
-      return 'bg-[var(--brand-blue)]';
-    case 'low':
-      return 'bg-slate-400';
-    default:
-      return 'bg-[var(--brand-blue)]';
-  }
-};
+/**
+ * Priority color mapping helper
+ * @deprecated Use getPriorityColor from '@/lib/constants' directly
+ */
+export const getPriorityColor = getConstantPriorityColor;
 
 // Format relative due date helper
 export const formatDigestDueDate = (dateStr: string): string => {
   const date = new Date(dateStr);
   const now = new Date();
-  const diffDays = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((date.getTime() - now.getTime()) / TIME.DAY);
 
   if (diffDays < -1) {
     return `${Math.abs(diffDays)} days overdue`;

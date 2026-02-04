@@ -60,7 +60,7 @@ export const SubtaskItem = memo(function SubtaskItem({
             : 'border-[var(--border)] hover:border-[var(--accent)] active:border-[var(--accent)]'
         }`}
       >
-        {subtask.completed && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />}
+        {subtask.completed && <Check className="w-3.5 h-3.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} aria-hidden="true" />}
       </button>
 
       {/* Text or edit input */}
@@ -95,18 +95,20 @@ export const SubtaskItem = memo(function SubtaskItem({
       {!isEditing && !subtask.completed && (
         <button
           onClick={() => setIsEditing(true)}
+          aria-label={`Edit subtask: ${subtask.text}`}
           className="p-1.5 -m-1 text-[var(--text-light)] hover:text-[var(--accent)] active:text-[var(--accent-hover)] rounded transition-colors touch-manipulation opacity-0 group-hover:opacity-100 sm:opacity-100"
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       )}
 
       {/* Delete button */}
       <button
         onClick={() => onDelete(subtask.id)}
+        aria-label={`Delete subtask: ${subtask.text}`}
         className="p-1.5 -m-1 text-[var(--text-light)] hover:text-[var(--danger)] active:text-[var(--danger)] rounded transition-colors touch-manipulation"
       >
-        <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" aria-hidden="true" />
       </button>
     </div>
   );

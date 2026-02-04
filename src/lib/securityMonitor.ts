@@ -139,11 +139,12 @@ async function storeEvent(event: SecurityEvent, identifier?: string): Promise<vo
     try {
       // Use a sorted set with score = timestamp for efficient windowed queries
       const score = new Date(timestamp).getTime();
-      await redis.zadd(key, { score, member: `${timestamp}:${Math.random().toString(36).slice(2, 8)}` });
-      // Set TTL on the key to auto-expire old data
-      await redis.expire(key, EVENT_TTL_SECONDS);
-      // Trim to keep only the most recent entries
-      await redis.zremrangebyrank(key, 0, -201); // Keep last 200
+      // PERFORMANCE FIX: Use Promise.all to parallelize Redis operations instead of sequential awaits
+      await Promise.all([
+        redis.zadd(key, { score, member: `${timestamp}:${Math.random().toString(36).slice(2, 8)}` }),
+        redis.expire(key, EVENT_TTL_SECONDS),
+        redis.zremrangebyrank(key, 0, -201), // Keep last 200
+      ]);
       return;
     } catch (error) {
       logger.error('Redis storeEvent failed, using fallback', error as Error, {

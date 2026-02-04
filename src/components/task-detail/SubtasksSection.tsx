@@ -97,9 +97,10 @@ export default function SubtasksSection({
           <button
             type="button"
             onClick={onImportSubtasks}
+            aria-label="Import subtasks from email or text"
             className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-[var(--radius-md)] transition-colors text-[var(--accent)] bg-[var(--accent-light)] hover:brightness-95"
           >
-            <Mail className="w-3 h-3" />
+            <Mail className="w-3 h-3" aria-hidden="true" />
             Import
           </button>
         )}
@@ -148,6 +149,7 @@ export default function SubtasksSection({
                         type="button"
                         role="checkbox"
                         aria-checked={subtask.completed}
+                        aria-label={`${subtask.completed ? 'Completed' : 'Incomplete'}: ${subtask.text}`}
                         onClick={() => canEdit && onToggleSubtask(subtask.id)}
                         disabled={!canEdit}
                         className={`flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-[5px] border-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
@@ -158,7 +160,7 @@ export default function SubtasksSection({
                               : 'border-[var(--border)] bg-transparent text-transparent hover:border-[var(--border-hover)]'
                         }`}
                       >
-                        {subtask.completed && <Check className="w-3 h-3" />}
+                        {subtask.completed && <Check className="w-3 h-3" aria-hidden="true" />}
                       </button>
 
                       {/* Text / Inline edit */}
@@ -194,7 +196,7 @@ export default function SubtasksSection({
                             className="p-1 rounded-[var(--radius-sm)] transition-colors text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-3)]"
                             aria-label={`Edit subtask: ${subtask.text}`}
                           >
-                            <Pencil className="w-3.5 h-3.5" />
+                            <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                           </button>
                           <button
                             type="button"
@@ -202,7 +204,7 @@ export default function SubtasksSection({
                             className="p-1 rounded-[var(--radius-sm)] transition-colors text-[var(--danger)] hover:bg-[var(--danger-light)]"
                             aria-label={`Delete subtask: ${subtask.text}`}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                           </button>
                         </div>
                       )}

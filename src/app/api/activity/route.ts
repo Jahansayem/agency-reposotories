@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { sanitizeForPostgrestFilter, isValidUuid } from '@/lib/sanitize';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -30,11 +31,14 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     // If staff without can_view_all_tasks, we need to filter activities
     // to only show activities for tasks they created or are assigned to
     if (!canViewAllTasks && !todoId) {
+      // SECURITY: Sanitize userName to prevent PostgREST filter injection
+      const safeUserName = sanitizeForPostgrestFilter(ctx.userName);
+
       // First, get the list of todo IDs the user can see
       let todosQuery = supabase
         .from('todos')
         .select('id')
-        .or(`created_by.eq.${ctx.userName},assigned_to.eq.${ctx.userName}`);
+        .or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
 
       if (ctx.agencyId) {
         todosQuery = todosQuery.eq('agency_id', ctx.agencyId);
@@ -63,9 +67,17 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
         query = query.eq('agency_id', ctx.agencyId);
       }
 
+      // SECURITY: Validate UUIDs and sanitize userName to prevent filter injection
       // Filter to: activities for user's tasks OR activities by the user themselves
       if (userTodoIds.length > 0) {
-        query = query.or(`todo_id.in.(${userTodoIds.join(',')}),user_name.eq.${ctx.userName}`);
+        // Validate all UUIDs before interpolating into filter
+        const validUuids = userTodoIds.filter(isValidUuid);
+        if (validUuids.length > 0) {
+          query = query.or(`todo_id.in.(${validUuids.join(',')}),user_name.eq.${safeUserName}`);
+        } else {
+          // All UUIDs invalid, fall back to user's own activities
+          query = query.eq('user_name', ctx.userName);
+        }
       } else {
         // User has no tasks, only show their own activities
         query = query.eq('user_name', ctx.userName);

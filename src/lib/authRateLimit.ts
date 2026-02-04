@@ -13,6 +13,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { logger } from './logger';
+import { sanitizeForPostgrestFilter } from './sanitize';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -240,6 +241,10 @@ export async function clearAuthRateLimit(
   try {
     const supabase = getServiceClient();
 
+    // SECURITY: Sanitize inputs to prevent PostgREST filter injection
+    const safeIp = sanitizeForPostgrestFilter(ipAddress);
+    const safeUserName = sanitizeForPostgrestFilter(userName);
+
     // Don't actually delete - just mark the entries as resolved
     // This preserves the audit trail while resetting rate limits
     await supabase
@@ -247,7 +252,7 @@ export async function clearAuthRateLimit(
       .update({
         details: { resolved: true, resolved_at: new Date().toISOString() },
       })
-      .or(`ip_address.eq.${ipAddress},user_name.eq.${userName}`);
+      .or(`ip_address.eq.${safeIp},user_name.eq.${safeUserName}`);
   } catch (error) {
     logger.error('Failed to clear rate limit', error as Error, { component: 'authRateLimit', action: 'clearAuthRateLimit', userName, ipAddress });
   }

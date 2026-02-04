@@ -292,22 +292,24 @@ export const ChatMessageList = memo(function ChatMessageList({
   }
 
   return (
-    <>
+    <div role="log" aria-label={`Chat messages${conversation?.type === 'dm' ? ` with ${conversation.userName}` : ' - Team chat'}`} aria-live="polite">
       {/* Load more indicator at top */}
       {hasMoreMessages && (
         <div className="flex justify-center py-3">
           {isLoadingMore ? (
-            <div className="flex items-center gap-2 text-[var(--chat-text-secondary)] text-xs">
+            <div className="flex items-center gap-2 text-[var(--chat-text-secondary)] text-xs" role="status" aria-label="Loading older messages">
               <motion.div
                 className="w-4 h-4 border-2 border-[var(--accent)]/20 border-t-[var(--accent)] rounded-full"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                aria-hidden="true"
               />
               <span>Loading older messages...</span>
             </div>
           ) : (
             <button
               onClick={onLoadMore}
+              aria-label="Load earlier messages"
               className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors px-3 py-1.5 rounded-[var(--radius-lg)] hover:bg-[var(--accent)]/10"
             >
               Load earlier messages
@@ -507,8 +509,9 @@ export const ChatMessageList = memo(function ChatMessageList({
                           }}
                           className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
                           title="Reply"
+                          aria-label="Reply to message"
                         >
-                          <Reply className="w-3.5 h-3.5 text-[var(--chat-text-secondary)]" />
+                          <Reply className="w-3.5 h-3.5 text-[var(--chat-text-secondary)]" aria-hidden="true" />
                         </button>
                         <button
                           onClick={(e) => {
@@ -517,8 +520,11 @@ export const ChatMessageList = memo(function ChatMessageList({
                           }}
                           className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
                           title="More"
+                          aria-label="More message options"
+                          aria-haspopup="menu"
+                          aria-expanded={showMessageMenu === msg.id}
                         >
-                          <MoreHorizontal className="w-3.5 h-3.5 text-[var(--chat-text-secondary)]" />
+                          <MoreHorizontal className="w-3.5 h-3.5 text-[var(--chat-text-secondary)]" aria-hidden="true" />
                         </button>
                       </motion.div>
                     )}
@@ -530,61 +536,68 @@ export const ChatMessageList = memo(function ChatMessageList({
                           initial={{ opacity: 0, scale: 0.95, y: 5 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                          role="menu"
+                          aria-label="Message actions"
                           className={`absolute top-full mt-2 z-30 bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-[var(--radius-xl)] shadow-2xl overflow-hidden min-w-[160px] backdrop-blur-xl ${
                             isOwn ? 'right-0' : 'left-0'
                           }`}
                         >
                           <button
+                            role="menuitem"
                             onClick={() => {
                               onReply(msg);
                               setShowMessageMenu(null);
                             }}
                             className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                           >
-                            <Reply className="w-4 h-4" /> Reply
+                            <Reply className="w-4 h-4" aria-hidden="true" /> Reply
                           </button>
                           {canPinMessages && (
                             <button
+                              role="menuitem"
                               onClick={() => {
                                 onPin(msg);
                                 setShowMessageMenu(null);
                               }}
                               className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                             >
-                              <Pin className="w-4 h-4" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
+                              <Pin className="w-4 h-4" aria-hidden="true" /> {msg.is_pinned ? 'Unpin' : 'Pin'}
                             </button>
                           )}
                           {onCreateTask && (
                             <button
+                              role="menuitem"
                               onClick={() => {
                                 onCreateTask(msg);
                                 setShowMessageMenu(null);
                               }}
                               className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                             >
-                              <Plus className="w-4 h-4" /> Create Task
+                              <Plus className="w-4 h-4" aria-hidden="true" /> Create Task
                             </button>
                           )}
                           {isOwn && (
                             <button
+                              role="menuitem"
                               onClick={() => {
                                 onEdit(msg);
                                 setShowMessageMenu(null);
                               }}
                               className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
                             >
-                              <Edit3 className="w-4 h-4" /> Edit
+                              <Edit3 className="w-4 h-4" aria-hidden="true" /> Edit
                             </button>
                           )}
                           {(isOwn || canDeleteAnyMessage) && (
                             <button
+                              role="menuitem"
                               onClick={() => {
                                 onDelete(msg.id, msg.text);
                                 setShowMessageMenu(null);
                               }}
                               className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-red-400 transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" /> Delete
+                              <Trash2 className="w-4 h-4" aria-hidden="true" /> Delete
                             </button>
                           )}
                         </motion.div>
@@ -706,7 +719,7 @@ export const ChatMessageList = memo(function ChatMessageList({
           onClose={() => setLightboxAttachment(null)}
         />
       )}
-    </>
+    </div>
   );
 });
 

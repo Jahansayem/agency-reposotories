@@ -253,7 +253,11 @@ export function QuickFilterPills({
   ];
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto px-4 py-2 -mx-4 scrollbar-hide">
+    <div
+      className="flex items-center gap-2 overflow-x-auto px-4 py-2 -mx-4 scrollbar-hide"
+      role="tablist"
+      aria-label="Task filter options"
+    >
       {filters.map(filter => {
         const isActive = currentFilter === filter.id;
         const Icon = filter.icon;
@@ -266,6 +270,9 @@ export function QuickFilterPills({
           <motion.button
             key={filter.id}
             onClick={() => onFilterChange(filter.id)}
+            role="tab"
+            aria-selected={isActive}
+            aria-label={`${filter.label} tasks: ${filter.count}`}
             className={`
               relative flex items-center gap-1.5 px-3 py-1.5 rounded-full
               text-sm font-medium whitespace-nowrap

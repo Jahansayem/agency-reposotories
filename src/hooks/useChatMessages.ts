@@ -380,14 +380,17 @@ export function useChatMessages({
       if (rpcError) {
         // RPC not available - use batched fallback for all messages at once
         // BUGFIX REACT-004: Read fresh from messagesRef.current inside loop to avoid stale closure
-        for (const id of unreadIds) {
-          const msg = messagesRef.current.find(m => m.id === id);
-          const currentReadBy = msg?.read_by || [];
-          await supabase
-            .from('messages')
-            .update({ read_by: [...currentReadBy, currentUser.name] })
-            .eq('id', id);
-        }
+        // PERFORMANCE FIX: Parallelize database updates instead of sequential awaits (N+1 -> O(1))
+        await Promise.all(
+          unreadIds.map(id => {
+            const msg = messagesRef.current.find(m => m.id === id);
+            const currentReadBy = msg?.read_by || [];
+            return supabase
+              .from('messages')
+              .update({ read_by: [...currentReadBy, currentUser.name] })
+              .eq('id', id);
+          })
+        );
       } else if (unreadIds.length > 1) {
         // RPC works - use it for remaining messages
         const remainingIds = unreadIds.slice(1);

@@ -230,6 +230,7 @@ export default function NavigationSidebar({
       <div className="px-3 py-3">
         <button
           onClick={triggerNewTask}
+          aria-label="Create new task"
           className={`
             w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[var(--radius-xl)]
             font-medium text-sm transition-all
@@ -237,7 +238,7 @@ export default function NavigationSidebar({
             text-white shadow-md hover:shadow-lg hover:brightness-110
           `}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           {isExpanded && <span>New Task</span>}
         </button>
       </div>

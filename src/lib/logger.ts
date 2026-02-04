@@ -248,44 +248,5 @@ export function withErrorLogging<T extends (...args: any[]) => Promise<any>>(
   }) as T;
 }
 
-/**
- * HOC for React components to catch and log errors
- * NOTE: Commented out due to JSX in .ts file - move to separate .tsx file if needed
- */
-// export function withErrorBoundary<P extends object>(
-//   Component: React.ComponentType<P>,
-//   componentName: string
-// ): React.ComponentType<P> {
-//   return class ErrorBoundaryWrapper extends React.Component<
-//     P,
-//     { hasError: boolean }
-//   > {
-//     constructor(props: P) {
-//       super(props);
-//       this.state = { hasError: false };
-//     }
-
-//     static getDerivedStateFromError() {
-//       return { hasError: true };
-//     }
-
-//     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-//       logger.error(
-//         `React component error in ${componentName}`,
-//         error,
-//         {
-//           component: componentName,
-//           componentStack: errorInfo.componentStack,
-//         }
-//       );
-//     }
-
-//     render() {
-//       if (this.state.hasError) {
-//         return null; // Would need JSX here
-//       }
-
-//       return <Component {...this.props} />;
-//     }
-//   };
-// }
+// Note: Error boundary HOC is implemented in src/components/ErrorBoundary.tsx
+// Use that component directly for React error boundary functionality

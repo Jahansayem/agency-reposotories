@@ -6,6 +6,13 @@
  */
 
 import { createHash, randomBytes } from 'crypto';
+import {
+  SESSION_TIMEOUTS,
+  LOCKOUT_CONFIG as CENTRALIZED_LOCKOUT_CONFIG,
+  getUserInitials as getInitials,
+  getRandomUserColor as getColor,
+  isValidPin as validatePin,
+} from './constants';
 
 // ============================================
 // CONFIGURATION
@@ -24,11 +31,11 @@ export const ARGON2_CONFIG = {
 };
 
 /**
- * Session configuration
+ * Session configuration - uses centralized constants
  */
 export const SESSION_CONFIG = {
-  IDLE_TIMEOUT: 30 * 60 * 1000, // 30 minutes
-  MAX_AGE: 8 * 60 * 60 * 1000, // 8 hours
+  IDLE_TIMEOUT: SESSION_TIMEOUTS.IDLE_TIMEOUT,
+  MAX_AGE: SESSION_TIMEOUTS.MAX_AGE,
   TOKEN_LENGTH: 32,
 };
 
@@ -196,11 +203,11 @@ export function isValidUsername(name: string): boolean {
 // ============================================
 
 /**
- * Lockout configuration
+ * Lockout configuration - uses centralized constants
  */
 export const LOCKOUT_CONFIG = {
-  MAX_ATTEMPTS: 5,
-  LOCKOUT_DURATION: 15 * 60 * 1000, // 15 minutes
+  MAX_ATTEMPTS: CENTRALIZED_LOCKOUT_CONFIG.MAX_ATTEMPTS,
+  LOCKOUT_DURATION: CENTRALIZED_LOCKOUT_CONFIG.LOCKOUT_DURATION,
 };
 
 /**
@@ -220,31 +227,21 @@ export function isLockoutExpired(lockoutTime: Date): boolean {
 }
 
 // ============================================
-// USER COLORS (unchanged from original)
+// USER UTILITIES (delegated to centralized constants)
 // ============================================
 
-const USER_COLORS = [
-  '#0033A0', // Allstate Blue
-  '#059669', // Green
-  '#7c3aed', // Purple
-  '#dc2626', // Red
-  '#ea580c', // Orange
-  '#0891b2', // Cyan
-  '#be185d', // Pink
-  '#4f46e5', // Indigo
-];
-
+/**
+ * Get a random color for new users
+ * @deprecated Use getRandomUserColor from '@/lib/constants' directly
+ */
 export function getRandomUserColor(): string {
-  return USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
+  return getColor();
 }
 
 /**
  * Get user initials for avatar
+ * @deprecated Use getUserInitials from '@/lib/constants' directly
  */
 export function getUserInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
+  return getInitials(name);
 }

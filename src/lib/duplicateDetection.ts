@@ -78,6 +78,29 @@ export interface DuplicateMatch {
   matchReasons: string[];
 }
 
+// Cache for extracted todo data to avoid repeated regex parsing
+// PERFORMANCE FIX: Pre-compute extractions to avoid O(n * regex_cost) on every call
+interface TodoExtractionCache {
+  phones: string[];
+  emails: string[];
+  names: string[];
+}
+const todoExtractionCache = new WeakMap<Todo, TodoExtractionCache>();
+
+function getOrComputeExtraction(todo: Todo): TodoExtractionCache {
+  let cached = todoExtractionCache.get(todo);
+  if (!cached) {
+    const combinedText = `${todo.text} ${todo.notes || ''} ${todo.transcription || ''}`;
+    cached = {
+      phones: extractPhoneNumbers(combinedText),
+      emails: extractEmails(combinedText),
+      names: extractPotentialNames(combinedText),
+    };
+    todoExtractionCache.set(todo, cached);
+  }
+  return cached;
+}
+
 // Find potential duplicates for a new task
 export function findPotentialDuplicates(
   newText: string,
@@ -94,10 +117,8 @@ export function findPotentialDuplicates(
     // Skip completed tasks
     if (todo.completed) continue;
 
-    const combinedText = `${todo.text} ${todo.notes || ''} ${todo.transcription || ''}`;
-    const todoPhones = extractPhoneNumbers(combinedText);
-    const todoEmails = extractEmails(combinedText);
-    const todoNames = extractPotentialNames(combinedText);
+    // PERFORMANCE FIX: Use cached extractions instead of re-computing regex on every call
+    const { phones: todoPhones, emails: todoEmails, names: todoNames } = getOrComputeExtraction(todo);
 
     let score = 0;
     const reasons: string[] = [];
