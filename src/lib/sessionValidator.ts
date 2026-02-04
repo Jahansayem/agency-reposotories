@@ -21,12 +21,22 @@ function getSupabaseAdmin() {
   }
 }
 
+/**
+ * Result of session validation with full user context.
+ *
+ * Includes user identity, their current agency context, and role within that agency.
+ * The agencyId and role come from the user's default agency membership.
+ */
 export interface SessionValidationResult {
   valid: boolean;
   userId?: string;
   userName?: string;
+  /** The user's role in their current agency (owner/manager/staff) */
   userRole?: string;
+  /** The user's current/default agency ID (null if not in any agency) */
   agencyId?: string;
+  /** The user's role within the agency (from agency_members table) */
+  agencyRole?: 'owner' | 'manager' | 'staff';
   error?: string;
 }
 
@@ -227,12 +237,60 @@ export async function validateSession(
         };
       }
 
+      // Determine agency context - prefer session's current_agency_id, fallback to default membership
+      let agencyId: string | undefined = session.current_agency_id || undefined;
+      let agencyRole: 'owner' | 'manager' | 'staff' | undefined = undefined;
+
+      // If no agency in session, try to get user's default agency membership
+      if (!agencyId) {
+        const { data: defaultMembership } = await supabaseAdmin
+          .from('agency_members')
+          .select('agency_id, role')
+          .eq('user_id', session.user_id)
+          .eq('is_default_agency', true)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (defaultMembership?.agency_id) {
+          agencyId = defaultMembership.agency_id;
+          agencyRole = defaultMembership.role as 'owner' | 'manager' | 'staff';
+        } else {
+          // Fallback: any active agency membership
+          const { data: anyMembership } = await supabaseAdmin
+            .from('agency_members')
+            .select('agency_id, role')
+            .eq('user_id', session.user_id)
+            .eq('status', 'active')
+            .limit(1)
+            .maybeSingle();
+
+          if (anyMembership?.agency_id) {
+            agencyId = anyMembership.agency_id;
+            agencyRole = anyMembership.role as 'owner' | 'manager' | 'staff';
+          }
+        }
+      } else {
+        // Session has agency - fetch the role for that agency
+        const { data: membership } = await supabaseAdmin
+          .from('agency_members')
+          .select('role')
+          .eq('user_id', session.user_id)
+          .eq('agency_id', agencyId)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (membership?.role) {
+          agencyRole = membership.role as 'owner' | 'manager' | 'staff';
+        }
+      }
+
       return {
         valid: true,
         userId: session.user_id,
         userName: user.name,
         userRole: user.role || 'staff',
-        agencyId: session.current_agency_id || undefined,
+        agencyId,
+        agencyRole,
       };
     }
 
@@ -243,12 +301,29 @@ export async function validateSession(
       };
     }
 
+    // RPC returned valid session - now get agency role if we have an agency
+    let agencyRole: 'owner' | 'manager' | 'staff' | undefined = undefined;
+    if (data.agency_id) {
+      const { data: membership } = await supabaseAdmin
+        .from('agency_members')
+        .select('role')
+        .eq('user_id', data.user_id)
+        .eq('agency_id', data.agency_id)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (membership?.role) {
+        agencyRole = membership.role as 'owner' | 'manager' | 'staff';
+      }
+    }
+
     return {
       valid: true,
       userId: data.user_id,
       userName: data.user_name,
       userRole: data.user_role || 'staff',
       agencyId: data.agency_id || undefined,
+      agencyRole,
     };
   } catch (error) {
     logger.error('Session validation error:', error, { component: 'SessionValidator' });

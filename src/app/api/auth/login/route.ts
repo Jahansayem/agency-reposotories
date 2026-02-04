@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createHash, timingSafeEqual } from 'crypto';
 import { createSession } from '@/lib/sessionValidator';
 import { checkLockout, recordFailedAttempt, clearLockout, getLockoutIdentifier } from '@/lib/serverLockout';
@@ -11,9 +11,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Lazy initialization - only validate at runtime, not build time
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let supabase: any = null;
-function getSupabase() {
+// TYPE-012 Fix: Use SupabaseClient type instead of any
+let supabase: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
   if (!supabase) {
     if (!supabaseServiceRoleKey) {
       throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for the login endpoint');
@@ -122,13 +122,15 @@ export async function POST(request: NextRequest) {
       .update({ last_login: new Date().toISOString() })
       .eq('id', userId);
 
-    // Look up user's default agency membership
+    // Look up user's default agency membership (including role and agency name)
     let agencyId: string | null = null;
+    let agencyName: string | null = null;
+    let agencyRole: string | null = null;
 
     // First try: default agency
     const { data: defaultMembership } = await getSupabase()
       .from('agency_members')
-      .select('agency_id')
+      .select('agency_id, role, agencies!inner(name)')
       .eq('user_id', userId)
       .eq('status', 'active')
       .eq('is_default_agency', true)
@@ -137,11 +139,14 @@ export async function POST(request: NextRequest) {
 
     if (defaultMembership?.agency_id) {
       agencyId = defaultMembership.agency_id;
+      agencyRole = defaultMembership.role;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      agencyName = (defaultMembership.agencies as any)?.name || null;
     } else {
       // Fallback: any active agency
       const { data: anyMembership } = await getSupabase()
         .from('agency_members')
-        .select('agency_id')
+        .select('agency_id, role, agencies!inner(name)')
         .eq('user_id', userId)
         .eq('status', 'active')
         .limit(1)
@@ -149,6 +154,9 @@ export async function POST(request: NextRequest) {
 
       if (anyMembership?.agency_id) {
         agencyId = anyMembership.agency_id;
+        agencyRole = anyMembership.role;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        agencyName = (anyMembership.agencies as any)?.name || null;
       }
     }
 
@@ -181,6 +189,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Build response with HttpOnly session cookie
+    // Include current agency info if user belongs to an agency
     const response = NextResponse.json({
       success: true,
       user: {
@@ -188,8 +197,15 @@ export async function POST(request: NextRequest) {
         name: user.name,
         color: user.color,
         role: user.role || 'staff',
+        // Include agency context in user object for convenience
+        agencyId: agencyId || null,
+        agencyName: agencyName || null,
+        agencyRole: agencyRole || null,
       },
+      // Also include at top level for backwards compatibility
       ...(agencyId ? { currentAgencyId: agencyId } : {}),
+      ...(agencyName ? { currentAgencyName: agencyName } : {}),
+      ...(agencyRole ? { currentAgencyRole: agencyRole } : {}),
       agencies,
     });
 
