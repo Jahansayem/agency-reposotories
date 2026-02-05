@@ -11,15 +11,12 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
-  Filter,
   Users,
   Crown,
   Star,
   Shield,
   X,
-  ChevronRight,
   TrendingUp,
-  AlertCircle,
   Loader2,
 } from 'lucide-react';
 import { useCustomerSearch, useCustomerList } from '@/hooks/useCustomers';
@@ -48,7 +45,6 @@ export function CustomerLookupView({
 }: CustomerLookupViewProps) {
   const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>('all');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
 
   // Search hook for search input
   const {
@@ -70,7 +66,11 @@ export function CustomerLookupView({
   });
 
   // Determine which customers to show
-  const displayCustomers = query.length >= 2 ? searchResults : allCustomers;
+  // Filter search results by segment if one is selected
+  const filteredSearchResults = selectedSegment === 'all'
+    ? searchResults
+    : searchResults.filter(c => c.segment === selectedSegment);
+  const displayCustomers = query.length >= 2 ? filteredSearchResults : allCustomers;
   const isLoading = query.length >= 2 ? searchLoading : listLoading;
 
   // Handle customer selection
@@ -136,18 +136,6 @@ export function CustomerLookupView({
 
         {/* Segment filter chips */}
         <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 -mx-1 px-1">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex-shrink-0 ${
-              showFilters
-                ? 'bg-[var(--accent)] text-white'
-                : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            Filter
-          </button>
-
           {SEGMENT_FILTERS.map((filter) => (
             <button
               key={filter.value}
@@ -237,7 +225,8 @@ export function CustomerLookupView({
                 <h2 className="font-semibold text-[var(--foreground)]">Customer Details</h2>
                 <button
                   onClick={handleCloseDetail}
-                  className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] lg:hidden"
+                  className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)]"
+                  aria-label="Close customer details"
                 >
                   <X className="w-5 h-5" />
                 </button>

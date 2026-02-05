@@ -92,16 +92,16 @@ export function CustomerSearchInput({
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Selected Customer Display */}
       {value && !focused ? (
-        <div className="flex items-center gap-2 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
+        <div className="flex items-center gap-2 p-2 border border-[var(--border)] rounded-lg bg-[var(--surface-2)]">
           <SegmentIndicator segment={value.segment} />
-          <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white truncate">
+          <span className="flex-1 text-sm font-medium text-[var(--foreground)] truncate">
             {value.name}
           </span>
           {!disabled && (
             <button
               type="button"
               onClick={handleClear}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="p-1 text-[var(--text-light)] hover:text-[var(--foreground)] transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -110,7 +110,7 @@ export function CustomerSearchInput({
       ) : (
         /* Search Input */
         <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-light)]">
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
@@ -128,11 +128,11 @@ export function CustomerSearchInput({
             disabled={disabled}
             className="
               w-full pl-10 pr-10 py-2 text-sm
-              border border-gray-300 dark:border-gray-600 rounded-lg
-              bg-white dark:bg-gray-800
-              text-gray-900 dark:text-white
-              placeholder-gray-400 dark:placeholder-gray-500
-              focus:ring-2 focus:ring-blue-500 focus:border-transparent
+              border border-[var(--border)] rounded-lg
+              bg-[var(--surface)]
+              text-[var(--foreground)]
+              placeholder-[var(--text-light)]
+              focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent
               disabled:opacity-50 disabled:cursor-not-allowed
             "
           />
@@ -140,7 +140,7 @@ export function CustomerSearchInput({
             <button
               type="button"
               onClick={clear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--text-light)] hover:text-[var(--foreground)]"
             >
               <X className="w-4 h-4" />
             </button>
@@ -152,8 +152,8 @@ export function CustomerSearchInput({
       {isOpen && customers.length > 0 && (
         <div className="
           absolute z-50 w-full mt-1
-          bg-white dark:bg-gray-800
-          border border-gray-200 dark:border-gray-700
+          bg-[var(--surface)]
+          border border-[var(--border)]
           rounded-lg shadow-lg
           max-h-[300px] overflow-y-auto
         ">
@@ -164,8 +164,8 @@ export function CustomerSearchInput({
               onClick={() => handleSelect(customer)}
               className="
                 w-full px-3 py-2 text-left
-                hover:bg-gray-50 dark:hover:bg-gray-700
-                border-b border-gray-100 dark:border-gray-700 last:border-0
+                hover:bg-[var(--surface-2)]
+                border-b border-[var(--border)] last:border-0
                 transition-colors
               "
             >
@@ -173,7 +173,7 @@ export function CustomerSearchInput({
                 <SegmentIndicator segment={customer.segment} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900 dark:text-white truncate">
+                    <span className="font-medium text-[var(--foreground)] truncate">
                       {customer.name}
                     </span>
                     {customer.hasOpportunity && customer.priorityTier && (
@@ -187,7 +187,7 @@ export function CustomerSearchInput({
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-3 mt-0.5 text-xs text-[var(--text-muted)]">
                     <span className="flex items-center gap-1">
                       <DollarSign className="w-3 h-3" />
                       ${customer.totalPremium.toLocaleString()}/yr
@@ -216,12 +216,12 @@ export function CustomerSearchInput({
       {isOpen && query.length >= 2 && customers.length === 0 && !loading && (
         <div className="
           absolute z-50 w-full mt-1 p-4
-          bg-white dark:bg-gray-800
-          border border-gray-200 dark:border-gray-700
+          bg-[var(--surface)]
+          border border-[var(--border)]
           rounded-lg shadow-lg text-center
         ">
-          <User className="w-8 h-8 mx-auto text-gray-300 dark:text-gray-600 mb-2" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <User className="w-8 h-8 mx-auto text-[var(--text-light)] mb-2" />
+          <p className="text-sm text-[var(--text-muted)]">
             No customers found for "{query}"
           </p>
         </div>

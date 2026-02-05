@@ -48,18 +48,6 @@ export async function GET(request: NextRequest) {
     const segmentFilter = searchParams.get('segment');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
 
-    // DEBUG: Log what we're querying
-    console.log('[Customers API] Query params:', { query, agencyId, segmentFilter, limit });
-
-    // First, check total counts in both tables
-    const { count: insightsCount } = await supabase
-      .from('customer_insights')
-      .select('*', { count: 'exact', head: true });
-    const { count: oppsCount } = await supabase
-      .from('cross_sell_opportunities')
-      .select('*', { count: 'exact', head: true });
-    console.log('[Customers API] Total records:', { customer_insights: insightsCount, cross_sell_opportunities: oppsCount });
-
     // First, try customer_insights table
     let insightsQuery = supabase
       .from('customer_insights')

@@ -50,8 +50,8 @@ export function CustomerDetailPanel({
 
   if (loading) {
     return (
-      <div className={`p-4 bg-gray-50 dark:bg-gray-800 rounded-lg ${className}`}>
-        <div className="flex items-center justify-center gap-2 text-gray-500">
+      <div className={`p-4 bg-[var(--surface-2)] rounded-lg ${className}`}>
+        <div className="flex items-center justify-center gap-2 text-[var(--text-muted)]">
           <Loader2 className="w-4 h-4 animate-spin" />
           <span>Loading customer...</span>
         </div>
@@ -78,14 +78,14 @@ export function CustomerDetailPanel({
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ${className}`}>
+    <div className={`bg-[var(--surface)] border border-[var(--border)] rounded-lg overflow-hidden ${className}`}>
       {/* Header */}
-      <div className="p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-750 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 bg-[var(--surface)] border-b border-[var(--border)]">
         <div className="flex items-start gap-3">
           <SegmentIndicator segment={customer.segment} size="md" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+              <h3 className="text-lg font-bold text-[var(--foreground)] truncate">
                 {customer.name}
               </h3>
               <span className={`
@@ -98,7 +98,7 @@ export function CustomerDetailPanel({
                 {customer.segment}
               </span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-sm text-[var(--text-muted)] mt-0.5">
               {customer.segmentConfig.description}
             </p>
           </div>
@@ -128,7 +128,7 @@ export function CustomerDetailPanel({
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-px bg-gray-200 dark:bg-gray-700">
+      <div className="grid grid-cols-4 gap-px bg-[var(--border)]">
         <StatBox label="Premium" value={formatCurrency(customer.totalPremium)} subtext="/year" />
         <StatBox label="Policies" value={customer.policyCount.toString()} />
         <StatBox label="Tenure" value={`${customer.tenureYears}yr`} />
@@ -140,28 +140,28 @@ export function CustomerDetailPanel({
       </div>
 
       {/* Products */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+      <div className="p-4 border-b border-[var(--border)]">
+        <h4 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">
           Current Products
         </h4>
         <div className="flex flex-wrap gap-1.5">
           {customer.products.map((product, i) => (
             <span
               key={i}
-              className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+              className="px-2 py-1 text-sm bg-[var(--surface-2)] text-[var(--foreground)] rounded"
             >
               {product}
             </span>
           ))}
           {customer.products.length === 0 && (
-            <span className="text-sm text-gray-400">No products listed</span>
+            <span className="text-sm text-[var(--text-light)]">No products listed</span>
           )}
         </div>
       </div>
 
       {/* Warnings/Alerts */}
       {(customer.retentionRisk !== 'low' || customer.paymentStatus !== 'current' || customer.upcomingRenewal) && (
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
+        <div className="p-4 border-b border-[var(--border)] space-y-2">
           {customer.retentionRisk !== 'low' && (
             <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
               <AlertTriangle className="w-4 h-4" />
@@ -205,7 +205,7 @@ export function CustomerDetailPanel({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+          <p className="text-sm text-[var(--text-muted)] text-center py-4">
             No active opportunities
           </p>
         )}
@@ -227,7 +227,7 @@ export function CustomerDetailPanel({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+          <p className="text-sm text-[var(--text-muted)] text-center py-4">
             No related tasks
           </p>
         )}
@@ -250,11 +250,11 @@ function StatBox({
   className?: string;
 }) {
   return (
-    <div className="p-3 bg-white dark:bg-gray-800 text-center">
-      <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</div>
-      <div className={`text-lg font-bold text-gray-900 dark:text-white ${className}`}>
+    <div className="p-3 bg-[var(--surface)] text-center">
+      <div className="text-xs text-[var(--text-muted)] mb-0.5">{label}</div>
+      <div className={`text-lg font-bold text-[var(--foreground)] ${className}`}>
         {value}
-        {subtext && <span className="text-xs font-normal text-gray-400">{subtext}</span>}
+        {subtext && <span className="text-xs font-normal text-[var(--text-light)]">{subtext}</span>}
       </div>
     </div>
   );
@@ -278,22 +278,22 @@ function CollapsibleSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-gray-200 dark:border-gray-700 last:border-0">
+    <div className="border-b border-[var(--border)] last:border-0">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-[var(--surface-2)] transition-colors"
       >
         <div className="flex items-center gap-2">
           <Icon className={`w-4 h-4 ${iconColor}`} />
-          <span className="text-sm font-medium text-gray-900 dark:text-white">{title}</span>
+          <span className="text-sm font-medium text-[var(--foreground)]">{title}</span>
           {count > 0 && (
-            <span className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-[var(--surface-2)] text-[var(--foreground)] rounded">
               {count}
             </span>
           )}
         </div>
-        {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+        {expanded ? <ChevronUp className="w-4 h-4 text-[var(--text-light)]" /> : <ChevronDown className="w-4 h-4 text-[var(--text-light)]" />}
       </button>
       <AnimatePresence>
         {expanded && (
@@ -338,7 +338,7 @@ function OpportunityItem({
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
 
   return (
-    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+    <div className="p-3 bg-[var(--surface-2)] rounded-lg">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -351,11 +351,11 @@ function OpportunityItem({
             `}>
               {opportunity.priorityTier}
             </span>
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
+            <span className="text-sm font-medium text-[var(--foreground)]">
               {opportunity.recommendedProduct}
             </span>
           </div>
-          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-1 text-xs text-[var(--text-muted)]">
             +{formatCurrency(opportunity.potentialPremiumAdd)}/yr potential
             {opportunity.renewalDate && ` • Renews ${new Date(opportunity.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
           </div>
@@ -381,8 +381,8 @@ function OpportunityItem({
         )}
       </div>
       {opportunity.talkingPoints.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+        <div className="mt-2 pt-2 border-t border-[var(--border)]">
+          <ul className="text-xs text-[var(--text-muted)] space-y-1">
             {opportunity.talkingPoints.slice(0, 2).map((point, i) => (
               <li key={i} className="flex items-start gap-1">
                 <span className="text-blue-500">•</span>
@@ -407,21 +407,21 @@ function TaskItem({
     <button
       type="button"
       onClick={onClick}
-      className="w-full p-3 bg-gray-50 dark:bg-gray-750 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      className="w-full p-3 bg-[var(--surface-2)] rounded-lg text-left hover:bg-[var(--surface-2)] hover:opacity-80 transition-colors"
     >
       <div className="flex items-start gap-2">
         <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 ${
           task.completed
             ? 'bg-green-500 border-green-500'
-            : 'border-gray-300 dark:border-gray-600'
+            : 'border-[var(--border)]'
         }`}>
           {task.completed && <CheckCircle className="w-3 h-3 text-white" />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+          <p className={`text-sm ${task.completed ? 'text-[var(--text-light)] line-through' : 'text-[var(--foreground)]'}`}>
             {task.text}
           </p>
-          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]">
             {task.dueDate && (
               <span className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
@@ -431,7 +431,7 @@ function TaskItem({
             {task.assignedTo && <span>→ {task.assignedTo}</span>}
           </div>
         </div>
-        <ExternalLink className="w-4 h-4 text-gray-400" />
+        <ExternalLink className="w-4 h-4 text-[var(--text-light)]" />
       </div>
     </button>
   );

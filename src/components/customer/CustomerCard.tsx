@@ -55,10 +55,10 @@ export function CustomerCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={`
-        bg-white dark:bg-gray-800
-        border border-gray-200 dark:border-gray-700
+        bg-[var(--surface)]
+        border border-[var(--border)]
         rounded-lg overflow-hidden
-        ${onClick ? 'cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors' : ''}
+        ${onClick ? 'cursor-pointer hover:border-[var(--accent)] transition-colors' : ''}
         ${className}
       `}
       onClick={onClick}
@@ -70,7 +70,7 @@ export function CustomerCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className={`font-semibold text-gray-900 dark:text-white truncate ${compact ? 'text-sm' : 'text-base'}`}>
+              <h3 className={`font-semibold text-[var(--foreground)] truncate ${compact ? 'text-sm' : 'text-base'}`}>
                 {customer.name}
               </h3>
               {customer.hasOpportunity && customer.priorityTier && (
@@ -86,8 +86,8 @@ export function CustomerCard({
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
-              <span className="font-medium text-gray-700 dark:text-gray-300">
+            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-[var(--text-muted)]">
+              <span className="font-medium text-[var(--foreground)]">
                 {formatCurrency(customer.totalPremium)}/yr
               </span>
               <span>{customer.policyCount} {customer.policyCount === 1 ? 'policy' : 'policies'}</span>
@@ -98,7 +98,7 @@ export function CustomerCard({
           </div>
 
           {onClick && (
-            <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-[var(--text-light)] flex-shrink-0" />
           )}
         </div>
 
@@ -108,13 +108,13 @@ export function CustomerCard({
             {customer.products.slice(0, 4).map((product, i) => (
               <span
                 key={i}
-                className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded"
+                className="px-2 py-0.5 text-xs bg-[var(--surface-2)] text-[var(--foreground)] rounded"
               >
                 {product}
               </span>
             ))}
             {customer.products.length > 4 && (
-              <span className="px-2 py-0.5 text-xs text-gray-400">
+              <span className="px-2 py-0.5 text-xs text-[var(--text-light)]">
                 +{customer.products.length - 4} more
               </span>
             )}
@@ -150,7 +150,7 @@ export function CustomerCard({
 
         {/* Quick Actions */}
         {showActions && (customer.phone || customer.email) && !compact && (
-          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex gap-2">
+          <div className="mt-3 pt-3 border-t border-[var(--border)] flex gap-2">
             {customer.phone && (
               <a
                 href={`tel:${customer.phone}`}
@@ -194,18 +194,18 @@ export function CustomerMiniCard({
       onClick={onClick}
       className={`
         inline-flex items-center gap-2 px-2 py-1
-        bg-gray-50 dark:bg-gray-800
-        border border-gray-200 dark:border-gray-700
+        bg-[var(--surface-2)]
+        border border-[var(--border)]
         rounded-lg text-left
-        ${onClick ? 'hover:border-blue-400 cursor-pointer' : ''}
+        ${onClick ? 'hover:border-[var(--accent)] cursor-pointer' : ''}
         transition-colors
       `}
     >
       <SegmentIndicator segment={customer.segment as Customer['segment']} size="sm" />
-      <span className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
+      <span className="text-sm font-medium text-[var(--foreground)] truncate max-w-[150px]">
         {customer.name}
       </span>
-      {onClick && <ExternalLink className="w-3 h-3 text-gray-400" />}
+      {onClick && <ExternalLink className="w-3 h-3 text-[var(--text-light)]" />}
     </button>
   );
 }
