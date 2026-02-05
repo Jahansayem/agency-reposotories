@@ -60,9 +60,9 @@ describe('Reminder Service', () => {
     it('should calculate morning_of (9 AM on due date)', () => {
       const dueDate = new Date('2026-01-19T15:00:00Z');
       const result = calculateReminderTime('morning_of', dueDate);
-      // Note: This sets to 9 AM in local timezone
-      expect(result?.getHours()).toBe(9);
-      expect(result?.getMinutes()).toBe(0);
+      // Note: This sets to 9 AM UTC (see reminderService implementation)
+      expect(result?.getUTCHours()).toBe(9);
+      expect(result?.getUTCMinutes()).toBe(0);
     });
 
     it('should return null for presets without due date', () => {
