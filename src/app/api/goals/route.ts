@@ -34,9 +34,13 @@ export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
         category:goal_categories(*),
         milestones:goal_milestones(*)
       `)
-      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: true })
       .limit(limit);
+
+    // Scope to agency only when multi-tenancy is active (ctx.agencyId is truthy).
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
 
     if (categoryId) {
       query = query.eq('category_id', categoryId);
@@ -73,31 +77,41 @@ export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agency
     }
 
     // Get max display_order for new goal within this agency
-    const { data: maxOrderData } = await supabase
+    let maxOrderQuery = supabase
       .from('strategic_goals')
       .select('display_order')
-      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    if (ctx.agencyId) {
+      maxOrderQuery = maxOrderQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: maxOrderData } = await maxOrderQuery.single();
 
     const nextOrder = (maxOrderData?.display_order || 0) + 1;
 
+    const insertData: Record<string, unknown> = {
+      title,
+      description: description || null,
+      category_id: category_id || null,
+      status: status || 'not_started',
+      priority: priority || 'medium',
+      target_date: target_date || null,
+      target_value: target_value || null,
+      notes: notes || null,
+      display_order: nextOrder,
+      created_by: ctx.userName,
+    };
+
+    // Only set agency_id when multi-tenancy is active (column may not exist otherwise).
+    if (ctx.agencyId) {
+      insertData.agency_id = ctx.agencyId;
+    }
+
     const { data, error } = await supabase
       .from('strategic_goals')
-      .insert({
-        title,
-        description: description || null,
-        category_id: category_id || null,
-        status: status || 'not_started',
-        priority: priority || 'medium',
-        target_date: target_date || null,
-        target_value: target_value || null,
-        notes: notes || null,
-        display_order: nextOrder,
-        created_by: ctx.userName,
-        agency_id: ctx.agencyId,
-      })
+      .insert(insertData)
       .select(`
         *,
         category:goal_categories(*),
@@ -153,11 +167,16 @@ export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
     if (notes !== undefined) updateData.notes = notes;
     if (display_order !== undefined) updateData.display_order = display_order;
 
-    const { data, error } = await supabase
+    let updateQuery = supabase
       .from('strategic_goals')
       .update(updateData)
-      .eq('id', id)
-      .eq('agency_id', ctx.agencyId)
+      .eq('id', id);
+
+    if (ctx.agencyId) {
+      updateQuery = updateQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data, error } = await updateQuery
       .select(`
         *,
         category:goal_categories(*),
@@ -184,11 +203,16 @@ export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agen
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    let deleteQuery = supabase
       .from('strategic_goals')
       .delete()
-      .eq('id', id)
-      .eq('agency_id', ctx.agencyId);
+      .eq('id', id);
+
+    if (ctx.agencyId) {
+      deleteQuery = deleteQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) throw error;
 
