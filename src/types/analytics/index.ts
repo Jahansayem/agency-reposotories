@@ -324,45 +324,7 @@ export type {
 } from '../../lib/lead-analysis-api';
 
 // ============================================
-// Parse Agency Data Types
+// Parse Agency Data & Extract Real Metrics Types
+// DISABLED: These modules require xlsx dependency and data files
+// that are not included in the production build.
 // ============================================
-export type {
-  DataDirectoryConfig,
-  DataRow,
-  DataFrame,
-  ColumnAnalysis,
-  NumericStats,
-  ValueCounts,
-  ProductsPerCustomerAnalysis,
-  PremiumAnalysis,
-  ClaimsDataResult,
-  AllPurposeAuditResult,
-  BusinessMetricsResult,
-  SheetData,
-  PolicyGrowthRetentionResult,
-  NewBusinessDetailsResult,
-  SummaryReport,
-} from '../../lib/parse-agency-data';
-
-// Renamed to avoid conflict
-export type { RenewalAuditResult as ParseRenewalAuditResult } from '../../lib/parse-agency-data';
-
-// ============================================
-// Extract Real Metrics Types
-// ============================================
-export type {
-  PolicyRetentionRow,
-  RenewalAuditRow,
-  NewBusinessRow,
-  PremiumChangeDistribution,
-  PremiumChangeStats,
-  PolicyRetentionResult,
-  NewBusinessResult,
-  ComprehensiveSummary,
-} from '../../lib/extract-real-metrics';
-
-// Renamed to avoid conflicts
-export type {
-  CustomerSegmentation as ExtractedCustomerSegmentation,
-  RenewalAuditResult as ExtractedRenewalAuditResult,
-} from '../../lib/extract-real-metrics';

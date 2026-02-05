@@ -21,8 +21,6 @@
  * - Customer Segmentation: LTV stratification, marketing allocation
  * - Allstate Parser: Cross-sell scoring, priority tiers
  * - Lead Analysis API: Full lead analysis with 20+ analysis functions
- * - Parse Agency Data: Excel/CSV parsing utilities
- * - Extract Real Metrics: Metrics extraction from reports
  */
 
 // ============================================
@@ -584,90 +582,8 @@ export {
 } from '../lead-analysis-api';
 
 // ============================================
-// Parse Agency Data
-// Excel/CSV parsing utilities
+// Parse Agency Data & Extract Real Metrics
+// DISABLED: These modules require xlsx dependency and data files
+// that are not included in the production build.
+// Uncomment when xlsx is installed and data files are available.
 // ============================================
-export {
-  // Types
-  type DataDirectoryConfig,
-  type DataRow,
-  type DataFrame,
-  type ColumnAnalysis,
-  type NumericStats,
-  type ValueCounts,
-  type ProductsPerCustomerAnalysis,
-  type PremiumAnalysis,
-  type ClaimsDataResult,
-  type AllPurposeAuditResult,
-  type BusinessMetricsResult,
-  type SheetData,
-  type PolicyGrowthRetentionResult,
-  type RenewalAuditResult as ParseRenewalAuditResult,
-  type NewBusinessDetailsResult,
-  type SummaryReport,
-
-  // Constants
-  DEFAULT_DATA_DIR,
-  DEFAULT_BRITTNEY_DIR,
-  CLAIMS_FILES,
-
-  // Functions
-  fileExists,
-  readExcelFile,
-  readExcelFileAllSheets,
-  findMatchingColumns,
-  analyzeColumns,
-  isNumeric,
-  parseNumeric,
-  getNumericColumns,
-  columnSum,
-  columnMean,
-  columnMedian,
-  countUnique,
-  valueCounts,
-  valueCountsTopN,
-  groupByCount,
-  groupCountStats,
-  head,
-  countWhere,
-  parseClaimsData,
-  parseAllPurposeAudit,
-  parseBusinessMetrics,
-  parsePolicyGrowthRetention,
-  parseRenewalAudit,
-  parseNewBusinessDetails,
-  generateSummaryReport,
-  parseExcelFromBuffer,
-  parseExcelAllSheetsFromBuffer,
-  analyzeDataFrame,
-} from '../parse-agency-data';
-
-// ============================================
-// Extract Real Metrics
-// Metrics extraction from reports
-// ============================================
-export {
-  // Types
-  type PolicyRetentionRow,
-  type RenewalAuditRow,
-  type NewBusinessRow,
-  type CustomerSegmentation as ExtractedCustomerSegmentation,
-  type PremiumChangeDistribution,
-  type PremiumChangeStats,
-  type PolicyRetentionResult,
-  type RenewalAuditResult as ExtractedRenewalAuditResult,
-  type NewBusinessResult,
-  type ComprehensiveSummary,
-
-  // Constants
-  DATA_DIR,
-  BRITTNEY_DIR,
-
-  // Functions
-  extractPolicyRetentionData,
-  extractRenewalAuditData,
-  extractCustomerSegmentation,
-  extractNewBusinessMetrics,
-  generateFinalSummary,
-  main as extractMetricsMain,
-} from '../extract-real-metrics';
