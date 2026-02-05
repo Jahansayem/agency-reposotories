@@ -12,6 +12,7 @@ import Celebration from './Celebration';
 import ReminderPicker from './ReminderPicker';
 import ContentToSubtasksImporter from './ContentToSubtasksImporter';
 import { WaitingStatusBadge, WaitingBadge } from './WaitingStatusBadge';
+import { CustomerBadge } from './customer/CustomerBadge';
 import { sanitizeTranscription } from '@/lib/sanitize';
 import { haptics } from '@/lib/haptics';
 import { triggerHaptic } from '@/lib/microInteractions';
@@ -25,6 +26,20 @@ const PRIORITY_TO_BADGE_VARIANT: Record<TodoPriority, 'danger' | 'warning' | 'in
   medium: 'info',
   low: 'default',
 };
+
+/**
+ * Filter out internal/system user names from display
+ * Replaces system-generated names with user-friendly alternatives
+ */
+function filterSystemUserName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  // List of internal/system names to filter out
+  const systemNames = ['System Recovery Script', 'System', 'Migration Script', 'Auto Recovery'];
+  if (systemNames.some(sn => name.toLowerCase().includes(sn.toLowerCase()))) {
+    return null; // Hide system names entirely
+  }
+  return name;
+}
 
 // Subtask item component with inline editing
 interface SubtaskItemProps {
@@ -223,6 +238,8 @@ function areTodoItemPropsEqual(
     prevTodo.status !== nextTodo.status ||
     prevTodo.due_date !== nextTodo.due_date ||
     prevTodo.assigned_to !== nextTodo.assigned_to ||
+    prevTodo.customer_name !== nextTodo.customer_name ||
+    prevTodo.customer_segment !== nextTodo.customer_segment ||
     prevTodo.waiting_for_response !== nextTodo.waiting_for_response ||
     prevTodo.notes !== nextTodo.notes ||
     prevTodo.recurrence !== nextTodo.recurrence ||
@@ -861,6 +878,15 @@ function TodoItemComponent({
                 >
                   <span className="truncate">{todo.assigned_to}</span>
                 </Badge>
+              )}
+
+              {/* Customer badge - show linked customer from book of business */}
+              {todo.customer_name && todo.customer_segment && (
+                <CustomerBadge
+                  name={todo.customer_name}
+                  segment={todo.customer_segment}
+                  size="sm"
+                />
               )}
 
               {/* Waiting for response badge */}
@@ -1710,8 +1736,8 @@ function TodoItemComponent({
               {todo.created_at && (
                 <span>• {new Date(todo.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
               )}
-              {todo.updated_at && todo.updated_by && (
-                <span className="hidden sm:inline">• Updated by {todo.updated_by}</span>
+              {todo.updated_at && filterSystemUserName(todo.updated_by) && (
+                <span className="hidden sm:inline">• Updated by {filterSystemUserName(todo.updated_by)}</span>
               )}
             </div>
             <div className="flex items-center gap-3">

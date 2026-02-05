@@ -119,7 +119,7 @@ export function useFilters(userName: string) {
         result = result.filter((todo) => isDueToday(todo.due_date) && !todo.completed);
         break;
       case 'overdue':
-        result = result.filter((todo) => isOverdue(todo.due_date, todo.completed));
+        result = result.filter((todo) => isOverdue(todo.due_date, todo.completed, todo.status));
         break;
       case 'waiting':
         result = result.filter((todo) => todo.waiting_for_response && !todo.completed);
@@ -204,8 +204,8 @@ export function useFilters(userName: string) {
           if (priorityDiff !== 0) return priorityDiff;
 
           // Overdue items come first
-          const aOverdue = isOverdue(a.due_date, a.completed);
-          const bOverdue = isOverdue(b.due_date, b.completed);
+          const aOverdue = isOverdue(a.due_date, a.completed, a.status);
+          const bOverdue = isOverdue(b.due_date, b.completed, b.status);
           if (aOverdue !== bOverdue) return aOverdue ? -1 : 1;
 
           // Due today comes next
@@ -277,7 +277,7 @@ export function useFilters(userName: string) {
       completed: visibleTodos.filter(t => t.completed).length,
       myTasks: visibleTodos.filter(t => t.assigned_to === userName || t.created_by === userName).length,
       dueToday: visibleTodos.filter(t => isDueToday(t.due_date) && !t.completed).length,
-      overdue: visibleTodos.filter(t => isOverdue(t.due_date, t.completed)).length,
+      overdue: visibleTodos.filter(t => isOverdue(t.due_date, t.completed, t.status)).length,
       urgent: visibleTodos.filter(t => t.priority === 'urgent' && !t.completed).length,
       waiting: waitingTodos.length,
       needsFollowup: waitingTodos.filter(t => isFollowUpOverdue(t)).length,

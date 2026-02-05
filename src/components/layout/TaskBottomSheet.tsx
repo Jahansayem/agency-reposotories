@@ -30,6 +30,20 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Todo, TodoPriority, TodoStatus, Subtask, User as UserType, PRIORITY_CONFIG, STATUS_CONFIG } from '@/types/todo';
 import { sanitizeTranscription } from '@/lib/sanitize';
 
+/**
+ * Filter out internal/system user names from display
+ * Replaces system-generated names with user-friendly alternatives
+ */
+function filterSystemUserName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  // List of internal/system names to filter out
+  const systemNames = ['System Recovery Script', 'System', 'Migration Script', 'Auto Recovery'];
+  if (systemNames.some(sn => name.toLowerCase().includes(sn.toLowerCase()))) {
+    return null; // Hide system names entirely
+  }
+  return name;
+}
+
 // ===============================================================================
 // TASK BOTTOM SHEET
 // A mobile-optimized bottom sheet for viewing and editing task details
@@ -914,9 +928,9 @@ export default function TaskBottomSheet({
                     Created by {task.created_by}{' '}
                     {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
                   </p>
-                  {task.updated_at && task.updated_by && (
+                  {task.updated_at && filterSystemUserName(task.updated_by) && (
                     <p>
-                      Updated by {task.updated_by}{' '}
+                      Updated by {filterSystemUserName(task.updated_by)}{' '}
                       {formatDistanceToNow(new Date(task.updated_at), { addSuffix: true })}
                     </p>
                   )}

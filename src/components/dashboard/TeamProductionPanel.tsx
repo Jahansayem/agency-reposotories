@@ -128,14 +128,14 @@ export default function TeamProductionPanel({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700"
+      className="bg-[var(--surface)] rounded-xl p-6 shadow-sm border border-[var(--border)]"
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
         <div className="p-2 rounded-lg bg-[#0033A0]/10 dark:bg-[#72B5E8]/20">
           <Users className="w-5 h-5 text-[#0033A0] dark:text-[#72B5E8]" />
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+        <h3 className="text-lg font-semibold text-[var(--foreground)]">
           Team Production
         </h3>
       </div>
@@ -143,7 +143,7 @@ export default function TeamProductionPanel({
       {/* Team Member List */}
       <div className="space-y-1 mb-4">
         {userStats.length === 0 ? (
-          <div className="text-center py-6 text-slate-500 dark:text-slate-400">
+          <div className="text-center py-6 text-[var(--text-muted)]">
             <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No team members found</p>
           </div>
@@ -155,7 +155,7 @@ export default function TeamProductionPanel({
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
               onClick={() => onUserClick(stat.userName)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left group"
+              className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-left group"
             >
               {/* Avatar */}
               <div
@@ -167,14 +167,14 @@ export default function TeamProductionPanel({
 
               {/* Name */}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                <div className="text-sm font-medium text-[var(--foreground)] truncate">
                   {stat.userName}
                 </div>
               </div>
 
               {/* Policies */}
               <div className="w-20 flex-shrink-0 text-right">
-                <span className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="text-sm text-[var(--text-muted)]">
                   {stat.policiesWritten}{' '}
                   <span className="hidden sm:inline">
                     {stat.policiesWritten === 1 ? 'policy' : 'policies'}
@@ -192,7 +192,7 @@ export default function TeamProductionPanel({
 
               {/* Tasks */}
               <div className="w-16 flex-shrink-0 text-right">
-                <span className="text-sm text-slate-500 dark:text-slate-400">
+                <span className="text-sm text-[var(--text-muted)]">
                   {stat.tasksCompleted}{' '}
                   <span className="hidden sm:inline">
                     {stat.tasksCompleted === 1 ? 'task' : 'tasks'}
@@ -201,7 +201,7 @@ export default function TeamProductionPanel({
               </div>
 
               {/* Hover indicator */}
-              <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+              <ChevronRight className="w-4 h-4 text-[var(--text-light)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
             </motion.button>
           ))
         )}

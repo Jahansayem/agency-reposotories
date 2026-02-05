@@ -37,6 +37,32 @@ import { useTheme } from '@/contexts/ThemeContext';
 // Shows recent activity with clickable items to navigate to related tasks
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * Humanize status strings for display
+ * Converts internal values like 'in_progress' to 'In Progress'
+ */
+function humanizeStatus(status: string | undefined): string {
+  if (!status) return '';
+  const statusMap: Record<string, string> = {
+    'todo': 'To Do',
+    'in_progress': 'In Progress',
+    'done': 'Done',
+    'not_started': 'Not Started',
+    'on_hold': 'On Hold',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+  };
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Humanize priority strings for display
+ */
+function humanizePriority(priority: string | undefined): string {
+  if (!priority) return '';
+  return priority.charAt(0).toUpperCase() + priority.slice(1);
+}
+
 interface NotificationModalProps {
   currentUserName: string;
   isOpen: boolean;
@@ -484,7 +510,7 @@ function NotificationItem({ activity, isUnread, onClick }: NotificationItemProps
         return (
           <>
             <strong>{userName}</strong> moved {taskText} to{' '}
-            <span style={{ color: config.color }}>{details.to}</span>
+            <span style={{ color: config.color }}>{humanizeStatus(details.to as string)}</span>
           </>
         );
       case 'priority_changed':
@@ -492,7 +518,7 @@ function NotificationItem({ activity, isUnread, onClick }: NotificationItemProps
           <>
             <strong>{userName}</strong> changed priority of {taskText} to{' '}
             <span style={{ color: PRIORITY_CONFIG[details.to as keyof typeof PRIORITY_CONFIG]?.color }}>
-              {details.to}
+              {humanizePriority(details.to as string)}
             </span>
           </>
         );

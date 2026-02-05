@@ -40,6 +40,10 @@ import PipelineHealthPanel from './PipelineHealthPanel';
 import RenewalsCalendarPanel from './RenewalsCalendarPanel';
 import TeamProductionPanel from './TeamProductionPanel';
 import CalendarView from '../calendar/CalendarView';
+import SubtaskProgressWidget from './SubtaskProgressWidget';
+import UnassignedTasksAlert from './UnassignedTasksAlert';
+import MissingDueDatesWarning from './MissingDueDatesWarning';
+import FeatureAdoptionPrompts from './FeatureAdoptionPrompts';
 
 interface ManagerDashboardProps {
   currentUser: AuthUser;
@@ -161,6 +165,24 @@ export default function ManagerDashboard({
       totalOverdue: teamOverdue.length,
     };
   }, [todos]);
+
+  // Feature adoption props
+  const hasReminders = useMemo(() => {
+    // Check if any todos have reminders associated
+    // Since reminders are stored in a separate table, we'll default to false
+    // In a real implementation, this would check if user has created any reminders
+    return false;
+  }, []);
+
+  const hasRecurringTasks = useMemo(() => {
+    return todos.some(t => t.recurrence);
+  }, [todos]);
+
+  const hasStrategicGoals = useMemo(() => {
+    // Strategic goals are owner-only feature, check if user is owner and has goals
+    // For now, default to false since we don't have access to goals data here
+    return false;
+  }, []);
 
   const handleNavigateToTasks = useCallback(() => {
     if (onNavigateToTasks) {
@@ -311,8 +333,7 @@ export default function ManagerDashboard({
           <Icon className={`w-4 h-4 ${
             'text-[#0033A0]'}`} />
         </div>
-        <h2 className={`text-sm font-semibold ${
-          'text-slate-700'}`}>
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">
           {title}
         </h2>
         {badge !== undefined && badge > 0 && (
@@ -325,7 +346,7 @@ export default function ManagerDashboard({
         <button
           onClick={action.onClick}
           className={`text-xs font-medium px-3 py-2 -my-1 rounded-[var(--radius-lg)] min-h-[36px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
-            'text-[#0033A0] hover:text-[#0047CC] hover:bg-slate-50 focus-visible:ring-offset-white'}`}
+            'text-[#0033A0] dark:text-[#72B5E8] hover:text-[#0047CC] dark:hover:text-[#8AC8F0] hover:bg-[var(--surface-2)] focus-visible:ring-offset-[var(--surface)]'}`}
         >
           {action.label}
         </button>
@@ -355,20 +376,20 @@ export default function ManagerDashboard({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-6xl h-[80vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden"
+              className="w-full max-w-6xl h-[80vh] bg-[var(--surface)] rounded-2xl shadow-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Calendar Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
+                <h2 className="text-xl font-semibold text-[var(--foreground)]">
                   Renewals Calendar
                 </h2>
                 <button
                   onClick={() => setShowCalendar(false)}
-                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors"
                   aria-label="Close calendar"
                 >
-                  <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                  <X className="w-5 h-5 text-[var(--text-muted)]" />
                 </button>
               </div>
               {/* Calendar Content */}
@@ -429,17 +450,16 @@ export default function ManagerDashboard({
             <button
               onClick={handleFilterOverdue}
               aria-label={`View ${teamStats.totalOverdue} overdue team task${teamStats.totalOverdue > 1 ? 's' : ''}`}
-              className={`w-full flex items-center gap-4 p-4 rounded-[var(--radius-2xl)] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${
-                'bg-red-50 hover:bg-red-100 border border-red-200 focus-visible:ring-offset-white'}`}
+              className={`w-full flex items-center gap-4 p-4 rounded-[var(--radius-2xl)] transition-colors group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 bg-red-500/10 dark:bg-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30 border border-red-500/20 focus-visible:ring-offset-[var(--surface)]`}
             >
               <div className="flex items-center justify-center w-12 h-12 rounded-[var(--radius-xl)] bg-red-500/20">
                 <AlertTriangle className="w-6 h-6 text-red-500" />
               </div>
               <div className="flex-1 text-left">
-              <p className={`text-lg font-bold ${'text-slate-900'}`}>
+              <p className="text-lg font-bold text-[var(--foreground)]">
                 {teamStats.totalOverdue} team task{teamStats.totalOverdue > 1 ? 's' : ''} overdue
               </p>
-              <p className={`text-sm ${'text-slate-600'}`}>
+              <p className="text-sm text-[var(--text-muted)]">
                 {myStats.overdue > 0 ? `${myStats.overdue} are yours` : 'Click to view and delegate'}
               </p>
             </div>
@@ -447,6 +467,13 @@ export default function ManagerDashboard({
           </button>
         </motion.div>
       )}
+
+      {/* Unassigned Tasks Alert - Show if there are incomplete unassigned tasks */}
+      <UnassignedTasksAlert
+        todos={todos}
+        onAssignTasks={handleNavigateToTasks}
+        onTaskClick={handleTaskClick}
+      />
 
       {/* Main Grid */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-4 xl:grid-cols-5">
@@ -459,37 +486,38 @@ export default function ManagerDashboard({
 
             {/* Traffic Light Stats - Enhanced with tabular-nums and better visual hierarchy */}
             <div className="grid grid-cols-4 gap-3 mb-5">
-              <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors ${'bg-slate-50'}`}>
-                <p className={`text-2xl font-bold tabular-nums ${'text-slate-900'}`}>
+              <div className="text-center p-3 rounded-[var(--radius-xl)] transition-colors bg-[var(--surface-2)]">
+                <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">
                   {users.length}
                 </p>
-                <p className={`text-label ${'text-slate-500'}`}>
+                <p className="text-label text-[var(--text-muted)]">
                   Team Size
                 </p>
               </div>
-              <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors ${'bg-slate-50'}`}>
-                <p className={`text-2xl font-bold tabular-nums ${'text-slate-900'}`}>
+              <div className="text-center p-3 rounded-[var(--radius-xl)] transition-colors bg-[var(--surface-2)]">
+                <p className="text-2xl font-bold tabular-nums text-[var(--foreground)]">
                   {managerData.teamOverview.totalActive}
                 </p>
-                <p className={`text-label ${'text-slate-500'}`}>
+                <p className="text-label text-[var(--text-muted)]">
                   Active Tasks
                 </p>
               </div>
               <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors ${
                 teamStats.totalOverdue > 0
-                  ? 'bg-red-50 border border-red-200/50': 'bg-slate-50'}`}>
-                <p className={`text-2xl font-bold tabular-nums ${teamStats.totalOverdue > 0 ? 'text-red-500' : 'text-slate-900'}`}>
+                  ? 'bg-red-500/10 dark:bg-red-500/20 border border-red-500/20 dark:border-red-500/30'
+                  : 'bg-[var(--surface-2)]'}`}>
+                <p className={`text-2xl font-bold tabular-nums ${teamStats.totalOverdue > 0 ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
                   {teamStats.totalOverdue}
                 </p>
-                <p className={`text-label ${'text-slate-500'}`}>
+                <p className="text-label text-[var(--text-muted)]">
                   Overdue
                 </p>
               </div>
-              <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors ${'bg-emerald-50'}`}>
+              <div className="text-center p-3 rounded-[var(--radius-xl)] transition-colors bg-emerald-500/10 dark:bg-emerald-500/20">
                 <p className="text-2xl font-bold tabular-nums text-emerald-500">
                   {managerData.teamOverview.weeklyTeamCompleted}
                 </p>
-                <p className={`text-label ${'text-slate-500'}`}>
+                <p className="text-label text-[var(--text-muted)]">
                   Done/Week
                 </p>
               </div>
@@ -498,7 +526,7 @@ export default function ManagerDashboard({
             {/* Needs Attention Section */}
             {membersNeedingAttention.length > 0 && (
               <div className="mb-5">
-                <div className={`text-xs font-semibold uppercase tracking-wide mb-3 flex items-center gap-2 ${'text-slate-400'}`}>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-3 flex items-center gap-2 text-[var(--text-light)]">
                   <AlertCircle className="w-3.5 h-3.5" />
                   Needs Attention
                 </div>
@@ -508,7 +536,8 @@ export default function ManagerDashboard({
                       key={member.name}
                       className={`flex items-center gap-3 p-3 rounded-[var(--radius-xl)] ${
                         member.workloadLevel === 'overloaded'
-                          ? 'bg-red-50 border border-red-200': 'bg-amber-50 border border-amber-200'}`}
+                          ? 'bg-red-500/10 dark:bg-red-500/20 border border-red-500/20 dark:border-red-500/30'
+                          : 'bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20 dark:border-amber-500/30'}`}
                     >
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
                         member.workloadLevel === 'overloaded'
@@ -518,16 +547,16 @@ export default function ManagerDashboard({
                         {member.name.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${'text-slate-900'}`}>
+                        <p className="text-sm font-medium truncate text-[var(--foreground)]">
                           {member.name}
                         </p>
-                        <p className={`text-xs ${'text-slate-500'}`}>
+                        <p className="text-xs text-[var(--text-muted)]">
                           {member.overdueTasks > 0 && `${member.overdueTasks} overdue`}
                           {member.overdueTasks > 0 && member.workloadLevel === 'overloaded' && ' · '}
                           {member.workloadLevel === 'overloaded' && `${member.activeTasks} tasks (overloaded)`}
                         </p>
                       </div>
-                      <ChevronRight className={`w-4 h-4 ${'text-slate-300'}`} />
+                      <ChevronRight className={`w-4 h-4 text-[var(--text-light)]`} />
                     </div>
                   ))}
                 </div>
@@ -540,7 +569,7 @@ export default function ManagerDashboard({
                 onClick={() => setShowAllTeamMembers(!showAllTeamMembers)}
                 aria-expanded={showAllTeamMembers}
                 aria-label={`${showAllTeamMembers ? 'Collapse' : 'Expand'} team workload list`}
-                className={`w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide mb-3 min-h-[48px] rounded-[var(--radius-lg)] px-2 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${'text-slate-500 hover:text-slate-700 focus-visible:ring-offset-white'}`}
+                className={`w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wide mb-3 min-h-[48px] rounded-[var(--radius-lg)] px-2 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 text-[var(--text-muted)] hover:text-[var(--foreground)] focus-visible:ring-offset-[var(--surface)]`}
               >
                 <span>Team Workload</span>
                 <ChevronDown className={`w-4 h-4 transition-transform ${showAllTeamMembers ? 'rotate-180' : ''}`} />
@@ -559,13 +588,13 @@ export default function ManagerDashboard({
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
                         member.workloadLevel === 'overloaded'
                           ? 'bg-red-500/20 text-red-500'
-                          : 'bg-slate-100 text-slate-600'}`}>
+                          : 'bg-[var(--surface-2)] text-[var(--text-muted)]'}`}>
                         {member.name.charAt(0)}
                       </div>
-                      <span className={`w-24 text-sm truncate font-medium ${'text-slate-700'}`}>
+                      <span className={`w-24 text-sm truncate font-medium text-[var(--foreground)]`}>
                         {member.name.split(' ')[0]}
                       </span>
-                      <div className={`flex-1 h-3 rounded-full overflow-hidden ${'bg-slate-100'}`}>
+                      <div className={`flex-1 h-3 rounded-full overflow-hidden bg-[var(--surface-2)]`}>
                         <motion.div
                           initial={prefersReducedMotion ? false : { width: 0 }}
                           animate={{ width: `${Math.min(member.activeTasks / 15 * 100, 100)}%` }}
@@ -593,7 +622,7 @@ export default function ManagerDashboard({
                         {member.overdueTasks > 0 && (
                           <span className="text-xs text-red-500 font-bold tabular-nums">{member.overdueTasks}!</span>
                         )}
-                        <span className={`text-xs font-medium tabular-nums ${'text-slate-500'}`}>
+                        <span className={`text-xs font-medium tabular-nums text-[var(--text-muted)]`}>
                           {member.activeTasks}
                         </span>
                       </div>
@@ -603,8 +632,7 @@ export default function ManagerDashboard({
               {managerData.memberStats.length > 5 && !showAllTeamMembers && (
                 <button
                   onClick={() => setShowAllTeamMembers(true)}
-                  className={`w-full text-center py-2 mt-2 text-xs font-medium min-h-[48px] rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
-                    'text-[#0033A0] hover:text-[#0047CC] focus-visible:ring-offset-white'} hover:underline`}
+                  className={`w-full text-center py-2 mt-2 text-xs font-medium min-h-[48px] rounded-[var(--radius-lg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 text-[#0033A0] dark:text-[#72B5E8] hover:text-[#0047CC] dark:hover:text-[#8AC8F0] focus-visible:ring-offset-[var(--surface)] hover:underline`}
                 >
                   Show all {managerData.memberStats.length} team members
                 </button>
@@ -637,7 +665,7 @@ export default function ManagerDashboard({
 
               if (!hasAnyWork) {
                 return (
-                  <div className={`text-center py-6 ${'text-slate-400'}`}>
+                  <div className={`text-center py-6 text-[var(--text-light)]`}>
                     <CheckCircle2 className="w-10 h-10 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">All insurance tasks completed</p>
                   </div>
@@ -655,18 +683,19 @@ export default function ManagerDashboard({
                         key={key}
                         className={`flex items-center gap-3 p-3 rounded-[var(--radius-xl)] ${
                           data.overdue > 0
-                            ? 'bg-red-50 border border-red-100': 'bg-slate-50'}`}
+                            ? 'bg-red-500/10 dark:bg-red-500/20 border border-red-500/20'
+                            : 'bg-[var(--surface-2)]'}`}
                       >
                         <div className={`w-10 h-10 rounded-[var(--radius-xl)] flex items-center justify-center ${bgColor}`}>
                           <Icon className={`w-5 h-5 ${color}`} />
                         </div>
                         <div className="flex-1">
-                          <p className={`text-sm font-medium ${'text-slate-900'}`}>{label}</p>
+                          <p className={`text-sm font-medium text-[var(--foreground)]`}>{label}</p>
                           <div className="flex items-center gap-2 text-xs">
                             {data.overdue > 0 && (
                               <span className="text-red-500 font-medium">{data.overdue} overdue</span>
                             )}
-                            <span className={`${'text-slate-400'}`}>
+                            <span className={`text-[var(--text-light)]`}>
                               {data.active} active
                             </span>
                           </div>
@@ -692,11 +721,10 @@ export default function ManagerDashboard({
               <button
                 onClick={handleFilterOverdue}
                 aria-label={`View your ${myStats.overdue} overdue task${myStats.overdue > 1 ? 's' : ''}`}
-                className={`w-full flex items-center gap-3 p-3 rounded-[var(--radius-xl)] mb-4 min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 ${
-                  'bg-red-50 hover:bg-red-100 focus-visible:ring-offset-white'} transition-colors`}
+                className={`w-full flex items-center gap-3 p-3 rounded-[var(--radius-xl)] mb-4 min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 bg-red-500/10 dark:bg-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30 focus-visible:ring-offset-[var(--surface)] transition-colors`}
               >
                 <AlertTriangle className="w-5 h-5 text-red-500" />
-                <span className={`text-sm font-medium ${'text-slate-900'}`}>
+                <span className={`text-sm font-medium text-[var(--foreground)]`}>
                   {myStats.overdue} task{myStats.overdue > 1 ? 's' : ''} overdue
                 </span>
                 <ArrowRight className="w-4 h-4 text-red-500 ml-auto" />
@@ -707,11 +735,10 @@ export default function ManagerDashboard({
             {myStats.dueToday > 0 ? (
               <div className="space-y-1">
                 <div className="flex items-center justify-between mb-2">
-                  <span className={`text-xs font-semibold uppercase tracking-wide ${'text-slate-500'}`}>
+                  <span className={`text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]`}>
                     Due Today
                   </span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full tabular-nums ${
-                    'bg-amber-100 text-amber-700'}`}>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full tabular-nums bg-amber-500/20 text-amber-500`}>
                     {myStats.dueToday}
                   </span>
                 </div>
@@ -723,8 +750,7 @@ export default function ManagerDashboard({
                     transition={prefersReducedMotion ? { duration: 0 } : { delay: index * 0.05 }}
                     onClick={() => handleTaskClick(task.id)}
                     aria-label={`Open task: ${task.text}`}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-all duration-200 group min-h-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
-                      'hover:bg-slate-50 active:bg-slate-100 active:scale-[0.98] focus-visible:ring-offset-white'}`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left transition-all duration-200 group min-h-[52px] touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 hover:bg-[var(--surface-2)] active:bg-[var(--surface-2)] active:scale-[0.98] focus-visible:ring-offset-[var(--surface)]`}
                   >
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 transition-transform group-hover:scale-110 ${
                       task.priority === 'urgent'
@@ -733,11 +759,10 @@ export default function ManagerDashboard({
                           ? 'bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.4)]'
                           : 'bg-[#0047CC]'
                     }`} />
-                    <span className={`flex-1 text-sm font-medium truncate ${'text-slate-800'}`}>
+                    <span className={`flex-1 text-sm font-medium truncate text-[var(--foreground)]`}>
                       {task.text}
                     </span>
-                    <ChevronRight className={`w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-60 transition-all group-hover:translate-x-0.5 ${
-                      'text-slate-400'}`} />
+                    <ChevronRight className={`w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-60 transition-all group-hover:translate-x-0.5 text-[var(--text-light)]`} />
                   </motion.button>
                 ))}
               </div>
@@ -745,13 +770,12 @@ export default function ManagerDashboard({
               <motion.div
                 initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className={`flex items-center gap-3 py-4 px-4 rounded-[var(--radius-xl)] ${
-                  'bg-emerald-50 border border-emerald-200/50'}`}
+                className={`flex items-center gap-3 py-4 px-4 rounded-[var(--radius-xl)] bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/20`}
               >
                 <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
                   <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                 </div>
-                <span className={`text-sm font-medium ${'text-emerald-700'}`}>
+                <span className={`text-sm font-medium text-emerald-500`}>
                   No tasks due today — great job!
                 </span>
               </motion.div>
@@ -759,17 +783,17 @@ export default function ManagerDashboard({
 
             {/* Quick Stats - Enhanced */}
             <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-dashed border-slate-200 dark:border-white/10">
-              <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors ${'bg-slate-50'}`}>
-                <p className={`text-xl font-bold tabular-nums ${'text-slate-900'}`}>
+              <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors bg-[var(--surface-2)]`}>
+                <p className={`text-xl font-bold tabular-nums text-[var(--foreground)]`}>
                   {myStats.totalActive}
                 </p>
-                <p className={`text-label ${'text-slate-500'}`}>Your Active</p>
+                <p className={`text-label text-[var(--text-muted)]`}>Your Active</p>
               </div>
-              <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors ${'bg-emerald-50'}`}>
+              <div className={`text-center p-3 rounded-[var(--radius-xl)] transition-colors bg-emerald-500/10 dark:bg-emerald-500/20`}>
                 <p className="text-xl font-bold tabular-nums text-emerald-500">
                   {managerData.memberStats.find(m => m.name === currentUser.name)?.weeklyCompleted || 0}
                 </p>
-                <p className={`text-label ${'text-slate-500'}`}>Done/Week</p>
+                <p className={`text-label text-[var(--text-muted)]`}>Done/Week</p>
               </div>
             </div>
           </Card>
@@ -790,16 +814,17 @@ export default function ManagerDashboard({
                       aria-label={`Open stalled task: ${item.todo.text}, ${item.daysSinceActivity} days without activity`}
                       className={`w-full flex items-center gap-3 p-3 rounded-[var(--radius-xl)] text-left transition-all duration-200 group min-h-[48px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0033A0] focus-visible:ring-offset-2 ${
                         item.urgencyLevel === 'critical'
-                          ? 'bg-red-50 hover:bg-red-100 border-l-4 border-l-red-500 focus-visible:ring-offset-white': 'bg-slate-50 hover:bg-slate-100 focus-visible:ring-offset-white'} active:scale-[0.98]`}
+                          ? 'bg-red-500/10 dark:bg-red-500/20 hover:bg-red-500/20 dark:hover:bg-red-500/30 border-l-4 border-l-red-500'
+                          : 'bg-[var(--surface-2)] hover:bg-[var(--surface-hover)]'} focus-visible:ring-offset-[var(--surface)] active:scale-[0.98]`}
                       onClick={() => handleTaskClick(item.todo.id)}
                     >
                       <span className={`px-2 py-1 rounded-[var(--radius-md)] text-badge tabular-nums ${badge.bg} ${badge.text}`}>
                         {item.daysSinceActivity}d
                       </span>
-                      <span className={`flex-1 truncate text-sm font-medium ${'text-slate-800'}`}>
+                      <span className={`flex-1 truncate text-sm font-medium text-[var(--foreground)]`}>
                         {item.todo.text}
                       </span>
-                      <ChevronRight className={`w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-60 transition-all group-hover:translate-x-0.5 ${'text-slate-400'}`} />
+                      <ChevronRight className={`w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-60 transition-all group-hover:translate-x-0.5 text-[var(--text-light)]`} />
                     </motion.button>
                   );
                 })}
@@ -817,16 +842,17 @@ export default function ManagerDashboard({
                     key={idx}
                     className={`flex items-start gap-3 p-3 rounded-[var(--radius-xl)] ${
                       bottleneck.severity === 'critical'
-                        ? 'bg-red-50': 'bg-amber-50'}`}
+                        ? 'bg-red-500/10 dark:bg-red-500/20'
+                        : 'bg-amber-500/10 dark:bg-amber-500/20'}`}
                   >
                     <AlertTriangle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
                       bottleneck.severity === 'critical' ? 'text-red-500' : 'text-amber-500'
                     }`} />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${'text-slate-900'}`}>
+                      <p className={`text-sm font-medium text-[var(--foreground)]`}>
                         {bottleneck.title}
                       </p>
-                      <p className={`text-xs ${'text-slate-500'}`}>
+                      <p className={`text-xs text-[var(--text-muted)]`}>
                         {bottleneck.description}
                       </p>
                     </div>
@@ -835,8 +861,29 @@ export default function ManagerDashboard({
               </div>
             </Card>
           )}
+
+          {/* Subtask Progress Widget */}
+          <SubtaskProgressWidget
+            todos={todos}
+            onViewSubtasks={handleNavigateToTasks}
+          />
+
+          {/* Missing Due Dates Warning */}
+          <MissingDueDatesWarning
+            todos={todos}
+            onSetDueDates={handleNavigateToTasks}
+            onTaskClick={handleTaskClick}
+          />
         </div>
       </div>
+
+      {/* Feature Adoption Prompts */}
+      <FeatureAdoptionPrompts
+        todos={todos}
+        hasReminders={hasReminders}
+        hasRecurringTasks={hasRecurringTasks}
+        hasStrategicGoals={hasStrategicGoals}
+      />
       </div>
     </>
   );
