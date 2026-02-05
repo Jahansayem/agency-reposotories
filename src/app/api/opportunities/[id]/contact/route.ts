@@ -30,14 +30,14 @@ const supabase = createClient(
 
 const VALID_CONTACT_METHODS: ContactMethod[] = ['phone', 'email', 'in_person', 'mail'];
 const VALID_CONTACT_OUTCOMES: ContactOutcome[] = [
-  'connected',
-  'voicemail',
+  'contacted_interested',
+  'contacted_not_interested',
+  'contacted_callback_scheduled',
+  'contacted_wrong_timing',
+  'left_voicemail',
   'no_answer',
-  'wrong_number',
-  'callback_scheduled',
-  'sold',
-  'not_interested',
-  'follow_up_needed',
+  'invalid_contact',
+  'declined_permanently',
 ];
 
 function isValidContactMethod(method: string): method is ContactMethod {
@@ -310,15 +310,16 @@ export async function POST(
     }
 
     // Map contact outcome to opportunity contact_outcome field
+    // This bridges the detailed tracking outcomes to the simpler opportunity status
     const outcomeMapping: Record<ContactOutcome, string | null> = {
-      connected: null, // Connected but no specific outcome
-      voicemail: 'no_answer',
-      no_answer: 'no_answer',
-      wrong_number: null,
-      callback_scheduled: 'callback',
-      sold: 'sold',
-      not_interested: 'declined',
-      follow_up_needed: 'callback',
+      contacted_interested: 'quoted',        // Interested → move to quoted stage
+      contacted_not_interested: 'declined',  // Not interested → mark as declined
+      contacted_callback_scheduled: 'callback', // Callback → follow up scheduled
+      contacted_wrong_timing: 'callback',    // Wrong timing → try again later
+      left_voicemail: 'no_answer',           // Voicemail → needs follow up
+      no_answer: 'no_answer',                // No answer → needs retry
+      invalid_contact: null,                 // Invalid → data quality issue
+      declined_permanently: 'declined',      // Permanent decline → closed
     };
 
     // Update parent opportunity with latest contact info
@@ -334,10 +335,9 @@ export async function POST(
       opportunityUpdate.contact_outcome = mappedOutcome;
     }
 
-    // If sold, set converted fields
-    if (contact_outcome === 'sold') {
-      opportunityUpdate.converted_at = contactRecord.contacted_at;
-    }
+    // If interested, this is a strong conversion signal - may lead to sale
+    // Actual conversion is tracked separately when policy is written
+    // Note: 'contacted_interested' maps to 'quoted' status, not immediate sale
 
     const { error: updateError } = await supabase
       .from('cross_sell_opportunities')

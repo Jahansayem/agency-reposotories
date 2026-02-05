@@ -34,14 +34,17 @@ import type {
   ParsedCrossSellRecord,
 } from '@/types/allstate-analytics';
 
-// Create Supabase client with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -341,6 +344,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const agencyId = searchParams.get('agency_id');
     const limit = parseInt(searchParams.get('limit') || '20', 10);

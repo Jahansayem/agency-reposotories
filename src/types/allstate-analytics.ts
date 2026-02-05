@@ -630,17 +630,27 @@ export const DEFAULT_CROSS_SELL_SUBTASKS = [
 export type ContactMethod = 'phone' | 'email' | 'in_person' | 'mail';
 
 /**
- * Valid contact outcomes
+ * Valid contact outcomes - Enhanced for model training feedback loop
+ *
+ * These outcomes provide granular tracking for:
+ * 1. Contact success vs failure
+ * 2. Customer interest level when reached
+ * 3. Reason for non-conversion
+ * 4. Data quality issues
+ *
+ * This enables better model training by distinguishing between:
+ * - Customer-driven outcomes (interest, timing, permanent decline)
+ * - Operational outcomes (no answer, voicemail, invalid data)
  */
 export type ContactOutcome =
-  | 'connected'
-  | 'voicemail'
-  | 'no_answer'
-  | 'wrong_number'
-  | 'callback_scheduled'
-  | 'sold'
-  | 'not_interested'
-  | 'follow_up_needed';
+  | 'contacted_interested'       // Reached customer, they expressed interest
+  | 'contacted_not_interested'   // Reached customer, not interested at this time
+  | 'contacted_callback_scheduled' // Reached customer, scheduled specific callback
+  | 'contacted_wrong_timing'     // Reached customer, bad timing (busy, just renewed elsewhere, etc.)
+  | 'left_voicemail'             // Did not reach, left voicemail message
+  | 'no_answer'                  // Did not reach, no voicemail left
+  | 'invalid_contact'            // Contact info is incorrect (wrong number, bounced email)
+  | 'declined_permanently';      // Customer explicitly declined, do not contact again
 
 /**
  * Contact history record for tracking contact attempts on opportunities
@@ -725,6 +735,12 @@ export const CONTACT_METHOD_CONFIG: Record<ContactMethod, {
 
 /**
  * Configuration for contact outcomes display
+ *
+ * Organized by outcome type for better model training feedback:
+ * - Positive outcomes (interest shown, callback scheduled)
+ * - Neutral outcomes (wrong timing, voicemail)
+ * - Negative outcomes (not interested, declined permanently)
+ * - Operational outcomes (no answer, invalid contact)
  */
 export const CONTACT_OUTCOME_CONFIG: Record<ContactOutcome, {
   label: string;
@@ -733,22 +749,60 @@ export const CONTACT_OUTCOME_CONFIG: Record<ContactOutcome, {
   bgColor: string;
   description: string;
   isPositive: boolean;
+  /** For model training: indicates customer was successfully reached */
+  customerReached: boolean;
+  /** For model training: indicates customer expressed interest level (-1 to 1) */
+  interestSignal: number;
 }> = {
-  connected: {
-    label: 'Connected',
-    icon: 'check-circle',
-    color: '#22c55e',
-    bgColor: 'rgba(34, 197, 94, 0.15)',
-    description: 'Successfully reached the customer',
+  contacted_interested: {
+    label: 'Interested',
+    icon: 'thumbs-up',
+    color: '#10b981',
+    bgColor: 'rgba(16, 185, 129, 0.15)',
+    description: 'Customer expressed interest in the product',
     isPositive: true,
+    customerReached: true,
+    interestSignal: 1,
   },
-  voicemail: {
-    label: 'Voicemail',
-    icon: 'voicemail',
+  contacted_not_interested: {
+    label: 'Not Interested',
+    icon: 'thumbs-down',
+    color: '#64748b',
+    bgColor: 'rgba(100, 116, 139, 0.15)',
+    description: 'Customer not interested at this time',
+    isPositive: false,
+    customerReached: true,
+    interestSignal: -0.5,
+  },
+  contacted_callback_scheduled: {
+    label: 'Callback Scheduled',
+    icon: 'calendar',
+    color: '#3b82f6',
+    bgColor: 'rgba(59, 130, 246, 0.15)',
+    description: 'Customer requested callback at specific time',
+    isPositive: true,
+    customerReached: true,
+    interestSignal: 0.7,
+  },
+  contacted_wrong_timing: {
+    label: 'Wrong Timing',
+    icon: 'clock',
     color: '#f59e0b',
     bgColor: 'rgba(245, 158, 11, 0.15)',
-    description: 'Left voicemail message',
+    description: 'Customer reached but timing was not right (busy, just renewed, etc.)',
     isPositive: false,
+    customerReached: true,
+    interestSignal: 0,
+  },
+  left_voicemail: {
+    label: 'Left Voicemail',
+    icon: 'voicemail',
+    color: '#8b5cf6',
+    bgColor: 'rgba(139, 92, 246, 0.15)',
+    description: 'Left voicemail message for customer',
+    isPositive: false,
+    customerReached: false,
+    interestSignal: 0,
   },
   no_answer: {
     label: 'No Answer',
@@ -757,45 +811,27 @@ export const CONTACT_OUTCOME_CONFIG: Record<ContactOutcome, {
     bgColor: 'rgba(107, 114, 128, 0.15)',
     description: 'No answer, no voicemail left',
     isPositive: false,
+    customerReached: false,
+    interestSignal: 0,
   },
-  wrong_number: {
-    label: 'Wrong Number',
+  invalid_contact: {
+    label: 'Invalid Contact',
+    icon: 'alert-circle',
+    color: '#ef4444',
+    bgColor: 'rgba(239, 68, 68, 0.15)',
+    description: 'Contact information is incorrect (wrong number, bounced email)',
+    isPositive: false,
+    customerReached: false,
+    interestSignal: 0,
+  },
+  declined_permanently: {
+    label: 'Declined Permanently',
     icon: 'x-circle',
-    color: '#ef4444',
-    bgColor: 'rgba(239, 68, 68, 0.15)',
-    description: 'Phone number is incorrect',
+    color: '#dc2626',
+    bgColor: 'rgba(220, 38, 38, 0.15)',
+    description: 'Customer explicitly declined, do not contact again',
     isPositive: false,
-  },
-  callback_scheduled: {
-    label: 'Callback Scheduled',
-    icon: 'calendar',
-    color: '#3b82f6',
-    bgColor: 'rgba(59, 130, 246, 0.15)',
-    description: 'Customer requested callback at specific time',
-    isPositive: true,
-  },
-  sold: {
-    label: 'Sold',
-    icon: 'trophy',
-    color: '#22c55e',
-    bgColor: 'rgba(34, 197, 94, 0.15)',
-    description: 'Sale completed successfully',
-    isPositive: true,
-  },
-  not_interested: {
-    label: 'Not Interested',
-    icon: 'thumbs-down',
-    color: '#ef4444',
-    bgColor: 'rgba(239, 68, 68, 0.15)',
-    description: 'Customer declined the offer',
-    isPositive: false,
-  },
-  follow_up_needed: {
-    label: 'Follow-up Needed',
-    icon: 'clock',
-    color: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.15)',
-    description: 'Requires additional follow-up',
-    isPositive: false,
+    customerReached: true,
+    interestSignal: -1,
   },
 };

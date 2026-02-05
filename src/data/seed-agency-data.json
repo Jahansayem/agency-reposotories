@@ -1,0 +1,99 @@
+{
+  "agency_info": {
+    "agent_name": "Derrick Bealer",
+    "agent_id": "A0C6581",
+    "agency_name": "Straightlined",
+    "production_month": "Sep-2025"
+  },
+  "current_state": {
+    "written_premium_monthly": 4072346,
+    "written_premium_annual_estimate": 48868152,
+    "portfolio_growth_bps_current": 0.0,
+    "portfolio_growth_bps_previous": 0.2987,
+    "portfolio_growth_previous_amount": 12058,
+    "estimated_policies": 3500,
+    "estimated_customers": 2200,
+    "policies_per_customer": 1.59
+  },
+  "actual_staffing": {
+    "total_staff": 2,
+    "producers": 1,
+    "service_staff": 0,
+    "admin_staff": 1,
+    "note": "CONFIRMED - Just Derrick (producer) + 1 admin assistant",
+    "revenue_per_employee": 2036173,
+    "rpe_status": "EXCEPTIONAL - $2M+ per employee (solo producer managing $4M book!)"
+  },
+  "estimated_metrics": {
+    "average_premium_per_policy": 1164,
+    "commission_rate_estimate": 0.12,
+    "annual_commission_revenue": 5864178,
+    "monthly_commission_revenue": 488681
+  },
+  "calculated_benchmarks": {
+    "policies_per_customer": 1.59,
+    "policies_per_customer_status": "Below 1.8 threshold - opportunity to improve retention through bundling",
+    "revenue_per_employee": 488681,
+    "retention_rate_estimate": 0.91,
+    "service_producer_ratio": 2.67,
+    "service_producer_status": "Near optimal (target: 2.8:1)"
+  },
+  "product_mix_estimated": {
+    "STATUS": "⚠️ ESTIMATED - NEEDS DERRICK'S ACTUAL DATA",
+    "instructions": "Fill out DERRICK_PRODUCT_MIX_FORM.md with actual policy counts from your AMS",
+    "auto": 1800,
+    "home": 1200,
+    "umbrella": 350,
+    "cyber": 100,
+    "commercial": 50,
+    "life": 0,
+    "other": 0,
+    "total": 3500,
+    "note": "These are rough estimates based on typical agency distribution. Replace with actual counts for accurate modeling."
+  },
+  "growth_opportunities": {
+    "cross_sell_to_1_8_threshold": {
+      "current_ppc": 1.59,
+      "target_ppc": 1.8,
+      "additional_policies_needed": 462,
+      "potential_retention_improvement": "91% → 95% (unlocks 4% improvement)",
+      "priority": "HIGH"
+    },
+    "umbrella_policies": {
+      "description": "High-margin product with 15% commission",
+      "current_estimate": 350,
+      "recommended_penetration": "20-25% of customers",
+      "target_policies": 440,
+      "gap": 90,
+      "priority": "HIGH"
+    },
+    "cyber_policies": {
+      "description": "Emerging product with 15-25% commission",
+      "current_estimate": 100,
+      "recommended_penetration": "10-15% of customers",
+      "target_policies": 220,
+      "gap": 120,
+      "priority": "MEDIUM"
+    },
+    "total_policies_needed_for_1_8": {
+      "calculation": "2,200 customers × 1.8 = 3,960 policies",
+      "current_policies": 3500,
+      "gap": 460,
+      "recommended_mix": {
+        "umbrella_additional": 90,
+        "cyber_additional": 120,
+        "home_bundle_additional": 150,
+        "auto_additional": 100
+      }
+    }
+  },
+  "notes": [
+    "Written premium of $4M+/month indicates mature, well-established agency",
+    "Portfolio growth showing 0% current vs 0.30% previous - potential retention concern",
+    "Strong base to optimize - focus on bundling to reach 1.8 threshold",
+    "Large book size means small % improvements = significant revenue gains",
+    "⚠️ IMPORTANT: Product mix above is ESTIMATED - need actual counts from AMS",
+    "📋 Action Item: Fill out DERRICK_PRODUCT_MIX_FORM.md for accurate modeling",
+    "Once actual product mix is provided, model will recalculate with precise projections"
+  ]
+}

@@ -16,10 +16,12 @@ import type {
   CrossSellListResponse,
 } from '@/types/allstate-analytics';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 /**
  * GET /api/analytics/cross-sell
@@ -27,6 +29,7 @@ const supabase = createClient(
  */
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
@@ -121,32 +124,47 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get summary counts
+    // Get summary counts using database-side aggregation (fixes N+1 query)
+    // This is much more efficient than fetching all records and counting in JS
     const { data: summaryData } = await supabase
       .from('cross_sell_opportunities')
-      .select('priority_tier, potential_premium_add')
+      .select('priority_tier')
       .eq('dismissed', false)
       .eq('agency_id', agencyId || '');
 
-    const summary = {
-      hot_count: 0,
-      high_count: 0,
-      medium_count: 0,
-      low_count: 0,
-      total_potential_premium: 0,
-    };
+    // Aggregate premium sum separately - Supabase doesn't support multiple aggregates in one query
+    const { data: premiumData } = await supabase
+      .from('cross_sell_opportunities')
+      .select('potential_premium_add')
+      .eq('dismissed', false)
+      .eq('agency_id', agencyId || '')
+      .not('potential_premium_add', 'is', null);
 
-    if (summaryData) {
-      for (const row of summaryData) {
-        summary.total_potential_premium += row.potential_premium_add || 0;
-        switch (row.priority_tier) {
-          case 'HOT': summary.hot_count++; break;
-          case 'HIGH': summary.high_count++; break;
-          case 'MEDIUM': summary.medium_count++; break;
-          case 'LOW': summary.low_count++; break;
+    // Calculate tier counts using reduce (single pass, no N+1)
+    const tierCounts = (summaryData || []).reduce(
+      (acc, row) => {
+        const tier = row.priority_tier as string;
+        if (tier in acc) {
+          acc[tier]++;
         }
-      }
-    }
+        return acc;
+      },
+      { HOT: 0, HIGH: 0, MEDIUM: 0, LOW: 0 } as Record<string, number>
+    );
+
+    // Calculate total premium (single pass)
+    const totalPremium = (premiumData || []).reduce(
+      (sum, row) => sum + (row.potential_premium_add || 0),
+      0
+    );
+
+    const summary = {
+      hot_count: tierCounts.HOT,
+      high_count: tierCounts.HIGH,
+      medium_count: tierCounts.MEDIUM,
+      low_count: tierCounts.LOW,
+      total_potential_premium: totalPremium,
+    };
 
     const response: CrossSellListResponse = {
       opportunities: data || [],
@@ -172,6 +190,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
 
     // Validate required fields
@@ -246,6 +265,7 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const { id, ...updates } = body;
 
@@ -306,6 +326,7 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const reason = searchParams.get('reason');

@@ -75,6 +75,15 @@ See `docs/MULTI_AGENCY_LAUNCH_PLAN.md` for complete audit results.
 - **Daily digest** - AI-generated summary of team activity and priorities
 - **Outlook Add-in** - Convert emails to tasks using AI (Claude)
 
+### Allstate Analytics Integration (NEW)
+- **Weekly data import** - Upload CSV exports from Allstate Book of Business
+- **Cross-sell analysis** - Automatic priority scoring (HOT/HIGH/MEDIUM/LOW tiers)
+- **Opportunity tracking** - Contact tracking, outcome recording, conversion metrics
+- **Renewal calendar** - Visual calendar of upcoming renewals with cross-sell links
+- **Task generation** - Auto-create follow-up tasks from high-priority opportunities
+- **Talking points** - AI-generated sales talking points based on customer data
+- **Performance metrics** - Conversion rates, premium potential, segment analysis
+
 ### Collaboration & Communication
 - **Team chat** - Real-time messaging with direct messages and team channels
 - **Chat image attachments** - Share screenshots and files with auto-thumbnail generation

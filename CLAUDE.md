@@ -63,6 +63,96 @@ UPSTASH_REDIS_REST_TOKEN=<from upstash>  # Optional: rate limiting (fallback to 
 
 ---
 
+## 📊 Allstate Analytics Integration (February 2026)
+
+**NEW:** Weekly data import workflow for cross-sell opportunity analysis from Allstate Book of Business exports.
+
+### Overview
+
+The Allstate Analytics integration enables:
+1. **Weekly Data Import** - Upload CSV exports from Allstate Gateway
+2. **Cross-Sell Analysis** - Automatic priority scoring and opportunity identification
+3. **Renewal Calendar** - Visual calendar of upcoming renewals with cross-sell links
+4. **Task Generation** - Auto-create tasks from high-priority opportunities
+
+### Key Files
+
+```
+# Type Definitions
+src/types/allstate-analytics.ts      # CrossSellOpportunity, RenewalCalendarEntry, etc.
+
+# Parser & Scoring
+src/lib/allstate-parser.ts           # CSV parsing, scoring algorithms, talking points
+
+# API Endpoints
+src/app/api/analytics/upload/        # POST - Upload CSV data
+src/app/api/analytics/cross-sell/    # GET/POST/PATCH/DELETE - Opportunity CRUD
+src/app/api/analytics/cross-sell/generate-tasks/  # POST - Create tasks from opportunities
+src/app/api/analytics/calendar/      # GET - Renewal calendar data
+
+# React Hooks
+src/hooks/useCrossSellData.ts        # Hook for managing cross-sell data
+
+# UI Components
+src/components/analytics/AllstateDataUploader.tsx      # Upload modal
+src/components/analytics/CrossSellOpportunitiesPanel.tsx  # Opportunities list
+
+# Database Migration
+supabase/migrations/20260204_allstate_analytics.sql    # 4 new tables
+```
+
+### Database Tables
+
+| Table | Purpose |
+|-------|---------|
+| `data_upload_batches` | Track each file upload for auditing |
+| `cross_sell_opportunities` | Main opportunity records with scoring |
+| `renewal_calendar` | Calendar view of upcoming renewals |
+| `customer_insights` | Aggregated customer analytics |
+
+### Priority Tier System
+
+| Tier | Criteria | Action Required |
+|------|----------|-----------------|
+| **HOT** | Renewal ≤7 days + score ≥100 | Contact today |
+| **HIGH** | Renewal ≤14 days + score ≥75 | Schedule this week |
+| **MEDIUM** | Renewal ≤30 days + score ≥50 | Plan outreach |
+| **LOW** | Other opportunities | Batch process |
+
+### Usage Example
+
+```typescript
+// Upload data
+const formData = new FormData();
+formData.append('file', csvFile);
+formData.append('data_source', 'book_of_business');
+formData.append('uploaded_by', 'Derrick');
+await fetch('/api/analytics/upload', { method: 'POST', body: formData });
+
+// Fetch opportunities
+const { opportunities, summary } = await fetch('/api/analytics/cross-sell?tier=HOT,HIGH').then(r => r.json());
+
+// Generate tasks from opportunities
+await fetch('/api/analytics/cross-sell/generate-tasks', {
+  method: 'POST',
+  body: JSON.stringify({ tier_filter: ['HOT'], created_by: 'Derrick' })
+});
+```
+
+### Data Flow
+
+```
+Allstate Gateway → CSV Export → Upload API → Parser → Scorer
+                                                ↓
+                                         Database Tables
+                                                ↓
+                    Dashboard ← Cross-Sell Panel ← Calendar Panel
+                                                ↓
+                                         Task Generation
+```
+
+---
+
 ## ⚠️ MANDATORY: Pre-Push Build Check
 
 **CRITICAL RULE: Always run `npm run build` before pushing ANY code changes.**

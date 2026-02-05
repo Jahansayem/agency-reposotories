@@ -33,7 +33,9 @@ import {
   Crown,
   Sparkles,
   Activity,
-  ChevronDown
+  ChevronDown,
+  Plus,
+  CheckCircle
 } from 'lucide-react';
 
 // Animation variants
@@ -427,19 +429,27 @@ const ProductCard = ({
   );
 };
 
-// Customer Target Row
+// Customer Target Row with inline task creation
 const TargetRow = ({
   name,
   premium,
   tenure,
   detail,
-  variant = 'default'
+  variant = 'default',
+  category,
+  onCreateTask,
+  isCreating = false,
+  hasTask = false
 }: {
   name: string;
   premium: number;
   tenure?: number;
   detail?: string;
   variant?: 'default' | 'danger' | 'success';
+  category?: string;
+  onCreateTask?: () => void;
+  isCreating?: boolean;
+  hasTask?: boolean;
 }) => {
   const variantClasses = {
     default: 'bg-white/5 hover:bg-white/10',
@@ -455,23 +465,90 @@ const TargetRow = ({
 
   return (
     <div className={`flex items-center justify-between p-3 rounded-lg border border-white/5 transition-colors ${variantClasses[variant]}`}>
-      <div>
-        <p className="font-medium text-white text-sm">{name}</p>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-white text-sm truncate">{name}</p>
         <p className="text-xs text-white/50">
           {tenure !== undefined && `${tenure}yr tenure`}
           {detail && (tenure ? ` • ${detail}` : detail)}
         </p>
       </div>
-      <span className={`font-bold font-mono ${premiumClasses[variant]}`}>
-        ${premium.toLocaleString()}
-      </span>
+      <div className="flex items-center gap-3 ml-3">
+        <span className={`font-bold font-mono ${premiumClasses[variant]}`}>
+          ${premium.toLocaleString()}
+        </span>
+        {onCreateTask && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateTask();
+            }}
+            disabled={isCreating || hasTask}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+              hasTask
+                ? 'bg-green-500/20 text-green-400 border border-green-500/30 cursor-default'
+                : isCreating
+                ? 'bg-sky-500/20 text-sky-400 cursor-wait'
+                : 'bg-sky-500/20 text-sky-400 border border-sky-500/30 hover:bg-sky-500/30'
+            }`}
+            title={hasTask ? 'Task already created' : 'Create task for this customer'}
+          >
+            {isCreating ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : hasTask ? (
+              <CheckCircle className="w-3.5 h-3.5" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            {hasTask ? 'Done' : isCreating ? '...' : 'Task'}
+          </button>
+        )}
+      </div>
     </div>
   );
 };
 
 export function BookOfBusinessDashboard() {
   const [activeSection, setActiveSection] = useState<'overview' | 'products' | 'crosssell' | 'retention' | 'analysis'>('overview');
+  const [creatingTaskFor, setCreatingTaskFor] = useState<string | null>(null);
+  const [createdTasks, setCreatedTasks] = useState<Set<string>>(new Set());
+  const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const data = bookOfBusinessData;
+
+  // Handle inline task creation for customer targets
+  const handleCreateTask = async (customerName: string, category: string, premium: number, detail?: string) => {
+    const taskKey = `${customerName}-${category}`;
+    setCreatingTaskFor(taskKey);
+
+    try {
+      // Create task directly via todos API since these are static targets without opportunity IDs
+      const response = await fetch('/api/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: `Cross-sell: Contact ${customerName} - ${category}`,
+          priority: category.includes('Risk') ? 'urgent' : 'high',
+          assigned_to: 'Derrick',
+          created_by: 'System',
+          notes: `**Cross-sell Target from Book of Business**\n\n**Customer:** ${customerName}\n**Category:** ${category}\n**Current Premium:** $${premium.toLocaleString()}\n${detail ? `**Details:** ${detail}` : ''}\n\nThis task was auto-generated from the Book of Business dashboard.`,
+          status: 'todo',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create task');
+      }
+
+      setCreatedTasks(prev => new Set(prev).add(taskKey));
+      setToastMessage({ type: 'success', message: `Task created for ${customerName}` });
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      console.error('Failed to create task:', err);
+      setToastMessage({ type: 'error', message: 'Failed to create task. Please try again.' });
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setCreatingTaskFor(null);
+    }
+  };
 
   return (
     <motion.div
@@ -480,6 +557,17 @@ export function BookOfBusinessDashboard() {
       animate="visible"
       className="space-y-6 p-6"
     >
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+          toastMessage.type === 'success'
+            ? 'bg-green-600 text-white'
+            : 'bg-red-600 text-white'
+        }`}>
+          {toastMessage.message}
+        </div>
+      )}
+
       {/* Hero Header */}
       <motion.div variants={itemVariants} className="relative overflow-hidden">
         <div className="glass-card-elevated p-8 relative">
@@ -831,9 +919,22 @@ export function BookOfBusinessDashboard() {
                 <h3 className="heading-4 text-white">Top Auto-Only Targets</h3>
               </div>
               <div className="space-y-3">
-                {data.crossSellTargets.autoOnlyTopTargets.map((target, i) => (
-                  <TargetRow key={i} name={target.name} premium={target.premium} tenure={target.tenure} detail={target.zip} />
-                ))}
+                {data.crossSellTargets.autoOnlyTopTargets.map((target, i) => {
+                  const taskKey = `${target.name}-Auto-Only Add Home`;
+                  return (
+                    <TargetRow
+                      key={i}
+                      name={target.name}
+                      premium={target.premium}
+                      tenure={target.tenure}
+                      detail={target.zip}
+                      category="Auto-Only Add Home"
+                      onCreateTask={() => handleCreateTask(target.name, 'Auto-Only Add Home', target.premium, target.zip)}
+                      isCreating={creatingTaskFor === taskKey}
+                      hasTask={createdTasks.has(taskKey)}
+                    />
+                  );
+                })}
               </div>
             </motion.div>
 
@@ -845,9 +946,22 @@ export function BookOfBusinessDashboard() {
                 <h3 className="heading-4 text-white">Top Umbrella Targets</h3>
               </div>
               <div className="space-y-3">
-                {data.crossSellTargets.umbrellaTopTargets.map((target, i) => (
-                  <TargetRow key={i} name={target.name} premium={target.premium} tenure={target.tenure} detail={target.products} />
-                ))}
+                {data.crossSellTargets.umbrellaTopTargets.map((target, i) => {
+                  const taskKey = `${target.name}-Add Umbrella`;
+                  return (
+                    <TargetRow
+                      key={i}
+                      name={target.name}
+                      premium={target.premium}
+                      tenure={target.tenure}
+                      detail={target.products}
+                      category="Add Umbrella"
+                      onCreateTask={() => handleCreateTask(target.name, 'Add Umbrella', target.premium, target.products)}
+                      isCreating={creatingTaskFor === taskKey}
+                      hasTask={createdTasks.has(taskKey)}
+                    />
+                  );
+                })}
               </div>
             </motion.div>
           </div>
@@ -928,9 +1042,23 @@ export function BookOfBusinessDashboard() {
               <h3 className="heading-4 text-white">High Risk Customers (Score 5)</h3>
             </div>
             <div className="space-y-3">
-              {data.retentionRisk.highRiskCustomers.map((customer, i) => (
-                <TargetRow key={i} name={customer.name} premium={customer.premium} tenure={customer.tenure} detail={`${customer.policyCount} policy • ${customer.ezpay ? 'EZPay' : 'No EZPay'}`} variant="danger" />
-              ))}
+              {data.retentionRisk.highRiskCustomers.map((customer, i) => {
+                const taskKey = `${customer.name}-High Retention Risk`;
+                return (
+                  <TargetRow
+                    key={i}
+                    name={customer.name}
+                    premium={customer.premium}
+                    tenure={customer.tenure}
+                    detail={`${customer.policyCount} policy ${customer.ezpay ? 'EZPay' : 'No EZPay'}`}
+                    variant="danger"
+                    category="High Retention Risk"
+                    onCreateTask={() => handleCreateTask(customer.name, 'High Retention Risk', customer.premium, `${customer.policyCount} policy, ${customer.ezpay ? 'EZPay enrolled' : 'Not on EZPay'}`)}
+                    isCreating={creatingTaskFor === taskKey}
+                    hasTask={createdTasks.has(taskKey)}
+                  />
+                );
+              })}
             </div>
           </motion.div>
 
@@ -946,9 +1074,23 @@ export function BookOfBusinessDashboard() {
               </div>
             </div>
             <div className="space-y-3">
-              {data.referralPotential.topCandidates.map((candidate, i) => (
-                <TargetRow key={i} name={candidate.name} premium={candidate.premium} tenure={candidate.tenure} detail={`${candidate.policyCount} policies`} variant="success" />
-              ))}
+              {data.referralPotential.topCandidates.map((candidate, i) => {
+                const taskKey = `${candidate.name}-Referral Outreach`;
+                return (
+                  <TargetRow
+                    key={i}
+                    name={candidate.name}
+                    premium={candidate.premium}
+                    tenure={candidate.tenure}
+                    detail={`${candidate.policyCount} policies`}
+                    variant="success"
+                    category="Referral Outreach"
+                    onCreateTask={() => handleCreateTask(candidate.name, 'Referral Outreach', candidate.premium, `${candidate.policyCount} policies, ${candidate.tenure}yr tenure`)}
+                    isCreating={creatingTaskFor === taskKey}
+                    hasTask={createdTasks.has(taskKey)}
+                  />
+                );
+              })}
             </div>
           </motion.div>
         </motion.div>

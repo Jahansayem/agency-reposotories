@@ -39,10 +39,18 @@ export interface TodayOpportunitiesMeta {
   upcomingCount: number;
 }
 
+import type { ContactMethod, ContactOutcome } from '@/types/allstate-analytics';
+
+/**
+ * Contact request for logging contact attempts
+ * Uses the enhanced contact outcomes for model training
+ */
 export interface ContactRequest {
-  contactType: 'call' | 'email' | 'sms';
-  outcome: 'reached' | 'no_answer' | 'left_message' | 'scheduled_callback';
+  contactMethod: ContactMethod;
+  outcome: ContactOutcome;
   notes?: string;
+  nextAction?: string;
+  nextActionDate?: string;
 }
 
 export function useTodayOpportunities(limit: number = 10) {
@@ -106,15 +114,19 @@ export function useTodayOpportunities(limit: number = 10) {
 
   const logContactAttempt = useCallback(async (
     opportunityId: string,
-    request: ContactRequest
+    request: ContactRequest,
+    userId: string
   ) => {
     const response = await fetch(`/api/opportunities/${opportunityId}/contact`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contact_type: request.contactType,
-        outcome: request.outcome,
+        user_id: userId,
+        contact_method: request.contactMethod,
+        contact_outcome: request.outcome,
         notes: request.notes,
+        next_action: request.nextAction,
+        next_action_date: request.nextActionDate,
       }),
     });
 

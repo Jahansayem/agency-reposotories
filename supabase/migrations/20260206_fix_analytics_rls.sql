@@ -14,7 +14,7 @@
 -- - cross_sell_opportunities
 -- - renewal_calendar
 -- - customer_insights
--- - contact_history
+-- (contact_history skipped - table does not exist)
 --
 -- Author: Database Engineer (Security Fix)
 -- Date: 2026-02-06
@@ -38,8 +38,7 @@ DROP POLICY IF EXISTS "Allow all operations on renewal calendar" ON renewal_cale
 -- Drop customer_insights policy
 DROP POLICY IF EXISTS "Allow all operations on customer insights" ON customer_insights;
 
--- Drop contact_history policy
-DROP POLICY IF EXISTS "Allow all operations on contact history" ON contact_history;
+-- Note: contact_history table does not exist in this database - skipping
 
 -- ============================================
 -- STEP 2: CREATE AGENCY-SCOPED POLICIES
@@ -218,65 +217,7 @@ CREATE POLICY "customer_insights_delete_agency" ON customer_insights
     )
   );
 
--- --------------------------------------------
--- Table: contact_history
--- Contact attempts - linked via cross_sell_opportunities
--- NOTE: This table does not have agency_id directly,
--- so we check via the parent opportunity's agency_id
--- --------------------------------------------
-
-CREATE POLICY "contact_history_select_agency" ON contact_history
-  FOR SELECT
-  USING (
-    -- Check if the parent opportunity belongs to user's agency
-    opportunity_id IN (
-      SELECT cso.id FROM cross_sell_opportunities cso
-      WHERE cso.agency_id IS NULL  -- Allow legacy/demo data
-         OR cso.agency_id IN (
-           SELECT agency_id FROM agency_members
-           WHERE user_id = auth.uid() AND status = 'active'
-         )
-    )
-  );
-
-CREATE POLICY "contact_history_insert_agency" ON contact_history
-  FOR INSERT
-  WITH CHECK (
-    -- Only allow insert if parent opportunity belongs to user's agency
-    opportunity_id IN (
-      SELECT cso.id FROM cross_sell_opportunities cso
-      WHERE cso.agency_id IN (
-        SELECT am.agency_id FROM agency_members am
-        WHERE am.user_id = auth.uid() AND am.status = 'active'
-      )
-    )
-  );
-
-CREATE POLICY "contact_history_update_agency" ON contact_history
-  FOR UPDATE
-  USING (
-    opportunity_id IN (
-      SELECT cso.id FROM cross_sell_opportunities cso
-      WHERE cso.agency_id IS NULL
-         OR cso.agency_id IN (
-           SELECT agency_id FROM agency_members
-           WHERE user_id = auth.uid() AND status = 'active'
-         )
-    )
-  );
-
-CREATE POLICY "contact_history_delete_agency" ON contact_history
-  FOR DELETE
-  USING (
-    -- Only allow delete if parent opportunity belongs to user's agency (not legacy)
-    opportunity_id IN (
-      SELECT cso.id FROM cross_sell_opportunities cso
-      WHERE cso.agency_id IN (
-        SELECT agency_id FROM agency_members
-        WHERE user_id = auth.uid() AND status = 'active'
-      )
-    )
-  );
+-- Note: contact_history table does not exist - skipping policies for that table
 
 -- ============================================
 -- VERIFICATION COMMENTS
@@ -294,8 +235,7 @@ COMMENT ON POLICY "renewal_calendar_select_agency" ON renewal_calendar
 COMMENT ON POLICY "customer_insights_select_agency" ON customer_insights
   IS 'Agency-scoped: Users can only SELECT insights from their agencies';
 
-COMMENT ON POLICY "contact_history_select_agency" ON contact_history
-  IS 'Agency-scoped: Users can only SELECT contact history via parent opportunity agency';
+-- Note: contact_history table comment skipped - table doesn't exist
 
 -- ============================================
 -- END OF SECURITY FIX MIGRATION

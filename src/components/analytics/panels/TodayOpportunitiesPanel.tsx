@@ -6,13 +6,43 @@
  * Displays TODAY's top priority cross-sell opportunities with:
  * - Auto-filtered by current date (daysUntilRenewal = 0)
  * - One-click calling
- * - Quick contact logging
+ * - Quick contact logging with 8 detailed outcomes for model training
  * - Real-time updates via API
  */
 
 import { useState } from 'react';
-import { useTodayOpportunities, type ContactRequest } from '../hooks/useTodayOpportunities';
-import { Phone, Mail, CheckCircle, XCircle, Clock, RefreshCw } from 'lucide-react';
+import { useTodayOpportunities, type ContactRequest, type TodayOpportunity } from '../hooks/useTodayOpportunities';
+import { CONTACT_OUTCOME_CONFIG, type ContactOutcome } from '@/types/allstate-analytics';
+import {
+  Phone,
+  Mail,
+  CheckCircle,
+  XCircle,
+  Clock,
+  RefreshCw,
+  Plus,
+  ListTodo,
+  ThumbsUp,
+  ThumbsDown,
+  Calendar,
+  Voicemail,
+  PhoneMissed,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+
+// Icon mapping for contact outcomes
+const OUTCOME_ICONS: Record<ContactOutcome, React.ComponentType<{ className?: string }>> = {
+  contacted_interested: ThumbsUp,
+  contacted_not_interested: ThumbsDown,
+  contacted_callback_scheduled: Calendar,
+  contacted_wrong_timing: Clock,
+  left_voicemail: Voicemail,
+  no_answer: PhoneMissed,
+  invalid_contact: AlertCircle,
+  declined_permanently: XCircle,
+};
 
 export function TodayOpportunitiesPanel() {
   const {
@@ -25,18 +55,68 @@ export function TodayOpportunitiesPanel() {
   } = useTodayOpportunities(10);
 
   const [loggingContact, setLoggingContact] = useState<string | null>(null);
+  const [creatingTask, setCreatingTask] = useState<string | null>(null);
+  const [createdTaskIds, setCreatedTaskIds] = useState<Set<string>>(new Set());
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  // Track which opportunities have the outcome selector expanded
+  const [expandedOutcomes, setExpandedOutcomes] = useState<Set<string>>(new Set());
 
-  // Handle contact logging
+  // Toggle outcome selector visibility
+  const toggleOutcomeSelector = (oppId: string) => {
+    setExpandedOutcomes(prev => {
+      const next = new Set(prev);
+      if (next.has(oppId)) {
+        next.delete(oppId);
+      } else {
+        next.add(oppId);
+      }
+      return next;
+    });
+  };
+
+  // Handle contact logging with the new outcome types
   const handleLogContact = async (
     opportunityId: string,
-    request: ContactRequest
+    outcome: ContactOutcome,
+    notes?: string
   ) => {
     setLoggingContact(opportunityId);
 
     try {
-      await logContactAttempt(opportunityId, request);
-      setToastMessage({ type: 'success', message: 'Contact logged successfully' });
+      // For now, use a placeholder user ID - in production this would come from auth context
+      // TODO: Get actual user ID from auth context
+      const request: ContactRequest = {
+        contactMethod: 'phone',
+        outcome,
+        notes: notes || `Contact logged via Today panel: ${CONTACT_OUTCOME_CONFIG[outcome].label}`,
+      };
+
+      // The hook now requires userId - we'll need to get this from context
+      // For now, we'll call the API directly with a workaround
+      const response = await fetch(`/api/opportunities/${opportunityId}/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: '00000000-0000-0000-0000-000000000000', // Placeholder - should come from auth
+          contact_method: request.contactMethod,
+          contact_outcome: request.outcome,
+          notes: request.notes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to log contact');
+      }
+
+      setToastMessage({ type: 'success', message: `Contact logged: ${CONTACT_OUTCOME_CONFIG[outcome].label}` });
+      // Close the outcome selector after logging
+      setExpandedOutcomes(prev => {
+        const next = new Set(prev);
+        next.delete(opportunityId);
+        return next;
+      });
+      // Refresh the list
+      refresh();
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err) {
       console.error('Failed to log contact:', err);
@@ -44,6 +124,56 @@ export function TodayOpportunitiesPanel() {
       setTimeout(() => setToastMessage(null), 3000);
     } finally {
       setLoggingContact(null);
+    }
+  };
+
+  // Map priority tier to task priority
+  const mapTierToPriority = (tier: string): string => {
+    switch (tier) {
+      case 'HOT': return 'urgent';
+      case 'HIGH': return 'high';
+      case 'MEDIUM': return 'medium';
+      default: return 'medium';
+    }
+  };
+
+  // Handle inline task creation
+  const handleQuickCreateTask = async (opp: TodayOpportunity) => {
+    setCreatingTask(opp.id);
+
+    try {
+      const response = await fetch('/api/opportunities/create-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          opportunityId: opp.id,
+          assignedTo: 'Derrick', // Default assignee - could be made configurable
+          createdBy: 'System',
+          priority: mapTierToPriority(opp.priorityTier),
+          customText: `Cross-sell: ${opp.customerName} - ${opp.recommendedProduct}`,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 409) {
+          // Task already exists
+          setCreatedTaskIds(prev => new Set(prev).add(opp.id));
+          setToastMessage({ type: 'success', message: 'Task already exists for this opportunity' });
+        } else {
+          throw new Error(errorData.error || 'Failed to create task');
+        }
+      } else {
+        setCreatedTaskIds(prev => new Set(prev).add(opp.id));
+        setToastMessage({ type: 'success', message: `Task created for ${opp.customerName}` });
+      }
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      console.error('Failed to create task:', err);
+      setToastMessage({ type: 'error', message: 'Failed to create task. Please try again.' });
+      setTimeout(() => setToastMessage(null), 3000);
+    } finally {
+      setCreatingTask(null);
     }
   };
 
@@ -226,55 +356,111 @@ export function TodayOpportunitiesPanel() {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* Call Button */}
-              <a
-                href={`tel:${opp.phone}`}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              >
-                <Phone className="h-5 w-5" />
-                Call {opp.phone}
-              </a>
-
-              {/* Email Button */}
-              <a
-                href={`mailto:${opp.email}`}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-              >
-                <Mail className="h-5 w-5" />
-                Email
-              </a>
-
-              {/* Log Contact Buttons */}
+            <div className="space-y-3">
+              {/* Primary Action: Create Task - Always visible inline */}
               <button
-                onClick={() =>
-                  handleLogContact(opp.id, {
-                    contactType: 'call',
-                    outcome: 'reached',
-                    notes: 'Contact made via Today panel'
-                  })
-                }
-                disabled={loggingContact === opp.id}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handleQuickCreateTask(opp)}
+                disabled={creatingTask === opp.id || createdTaskIds.has(opp.id)}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  createdTaskIds.has(opp.id)
+                    ? 'bg-green-100 text-green-700 border-2 border-green-300 cursor-default'
+                    : 'bg-[#0033A0] text-white hover:bg-[#002680] disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
               >
-                <CheckCircle className="h-5 w-5" />
-                {loggingContact === opp.id ? 'Logging...' : '✅ Contacted'}
+                {creatingTask === opp.id ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 animate-spin" />
+                    Creating Task...
+                  </>
+                ) : createdTaskIds.has(opp.id) ? (
+                  <>
+                    <ListTodo className="h-5 w-5" />
+                    Task Created
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5" />
+                    Create Task
+                  </>
+                )}
               </button>
 
-              <button
-                onClick={() =>
-                  handleLogContact(opp.id, {
-                    contactType: 'call',
-                    outcome: 'no_answer',
-                    notes: 'No answer - will retry'
-                  })
-                }
-                disabled={loggingContact === opp.id}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Clock className="h-5 w-5" />
-                No Answer
-              </button>
+              {/* Contact Actions Row */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Call Button */}
+                <a
+                  href={`tel:${opp.phone}`}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  <Phone className="h-5 w-5" />
+                  Call {opp.phone}
+                </a>
+
+                {/* Email Button */}
+                <a
+                  href={`mailto:${opp.email}`}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  <Mail className="h-5 w-5" />
+                  Email
+                </a>
+              </div>
+
+              {/* Log Contact Outcome Button - Expands to show all options */}
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => toggleOutcomeSelector(opp.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors font-medium text-gray-700"
+                >
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-gray-500" />
+                    Log Contact Outcome
+                  </span>
+                  {expandedOutcomes.has(opp.id) ? (
+                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  )}
+                </button>
+
+                {/* Expanded Outcome Options */}
+                {expandedOutcomes.has(opp.id) && (
+                  <div className="p-3 bg-white border-t border-gray-200">
+                    <p className="text-xs text-gray-500 mb-3 px-1">
+                      Select the outcome of your contact attempt:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(Object.keys(CONTACT_OUTCOME_CONFIG) as ContactOutcome[]).map((outcome) => {
+                        const config = CONTACT_OUTCOME_CONFIG[outcome];
+                        const Icon = OUTCOME_ICONS[outcome];
+                        return (
+                          <button
+                            key={outcome}
+                            onClick={() => handleLogContact(opp.id, outcome)}
+                            disabled={loggingContact === opp.id}
+                            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              backgroundColor: config.bgColor,
+                              color: config.color,
+                              border: `1px solid ${config.color}30`,
+                            }}
+                            title={config.description}
+                          >
+                            <Icon className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate">{config.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {loggingContact === opp.id && (
+                      <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Logging contact...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Customer Details (Expandable) */}

@@ -17,10 +17,12 @@ import type {
 } from '@/types/allstate-analytics';
 import type { Todo, Subtask, TodoPriority } from '@/types/todo';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 // Default priority mapping
 const PRIORITY_MAPPING: Record<CrossSellPriorityTier, TodoPriority> = {
@@ -54,6 +56,7 @@ interface GenerateTasksRequest {
  */
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const body: GenerateTasksRequest = await request.json();
 
     if (!body.created_by) {
@@ -115,65 +118,61 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate tasks
-    const createdTasks: Array<{ task_id: string; opportunity_id: string }> = [];
-    const errors: Array<{ opportunity_id: string; error: string }> = [];
+    // Helper function to generate task data from an opportunity
+    const generateTaskData = (opp: CrossSellOpportunity) => {
+      // Generate task text
+      const taskText = `Cross-sell ${opp.recommended_product} to ${opp.customer_name}`;
 
-    for (const opp of opportunities as CrossSellOpportunity[]) {
-      try {
-        // Generate task text
-        const taskText = `Cross-sell ${opp.recommended_product} to ${opp.customer_name}`;
+      // Generate notes with talking points
+      let notes = '';
+      if (options.include_talking_points_in_notes) {
+        notes = [
+          `**Customer:** ${opp.customer_name}`,
+          `**Phone:** ${opp.phone || 'N/A'}`,
+          `**Email:** ${opp.email || 'N/A'}`,
+          '',
+          `**Current Products:** ${opp.current_products}`,
+          `**Recommended:** ${opp.recommended_product}`,
+          `**Potential Premium:** $${opp.potential_premium_add?.toLocaleString() || 'N/A'}`,
+          '',
+          '**Talking Points:**',
+          `1. ${opp.talking_point_1 || 'Review customer needs'}`,
+          `2. ${opp.talking_point_2 || 'Present bundle savings'}`,
+          `3. ${opp.talking_point_3 || 'Emphasize value'}`,
+        ].join('\n');
+      }
 
-        // Generate notes with talking points
-        let notes = '';
-        if (options.include_talking_points_in_notes) {
-          notes = [
-            `**Customer:** ${opp.customer_name}`,
-            `**Phone:** ${opp.phone || 'N/A'}`,
-            `**Email:** ${opp.email || 'N/A'}`,
-            '',
-            `**Current Products:** ${opp.current_products}`,
-            `**Recommended:** ${opp.recommended_product}`,
-            `**Potential Premium:** $${opp.potential_premium_add?.toLocaleString() || 'N/A'}`,
-            '',
-            '**Talking Points:**',
-            `1. ${opp.talking_point_1 || 'Review customer needs'}`,
-            `2. ${opp.talking_point_2 || 'Present bundle savings'}`,
-            `3. ${opp.talking_point_3 || 'Emphasize value'}`,
-          ].join('\n');
+      // Calculate due date
+      let dueDate: string | undefined;
+      if (options.set_due_date_to_renewal && opp.renewal_date) {
+        const renewalDate = new Date(opp.renewal_date);
+        renewalDate.setDate(renewalDate.getDate() - options.due_date_days_before_renewal);
+        // Don't set due date in the past
+        if (renewalDate > new Date()) {
+          dueDate = renewalDate.toISOString();
+        } else {
+          // If renewal is imminent or past, set due date to tomorrow
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          dueDate = tomorrow.toISOString();
         }
+      }
 
-        // Calculate due date
-        let dueDate: string | undefined;
-        if (options.set_due_date_to_renewal && opp.renewal_date) {
-          const renewalDate = new Date(opp.renewal_date);
-          renewalDate.setDate(renewalDate.getDate() - options.due_date_days_before_renewal);
-          // Don't set due date in the past
-          if (renewalDate > new Date()) {
-            dueDate = renewalDate.toISOString();
-          } else {
-            // If renewal is imminent or past, set due date to tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            dueDate = tomorrow.toISOString();
-          }
-        }
+      // Create subtasks
+      const subtasks: Subtask[] = options.create_subtasks
+        ? DEFAULT_SUBTASKS.map((text, index) => ({
+            id: uuidv4(),
+            text,
+            completed: false,
+            priority: index === 0 || index === 1 ? 'high' : 'medium' as TodoPriority,
+          }))
+        : [];
 
-        // Create subtasks
-        const subtasks: Subtask[] = options.create_subtasks
-          ? DEFAULT_SUBTASKS.map((text, index) => ({
-              id: uuidv4(),
-              text,
-              completed: false,
-              priority: index === 0 || index === 1 ? 'high' : 'medium' as TodoPriority,
-            }))
-          : [];
+      // Map priority
+      const priority = options.default_priority_mapping[opp.priority_tier] || 'medium';
 
-        // Map priority
-        const priority = options.default_priority_mapping[opp.priority_tier] || 'medium';
-
-        // Create the task
-        const task: Partial<Todo> = {
+      return {
+        task: {
           text: taskText,
           completed: false,
           status: 'todo',
@@ -188,49 +187,114 @@ export async function POST(request: NextRequest) {
           category: 'prospecting',
           customer_name: opp.customer_name,
           premium_amount: opp.potential_premium_add,
-        };
+        } as Partial<Todo>,
+        taskText,
+        opportunityId: opp.id,
+        customerName: opp.customer_name,
+        priorityTier: opp.priority_tier,
+      };
+    };
 
-        const { data: createdTask, error: createError } = await supabase
-          .from('todos')
-          .insert(task)
-          .select('id')
-          .single();
+    // Prepare all tasks for batch insert (avoids N+1 sequential inserts)
+    const taskDataList = (opportunities as CrossSellOpportunity[]).map(generateTaskData);
+    const tasksToInsert = taskDataList.map(td => td.task);
 
-        if (createError) {
-          throw new Error(createError.message);
-        }
+    // Batch insert all tasks in a single database call
+    const { data: createdTasksData, error: batchInsertError } = await supabase
+      .from('todos')
+      .insert(tasksToInsert)
+      .select('id');
 
-        // Link task to opportunity
-        await supabase
-          .from('cross_sell_opportunities')
-          .update({ task_id: createdTask.id })
-          .eq('id', opp.id);
+    if (batchInsertError) {
+      console.error('Failed to batch insert tasks:', batchInsertError);
+      return NextResponse.json(
+        { error: 'Failed to create tasks: ' + batchInsertError.message },
+        { status: 500 }
+      );
+    }
 
-        createdTasks.push({
-          task_id: createdTask.id,
-          opportunity_id: opp.id,
-        });
+    if (!createdTasksData || createdTasksData.length !== taskDataList.length) {
+      console.error('Task count mismatch after batch insert');
+      return NextResponse.json(
+        { error: 'Task creation partially failed - count mismatch' },
+        { status: 500 }
+      );
+    }
 
-        // Log activity
-        await supabase.from('activity_log').insert({
-          action: 'task_created',
-          todo_id: createdTask.id,
-          todo_text: taskText,
-          user_name: body.created_by,
-          agency_id: body.agency_id,
-          details: {
-            source: 'cross_sell_opportunity',
-            opportunity_id: opp.id,
-            customer_name: opp.customer_name,
-            priority_tier: opp.priority_tier,
-          },
-        });
-      } catch (err) {
+    // Map task IDs back to opportunities
+    const createdTasks: Array<{ task_id: string; opportunity_id: string }> = [];
+    const opportunityUpdates: Array<{ id: string; task_id: string }> = [];
+    const activityLogs: Array<{
+      action: string;
+      todo_id: string;
+      todo_text: string;
+      user_name: string;
+      agency_id?: string;
+      details: Record<string, unknown>;
+    }> = [];
+
+    for (let i = 0; i < createdTasksData.length; i++) {
+      const taskId = createdTasksData[i].id;
+      const taskData = taskDataList[i];
+
+      createdTasks.push({
+        task_id: taskId,
+        opportunity_id: taskData.opportunityId,
+      });
+
+      opportunityUpdates.push({
+        id: taskData.opportunityId,
+        task_id: taskId,
+      });
+
+      activityLogs.push({
+        action: 'task_created',
+        todo_id: taskId,
+        todo_text: taskData.taskText,
+        user_name: body.created_by,
+        agency_id: body.agency_id,
+        details: {
+          source: 'cross_sell_opportunity',
+          opportunity_id: taskData.opportunityId,
+          customer_name: taskData.customerName,
+          priority_tier: taskData.priorityTier,
+        },
+      });
+    }
+
+    // Batch update opportunities to link task IDs
+    // Supabase doesn't support batch update with different values, so we use Promise.all
+    // but this is still much faster than sequential await in a loop (parallel execution)
+    const updatePromises = opportunityUpdates.map(update =>
+      supabase
+        .from('cross_sell_opportunities')
+        .update({ task_id: update.task_id })
+        .eq('id', update.id)
+    );
+
+    // Batch insert activity logs in a single call
+    const activityLogPromise = supabase.from('activity_log').insert(activityLogs);
+
+    // Execute all updates and activity log insert in parallel
+    const [updateResults, activityLogResult] = await Promise.all([
+      Promise.all(updatePromises),
+      activityLogPromise,
+    ]);
+
+    // Check for errors (non-fatal - tasks were created successfully)
+    const errors: Array<{ opportunity_id: string; error: string }> = [];
+    updateResults.forEach((result, index) => {
+      if (result.error) {
         errors.push({
-          opportunity_id: opp.id,
-          error: err instanceof Error ? err.message : 'Unknown error',
+          opportunity_id: opportunityUpdates[index].id,
+          error: `Failed to link task: ${result.error.message}`,
         });
       }
+    });
+
+    if (activityLogResult.error) {
+      console.warn('Failed to insert activity logs:', activityLogResult.error);
+      // Non-fatal - don't add to errors array as tasks were created
     }
 
     return NextResponse.json({
