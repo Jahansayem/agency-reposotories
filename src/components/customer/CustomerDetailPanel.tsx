@@ -1,0 +1,440 @@
+'use client';
+
+/**
+ * Customer Detail Panel
+ *
+ * Full customer context panel for display in task detail modal.
+ * Shows customer info, opportunities, and linked tasks.
+ */
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  User,
+  Phone,
+  Mail,
+  MapPin,
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Plus,
+  Loader2,
+} from 'lucide-react';
+import { useCustomerDetail, useCreateTaskFromOpportunity } from '@/hooks/useCustomers';
+import { SegmentIndicator } from './CustomerBadge';
+import type { CustomerOpportunity, CustomerTask } from '@/types/customer';
+
+interface CustomerDetailPanelProps {
+  customerId: string;
+  onCreateTask?: (taskId: string) => void;
+  onViewTask?: (taskId: string) => void;
+  currentUser?: string;
+  className?: string;
+}
+
+export function CustomerDetailPanel({
+  customerId,
+  onCreateTask,
+  onViewTask,
+  currentUser = 'Unknown',
+  className = '',
+}: CustomerDetailPanelProps) {
+  const { customer, opportunities, tasks, stats, loading, error } = useCustomerDetail(customerId);
+  const [expandedSection, setExpandedSection] = useState<'opportunities' | 'tasks' | null>('opportunities');
+
+  if (loading) {
+    return (
+      <div className={`p-4 bg-gray-50 dark:bg-gray-800 rounded-lg ${className}`}>
+        <div className="flex items-center justify-center gap-2 text-gray-500">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Loading customer...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !customer) {
+    return (
+      <div className={`p-4 bg-red-50 dark:bg-red-900/20 rounded-lg ${className}`}>
+        <div className="text-sm text-red-600 dark:text-red-400">
+          {error?.message || 'Customer not found'}
+        </div>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  return (
+    <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ${className}`}>
+      {/* Header */}
+      <div className="p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-750 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-start gap-3">
+          <SegmentIndicator segment={customer.segment} size="md" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+                {customer.name}
+              </h3>
+              <span className={`
+                px-2 py-0.5 text-xs font-medium rounded capitalize
+                ${customer.segment === 'elite' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                  customer.segment === 'premium' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                  customer.segment === 'standard' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                  'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400'}
+              `}>
+                {customer.segment}
+              </span>
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              {customer.segmentConfig.description}
+            </p>
+          </div>
+        </div>
+
+        {/* Contact Actions */}
+        <div className="flex gap-2 mt-3">
+          {customer.phone && (
+            <a
+              href={`tel:${customer.phone}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Phone className="w-4 h-4" />
+              {customer.phone}
+            </a>
+          )}
+          {customer.email && (
+            <a
+              href={`mailto:${customer.email}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+              Email
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-4 gap-px bg-gray-200 dark:bg-gray-700">
+        <StatBox label="Premium" value={formatCurrency(customer.totalPremium)} subtext="/year" />
+        <StatBox label="Policies" value={customer.policyCount.toString()} />
+        <StatBox label="Tenure" value={`${customer.tenureYears}yr`} />
+        <StatBox
+          label="LTV"
+          value={formatCurrency(customer.segmentConfig.avgLtv)}
+          className={customer.segment === 'elite' ? 'text-amber-600 dark:text-amber-400' : ''}
+        />
+      </div>
+
+      {/* Products */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+          Current Products
+        </h4>
+        <div className="flex flex-wrap gap-1.5">
+          {customer.products.map((product, i) => (
+            <span
+              key={i}
+              className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+            >
+              {product}
+            </span>
+          ))}
+          {customer.products.length === 0 && (
+            <span className="text-sm text-gray-400">No products listed</span>
+          )}
+        </div>
+      </div>
+
+      {/* Warnings/Alerts */}
+      {(customer.retentionRisk !== 'low' || customer.paymentStatus !== 'current' || customer.upcomingRenewal) && (
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 space-y-2">
+          {customer.retentionRisk !== 'low' && (
+            <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Retention risk: <strong>{customer.retentionRisk}</strong></span>
+            </div>
+          )}
+          {customer.paymentStatus !== 'current' && (
+            <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <DollarSign className="w-4 h-4" />
+              <span>Payment status: <strong>{customer.paymentStatus.replace('_', ' ')}</strong></span>
+            </div>
+          )}
+          {customer.upcomingRenewal && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <Calendar className="w-4 h-4" />
+              <span>Upcoming renewal: <strong>{formatDate(customer.upcomingRenewal)}</strong></span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Opportunities Section */}
+      <CollapsibleSection
+        title="Cross-sell Opportunities"
+        count={stats?.activeOpportunities || 0}
+        expanded={expandedSection === 'opportunities'}
+        onToggle={() => setExpandedSection(expandedSection === 'opportunities' ? null : 'opportunities')}
+        icon={TrendingUp}
+        iconColor="text-green-500"
+      >
+        {opportunities.length > 0 ? (
+          <div className="space-y-2">
+            {opportunities.filter(o => !o.dismissed).map((opp) => (
+              <OpportunityItem
+                key={opp.id}
+                opportunity={opp}
+                onCreateTask={onCreateTask}
+                onViewTask={onViewTask}
+                currentUser={currentUser}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+            No active opportunities
+          </p>
+        )}
+      </CollapsibleSection>
+
+      {/* Tasks Section */}
+      <CollapsibleSection
+        title="Related Tasks"
+        count={stats?.linkedTasks || 0}
+        expanded={expandedSection === 'tasks'}
+        onToggle={() => setExpandedSection(expandedSection === 'tasks' ? null : 'tasks')}
+        icon={CheckCircle}
+        iconColor="text-blue-500"
+      >
+        {tasks.length > 0 ? (
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <TaskItem key={task.id} task={task} onClick={() => onViewTask?.(task.id)} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+            No related tasks
+          </p>
+        )}
+      </CollapsibleSection>
+    </div>
+  );
+}
+
+// Helper Components
+
+function StatBox({
+  label,
+  value,
+  subtext,
+  className = '',
+}: {
+  label: string;
+  value: string;
+  subtext?: string;
+  className?: string;
+}) {
+  return (
+    <div className="p-3 bg-white dark:bg-gray-800 text-center">
+      <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">{label}</div>
+      <div className={`text-lg font-bold text-gray-900 dark:text-white ${className}`}>
+        {value}
+        {subtext && <span className="text-xs font-normal text-gray-400">{subtext}</span>}
+      </div>
+    </div>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  count,
+  expanded,
+  onToggle,
+  icon: Icon,
+  iconColor,
+  children,
+}: {
+  title: string;
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+  icon: typeof TrendingUp;
+  iconColor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-gray-200 dark:border-gray-700 last:border-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Icon className={`w-4 h-4 ${iconColor}`} />
+          <span className="text-sm font-medium text-gray-900 dark:text-white">{title}</span>
+          {count > 0 && (
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+              {count}
+            </span>
+          )}
+        </div>
+        {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function OpportunityItem({
+  opportunity,
+  onCreateTask,
+  onViewTask,
+  currentUser,
+}: {
+  opportunity: CustomerOpportunity;
+  onCreateTask?: (taskId: string) => void;
+  onViewTask?: (taskId: string) => void;
+  currentUser: string;
+}) {
+  const { createTask, loading } = useCreateTaskFromOpportunity();
+
+  const handleCreateTask = async () => {
+    const taskId = await createTask({
+      opportunityId: opportunity.id,
+      assignedTo: currentUser,
+      createdBy: currentUser,
+      priority: opportunity.priorityTier === 'HOT' ? 'urgent' : 'high',
+    });
+    onCreateTask?.(taskId);
+  };
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+
+  return (
+    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-lg">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className={`
+              px-1.5 py-0.5 text-xs font-bold rounded
+              ${opportunity.priorityTier === 'HOT' ? 'bg-red-500 text-white' :
+                opportunity.priorityTier === 'HIGH' ? 'bg-orange-500 text-white' :
+                opportunity.priorityTier === 'MEDIUM' ? 'bg-yellow-500 text-white' :
+                'bg-gray-400 text-white'}
+            `}>
+              {opportunity.priorityTier}
+            </span>
+            <span className="text-sm font-medium text-gray-900 dark:text-white">
+              {opportunity.recommendedProduct}
+            </span>
+          </div>
+          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            +{formatCurrency(opportunity.potentialPremiumAdd)}/yr potential
+            {opportunity.renewalDate && ` • Renews ${new Date(opportunity.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+          </div>
+        </div>
+        {opportunity.taskId ? (
+          <button
+            type="button"
+            onClick={() => onViewTask?.(opportunity.taskId!)}
+            className="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            View Task
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleCreateTask}
+            disabled={loading}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+            Task
+          </button>
+        )}
+      </div>
+      {opportunity.talkingPoints.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+          <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+            {opportunity.talkingPoints.slice(0, 2).map((point, i) => (
+              <li key={i} className="flex items-start gap-1">
+                <span className="text-blue-500">•</span>
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskItem({
+  task,
+  onClick,
+}: {
+  task: CustomerTask;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full p-3 bg-gray-50 dark:bg-gray-750 rounded-lg text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+    >
+      <div className="flex items-start gap-2">
+        <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+          task.completed
+            ? 'bg-green-500 border-green-500'
+            : 'border-gray-300 dark:border-gray-600'
+        }`}>
+          {task.completed && <CheckCircle className="w-3 h-3 text-white" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm ${task.completed ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+            {task.text}
+          </p>
+          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {task.dueDate && (
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
+            {task.assignedTo && <span>→ {task.assignedTo}</span>}
+          </div>
+        </div>
+        <ExternalLink className="w-4 h-4 text-gray-400" />
+      </div>
+    </button>
+  );
+}
+
+export default CustomerDetailPanel;

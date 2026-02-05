@@ -14,6 +14,7 @@ import {
   Inbox,
   BarChart2,
   Keyboard,
+  Users,
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
@@ -50,9 +51,11 @@ const primaryNavItems: NavItem[] = [
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'ai_inbox', label: 'AI Inbox', icon: Inbox },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'analytics', label: 'Analytics', icon: BarChart2 },
 ];
 
 const secondaryNavItems: NavItem[] = [
+  { id: 'customers', label: 'Customers', icon: Users },
   { id: 'goals', label: 'Strategic Goals', icon: Target, permission: 'can_view_strategic_goals' },
   { id: 'archive', label: 'Archive', icon: Archive, permission: 'can_view_archive' },
 ];

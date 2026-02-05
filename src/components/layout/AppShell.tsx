@@ -25,6 +25,8 @@ export type ActiveView =
   | 'goals'
   | 'archive'
   | 'ai_inbox'
+  | 'analytics'
+  | 'customers'
   | 'settings';
 
 export type RightPanelContent =

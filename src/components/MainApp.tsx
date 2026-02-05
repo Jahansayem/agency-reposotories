@@ -38,6 +38,18 @@ const DashboardPage = dynamic(() => import('./views/DashboardPage'), {
   loading: () => <DashboardModalSkeleton />,
 });
 
+// Lazy load AnalyticsPage for the book of business analytics view
+const AnalyticsPage = dynamic(() => import('./views/AnalyticsPage'), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
+
+// Lazy load CustomerLookupView for the customer book of business browser
+const CustomerLookupView = dynamic(() => import('./views/CustomerLookupView'), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
+
 // Lazy load WeeklyProgressChart modal (accessible from any view via sidebar)
 const WeeklyProgressChart = dynamic(() => import('./WeeklyProgressChart'), {
   ssr: false,
@@ -395,6 +407,23 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             onAccept={handleAIAccept}
             onDismiss={handleAIDismiss}
             onRefresh={handleAIRefresh}
+          />
+        );
+
+      case 'analytics':
+        // Analytics dashboard with book of business insights
+        return (
+          <AnalyticsPage key={agencyKey} />
+        );
+
+      case 'customers':
+        // Customer lookup from book of business
+        return (
+          <CustomerLookupView
+            key={agencyKey}
+            agencyId={currentAgencyId || undefined}
+            currentUser={currentUser.name}
+            onClose={() => setActiveView('tasks')}
           />
         );
 
