@@ -48,6 +48,18 @@ export async function GET(request: NextRequest) {
     const segmentFilter = searchParams.get('segment');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
 
+    // DEBUG: Log what we're querying
+    console.log('[Customers API] Query params:', { query, agencyId, segmentFilter, limit });
+
+    // First, check total counts in both tables
+    const { count: insightsCount } = await supabase
+      .from('customer_insights')
+      .select('*', { count: 'exact', head: true });
+    const { count: oppsCount } = await supabase
+      .from('cross_sell_opportunities')
+      .select('*', { count: 'exact', head: true });
+    console.log('[Customers API] Total records:', { customer_insights: insightsCount, cross_sell_opportunities: oppsCount });
+
     // First, try customer_insights table
     let insightsQuery = supabase
       .from('customer_insights')
@@ -66,6 +78,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: insights, error: insightsError } = await insightsQuery;
+    console.log('[Customers API] customer_insights results:', {
+      count: insights?.length || 0,
+      error: insightsError?.message,
+      sampleAgencyIds: insights?.slice(0, 3).map(i => i.agency_id)
+    });
 
     // Also search cross_sell_opportunities for customers not in insights
     let opportunitiesQuery = supabase
@@ -86,6 +103,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: opportunities, error: oppError } = await opportunitiesQuery;
+    console.log('[Customers API] cross_sell_opportunities results:', {
+      count: opportunities?.length || 0,
+      error: oppError?.message,
+      sampleAgencyIds: opportunities?.slice(0, 3).map(o => o.agency_id)
+    });
 
     // Merge and deduplicate by customer name
     const customerMap = new Map<string, {
