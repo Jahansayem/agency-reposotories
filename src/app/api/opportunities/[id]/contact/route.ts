@@ -19,10 +19,13 @@ import type {
   LogContactResponse,
 } from '@/types/allstate-analytics';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 // ============================================
 // Validation Helpers
@@ -80,6 +83,7 @@ export async function GET(
   { params }: RouteParams
 ): Promise<NextResponse<ContactHistoryListResponse | { error: string }>> {
   try {
+    const supabase = getSupabaseClient();
     const { id: opportunityId } = await params;
 
     // Validate opportunity ID
@@ -189,6 +193,7 @@ export async function POST(
   { params }: RouteParams
 ): Promise<NextResponse<LogContactResponse | { error: string }>> {
   try {
+    const supabase = getSupabaseClient();
     const { id: opportunityId } = await params;
 
     // Validate opportunity ID
