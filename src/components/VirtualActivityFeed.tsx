@@ -81,13 +81,50 @@ const actionColors: Record<string, string> = {
   tasks_merged: 'text-purple-600 dark:text-purple-400',
 };
 
+/**
+ * Humanize status strings for display
+ * Converts internal values like 'in_progress' to 'In Progress'
+ */
+function humanizeStatus(status: string | undefined): string {
+  if (!status) return '';
+  const statusMap: Record<string, string> = {
+    'todo': 'To Do',
+    'in_progress': 'In Progress',
+    'done': 'Done',
+    'not_started': 'Not Started',
+    'on_hold': 'On Hold',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+  };
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Humanize priority strings for display
+ */
+function humanizePriority(priority: string | undefined): string {
+  if (!priority) return '';
+  return priority.charAt(0).toUpperCase() + priority.slice(1);
+}
+
 // Format action text
 function formatAction(entry: ActivityLogEntry): string {
   const action = entry.action.replace(/_/g, ' ');
 
   if (entry.details) {
     if ('from' in entry.details && 'to' in entry.details) {
-      return `${action}: ${entry.details.from} → ${entry.details.to}`;
+      // Humanize status and priority values
+      const from = entry.action === 'status_changed'
+        ? humanizeStatus(entry.details.from as string)
+        : entry.action === 'priority_changed'
+          ? humanizePriority(entry.details.from as string)
+          : entry.details.from;
+      const to = entry.action === 'status_changed'
+        ? humanizeStatus(entry.details.to as string)
+        : entry.action === 'priority_changed'
+          ? humanizePriority(entry.details.to as string)
+          : entry.details.to;
+      return `${action}: ${from} → ${to}`;
     }
   }
 

@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Users, Plus, Trash2, Crown, Briefcase, User as UserIcon, Loader2, AlertCircle, Check, Mail, Send, Edit2, ChevronDown } from 'lucide-react';
+import { X, Users, Plus, Trash2, Crown, Briefcase, User as UserIcon, Loader2, AlertCircle, Check, Mail, Send, Edit2, ChevronDown, Settings } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
-import type { AgencyRole } from '@/types/agency';
+import type { AgencyRole, AgencyPermissions } from '@/types/agency';
 import { InvitationForm } from '@/components/InvitationForm';
 import { PendingInvitationsList } from '@/components/PendingInvitationsList';
+import { MemberPermissionsPanel } from '@/components/permissions';
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 
@@ -21,6 +22,7 @@ interface AgencyMember {
   user_color: string;
   global_role: string;
   agency_role: AgencyRole;
+  permissions: AgencyPermissions;
   status: string;
   is_default_agency: boolean;
   joined_at: string;
@@ -110,6 +112,9 @@ export function AgencyMembersModal({
   // Role editing state
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [isChangingRole, setIsChangingRole] = useState(false);
+
+  // Permissions panel state
+  const [expandedPermissionsMemberId, setExpandedPermissionsMemberId] = useState<string | null>(null);
 
   // Check if current user can manage members
   const canManageMembers = currentRole === 'owner' || currentRole === 'manager';
@@ -288,11 +293,21 @@ export function AgencyMembersModal({
     if (!isSubmitting && !isChangingRole) {
       setShowAddForm(false);
       setEditingMemberId(null);
+      setExpandedPermissionsMemberId(null);
       setError(null);
       setSuccess(null);
       setActiveTab('members');
       onClose();
     }
+  };
+
+  // Handle permission update from panel - update local state
+  const handlePermissionUpdate = (memberId: string, updatedPermissions: AgencyPermissions) => {
+    setMembers(prev =>
+      prev.map(m =>
+        m.id === memberId ? { ...m, permissions: updatedPermissions } : m
+      )
+    );
   };
 
   // Get users not already in the agency
@@ -597,138 +612,188 @@ export function AgencyMembersModal({
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {members.map((member) => (
-                          <div
-                            key={member.id}
-                            className="
-                              flex items-center gap-4 p-4 rounded-lg
-                              bg-gray-50 dark:bg-gray-700/50
-                              hover:bg-gray-100 dark:hover:bg-gray-700
-                              transition-colors
-                            "
-                          >
-                            {/* Avatar */}
+                        {members.map((member) => {
+                          const isPermissionsExpanded = expandedPermissionsMemberId === member.id;
+                          const canCustomizePermissions =
+                            currentRole === 'owner' &&
+                            member.user_name !== currentUserName &&
+                            !isOnlyOwner(member);
+
+                          return (
                             <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
-                              style={{ backgroundColor: member.user_color }}
+                              key={member.id}
+                              className={`
+                                p-4 rounded-lg
+                                bg-gray-50 dark:bg-gray-700/50
+                                ${!isPermissionsExpanded ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : ''}
+                                transition-colors
+                              `}
                             >
-                              {member.user_name.charAt(0)}
-                            </div>
+                              <div className="flex items-center gap-4">
+                                {/* Avatar */}
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0"
+                                  style={{ backgroundColor: member.user_color }}
+                                >
+                                  {member.user_name.charAt(0)}
+                                </div>
 
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 dark:text-white truncate">
-                                {member.user_name}
-                                {member.user_name === currentUserName && (
-                                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(You)</span>
-                                )}
-                              </p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Joined {new Date(member.joined_at).toLocaleDateString()}
-                              </p>
-                            </div>
-
-                            {/* Role Badge with Edit */}
-                            <div className="relative" data-role-dropdown>
-                              {currentRole === 'owner' && !isOnlyOwner(member) ? (
-                                <>
-                                  <button
-                                    onClick={() => setEditingMemberId(editingMemberId === member.id ? null : member.id)}
-                                    disabled={isChangingRole || isSubmitting}
-                                    className={`
-                                      flex items-center gap-1.5 px-3 py-1 rounded-full
-                                      ${getRoleBadgeColor(member.agency_role)}
-                                      hover:opacity-80 transition-opacity
-                                      disabled:opacity-50 disabled:cursor-not-allowed
-                                    `}
-                                  >
-                                    {getRoleIcon(member.agency_role)}
-                                    <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
-                                    <Edit2 className="w-3 h-3 ml-0.5 opacity-60" />
-                                  </button>
-
-                                  {/* Role Dropdown */}
-                                  <AnimatePresence>
-                                    {editingMemberId === member.id && (
-                                      <motion.div
-                                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                                        transition={{ duration: 0.15 }}
-                                        className="
-                                          absolute right-0 top-full mt-2 z-20
-                                          bg-white dark:bg-gray-800
-                                          border border-gray-200 dark:border-gray-700
-                                          rounded-lg shadow-xl
-                                          py-1 min-w-[140px]
-                                        "
-                                        data-role-dropdown
-                                      >
-                                        {(['staff', 'manager', 'owner'] as AgencyRole[]).map((role) => (
-                                          <button
-                                            key={role}
-                                            onClick={() => {
-                                              if (role !== member.agency_role) {
-                                                handleChangeRole(member.id, member.user_name, member.agency_role, role);
-                                              } else {
-                                                setEditingMemberId(null);
-                                              }
-                                            }}
-                                            disabled={isChangingRole}
-                                            className={`
-                                              w-full px-3 py-2 text-left
-                                              flex items-center gap-2
-                                              hover:bg-gray-100 dark:hover:bg-gray-700
-                                              transition-colors
-                                              disabled:opacity-50 disabled:cursor-not-allowed
-                                              ${role === member.agency_role ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
-                                            `}
-                                          >
-                                            <div className={getRoleColor(role)}>
-                                              {getRoleIcon(role)}
-                                            </div>
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                              {getRoleLabel(role)}
-                                            </span>
-                                            {role === member.agency_role && (
-                                              <Check className="w-4 h-4 ml-auto text-blue-600 dark:text-blue-400" />
-                                            )}
-                                          </button>
-                                        ))}
-                                      </motion.div>
+                                {/* Info */}
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 dark:text-white truncate">
+                                    {member.user_name}
+                                    {member.user_name === currentUserName && (
+                                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(You)</span>
                                     )}
-                                  </AnimatePresence>
-                                </>
-                              ) : (
-                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${getRoleBadgeColor(member.agency_role)}`}>
-                                  {getRoleIcon(member.agency_role)}
-                                  <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
-                                  {isOnlyOwner(member) && (
-                                    <span className="text-[10px] opacity-60">(only)</span>
+                                  </p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Joined {new Date(member.joined_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+
+                                {/* Role Badge with Edit */}
+                                <div className="relative" data-role-dropdown>
+                                  {currentRole === 'owner' && !isOnlyOwner(member) ? (
+                                    <>
+                                      <button
+                                        onClick={() => setEditingMemberId(editingMemberId === member.id ? null : member.id)}
+                                        disabled={isChangingRole || isSubmitting}
+                                        className={`
+                                          flex items-center gap-1.5 px-3 py-1 rounded-full
+                                          ${getRoleBadgeColor(member.agency_role)}
+                                          hover:opacity-80 transition-opacity
+                                          disabled:opacity-50 disabled:cursor-not-allowed
+                                        `}
+                                      >
+                                        {getRoleIcon(member.agency_role)}
+                                        <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
+                                        <Edit2 className="w-3 h-3 ml-0.5 opacity-60" />
+                                      </button>
+
+                                      {/* Role Dropdown */}
+                                      <AnimatePresence>
+                                        {editingMemberId === member.id && (
+                                          <motion.div
+                                            initial={{ opacity: 0, scale: 0.95, y: -8 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95, y: -8 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="
+                                              absolute right-0 top-full mt-2 z-20
+                                              bg-white dark:bg-gray-800
+                                              border border-gray-200 dark:border-gray-700
+                                              rounded-lg shadow-xl
+                                              py-1 min-w-[140px]
+                                            "
+                                            data-role-dropdown
+                                          >
+                                            {(['staff', 'manager', 'owner'] as AgencyRole[]).map((role) => (
+                                              <button
+                                                key={role}
+                                                onClick={() => {
+                                                  if (role !== member.agency_role) {
+                                                    handleChangeRole(member.id, member.user_name, member.agency_role, role);
+                                                  } else {
+                                                    setEditingMemberId(null);
+                                                  }
+                                                }}
+                                                disabled={isChangingRole}
+                                                className={`
+                                                  w-full px-3 py-2 text-left
+                                                  flex items-center gap-2
+                                                  hover:bg-gray-100 dark:hover:bg-gray-700
+                                                  transition-colors
+                                                  disabled:opacity-50 disabled:cursor-not-allowed
+                                                  ${role === member.agency_role ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                                                `}
+                                              >
+                                                <div className={getRoleColor(role)}>
+                                                  {getRoleIcon(role)}
+                                                </div>
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                  {getRoleLabel(role)}
+                                                </span>
+                                                {role === member.agency_role && (
+                                                  <Check className="w-4 h-4 ml-auto text-blue-600 dark:text-blue-400" />
+                                                )}
+                                              </button>
+                                            ))}
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </>
+                                  ) : (
+                                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${getRoleBadgeColor(member.agency_role)}`}>
+                                      {getRoleIcon(member.agency_role)}
+                                      <span className="text-xs font-medium">{getRoleLabel(member.agency_role)}</span>
+                                      {isOnlyOwner(member) && (
+                                        <span className="text-[10px] opacity-60">(only)</span>
+                                      )}
+                                    </div>
                                   )}
                                 </div>
-                              )}
-                            </div>
 
-                            {/* Remove Button */}
-                            {canManageMembers && member.user_name !== currentUserName && (
-                              <button
-                                onClick={() => handleRemoveMember(member.id, member.user_name)}
-                                disabled={isSubmitting || isChangingRole || (member.agency_role === 'owner' && currentRole !== 'owner')}
-                                className="
-                                  p-2 rounded-lg
-                                  text-red-600 dark:text-red-400
-                                  hover:bg-red-50 dark:hover:bg-red-900/20
-                                  transition-colors
-                                  disabled:opacity-50 disabled:cursor-not-allowed
-                                "
-                                aria-label={`Remove ${member.user_name}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                                {/* Customize Permissions Button (Owner only, not for self) */}
+                                {canCustomizePermissions && (
+                                  <button
+                                    onClick={() =>
+                                      setExpandedPermissionsMemberId(
+                                        isPermissionsExpanded ? null : member.id
+                                      )
+                                    }
+                                    disabled={isSubmitting || isChangingRole}
+                                    className={`
+                                      p-2 rounded-lg transition-colors
+                                      ${isPermissionsExpanded
+                                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                      }
+                                      disabled:opacity-50 disabled:cursor-not-allowed
+                                    `}
+                                    aria-label={`Customize ${member.user_name}'s permissions`}
+                                    title="Customize permissions"
+                                  >
+                                    <Settings className="w-4 h-4" />
+                                  </button>
+                                )}
+
+                                {/* Remove Button */}
+                                {canManageMembers && member.user_name !== currentUserName && (
+                                  <button
+                                    onClick={() => handleRemoveMember(member.id, member.user_name)}
+                                    disabled={isSubmitting || isChangingRole || (member.agency_role === 'owner' && currentRole !== 'owner')}
+                                    className="
+                                      p-2 rounded-lg
+                                      text-red-600 dark:text-red-400
+                                      hover:bg-red-50 dark:hover:bg-red-900/20
+                                      transition-colors
+                                      disabled:opacity-50 disabled:cursor-not-allowed
+                                    "
+                                    aria-label={`Remove ${member.user_name}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Permission Panel (expanded) */}
+                              <AnimatePresence>
+                                {isPermissionsExpanded && currentAgency && (
+                                  <MemberPermissionsPanel
+                                    memberId={member.id}
+                                    memberName={member.user_name}
+                                    memberRole={member.agency_role}
+                                    permissions={member.permissions}
+                                    agencyId={currentAgency.id}
+                                    onUpdate={(updatedPermissions) =>
+                                      handlePermissionUpdate(member.id, updatedPermissions)
+                                    }
+                                  />
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 

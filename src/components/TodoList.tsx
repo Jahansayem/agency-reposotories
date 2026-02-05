@@ -35,6 +35,7 @@ import { sendTaskAssignmentNotification, sendTaskCompletionNotification, sendTas
 import { fetchWithCsrf } from '@/lib/csrf';
 import { getNextSuggestedTasks, calculateCompletionStreak, getEncouragementMessage } from '@/lib/taskSuggestions';
 import { ActivityLogEntry } from '@/types/todo';
+import type { LinkedCustomer } from '@/types/customer';
 import {
   StrategicDashboardSkeleton,
   ActivityFeedSkeleton,
@@ -460,7 +461,7 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
   }, [fetchActivityLog]);
 
   // Check for duplicates and either show modal or create task directly
-  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => {
+  const addTodo = (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null, customer?: LinkedCustomer) => {
     // Check if we should look for duplicates
     const combinedText = `${text} ${transcription || ''}`;
     if (shouldCheckForDuplicates(combinedText)) {
@@ -472,11 +473,11 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
       }
     }
     // No duplicates found, create directly
-    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence);
+    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
   };
 
   // Actually create the todo (called after duplicate check or when user confirms)
-  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => {
+  const createTodoDirectly = async (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null, customer?: LinkedCustomer) => {
     const newTodo: Todo = {
       id: uuidv4(),
       text,
@@ -493,6 +494,10 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
       reminder_sent: false,
       notes: notes,
       recurrence: recurrence || undefined,
+      // Customer linking
+      customer_id: customer?.id,
+      customer_name: customer?.name,
+      customer_segment: customer?.segment,
     };
 
     // Optimistic update using store action
@@ -518,6 +523,10 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
     }
     if (newTodo.notes) insertData.notes = newTodo.notes;
     if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
+    // Customer linking
+    if (newTodo.customer_id) insertData.customer_id = newTodo.customer_id;
+    if (newTodo.customer_name) insertData.customer_name = newTodo.customer_name;
+    if (newTodo.customer_segment) insertData.customer_segment = newTodo.customer_segment;
 
     // Set agency_id for multi-tenancy
     if (currentAgencyId) {
@@ -1670,8 +1679,8 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
       total: baseSet.length,
       completed: baseSet.filter((t) => t.completed).length,
       active: baseSet.filter((t) => !t.completed).length,
-      dueToday: baseSet.filter((t) => isDueToday(t.due_date) && !t.completed).length,
-      overdue: baseSet.filter((t) => isOverdue(t.due_date, t.completed)).length,
+      dueToday: baseSet.filter((t) => isDueToday(t.due_date) && !t.completed && t.status !== 'done').length,
+      overdue: baseSet.filter((t) => isOverdue(t.due_date, t.completed, t.status)).length,
     };
   }, [visibleTodos, quickFilter, highPriorityOnly, userName]);
 
@@ -2019,6 +2028,7 @@ export default function TodoList({ currentUser, onUserChange, initialFilter, aut
         closeEmailModal={closeEmailModal}
         selectedArchivedTodo={selectedArchivedTodo}
         selectArchivedTodo={selectArchivedTodo}
+        agencyId={currentAgencyId || undefined}
         onNextTaskClick={(taskId) => {
           const taskElement = document.getElementById(`todo-${taskId}`);
           if (taskElement) {

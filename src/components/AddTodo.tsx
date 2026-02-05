@@ -10,6 +10,8 @@ import FileImporter from './FileImporter';
 import { QuickTaskButtons, useTaskPatterns } from './QuickTaskButtons';
 import { CategoryConfidenceIndicator } from './CategoryConfidenceIndicator';
 import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate } from '@/types/todo';
+import type { LinkedCustomer } from '@/types/customer';
+import { CustomerSearchInput } from './customer/CustomerSearchInput';
 import { getUserPreferences, updateLastTaskDefaults } from '@/lib/userPreferences';
 import { analyzeTaskPattern } from '@/lib/insurancePatterns';
 import { logger } from '@/lib/logger';
@@ -22,10 +24,11 @@ import TemplatePicker from './TemplatePicker';
 import { usePermission } from '@/hooks/usePermission';
 
 interface AddTodoProps {
-  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => void;
+  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null, customer?: LinkedCustomer) => void;
   users: string[];
   currentUserId?: string;
   autoFocus?: boolean;
+  agencyId?: string;
 }
 
 interface SmartParseResult {
@@ -94,9 +97,12 @@ declare global {
   }
 }
 
-export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddTodoProps) {
+export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agencyId }: AddTodoProps) {
   const toast = useToast();
   const canUseAiFeatures = usePermission('can_use_ai_features');
+
+  // Customer linking state
+  const [linkedCustomer, setLinkedCustomer] = useState<LinkedCustomer | null>(null);
 
   // Fetch smart defaults based on user patterns
   const { suggestions, isLoading: suggestionsLoading } = useSuggestedDefaults(currentUserId);
@@ -338,7 +344,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
         }))
       : undefined as unknown as Subtask[];
 
-    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, notes || undefined, recurrence || null);
+    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -391,7 +397,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     taskAssignedTo?: string,
     subtasks?: Subtask[]
   ) => {
-    onAdd(taskText, taskPriority, taskDueDate, taskAssignedTo, subtasks, undefined, undefined, undefined, notes || undefined, recurrence || null);
+    onAdd(taskText, taskPriority, taskDueDate, taskAssignedTo, subtasks, undefined, undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, taskPriority, taskAssignedTo);
@@ -417,6 +423,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     setSuggestedSubtasks([]);
     setTemplateSubtasks([]); // Clear template subtasks (Phase 2.2)
     setPatternDismissed(false); // Reset so new pattern can be detected on next input
+    setLinkedCustomer(null); // Clear linked customer
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -433,7 +440,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       if (text.trim() && !isProcessing) {
-        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, undefined, undefined, notes || undefined, recurrence || null);
+        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
         // Save preferences for next time
         if (currentUserId) {
           updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -804,6 +811,20 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
               />
             </div>
 
+            {/* Customer Link - Link task to customer from book of business */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">
+                Link to Customer (optional)
+              </label>
+              <CustomerSearchInput
+                value={linkedCustomer}
+                onChange={setLinkedCustomer}
+                placeholder="Search customers by name..."
+                agencyId={agencyId}
+                className="max-w-md"
+              />
+            </div>
+
             {/* Progressive Disclosure: Advanced Options (Phase 1.1) */}
             <SimpleAccordion
               trigger="More options"
@@ -943,7 +964,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
             setDraggedFile(null);
           }}
           onCreateTask={(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile) => {
-            onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, undefined, notes || undefined, recurrence || null);
+            onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
             setShowFileImporter(false);
             setDraggedFile(null);
           }}

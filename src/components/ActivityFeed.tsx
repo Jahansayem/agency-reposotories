@@ -46,6 +46,32 @@ function saveNotificationSettings(settings: ActivityNotificationSettings): void 
 }
 
 /**
+ * Humanize status strings for display
+ * Converts internal values like 'in_progress' to 'In Progress'
+ */
+function humanizeStatus(status: string | undefined): string {
+  if (!status) return '';
+  const statusMap: Record<string, string> = {
+    'todo': 'To Do',
+    'in_progress': 'In Progress',
+    'done': 'Done',
+    'not_started': 'Not Started',
+    'on_hold': 'On Hold',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+  };
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Humanize priority strings for display
+ */
+function humanizePriority(priority: string | undefined): string {
+  if (!priority) return '';
+  return priority.charAt(0).toUpperCase() + priority.slice(1);
+}
+
+/**
  * Action configuration using semantic color tokens from design system.
  * Colors use CSS variables for consistent light/dark mode support.
  * @see src/lib/design-tokens.ts for ACTION_COLORS definitions
@@ -644,9 +670,9 @@ function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
       case 'status_changed':
         return (
           <span className="flex items-center gap-1">
-            <span className="text-[var(--text-muted)]">{details.from}</span>
+            <span className="text-[var(--text-muted)]">{humanizeStatus(details.from as string)}</span>
             <ArrowRight className="w-3 h-3" />
-            <span className="font-medium" style={{ color: config.color }}>{details.to}</span>
+            <span className="font-medium" style={{ color: config.color }}>{humanizeStatus(details.to as string)}</span>
           </span>
         );
       case 'priority_changed':
@@ -654,9 +680,9 @@ function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
         const toPriority = PRIORITY_CONFIG[details.to as keyof typeof PRIORITY_CONFIG];
         return (
           <span className="flex items-center gap-1">
-            <span style={{ color: fromPriority?.color }}>{details.from}</span>
+            <span style={{ color: fromPriority?.color }}>{humanizePriority(details.from as string)}</span>
             <ArrowRight className="w-3 h-3" />
-            <span className="font-medium" style={{ color: toPriority?.color }}>{details.to}</span>
+            <span className="font-medium" style={{ color: toPriority?.color }}>{humanizePriority(details.to as string)}</span>
           </span>
         );
       case 'assigned_to_changed':

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import AddTodo from './AddTodo';
 import { TodoPriority, Subtask } from '@/types/todo';
+import type { LinkedCustomer } from '@/types/customer';
 
 interface AddTaskModalProps {
   isOpen: boolean;
@@ -19,10 +20,12 @@ interface AddTaskModalProps {
     sourceFile?: File,
     reminderAt?: string,
     notes?: string,
-    recurrence?: 'daily' | 'weekly' | 'monthly' | null
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null,
+    customer?: LinkedCustomer
   ) => void;
   users: string[];
   currentUserId?: string;
+  agencyId?: string;
 }
 
 export default function AddTaskModal({
@@ -31,6 +34,7 @@ export default function AddTaskModal({
   onAdd,
   users,
   currentUserId,
+  agencyId,
 }: AddTaskModalProps) {
   // Handle escape key to close
   useEffect(() => {
@@ -64,9 +68,10 @@ export default function AddTaskModal({
       sourceFile?: File,
       reminderAt?: string,
       notes?: string,
-      recurrence?: 'daily' | 'weekly' | 'monthly' | null
+      recurrence?: 'daily' | 'weekly' | 'monthly' | null,
+      customer?: LinkedCustomer
     ) => {
-      onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence);
+      onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
       onClose();
     },
     [onAdd, onClose]
@@ -138,6 +143,7 @@ export default function AddTaskModal({
                   users={users}
                   currentUserId={currentUserId}
                   autoFocus={true}
+                  agencyId={agencyId}
                 />
               </div>
             </div>

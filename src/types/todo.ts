@@ -119,6 +119,9 @@ export interface Todo {
   customer_name?: string;
   policy_type?: PolicyType;
   renewal_status?: RenewalStatus;
+  // Customer/Book of Business linking
+  customer_id?: string;
+  customer_segment?: 'elite' | 'premium' | 'standard' | 'entry';
 }
 
 // ============================================

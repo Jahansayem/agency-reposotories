@@ -9,6 +9,7 @@ import { useTaskDetail } from './useTaskDetail';
 import { usePermission } from '@/hooks/usePermission';
 import TaskDetailHeader from './TaskDetailHeader';
 import MetadataSection from './MetadataSection';
+import { CustomerDetailPanel } from '../customer/CustomerDetailPanel';
 import ReminderRow from './ReminderRow';
 import WaitingRow from './WaitingRow';
 import NotesSection from './NotesSection';
@@ -180,6 +181,22 @@ export default function TaskDetailModal({
             canEdit={canEdit}
             canAssign={canAssignTasks}
           />
+
+          {/* Customer context panel - shown when task is linked to a customer */}
+          {todo.customer_id && (
+            <motion.div
+              custom={0}
+              initial="hidden"
+              animate="visible"
+              variants={sectionStagger}
+            >
+              <CustomerDetailPanel
+                customerId={todo.customer_id}
+                currentUser={currentUser.name}
+                className="bg-[var(--surface-2)]/30 rounded-xl border border-[var(--border)]/50"
+              />
+            </motion.div>
+          )}
 
           {/* Reminder row */}
           <ReminderRow

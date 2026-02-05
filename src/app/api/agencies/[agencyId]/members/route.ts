@@ -7,8 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { DEFAULT_PERMISSIONS } from '@/types/agency';
-import type { AgencyRole } from '@/types/agency';
+import { DEFAULT_PERMISSIONS, ELEVATED_PERMISSIONS } from '@/types/agency';
+import type { AgencyRole, AgencyPermissions } from '@/types/agency';
 import { apiErrorResponse } from '@/lib/apiResponse';
 import { logger } from '@/lib/logger';
 import {
@@ -286,9 +286,14 @@ export const POST = withAgencyAuth(
 
 /**
  * PATCH /api/agencies/[agencyId]/members
- * Update member role (inline role editing)
+ * Update member role and/or permissions
  *
- * Access: Owner only (managers cannot change roles)
+ * Supports three modes:
+ * 1. Role change only (newRole) - resets permissions to role defaults
+ * 2. Permission change only (permissions) - merges with existing permissions
+ * 3. Both (newRole + permissions) - sets role defaults then applies overrides
+ *
+ * Access: Owner only (managers cannot change roles or permissions)
  */
 export const PATCH = withAgencyAuth(
   async (request: NextRequest, ctx: AgencyAuthContext) => {
@@ -304,22 +309,46 @@ export const PATCH = withAgencyAuth(
 
       const agencyId = ctx.agencyId || validation.agencyIdFromParams;
       const body = await request.json();
-      const { memberId, newRole } = body;
+      const { memberId, newRole, permissions: permissionUpdates } = body as {
+        memberId: string;
+        newRole?: AgencyRole;
+        permissions?: Partial<AgencyPermissions>;
+      };
 
-      if (!memberId || !newRole) {
-        return apiErrorResponse('VALIDATION_ERROR', 'memberId and newRole are required');
+      // Validate at least memberId is provided
+      if (!memberId) {
+        return apiErrorResponse('VALIDATION_ERROR', 'memberId is required');
       }
 
-      // Validate role is valid
+      // Validate at least one update is provided
+      if (!newRole && !permissionUpdates) {
+        return apiErrorResponse('VALIDATION_ERROR', 'Either newRole or permissions must be provided');
+      }
+
+      // Validate role if provided
       const validRoles: AgencyRole[] = ['owner', 'manager', 'staff'];
-      if (!validRoles.includes(newRole)) {
+      if (newRole && !validRoles.includes(newRole)) {
         return apiErrorResponse('VALIDATION_ERROR', `Invalid role. Must be one of: ${validRoles.join(', ')}`);
+      }
+
+      // Validate permission keys if provided
+      if (permissionUpdates) {
+        const validPermissionKeys = Object.keys(DEFAULT_PERMISSIONS.owner);
+        const invalidKeys = Object.keys(permissionUpdates).filter(
+          key => !validPermissionKeys.includes(key)
+        );
+        if (invalidKeys.length > 0) {
+          return apiErrorResponse(
+            'VALIDATION_ERROR',
+            `Invalid permission keys: ${invalidKeys.join(', ')}`
+          );
+        }
       }
 
       // Get member to update - verify they belong to this agency
       const { data: memberToUpdate } = await supabase
         .from('agency_members')
-        .select('role, user_id, users!inner(name)')
+        .select('role, user_id, permissions, users!inner(name)')
         .eq('id', memberId)
         .eq('agency_id', agencyId)
         .single();
@@ -329,9 +358,13 @@ export const PATCH = withAgencyAuth(
       }
 
       const memberUserName = (memberToUpdate as any).users.name;
+      const currentPermissions = memberToUpdate.permissions as AgencyPermissions;
+      const currentRole = memberToUpdate.role as AgencyRole;
+
+      // ===== Security checks =====
 
       // Cannot change your own role if you're the only owner
-      if (memberToUpdate.user_id === ctx.userId && memberToUpdate.role === 'owner') {
+      if (newRole && memberToUpdate.user_id === ctx.userId && memberToUpdate.role === 'owner') {
         const { data: otherOwners } = await supabase
           .from('agency_members')
           .select('id')
@@ -344,37 +377,126 @@ export const PATCH = withAgencyAuth(
         }
       }
 
-      // Update role and permissions
-      const permissions = DEFAULT_PERMISSIONS[newRole as AgencyRole];
+      // Sole owner cannot remove their own can_manage_team permission
+      if (permissionUpdates?.can_manage_team === false && memberToUpdate.user_id === ctx.userId) {
+        const { data: otherOwners } = await supabase
+          .from('agency_members')
+          .select('id')
+          .eq('agency_id', agencyId)
+          .eq('role', 'owner')
+          .neq('user_id', ctx.userId);
+
+        if (!otherOwners || otherOwners.length === 0) {
+          return apiErrorResponse('FORBIDDEN', 'Cannot remove manage team permission as the only owner', 403);
+        }
+      }
+
+      // ===== Build final permissions =====
+
+      let finalPermissions: AgencyPermissions;
+      let finalRole = currentRole;
+
+      if (newRole && permissionUpdates) {
+        // Case 3: Role change with permission overrides
+        // Start with new role defaults, then apply overrides
+        finalRole = newRole;
+        finalPermissions = {
+          ...DEFAULT_PERMISSIONS[newRole],
+          ...permissionUpdates,
+        };
+      } else if (newRole) {
+        // Case 1: Role change only - use role defaults
+        finalRole = newRole;
+        finalPermissions = DEFAULT_PERMISSIONS[newRole];
+      } else {
+        // Case 2: Permission change only - merge with existing
+        finalPermissions = {
+          ...currentPermissions,
+          ...permissionUpdates,
+        };
+      }
+
+      // Sync legacy aliases to maintain backwards compatibility
+      finalPermissions.can_edit_any_task = finalPermissions.can_edit_all_tasks;
+      finalPermissions.can_delete_tasks = finalPermissions.can_delete_all_tasks;
+      finalPermissions.can_delete_any_message = finalPermissions.can_delete_all_messages;
+      finalPermissions.can_manage_strategic_goals = finalPermissions.can_edit_strategic_goals;
+
+      // ===== Check for elevated permissions granted to lower roles =====
+
+      const effectiveRole = newRole || currentRole;
+      if (permissionUpdates && (effectiveRole === 'staff' || effectiveRole === 'manager')) {
+        const elevatedGranted = ELEVATED_PERMISSIONS.filter(
+          perm => permissionUpdates[perm] === true && !DEFAULT_PERMISSIONS[effectiveRole][perm]
+        );
+
+        if (elevatedGranted.length > 0) {
+          await securityMonitor.recordEvent({
+            type: SecurityEventType.SENSITIVE_DATA_ACCESS,
+            severity: AlertSeverity.MEDIUM,
+            userId: ctx.userId,
+            userName: ctx.userName,
+            endpoint: request.url,
+            details: {
+              action: 'elevated_permissions_granted',
+              agency_id: agencyId,
+              target_user: memberUserName,
+              target_user_id: memberToUpdate.user_id,
+              target_role: effectiveRole,
+              elevated_permissions: elevatedGranted,
+            },
+          });
+        }
+      }
+
+      // ===== Perform the update =====
+
+      const updatePayload: Record<string, unknown> = {
+        permissions: finalPermissions,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (newRole) {
+        updatePayload.role = newRole;
+      }
 
       const { data: updatedMember, error: updateError } = await supabase
         .from('agency_members')
-        .update({
-          role: newRole as AgencyRole,
-          permissions,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', memberId)
-        .eq('agency_id', agencyId) // Extra safety: verify agency_id
+        .eq('agency_id', agencyId)
         .select()
         .single();
 
       if (updateError) {
-        logger.error('Failed to update member role', updateError, { component: 'api/agencies/members', action: 'PATCH' });
-        return apiErrorResponse('UPDATE_FAILED', 'Failed to update member role', 500);
+        logger.error('Failed to update member', updateError, { component: 'api/agencies/members', action: 'PATCH' });
+        return apiErrorResponse('UPDATE_FAILED', 'Failed to update member', 500);
       }
 
-      // Log activity with authenticated user info
+      // ===== Activity logging =====
+
+      const changedPermissions = permissionUpdates ? Object.keys(permissionUpdates) : [];
+      const action = newRole && !permissionUpdates
+        ? 'member_role_changed'
+        : !newRole && permissionUpdates
+        ? 'member_permissions_changed'
+        : 'member_role_and_permissions_changed';
+
       try {
         await supabase.from('activity_log').insert({
-          action: 'member_role_changed',
+          action,
           user_name: ctx.userName,
           details: {
             agency_id: agencyId,
             updated_user: memberUserName,
             updated_user_id: memberToUpdate.user_id,
-            old_role: memberToUpdate.role,
-            new_role: newRole,
+            ...(newRole && {
+              old_role: currentRole,
+              new_role: newRole,
+            }),
+            ...(permissionUpdates && {
+              changed_permissions: permissionUpdates,
+            }),
             updated_by_user_id: ctx.userId,
           },
         });
@@ -382,35 +504,52 @@ export const PATCH = withAgencyAuth(
         logger.error('Failed to log activity', logError, { component: 'api/agencies/members', action: 'PATCH' });
       }
 
-      // Log security event for audit
+      // ===== Security event for audit =====
+
+      const severity = (currentRole === 'owner' || newRole === 'owner')
+        ? AlertSeverity.HIGH
+        : AlertSeverity.MEDIUM;
+
       await securityMonitor.recordEvent({
         type: SecurityEventType.SENSITIVE_DATA_ACCESS,
-        severity: memberToUpdate.role === 'owner' || newRole === 'owner' ? AlertSeverity.HIGH : AlertSeverity.MEDIUM,
+        severity,
         userId: ctx.userId,
         userName: ctx.userName,
         endpoint: request.url,
         details: {
-          action: 'member_role_changed',
+          action,
           agency_id: agencyId,
           updated_user: memberUserName,
           updated_user_id: memberToUpdate.user_id,
-          old_role: memberToUpdate.role,
-          new_role: newRole,
+          ...(newRole && { old_role: currentRole, new_role: newRole }),
+          ...(permissionUpdates && { changed_permissions: Object.keys(permissionUpdates) }),
         },
       });
+
+      // ===== Build response message =====
+
+      let message: string;
+      if (newRole && permissionUpdates) {
+        message = `${memberUserName}'s role changed to ${newRole} with custom permissions`;
+      } else if (newRole) {
+        message = `${memberUserName}'s role changed to ${newRole}`;
+      } else {
+        message = `${memberUserName}'s permissions updated`;
+      }
 
       return NextResponse.json({
         success: true,
         member: updatedMember,
-        message: `${memberUserName}'s role changed to ${newRole}`,
+        message,
+        permissionsChanged: changedPermissions.length > 0 ? changedPermissions : undefined,
       });
 
     } catch (error) {
-      logger.error('Error updating member role', error, { component: 'api/agencies/members', action: 'PATCH' });
+      logger.error('Error updating member', error, { component: 'api/agencies/members', action: 'PATCH' });
       return apiErrorResponse('INTERNAL_ERROR', 'Internal server error', 500);
     }
   },
-  { requiredRoles: ['owner'] } // Only owners can change roles
+  { requiredRoles: ['owner'] } // Only owners can change roles/permissions
 );
 
 /**

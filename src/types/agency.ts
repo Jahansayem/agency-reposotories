@@ -355,6 +355,93 @@ export const SUBSCRIPTION_LIMITS: Record<SubscriptionTier, { users: number; stor
 };
 
 // ============================================
+// Permission Categories for UI
+// ============================================
+
+/**
+ * Permission metadata for displaying in the permission editor UI.
+ */
+export interface PermissionMeta {
+  key: keyof AgencyPermissions;
+  label: string;
+  description: string;
+}
+
+/**
+ * Category grouping for permissions in the UI.
+ */
+export interface PermissionCategoryMeta {
+  label: string;
+  icon: string;
+  permissions: PermissionMeta[];
+}
+
+/**
+ * Permission categories organized for the permission editor UI.
+ * Groups the 20 permissions into 4 logical categories.
+ */
+export const PERMISSION_CATEGORIES: Record<string, PermissionCategoryMeta> = {
+  tasks: {
+    label: 'Task Permissions',
+    icon: 'CheckSquare',
+    permissions: [
+      { key: 'can_create_tasks', label: 'Create tasks', description: 'Create new tasks' },
+      { key: 'can_edit_own_tasks', label: 'Edit own tasks', description: 'Edit tasks they created' },
+      { key: 'can_edit_all_tasks', label: 'Edit all tasks', description: 'Edit any task in the agency' },
+      { key: 'can_delete_own_tasks', label: 'Delete own tasks', description: 'Delete tasks they created' },
+      { key: 'can_delete_all_tasks', label: 'Delete all tasks', description: 'Delete any task (admin)' },
+      { key: 'can_assign_tasks', label: 'Assign tasks', description: 'Assign tasks to team members' },
+      { key: 'can_view_all_tasks', label: 'View all tasks', description: 'See tasks beyond own assignments' },
+      { key: 'can_reorder_tasks', label: 'Reorder tasks', description: 'Change task display order' },
+    ],
+  },
+  team: {
+    label: 'Team Permissions',
+    icon: 'Users',
+    permissions: [
+      { key: 'can_view_team_tasks', label: 'View team tasks', description: 'See tasks assigned to others' },
+      { key: 'can_view_team_stats', label: 'View team stats', description: 'See team performance metrics' },
+      { key: 'can_manage_team', label: 'Manage team', description: 'Invite/remove members, change roles' },
+    ],
+  },
+  chat: {
+    label: 'Chat Permissions',
+    icon: 'MessageSquare',
+    permissions: [
+      { key: 'can_use_chat', label: 'Use chat', description: 'Send messages and DMs' },
+      { key: 'can_delete_own_messages', label: 'Delete own messages', description: 'Delete their messages' },
+      { key: 'can_delete_all_messages', label: 'Delete all messages', description: 'Delete any message (admin)' },
+      { key: 'can_pin_messages', label: 'Pin messages', description: 'Pin important messages' },
+    ],
+  },
+  features: {
+    label: 'Feature Permissions',
+    icon: 'Sparkles',
+    permissions: [
+      { key: 'can_view_strategic_goals', label: 'View goals', description: 'See strategic goals dashboard' },
+      { key: 'can_edit_strategic_goals', label: 'Edit goals', description: 'Create and modify goals' },
+      { key: 'can_view_archive', label: 'View archive', description: 'Access archived tasks' },
+      { key: 'can_use_ai_features', label: 'Use AI features', description: 'Smart parse, email generation' },
+      { key: 'can_manage_templates', label: 'Manage templates', description: 'Create/edit task templates' },
+      { key: 'can_view_activity_log', label: 'View activity log', description: 'See team activity history' },
+    ],
+  },
+};
+
+/**
+ * Elevated permissions that warrant security warnings when granted to lower roles.
+ * These permissions give significant access that typically only managers/owners should have.
+ */
+export const ELEVATED_PERMISSIONS: (keyof AgencyPermissions)[] = [
+  'can_delete_all_tasks',
+  'can_delete_all_messages',
+  'can_manage_team',
+  'can_edit_strategic_goals',
+  'can_edit_all_tasks',
+  'can_view_all_tasks',
+];
+
+// ============================================
 // Helper Functions
 // ============================================
 
