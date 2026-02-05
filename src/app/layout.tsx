@@ -7,6 +7,7 @@ import { AnnouncementProvider } from "@/components/LiveRegion";
 import { ReactQueryProvider } from "@/lib/queryClient";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { ClerkProviderWrapper } from "@/components/auth/ClerkProviderWrapper";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -48,17 +49,19 @@ export default function RootLayout({
       <body
         className={`${plusJakarta.variable} font-sans antialiased`}
       >
-        <ServiceWorkerRegistration />
-        <OfflineIndicator />
-        <ReactQueryProvider>
-          <ThemeProvider>
-            <AnnouncementProvider>
-              <ToastProvider>
-                {children}
-              </ToastProvider>
-            </AnnouncementProvider>
-          </ThemeProvider>
-        </ReactQueryProvider>
+        <ClerkProviderWrapper>
+          <ServiceWorkerRegistration />
+          <OfflineIndicator />
+          <ReactQueryProvider>
+            <ThemeProvider>
+              <AnnouncementProvider>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </AnnouncementProvider>
+            </ThemeProvider>
+          </ReactQueryProvider>
+        </ClerkProviderWrapper>
       </body>
     </html>
   );

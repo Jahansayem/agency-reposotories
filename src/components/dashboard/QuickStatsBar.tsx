@@ -108,6 +108,8 @@ export function QuickStatsBar({ userName, todos, onSaleLogged }: QuickStatsBarPr
 
   const {
     metrics,
+    loading: metricsLoading,
+    isAvailable: metricsAvailable,
     calculatePipelineValue,
     calculatePoliciesThisWeek,
     calculatePremiumMTD,
@@ -115,9 +117,12 @@ export function QuickStatsBar({ userName, todos, onSaleLogged }: QuickStatsBarPr
 
   // Calculate stats from todos
   const stats = useMemo(() => {
+    // Calculate from todos regardless of metrics availability
     const premiumMTD = calculatePremiumMTD(todos);
     const policiesThisWeek = calculatePoliciesThisWeek(todos);
     const pipeline = calculatePipelineValue(todos);
+
+    // Retention rate comes from stored metrics only
     const retentionRate = metrics?.retention_rate;
 
     return {
@@ -128,6 +133,14 @@ export function QuickStatsBar({ userName, todos, onSaleLogged }: QuickStatsBarPr
       pipelineCount: pipeline.count,
     };
   }, [todos, metrics, calculatePremiumMTD, calculatePoliciesThisWeek, calculatePipelineValue]);
+
+  /**
+   * Format stat value with loading state
+   */
+  const formatStatValue = (value: string | number, isLoading: boolean): string | number => {
+    if (isLoading) return '...';
+    return value;
+  };
 
   const greeting = getGreeting();
   const firstName = userName.split(' ')[0];
@@ -196,7 +209,7 @@ export function QuickStatsBar({ userName, todos, onSaleLogged }: QuickStatsBarPr
           <StatCard
             icon={Shield}
             label="Retention"
-            value={formatPercentage(stats.retentionRate)}
+            value={metricsLoading ? '...' : formatPercentage(stats.retentionRate)}
             delay={0.25}
           />
           <StatCard

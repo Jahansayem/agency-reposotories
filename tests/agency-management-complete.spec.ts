@@ -25,9 +25,10 @@ test.describe('Agency Management - Complete Test Suite', () => {
   test('Test 1.1: Owner can access Create New Agency button', async ({ page }) => {
     console.log('\n=== TEST 1.1: Access Control - Owner Can Create Agencies ===');
 
-    // Click AgencySwitcher
+    // Click AgencySwitcher - wait for it to be visible with longer timeout
+    // The button contains "B Bealer Agency" where B is the avatar letter
     const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
-    await expect(agencySwitcher).toBeVisible();
+    await expect(agencySwitcher).toBeVisible({ timeout: 15000 });
 
     await agencySwitcher.click();
     await page.waitForTimeout(1000);

@@ -308,7 +308,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             currentUser={currentUser}
             todos={todos}
             users={users}
-            onNavigateToTasks={() => handleNavigateToTasks()}
+            onNavigateToTasks={handleNavigateToTasks}
             onAddTask={handleAddTask}
             onTaskClick={handleTaskLinkClick}
             onFilterOverdue={() => handleNavigateToTasks('overdue')}

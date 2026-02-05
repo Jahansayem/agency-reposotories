@@ -7,20 +7,33 @@
 
 import { supabase, createServiceRoleClient } from './supabaseClient';
 import { logger } from './logger';
-import { format, formatDistanceToNow, startOfDay } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
 import type { TaskReminder, ReminderType, TodoPriority } from '@/types/todo';
 import { TIME, REMINDER_OFFSETS, getPriorityEmoji } from './constants';
 
 /**
- * Returns the service role client for server-side DB operations,
- * falling back to the anon client if the service role key is not available.
+ * Get the start of day in UTC for consistent date comparisons
+ */
+function startOfDayUTC(date: Date): Date {
+  const result = new Date(date);
+  result.setUTCHours(0, 0, 0, 0);
+  return result;
+}
+
+/**
+ * Returns the service role client for server-side DB operations.
+ * Throws an error if the service role key is not available.
  */
 function getServerSupabase() {
   try {
     return createServiceRoleClient();
-  } catch {
-    return supabase;
+  } catch (error) {
+    logger.error('CRITICAL: Service role client unavailable', error as Error, {
+      component: 'reminderService',
+      action: 'getServerSupabase'
+    });
+    throw new Error('Reminder service unavailable: Service role credentials missing');
   }
 }
 
@@ -47,17 +60,17 @@ interface DueReminder {
  */
 export async function getDueReminders(
   windowMinutes: number = 5
-): Promise<DueReminder[]> {
+): Promise<{ reminders: DueReminder[]; error?: string }> {
   const { data, error } = await getServerSupabase().rpc('get_due_reminders', {
     check_window_minutes: windowMinutes,
   });
 
   if (error) {
-    logger.error('Error fetching due reminders', error, { component: 'reminderService' });
-    return [];
+    logger.error('Error fetching due reminders', error, { component: 'reminderService', action: 'getDueReminders' });
+    return { reminders: [], error: `Failed to fetch reminders: ${error.message}` };
   }
 
-  return data || [];
+  return { reminders: data || [] };
 }
 
 /**
@@ -85,7 +98,7 @@ function buildReminderMessage(
   // Due date
   if (dueDate) {
     const formattedDue = formatReminderDueDate(dueDate);
-    const isOverdue = startOfDay(new Date(dueDate)) < startOfDay(new Date());
+    const isOverdue = startOfDayUTC(new Date(dueDate)) < startOfDayUTC(new Date());
     const dueLine = isOverdue
       ? `⚠️ Due: ${formattedDue}`
       : `📅 Due: ${formattedDue}`;
@@ -111,11 +124,16 @@ function formatReminderDueDate(dateString: string): string {
   const date = new Date(dateString);
 
   if (isNaN(date.getTime())) {
-    return 'Invalid date';
+    logger.error('Invalid date string in reminder', null, {
+      component: 'reminderService',
+      action: 'formatReminderDueDate',
+      dateString: dateString?.substring(0, 50)
+    });
+    return 'Date unavailable';
   }
 
-  const todayStart = startOfDay(new Date());
-  const dateStart = startOfDay(date);
+  const todayStart = startOfDayUTC(new Date());
+  const dateStart = startOfDayUTC(date);
   const diffDays = Math.ceil(
     (dateStart.getTime() - todayStart.getTime()) / TIME.DAY
   );
@@ -165,8 +183,12 @@ export async function sendReminderChatNotification(
 
     return { success: true };
   } catch (err) {
-    logger.error('Error sending reminder chat notification', err, { component: 'reminderService' });
-    return { success: false, error: 'Unknown error occurred' };
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Error sending reminder chat notification', err as Error, {
+      component: 'reminderService',
+      action: 'sendReminderChatNotification'
+    });
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -207,8 +229,12 @@ export async function sendReminderPushNotification(
 
     return { success: true };
   } catch (err) {
-    logger.error('Error sending reminder push notification', err, { component: 'reminderService' });
-    return { success: false, error: 'Unknown error occurred' };
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Error sending reminder push notification', err as Error, {
+      component: 'reminderService',
+      action: 'sendReminderPushNotification'
+    });
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -300,8 +326,19 @@ export async function processAllDueReminders(): Promise<{
   processed: number;
   successful: number;
   failed: number;
+  error?: string;
 }> {
-  const reminders = await getDueReminders();
+  const { reminders, error: fetchError } = await getDueReminders();
+
+  if (fetchError) {
+    return {
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      error: fetchError,
+    };
+  }
+
   let successful = 0;
   let failed = 0;
 
@@ -380,12 +417,22 @@ export async function createAutoReminders(
   try {
     // First, cancel any existing auto-created reminders for this task
     // to avoid duplicates when due date is updated
-    await getServerSupabase()
+    const { error: deleteError } = await getServerSupabase()
       .from('task_reminders')
       .delete()
       .eq('todo_id', todoId)
       .eq('status', 'pending')
       .not('message', 'is', null); // Auto-created reminders have a message set (e.g. "Task due tomorrow")
+
+    if (deleteError) {
+      logger.warn('Failed to clean up old auto-reminders', {
+        component: 'reminderService',
+        action: 'createAutoReminders',
+        todoId,
+        error: deleteError.message
+      });
+      // Continue anyway - duplicates are better than no reminders
+    }
 
     // Create new reminders
     const remindersToInsert = futureReminders.map(config => ({
@@ -409,8 +456,12 @@ export async function createAutoReminders(
 
     return { success: true, created: futureReminders.length };
   } catch (err) {
-    logger.error('Error in createAutoReminders', err, { component: 'reminderService' });
-    return { success: false, created: 0, error: 'Unknown error occurred' };
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    logger.error('Error in createAutoReminders', err as Error, {
+      component: 'reminderService',
+      action: 'createAutoReminders'
+    });
+    return { success: false, created: 0, error: errorMessage };
   }
 }
 
@@ -508,9 +559,10 @@ export function calculateReminderTime(
     case 'morning_of':
       if (!dueDate) return null;
       const morning = new Date(dueDate);
-      morning.setHours(9, 0, 0, 0);
+      morning.setUTCHours(9, 0, 0, 0);  // Use UTC
       return morning;
     default:
+      logger.warn('Unknown reminder preset', { preset, component: 'reminderService' });
       return null;
   }
 }

@@ -44,7 +44,7 @@ export function useChatMessages({
   conversation,
   searchQuery,
 }: UseChatMessagesOptions): UseChatMessagesReturn {
-  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+  const { currentAgencyId, isMultiTenancyEnabled, isLoading: agencyLoading } = useAgency();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +57,11 @@ export function useChatMessages({
   // Fetch initial messages filtered by current conversation
   const fetchMessages = useCallback(async () => {
     if (!isSupabaseConfigured() || !conversation) return;
+
+    // FIX: Wait for agency context to be ready when multi-tenancy is enabled
+    if (isMultiTenancyEnabled && agencyLoading) {
+      return;
+    }
 
     setLoading(true);
 
@@ -93,12 +98,17 @@ export function useChatMessages({
       setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
     }
     setLoading(false);
-  }, [conversation, currentUser.name, isMultiTenancyEnabled, currentAgencyId]);
+  }, [conversation, currentUser.name, isMultiTenancyEnabled, currentAgencyId, agencyLoading]);
 
   // Load more (older) messages filtered by current conversation
   const loadMoreMessages = useCallback(async () => {
     const currentMessages = messagesRef.current;
     if (!isSupabaseConfigured() || isLoadingMore || !hasMoreMessages || currentMessages.length === 0 || !conversation) return;
+
+    // FIX: Wait for agency context to be ready when multi-tenancy is enabled
+    if (isMultiTenancyEnabled && agencyLoading) {
+      return;
+    }
 
     setIsLoadingMore(true);
     const oldestMessage = currentMessages[0];
@@ -137,7 +147,7 @@ export function useChatMessages({
       setHasMoreMessages(data?.length === MESSAGES_PER_PAGE);
     }
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMoreMessages, conversation, currentUser.name, isMultiTenancyEnabled, currentAgencyId]);
+  }, [isLoadingMore, hasMoreMessages, conversation, currentUser.name, isMultiTenancyEnabled, currentAgencyId, agencyLoading]);
 
   // Filter messages for current conversation
   const filteredMessages = useMemo(() => {

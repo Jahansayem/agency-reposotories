@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import { X } from 'lucide-react';
 import { prefersReducedMotion } from '@/lib/animations';
 
@@ -24,14 +24,14 @@ interface FilterChipProps {
  * - Accessible dismiss button
  */
 
-const chipVariants = {
+const chipVariants: Variants = {
   initial: { opacity: 0, scale: 0.8, x: -10 },
   animate: {
     opacity: 1,
     scale: 1,
     x: 0,
     transition: {
-      type: 'spring' as const,
+      type: 'spring',
       stiffness: 400,
       damping: 25
     }

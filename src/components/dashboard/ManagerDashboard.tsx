@@ -23,7 +23,7 @@ import {
   UserCheck,
   X,
 } from 'lucide-react';
-import { Todo, AuthUser, ActivityLogEntry, User } from '@/types/todo';
+import { Todo, AuthUser, ActivityLogEntry, User, QuickFilter } from '@/types/todo';
 import { useAppShell } from '../layout';
 import {
   generateDashboardAIData,
@@ -128,7 +128,7 @@ interface ManagerDashboardProps {
   activityLog?: ActivityLogEntry[];
   users: string[];
   allUsers?: User[];
-  onNavigateToTasks?: () => void;
+  onNavigateToTasks?: (filter?: QuickFilter) => void;
   onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;
@@ -307,11 +307,15 @@ export default function ManagerDashboard({
   // Handler for clicking a user in TeamProductionPanel
   const handleUserClick = useCallback((userName: string) => {
     if (userName && onFilterByUser) {
+      // Filter tasks to specific user
       onFilterByUser(userName);
+    } else if (onNavigateToTasks) {
+      // "View Full Team" - show all tasks (not just current user's)
+      onNavigateToTasks('all');
     } else {
       setActiveView('tasks');
     }
-  }, [onFilterByUser, setActiveView]);
+  }, [onFilterByUser, onNavigateToTasks, setActiveView]);
 
   // Handler for clicking a task in CalendarView
   const handleCalendarTaskClick = useCallback((todo: Todo) => {

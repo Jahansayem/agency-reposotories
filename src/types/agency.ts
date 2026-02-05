@@ -24,6 +24,8 @@ export interface Agency {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  /** Allstate agency code from PingFederate SAML (e.g., "A1234") */
+  allstate_agency_code?: string;
 }
 
 // ============================================

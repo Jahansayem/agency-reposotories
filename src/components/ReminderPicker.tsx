@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, BellOff, Clock, X, Check } from 'lucide-react';
-import { format, addMinutes, addHours, addDays, startOfDay, setHours, setMinutes } from 'date-fns';
+import { format, addMinutes, addHours, addDays, startOfDay, setHours, setMinutes, differenceInDays } from 'date-fns';
 import type { ReminderPreset, ReminderType } from '@/types/todo';
 
 interface ReminderPickerProps {
@@ -107,7 +107,11 @@ export default function ReminderPicker({
   const parsedDueDate = useMemo(() => {
     if (!dueDate) return undefined;
     const date = new Date(dueDate);
-    return isNaN(date.getTime()) ? undefined : date;
+    if (isNaN(date.getTime())) {
+      console.error('Invalid due date provided to ReminderPicker:', dueDate);
+      return undefined;
+    }
+    return date;
   }, [dueDate]);
 
   const parsedValue = useMemo(() => {
@@ -117,12 +121,13 @@ export default function ReminderPicker({
   }, [value]);
 
   const formatReminderDisplay = useCallback((date: Date): string => {
+    if (isNaN(date.getTime())) {
+      return 'Invalid time';
+    }
     const now = new Date();
     const today = startOfDay(now);
     const reminderDay = startOfDay(date);
-    const diffDays = Math.round(
-      (reminderDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const diffDays = differenceInDays(reminderDay, today);
 
     if (diffDays === 0) {
       return `Today at ${format(date, 'h:mm a')}`;
@@ -189,22 +194,30 @@ export default function ReminderPicker({
 
   // Calculate position
   useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const width = 256; // w-64
-      let left = rect.left;
-      let top = rect.bottom + 8;
+    if (!isOpen) return;
 
-      // Adjust if goes off screen
-      if (left + width > window.innerWidth) {
-        left = window.innerWidth - width - 16;
-      }
-      if (top + 300 > window.innerHeight) { // Approximate height
-        top = rect.top - 300 - 8;
-      }
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const width = 256; // w-64
+        let left = rect.left;
+        let top = rect.bottom + 8;
 
-      setDropdownPosition({ top, left });
-    }
+        // Adjust if goes off screen
+        if (left + width > window.innerWidth) {
+          left = window.innerWidth - width - 16;
+        }
+        if (top + 300 > window.innerHeight) { // Approximate height
+          top = rect.top - 300 - 8;
+        }
+
+        setDropdownPosition({ top, left });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
   }, [isOpen]);
 
   // Close on outside click

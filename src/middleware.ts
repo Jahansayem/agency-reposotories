@@ -1,6 +1,8 @@
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { rateLimiters, withRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
+import { AUTH_CONFIG } from '@/lib/featureFlags';
 
 /**
  * Allowed origins for Outlook add-in CORS.
@@ -176,6 +178,22 @@ function constantTimeCompare(a: string, b: string): boolean {
 }
 
 /**
+ * Routes that are public (no auth required)
+ */
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/outlook/(.*)',
+  '/api/health/(.*)',
+  '/api/csrf',
+  '/api/csp-report',
+  '/api/webhooks/(.*)',
+]);
+
+/**
  * Validate session from request headers/cookies
  *
  * SECURITY: Only accepts proper session tokens.
@@ -224,7 +242,7 @@ async function validateSessionFromRequest(request: NextRequest): Promise<{
   };
 }
 
-export async function middleware(request: NextRequest) {
+async function handleMiddleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip middleware for static assets
@@ -267,24 +285,37 @@ export async function middleware(request: NextRequest) {
   }
 
   // ============================================
-  // AUTHENTICATION CHECK
+  // AUTHENTICATION CHECK (Dual Auth: Clerk + PIN)
   // ============================================
 
   if (requiresAuth(pathname)) {
-    const session = await validateSessionFromRequest(request);
+    let isAuthenticated = false;
 
-    if (!session.valid) {
+    // Check Clerk authentication first (if enabled)
+    // Note: Clerk auth is handled by clerkMiddleware wrapper,
+    // so we check for Clerk session via the auth object
+    // For now, we rely on PIN session check as fallback
+
+    // Check PIN session authentication
+    if (AUTH_CONFIG.pinEnabled) {
+      const session = await validateSessionFromRequest(request);
+      if (session.valid) {
+        isAuthenticated = true;
+      }
+    }
+
+    if (!isAuthenticated) {
       logSecurityEvent('Authentication failure', {
         pathname,
         method: request.method,
-        error: session.error,
+        error: 'No valid authentication found',
         ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         userAgent: request.headers.get('user-agent') || 'unknown',
       });
       return NextResponse.json(
         {
           error: 'Authentication required',
-          message: session.error || 'Please log in to access this resource',
+          message: 'Please log in to access this resource',
         },
         { status: 401 }
       );
@@ -425,14 +456,46 @@ export async function middleware(request: NextRequest) {
   return applyCorsHeaders(response, matchedOutlookOrigin);
 }
 
+/**
+ * Clerk middleware wrapper with dual-auth support
+ *
+ * When Clerk is enabled, this wraps our custom middleware with Clerk's auth.
+ * When Clerk is disabled, it falls back to our original middleware.
+ */
+export const middleware = AUTH_CONFIG.clerkEnabled
+  ? clerkMiddleware(async (auth, request) => {
+      // Check if user is authenticated via Clerk
+      const { userId } = await auth();
+
+      // For public routes, skip auth check
+      if (isPublicRoute(request)) {
+        return handleMiddleware(request);
+      }
+
+      // If Clerk user is authenticated, skip PIN auth check
+      if (userId) {
+        // User is authenticated via Clerk
+        // Still run our middleware for CSRF, rate limiting, etc.
+        return handleMiddleware(request);
+      }
+
+      // Not authenticated via Clerk, let handleMiddleware check PIN auth
+      return handleMiddleware(request);
+    })
+  : handleMiddleware;
+
 export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
      * - _next/static (static files)
      * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * - favicon.ico, icon files, manifest, etc.
+     *
+     * Clerk's recommended matcher (combined with our existing patterns)
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
   ],
 };

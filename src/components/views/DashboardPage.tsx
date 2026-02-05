@@ -36,7 +36,7 @@ import QuickActions from '@/components/dashboard/QuickActions';
 import DailyDigestPanel from '@/components/dashboard/DailyDigestPanel';
 import ManagerDashboard from '@/components/dashboard/ManagerDashboard';
 import DoerDashboard from '@/components/dashboard/DoerDashboard';
-import { Todo, AuthUser, ActivityLogEntry, User } from '@/types/todo';
+import { Todo, AuthUser, ActivityLogEntry, User, QuickFilter } from '@/types/todo';
 import {
   generateDashboardAIData,
   getScoreBreakdown,
@@ -58,7 +58,7 @@ interface DashboardPageProps {
   activityLog?: ActivityLogEntry[];
   users?: string[];
   allUsers?: User[];
-  onNavigateToTasks?: () => void;
+  onNavigateToTasks?: (filter?: QuickFilter) => void;
   onAddTask?: () => void;
   onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
@@ -661,7 +661,7 @@ export default function DashboardPage({
                   </h3>
 
                   <button
-                    onClick={onNavigateToTasks}
+                    onClick={() => onNavigateToTasks?.()}
                     className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
                       darkMode
                         ? 'hover:bg-slate-700/50'
@@ -880,7 +880,7 @@ export default function DashboardPage({
 
                   {aiData.neglectedTasks.length > 3 && (
                     <button
-                      onClick={onNavigateToTasks}
+                      onClick={() => onNavigateToTasks?.()}
                       className={`w-full text-center py-2 mt-3 text-sm font-medium ${
                         darkMode ? 'text-[var(--accent-sky)]' : 'text-[var(--brand-blue)]'
                       } hover:underline`}

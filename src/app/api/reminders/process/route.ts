@@ -28,6 +28,22 @@ export const POST = withSystemAuth(async (_request: NextRequest) => {
     // Reminders are linked to todos which have agency_id for context.
     const result = await processAllDueReminders();
 
+    // Handle error from getDueReminders (propagated through processAllDueReminders)
+    if (result.error) {
+      logger.error('Failed to fetch due reminders', null, {
+        component: 'reminders/process',
+        action: 'POST',
+        error: result.error
+      });
+      return NextResponse.json({
+        success: false,
+        error: result.error,
+        processed: result.processed,
+        successful: result.successful,
+        failed: result.failed
+      }, { status: 500 });
+    }
+
     return NextResponse.json({
       success: true,
       ...result,

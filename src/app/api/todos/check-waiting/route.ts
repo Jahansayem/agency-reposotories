@@ -49,6 +49,15 @@ export const GET = withSystemAuth(async (_request: NextRequest) => {
       if (!task.waiting_since) continue;
 
       const waitingSince = new Date(task.waiting_since);
+      if (isNaN(waitingSince.getTime())) {
+        logger.warn('Invalid waiting_since date', {
+          component: 'check-waiting',
+          todoId: task.id,
+          waitingSince: task.waiting_since
+        });
+        continue;
+      }
+
       const hoursWaiting = (now.getTime() - waitingSince.getTime()) / (1000 * 60 * 60);
       const threshold = task.follow_up_after_hours || 48;
 
@@ -97,7 +106,19 @@ export const GET = withSystemAuth(async (_request: NextRequest) => {
           .insert(newEntries);
 
         if (logError) {
-          logger.error('Error logging overdue activities', logError, { component: 'check-waiting' });
+          logger.error('Error logging overdue activities', logError, {
+            component: 'check-waiting',
+            action: 'POST',
+            attemptedEntries: newEntries.length
+          });
+
+          return NextResponse.json({
+            message: 'Check completed with errors',
+            checked: waitingTasks.length,
+            overdue: overdueTaskIds.length,
+            newNotifications: 0,
+            error: 'Failed to create activity log entries'
+          }, { status: 207 });  // 207 Multi-Status for partial success
         }
       }
 

@@ -53,7 +53,7 @@ export function useTodoData(currentUser: AuthUser) {
     appendTodos,
   } = useTodoStore();
 
-  const { currentAgencyId, isMultiTenancyEnabled, hasPermission } = useAgency();
+  const { currentAgencyId, isMultiTenancyEnabled, hasPermission, isLoading: agencyLoading } = useAgency();
 
   // UX-008: Toast for rollback notifications on optimistic update failures
   const toast = useToast();
@@ -65,6 +65,14 @@ export function useTodoData(currentUser: AuthUser) {
     if (!isSupabaseConfigured()) {
       setError('Supabase is not configured. Please check your environment variables.');
       setLoading(false);
+      return;
+    }
+
+    // FIX: Wait for agency context to be ready when multi-tenancy is enabled
+    // This prevents fetching with null agencyId during initial load
+    if (isMultiTenancyEnabled && agencyLoading) {
+      // Agency context is still loading, skip this fetch - it will be re-triggered
+      // when agencyLoading becomes false (due to useEffect dependency)
       return;
     }
 
@@ -122,7 +130,7 @@ export function useTodoData(currentUser: AuthUser) {
       setError(null);
     }
     setLoading(false);
-  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId, canViewAllTasks, userName]);
+  }, [setTodos, setUsers, setUsersWithColors, setLoading, setError, setTotalTodoCount, setHasMoreTodos, isMultiTenancyEnabled, currentAgencyId, canViewAllTasks, userName, agencyLoading]);
 
   // Setup real-time subscription
   useEffect(() => {
