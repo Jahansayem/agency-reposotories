@@ -144,7 +144,7 @@ export default function NavigationSidebar({
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       onMouseEnter={() => sidebarCollapsed && setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      className="hidden md:flex flex-col flex-shrink-0 overflow-hidden border-r transition-colors bg-[var(--surface)] border-[var(--border)]"
+      className="hidden lg:flex flex-col flex-shrink-0 overflow-hidden border-r transition-colors bg-[var(--surface)] border-[var(--border)]"
       aria-label="Main navigation"
     >
       {/* ─── Header ─── */}

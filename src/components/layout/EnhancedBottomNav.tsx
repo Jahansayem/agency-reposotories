@@ -105,7 +105,7 @@ export default function EnhancedBottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-safe bg-[var(--surface)] backdrop-blur-xl border-t border-[var(--border)]"
+      className="fixed bottom-0 left-0 right-0 z-40 lg:hidden pb-safe bg-[var(--surface)] backdrop-blur-xl border-t border-[var(--border)]"
       role="navigation"
       aria-label="Main navigation"
     >
