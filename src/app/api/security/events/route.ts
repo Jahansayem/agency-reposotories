@@ -11,10 +11,13 @@ import { logger } from '@/lib/logger';
 import { withAgencyAdminAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import { securityMonitor } from '@/lib/securityMonitor';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 /**
  * GET /api/security/events - Get security event summary and recent events
@@ -22,6 +25,7 @@ const supabase = createClient(
  */
 export const GET = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const hours = parseInt(searchParams.get('hours') || '24', 10);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 500);

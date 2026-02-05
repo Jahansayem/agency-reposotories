@@ -18,10 +18,13 @@ import { createClient } from '@supabase/supabase-js';
 import { decryptField } from '@/lib/fieldEncryption';
 import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 /**
  * Normalize products to array format
@@ -38,6 +41,7 @@ function normalizeProducts(products: string[] | string | null | undefined): stri
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.trim() || '';
     const agencyId = searchParams.get('agency_id');

@@ -3,16 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
-// Create Supabase client for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 /**
  * Get users from a specific agency via agency_members join
  */
 async function getUsersFromAgency(agencyId: string): Promise<string[]> {
+  const supabase = getSupabaseClient();
   const { data: members, error } = await supabase
     .from('agency_members')
     .select(`

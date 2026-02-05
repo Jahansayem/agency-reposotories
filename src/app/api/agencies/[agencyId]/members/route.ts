@@ -22,11 +22,13 @@ import {
   AlertSeverity,
 } from '@/lib/securityMonitor';
 
-// Use service role key for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 /**
  * Validate that the agencyId from URL params matches the authenticated context.
@@ -91,6 +93,7 @@ async function validateAgencyIdMatch(
  */
 export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Validate agency ID from URL matches context
     const validation = await validateAgencyIdMatch(request, ctx);
     if (!validation.valid) {
@@ -154,6 +157,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 export const POST = withAgencyAuth(
   async (request: NextRequest, ctx: AgencyAuthContext) => {
     try {
+      const supabase = getSupabaseClient();
       // Validate agency ID from URL matches context
       const validation = await validateAgencyIdMatch(request, ctx);
       if (!validation.valid) {
@@ -298,6 +302,7 @@ export const POST = withAgencyAuth(
 export const PATCH = withAgencyAuth(
   async (request: NextRequest, ctx: AgencyAuthContext) => {
     try {
+      const supabase = getSupabaseClient();
       // Validate agency ID from URL matches context
       const validation = await validateAgencyIdMatch(request, ctx);
       if (!validation.valid) {
@@ -561,6 +566,7 @@ export const PATCH = withAgencyAuth(
 export const DELETE = withAgencyAuth(
   async (request: NextRequest, ctx: AgencyAuthContext) => {
     try {
+      const supabase = getSupabaseClient();
       // Validate agency ID from URL matches context
       const validation = await validateAgencyIdMatch(request, ctx);
       if (!validation.valid) {

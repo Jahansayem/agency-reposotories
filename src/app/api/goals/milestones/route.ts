@@ -3,15 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+}
 
 /**
  * Verify that a goal belongs to the given agency.
  * Returns the goal record or null.
  */
 async function verifyGoalAgency(goalId: string, agencyId: string) {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('strategic_goals')
     .select('id')
@@ -26,6 +31,7 @@ async function verifyGoalAgency(goalId: string, agencyId: string) {
 // GET - Fetch milestones for a goal
 export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const goalId = searchParams.get('goalId');
 
@@ -65,6 +71,7 @@ export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
 // POST - Create a new milestone
 export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const { goal_id, title, target_date } = body;
 
@@ -115,6 +122,7 @@ export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agency
 // PUT - Update a milestone
 export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const { id, title, completed, target_date, display_order } = body;
 
@@ -164,6 +172,7 @@ export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
 // DELETE - Delete a milestone
 export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
