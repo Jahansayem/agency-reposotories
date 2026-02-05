@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
       .limit(limit);
 
     if (agencyId) {
-      insightsQuery = insightsQuery.eq('agency_id', agencyId);
+      // Include customers with matching agency_id OR null agency_id (legacy/demo data)
+      insightsQuery = insightsQuery.or(`agency_id.eq.${agencyId},agency_id.is.null`);
     }
 
     if (query) {
@@ -71,7 +72,8 @@ export async function GET(request: NextRequest) {
       .limit(limit);
 
     if (agencyId) {
-      opportunitiesQuery = opportunitiesQuery.eq('agency_id', agencyId);
+      // Include opportunities with matching agency_id OR null agency_id (legacy/demo data)
+      opportunitiesQuery = opportunitiesQuery.or(`agency_id.eq.${agencyId},agency_id.is.null`);
     }
 
     if (query) {
