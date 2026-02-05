@@ -13,14 +13,29 @@
  * @module samlClaimHandler
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { DEFAULT_PERMISSIONS, type AgencyRole, type AgencyPermissions } from '@/types/agency';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Lazy-initialized Supabase client to avoid build-time errors
+// (environment variables aren't available during Next.js build)
+let _supabase: SupabaseClient | null = null;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+function getSupabaseClient(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error(
+        'Supabase configuration missing. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.'
+      );
+    }
+
+    _supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  return _supabase;
+}
 
 // ============================================
 // Types
@@ -233,6 +248,7 @@ export async function findOrCreateAgencyByCode(
   agencyCode: string,
   agencyName?: string
 ): Promise<{ agencyId: string; isNew: boolean; name: string }> {
+  const supabase = getSupabaseClient();
   // Normalize agency code (uppercase, trimmed)
   const normalizedCode = agencyCode.toUpperCase().trim();
 
@@ -347,6 +363,7 @@ export async function ensureAgencyMembership(
   agencyId: string,
   role: AgencyRole = 'staff'
 ): Promise<{ isNew: boolean; role: AgencyRole }> {
+  const supabase = getSupabaseClient();
   // Check if membership already exists
   const { data: existingMembership } = await supabase
     .from('agency_members')
@@ -524,6 +541,7 @@ export async function processSamlClaims(
 
     // Optionally store license number if provided
     if (claims.license_number) {
+      const supabase = getSupabaseClient();
       await supabase
         .from('users')
         .update({
@@ -579,6 +597,7 @@ export async function getAgencyForSession(
   userId: string,
   clerkMetadata?: ClerkUserMetadata
 ): Promise<string | null> {
+  const supabase = getSupabaseClient();
   // If we have SAML claims with agency_code, try to use that agency
   if (clerkMetadata) {
     const claims = extractSamlClaims(clerkMetadata);

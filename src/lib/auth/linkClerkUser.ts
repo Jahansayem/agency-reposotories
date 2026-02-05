@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import {
   processSamlClaims,
@@ -7,11 +7,25 @@ import {
   type SamlClaimResult,
 } from './samlClaimHandler';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Lazy-initialized Supabase client to avoid build-time errors
+// (environment variables aren't available during Next.js build)
+let _supabase: SupabaseClient | null = null;
 
-// Use service role for user management
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+function getSupabaseClient(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error(
+        'Supabase configuration missing. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.'
+      );
+    }
+
+    _supabase = createClient(supabaseUrl, supabaseServiceKey);
+  }
+  return _supabase;
+}
 
 // Allstate brand colors for user assignment
 const USER_COLORS = [
@@ -101,6 +115,8 @@ export async function linkClerkUserWithSaml(clerkData: ClerkUserData): Promise<L
 
   let user: LinkedUser;
   let isNewUser = false;
+
+  const supabase = getSupabaseClient();
 
   // First, check if this Clerk user is already linked
   const { data: existingClerkUser } = await supabase
@@ -211,6 +227,7 @@ async function createNewClerkUser(
   firstName: string | null | undefined,
   lastName: string | null | undefined
 ): Promise<LinkedUser> {
+  const supabase = getSupabaseClient();
   const displayName = firstName
     ? `${firstName}${lastName ? ` ${lastName.charAt(0)}.` : ''}`
     : email?.split('@')[0] || 'User';
@@ -249,6 +266,7 @@ async function createNewClerkUser(
  * Get a user by their Clerk ID
  */
 export async function getUserByClerkId(clerkUserId: string) {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('users')
     .select('*')
@@ -292,6 +310,7 @@ export async function updateUserFromClerk(clerkUserId: string, updates: Partial<
 
   // Update user record if there are changes
   if (Object.keys(updateData).length > 0) {
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('users')
       .update(updateData)

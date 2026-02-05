@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { validateSession, SessionValidationResult } from './sessionValidator';
 import { logger } from './logger';
 import type {
@@ -17,23 +17,34 @@ import type {
 import { DEFAULT_PERMISSIONS } from '@/types/agency';
 import { isFeatureEnabled } from './featureFlags';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Lazy-initialized Supabase client to avoid build-time errors
+// (environment variables aren't available during Next.js build)
+let _supabase: SupabaseClient | null = null;
+let _supabaseWarningLogged = false;
 
-if (!supabaseUrl) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
+function getSupabaseClient(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl) {
+      throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
+    }
+
+    if (!supabaseServiceKey && !_supabaseWarningLogged) {
+      _supabaseWarningLogged = true;
+      logger.warn('SUPABASE_SERVICE_ROLE_KEY is not configured - agency auth will use anon key with reduced privileges', {
+        component: 'AgencyAuth',
+      });
+    }
+
+    _supabase = createClient(
+      supabaseUrl,
+      supabaseServiceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
+  return _supabase;
 }
-
-if (!supabaseServiceKey) {
-  logger.warn('SUPABASE_SERVICE_ROLE_KEY is not configured - agency auth will use anon key with reduced privileges', {
-    component: 'AgencyAuth',
-  });
-}
-
-const supabase = createClient(
-  supabaseUrl,
-  supabaseServiceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 // ============================================
 // Types
@@ -138,7 +149,7 @@ export async function verifyAgencyAccess(
 
   // Check if user is super_admin (can bypass agency check if allowed)
   if (options.allowSuperAdmin !== false) {
-    const { data: user } = await supabase
+    const { data: user } = await getSupabaseClient()
       .from('users')
       .select('global_role')
       .eq('id', session.userId)
@@ -306,7 +317,7 @@ async function getAgencyMembership(
   userId: string,
   agencyId: string
 ): Promise<AgencyMemberRecord | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseClient()
     .from('agency_members')
     .select('role, permissions, status')
     .eq('user_id', userId)
@@ -328,7 +339,7 @@ interface AgencyRecord {
  * Get agency by ID
  */
 async function getAgencyById(agencyId: string): Promise<AgencyRecord | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseClient()
     .from('agencies')
     .select('id, name, slug')
     .eq('id', agencyId)
@@ -348,6 +359,7 @@ interface DefaultAgencyRecord {
  * Get user's default agency
  */
 async function getUserDefaultAgency(userId: string): Promise<DefaultAgencyRecord | null> {
+  const supabase = getSupabaseClient();
   // First try to find default agency
   const { data: defaultAgency } = await supabase
     .from('agency_members')
@@ -375,7 +387,7 @@ async function getUserDefaultAgency(userId: string): Promise<DefaultAgencyRecord
  * Get all agencies a user belongs to
  */
 export async function getUserAgencies(userId: string): Promise<AgencyMembership[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseClient()
     .from('agency_members')
     .select(`
       agency_id,
@@ -419,7 +431,7 @@ export async function setAgencyContext(
   userName: string
 ): Promise<void> {
   try {
-    await supabase.rpc('set_request_context', {
+    await getSupabaseClient().rpc('set_request_context', {
       p_user_id: userId,
       p_user_name: userName,
       p_agency_id: agencyId,
