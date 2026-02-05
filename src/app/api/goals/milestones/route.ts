@@ -211,6 +211,7 @@ export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agen
 
 // Helper function to update goal progress based on milestones
 async function updateGoalProgress(goalId: string) {
+  const supabase = getSupabaseClient();
   const { data: milestones } = await supabase
     .from('goal_milestones')
     .select('completed')

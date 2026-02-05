@@ -42,6 +42,7 @@ async function getDefaultAgencyId(): Promise<string | null> {
  * Validate that the specified agency exists and is active
  */
 async function validateAgency(agencyId: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
   const { data: agency, error } = await supabase
     .from('agencies')
     .select('id')
@@ -58,6 +59,7 @@ async function validateCreator(createdBy: string): Promise<{ valid: boolean; use
     return { valid: false };
   }
 
+  const supabase = getSupabaseClient();
   const { data: user, error } = await supabase
     .from('users')
     .select('id, name')
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const supabase = getSupabaseClient();
     const { text, assignedTo, priority, dueDate, createdBy, agency_id } = await request.json();
 
     // SECURITY: Validate that createdBy is a real user in the system

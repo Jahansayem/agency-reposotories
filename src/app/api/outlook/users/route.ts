@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const supabase = getSupabaseClient();
     // Get optional agency_id from query params
     const { searchParams } = new URL(request.url);
     const agencyId = searchParams.get('agency_id');

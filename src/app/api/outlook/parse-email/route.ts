@@ -56,6 +56,7 @@ async function getUsersFromAgency(agencyId: string): Promise<string[]> {
  * Get all registered users (fallback when no agency specified)
  */
 async function getAllUsers(): Promise<string[]> {
+  const supabase = getSupabaseClient();
   const { data: users, error } = await supabase
     .from('users')
     .select('name')
