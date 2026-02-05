@@ -3,14 +3,27 @@
  *
  * EXACT PORT from Python bealer-lead-model/src/customer_segmentation_model.py
  *
+ * NOTE: This module is for ANALYTICS (LTV, portfolio analysis, marketing allocation).
+ * For simple customer tier classification used in the Customers API, use:
+ *   import { getCustomerSegment, SEGMENT_CONFIGS } from '@/lib/segmentation';
+ *
+ * This module uses 'low_value' as segment name (Python legacy),
+ * while segmentation.ts uses 'entry' for UI consistency.
+ *
  * Key Insight: Top 40% of customers = 83% of profit
  * Not all customers are created equal!
  *
- * Segments:
- * - Elite: 3+ products, $3000+ premium, $18K LTV, 97% retention
- * - Premium: 2+ products, $2000+ premium, $9K LTV, 91% retention
- * - Standard: 1+ product, $800+ premium, $4.5K LTV, 72% retention
- * - Low-Value: everything else, $1.8K LTV, 65% retention
+ * Segments (Analytics Model):
+ * - Elite: ($15K+ premium AND 3+ products) OR $20K+ OR 5+ products
+ * - Premium: ($7K+ premium AND 2+ products) OR $10K+ OR 4+ products
+ * - Standard: $3K+ premium OR 2+ products
+ * - Low-Value: everything else
+ *
+ * LTV and retention benchmarks:
+ * - Elite: $18K LTV, 97% retention
+ * - Premium: $9K LTV, 91% retention
+ * - Standard: $4.5K LTV, 72% retention
+ * - Low-Value: $1.8K LTV, 65% retention
  */
 
 // ============================================
@@ -81,14 +94,15 @@ export interface AllocationDetails {
 }
 
 // ============================================
-// Segment Definitions (from Python)
+// Segment Definitions
+// Thresholds aligned with @/lib/segmentation.ts
 // ============================================
 
 export const CUSTOMER_SEGMENTS: Record<CustomerSegmentName, CustomerSegmentDefinition> = {
   elite: {
     name: 'Elite',
-    minProducts: 3,
-    minAnnualPremium: 3000,
+    minProducts: 3,           // ($15K+ AND 3+) OR $20K+ OR 5+ products
+    minAnnualPremium: 15000,
     avgLtv: 18000,
     avgRetention: 0.97,
     avgProducts: 3.8,
@@ -99,8 +113,8 @@ export const CUSTOMER_SEGMENTS: Record<CustomerSegmentName, CustomerSegmentDefin
   },
   premium: {
     name: 'Premium',
-    minProducts: 2,
-    minAnnualPremium: 2000,
+    minProducts: 2,           // ($7K+ AND 2+) OR $10K+ OR 4+ products
+    minAnnualPremium: 7000,
     avgLtv: 9000,
     avgRetention: 0.91,
     avgProducts: 2.2,
@@ -111,8 +125,8 @@ export const CUSTOMER_SEGMENTS: Record<CustomerSegmentName, CustomerSegmentDefin
   },
   standard: {
     name: 'Standard',
-    minProducts: 1,
-    minAnnualPremium: 800,
+    minProducts: 2,           // $3K+ OR 2+ products
+    minAnnualPremium: 3000,
     avgLtv: 4500,
     avgRetention: 0.72,
     avgProducts: 1.1,
@@ -154,30 +168,47 @@ const TARGET_DISTRIBUTION: Record<CustomerSegmentName, number> = {
 /**
  * Classify customer into segment based on product count and premium
  *
- * EXACT PORT from Python CustomerSegmentationModel.classify_customer()
+ * Uses unified thresholds matching @/lib/segmentation.ts:
+ * - Elite: ($15K+ AND 3+) OR $20K+ OR 5+ products
+ * - Premium: ($7K+ AND 2+) OR $10K+ OR 4+ products
+ * - Standard: $3K+ OR 2+ products
+ * - Low-value: everything else
+ *
+ * NOTE: This returns 'low_value' for analytics compatibility.
+ * For UI tier display, use getCustomerSegment() from @/lib/segmentation
+ * which returns 'entry' instead.
  */
 export function classifyCustomer(
   productCount: number,
   annualPremium: number
 ): CustomerSegmentName {
-  const { elite, premium, standard } = CUSTOMER_SEGMENTS;
-
-  // Elite tier
-  if (productCount >= elite.minProducts && annualPremium >= elite.minAnnualPremium) {
+  // Elite: High-value multi-policy customers
+  // Must have BOTH high premium AND multiple policies, OR exceptional in one dimension
+  if (
+    (annualPremium >= 15000 && productCount >= 3) ||
+    annualPremium >= 20000 ||
+    productCount >= 5
+  ) {
     return 'elite';
   }
 
-  // Premium tier
-  if (productCount >= premium.minProducts && annualPremium >= premium.minAnnualPremium) {
+  // Premium: Solid book customers
+  // Must have good premium AND be bundled, OR high in one dimension
+  if (
+    (annualPremium >= 7000 && productCount >= 2) ||
+    annualPremium >= 10000 ||
+    productCount >= 4
+  ) {
     return 'premium';
   }
 
-  // Standard tier
-  if (annualPremium >= standard.minAnnualPremium) {
+  // Standard: Growing relationship
+  // Either decent premium OR multiple policies
+  if (annualPremium >= 3000 || productCount >= 2) {
     return 'standard';
   }
 
-  // Low-value tier
+  // Low-value: New or single-policy
   return 'low_value';
 }
 

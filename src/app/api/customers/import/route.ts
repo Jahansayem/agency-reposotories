@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { validateSession } from '@/lib/sessionValidator';
-import { encryptField } from '@/lib/fieldEncryption';
+import { encryptField, decryptField } from '@/lib/fieldEncryption';
 import { checkRateLimit, rateLimiters } from '@/lib/rateLimit';
 import { logger } from '@/lib/logger';
 import { securityMonitor, SecurityEventType, AlertSeverity } from '@/lib/securityMonitor';
@@ -366,15 +366,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<ImportRes
     const customerNames = body.customers.map((c) => c.customer_name.trim());
 
     // Fetch existing customers for duplicate detection
-    let existingByEmail: Set<string> = new Set();
+    const existingByEmail: Set<string> = new Set();
     let existingByName: Set<string> = new Set();
 
     // Check for existing customers by email
+    // NOTE: Since emails are encrypted in the database, we cannot use .in() query.
+    // Instead, we fetch all emails, decrypt them, and build a lookup Set.
     if (customerEmails.length > 0) {
       const { data: existingEmailCustomers, error: emailError } = await supabase
         .from('customer_insights')
         .select('customer_email')
-        .in('customer_email', customerEmails);
+        .not('customer_email', 'is', null)
+        .limit(10000); // Reasonable limit to prevent memory issues
 
       if (emailError) {
         logger.error('Database error checking duplicate emails', emailError, {
@@ -392,11 +395,25 @@ export async function POST(request: NextRequest): Promise<NextResponse<ImportRes
         );
       }
 
-      existingByEmail = new Set(
-        (existingEmailCustomers || [])
-          .map((c) => c.customer_email?.toLowerCase())
-          .filter(Boolean) as string[]
-      );
+      // Decrypt each email and build lookup Set
+      if (existingEmailCustomers) {
+        for (const c of existingEmailCustomers) {
+          if (c.customer_email) {
+            try {
+              const decrypted = decryptField(c.customer_email, 'customer_insights.customer_email');
+              if (decrypted) {
+                existingByEmail.add(decrypted.toLowerCase());
+              }
+            } catch {
+              // Skip if decryption fails - might be corrupted or using old key
+              logger.warn('Failed to decrypt customer email during duplicate check', {
+                component: 'CustomerImport',
+                action: 'duplicate_check',
+              });
+            }
+          }
+        }
+      }
     }
 
     // Check for existing customers by name
@@ -432,13 +449,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<ImportRes
     const duplicateRows: number[] = [];
     const insertErrors: ImportError[] = [];
 
+    // Track plaintext values for within-batch deduplication
+    // (customersToInsert contains encrypted data, so we need separate tracking)
+    const batchNames: Set<string> = new Set();
+    const batchEmails: Set<string> = new Set();
+
     for (let i = 0; i < body.customers.length; i++) {
       const customer = body.customers[i];
       const rowNum = i + 1;
+      const nameTrimmed = customer.customer_name.trim();
+      const emailLower = customer.customer_email?.toLowerCase().trim();
 
       // Check for duplicate by email (if email is present)
-      if (customer.customer_email) {
-        const emailLower = customer.customer_email.toLowerCase().trim();
+      if (emailLower) {
         if (existingByEmail.has(emailLower)) {
           duplicateRows.push(rowNum);
           continue;
@@ -446,22 +469,21 @@ export async function POST(request: NextRequest): Promise<NextResponse<ImportRes
       }
 
       // Check for duplicate by name
-      if (existingByName.has(customer.customer_name.trim())) {
+      if (existingByName.has(nameTrimmed)) {
         duplicateRows.push(rowNum);
         continue;
       }
 
       // Also check against customers we're about to insert (prevent duplicates within batch)
-      const alreadyInBatch = customersToInsert.some(
-        (c) =>
-          c.customer_name === customer.customer_name.trim() ||
-          (customer.customer_email &&
-            c.customer_email === customer.customer_email.toLowerCase().trim())
-      );
-
-      if (alreadyInBatch) {
+      if (batchNames.has(nameTrimmed) || (emailLower && batchEmails.has(emailLower))) {
         duplicateRows.push(rowNum);
         continue;
+      }
+
+      // Track this customer for within-batch deduplication
+      batchNames.add(nameTrimmed);
+      if (emailLower) {
+        batchEmails.add(emailLower);
       }
 
       customersToInsert.push(normalizeCustomer(customer, agencyId));

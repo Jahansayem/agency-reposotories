@@ -6,26 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-// Segment tier thresholds
-function getSegmentTier(totalPremium: number, policyCount: number): string {
-  if (totalPremium >= 15000 || policyCount >= 4) return 'elite';
-  if (totalPremium >= 7000 || policyCount >= 3) return 'premium';
-  if (totalPremium >= 3000 || policyCount >= 2) return 'standard';
-  return 'entry';
-}
-
-const SEGMENT_CONFIG = {
-  elite: { label: 'Elite', color: '#C9A227', avgLtv: 18000, description: 'High-value multi-product customer' },
-  premium: { label: 'Premium', color: '#9333EA', avgLtv: 9000, description: 'Bundled product customer' },
-  standard: { label: 'Standard', color: '#3B82F6', avgLtv: 4500, description: 'Growth potential customer' },
-  entry: { label: 'Entry', color: '#0EA5E9', avgLtv: 1800, description: 'New or single-product customer' },
-};
 
 export async function GET(
   request: NextRequest,
@@ -67,7 +53,7 @@ export async function GET(
     let customer;
 
     if (insight) {
-      const segment = getSegmentTier(insight.total_premium || 0, insight.total_policies || 0);
+      const segment = getCustomerSegment(insight.total_premium || 0, insight.total_policies || 0);
       customer = {
         id: insight.id,
         name: insight.customer_name,
@@ -81,7 +67,7 @@ export async function GET(
         products: insight.products_held || [],
         tenureYears: insight.tenure_years || 0,
         segment,
-        segmentConfig: SEGMENT_CONFIG[segment as keyof typeof SEGMENT_CONFIG],
+        segmentConfig: SEGMENT_CONFIGS[segment as SegmentTier],
         retentionRisk: insight.retention_risk || 'low',
         paymentStatus: insight.payment_status || 'current',
         crossSellPotential: insight.cross_sell_potential || 0,
@@ -95,7 +81,7 @@ export async function GET(
     } else {
       // Build from opportunity data
       const opp = opportunities![0];
-      const segment = getSegmentTier(opp.current_premium || 0, opp.policy_count || 1);
+      const segment = getCustomerSegment(opp.current_premium || 0, opp.policy_count || 1);
       customer = {
         id: opp.id,
         name: opp.customer_name,
@@ -109,7 +95,7 @@ export async function GET(
         products: opp.current_products?.split(',').map((p: string) => p.trim()) || [],
         tenureYears: opp.tenure_years || 0,
         segment,
-        segmentConfig: SEGMENT_CONFIG[segment as keyof typeof SEGMENT_CONFIG],
+        segmentConfig: SEGMENT_CONFIGS[segment as SegmentTier],
         retentionRisk: 'low',
         paymentStatus: opp.balance_due > 0 ? 'past_due' : 'current',
         crossSellPotential: opp.potential_premium_add || 0,

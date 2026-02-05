@@ -4,35 +4,37 @@
  * GET /api/customers - Search/list customers from book of business
  *
  * Query params:
- * - q: Search query (name, phone, email)
+ * - q: Search query (name only - email/phone are encrypted)
  * - agency_id: Filter by agency
  * - segment: Filter by segment tier (elite, premium, standard, entry)
  * - limit: Max results (default 20)
+ *
+ * SECURITY: Email and phone fields are encrypted at rest using AES-256-GCM.
+ * These fields are decrypted when returned to authorized clients.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { decryptField } from '@/lib/fieldEncryption';
+import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Segment tier thresholds based on total premium
-function getSegmentTier(totalPremium: number, policyCount: number): string {
-  if (totalPremium >= 15000 || policyCount >= 4) return 'elite';
-  if (totalPremium >= 7000 || policyCount >= 3) return 'premium';
-  if (totalPremium >= 3000 || policyCount >= 2) return 'standard';
-  return 'entry';
+/**
+ * Normalize products to array format
+ * Handles both TEXT[] from customer_insights and comma-separated TEXT from cross_sell_opportunities
+ */
+function normalizeProducts(products: string[] | string | null | undefined): string[] {
+  if (!products) return [];
+  if (Array.isArray(products)) return products;
+  if (typeof products === 'string') {
+    return products.split(/[,;]/).map(p => p.trim()).filter(Boolean);
+  }
+  return [];
 }
-
-// Segment colors and labels
-const SEGMENT_CONFIG = {
-  elite: { label: 'Elite', color: '#C9A227', avgLtv: 18000 },
-  premium: { label: 'Premium', color: '#9333EA', avgLtv: 9000 },
-  standard: { label: 'Standard', color: '#3B82F6', avgLtv: 4500 },
-  entry: { label: 'Entry', color: '#0EA5E9', avgLtv: 1800 },
-};
 
 export async function GET(request: NextRequest) {
   try {
@@ -55,10 +57,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (query) {
-      // Search by name, phone, or email
-      insightsQuery = insightsQuery.or(
-        `customer_name.ilike.%${query}%,customer_email.ilike.%${query}%,customer_phone.ilike.%${query}%`
-      );
+      // Search by name only - email and phone are encrypted and cannot be searched with ILIKE
+      insightsQuery = insightsQuery.ilike('customer_name', `%${query}%`);
     }
 
     const { data: insights, error: insightsError } = await insightsQuery;
@@ -77,9 +77,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (query) {
-      opportunitiesQuery = opportunitiesQuery.or(
-        `customer_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`
-      );
+      // Search by name only - email and phone may be encrypted
+      opportunitiesQuery = opportunitiesQuery.ilike('customer_name', `%${query}%`);
     }
 
     const { data: opportunities, error: oppError } = await opportunitiesQuery;
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
       products: string[];
       tenureYears: number;
       segment: string;
-      segmentConfig: typeof SEGMENT_CONFIG['elite'];
+      segmentConfig: (typeof SEGMENT_CONFIGS)['elite'];
       retentionRisk: string;
       hasOpportunity: boolean;
       opportunityId: string | null;
@@ -110,21 +109,40 @@ export async function GET(request: NextRequest) {
     // Process insights
     if (insights && !insightsError) {
       for (const customer of insights) {
-        const segment = getSegmentTier(customer.total_premium || 0, customer.total_policies || 0);
+        const segment = getCustomerSegment(customer.total_premium || 0, customer.total_policies || 0);
+
+        // Decrypt PII fields - use try-catch to handle decryption errors gracefully
+        let decryptedEmail: string | null = null;
+        let decryptedPhone: string | null = null;
+
+        try {
+          decryptedEmail = decryptField(customer.customer_email, 'customer_insights.customer_email');
+        } catch {
+          // Decryption failed - return null instead of encrypted ciphertext
+          decryptedEmail = null;
+        }
+
+        try {
+          decryptedPhone = decryptField(customer.customer_phone, 'customer_insights.customer_phone');
+        } catch {
+          // Decryption failed - return null instead of encrypted ciphertext
+          decryptedPhone = null;
+        }
+
         customerMap.set(customer.customer_name, {
           id: customer.id,
           name: customer.customer_name,
-          email: customer.customer_email,
-          phone: customer.customer_phone,
+          email: decryptedEmail,
+          phone: decryptedPhone,
           address: null,
           city: null,
           zipCode: null,
           totalPremium: customer.total_premium || 0,
           policyCount: customer.total_policies || 0,
-          products: customer.products_held || [],
+          products: normalizeProducts(customer.products_held),
           tenureYears: customer.tenure_years || 0,
           segment,
-          segmentConfig: SEGMENT_CONFIG[segment as keyof typeof SEGMENT_CONFIG],
+          segmentConfig: SEGMENT_CONFIGS[segment as SegmentTier],
           retentionRisk: customer.retention_risk || 'low',
           hasOpportunity: false,
           opportunityId: null,
@@ -148,7 +166,7 @@ export async function GET(request: NextRequest) {
           existing.upcomingRenewal = opp.renewal_date;
         } else {
           // Add new customer from opportunity
-          const segment = getSegmentTier(opp.current_premium || 0, opp.policy_count || 1);
+          const segment = getCustomerSegment(opp.current_premium || 0, opp.policy_count || 1);
           customerMap.set(opp.customer_name, {
             id: opp.id,
             name: opp.customer_name,
@@ -159,10 +177,10 @@ export async function GET(request: NextRequest) {
             zipCode: opp.zip_code,
             totalPremium: opp.current_premium || 0,
             policyCount: opp.policy_count || 1,
-            products: opp.current_products?.split(',').map((p: string) => p.trim()) || [],
+            products: normalizeProducts(opp.current_products),
             tenureYears: opp.tenure_years || 0,
             segment,
-            segmentConfig: SEGMENT_CONFIG[segment as keyof typeof SEGMENT_CONFIG],
+            segmentConfig: SEGMENT_CONFIGS[segment as SegmentTier],
             retentionRisk: 'low',
             hasOpportunity: true,
             opportunityId: opp.id,
