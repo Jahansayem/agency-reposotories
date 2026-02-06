@@ -563,10 +563,46 @@ export async function POST(request: NextRequest) {
     }));
 
     let recordsCreated = 0;
+    let recordsUpdated = 0;
     let recordsFailed = 0;
 
-    // Insert into database if not dry run
+    // Insert/update database if not dry run
     if (!dryRun) {
+      // Get all customer names being uploaded
+      const customerNames = opportunities.map(o => o.customer_name);
+
+      // Build query to find existing records
+      let existingQuery = supabase
+        .from('cross_sell_opportunities')
+        .select('id, customer_name')
+        .in('customer_name', customerNames);
+
+      // Filter by agency if provided
+      if (agencyId) {
+        existingQuery = existingQuery.eq('agency_id', agencyId);
+      }
+
+      const { data: existing } = await existingQuery;
+      const existingNames = new Set(existing?.map(e => e.customer_name) || []);
+      const existingIds = existing?.map(e => e.id) || [];
+
+      console.log(`Found ${existingNames.size} existing customers to update`);
+
+      // Delete existing records for these customers (to replace with fresh data)
+      if (existingIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('cross_sell_opportunities')
+          .delete()
+          .in('id', existingIds);
+
+        if (deleteError) {
+          console.error('Failed to delete existing records:', deleteError);
+        } else {
+          recordsUpdated = existingIds.length;
+        }
+      }
+
+      // Insert all records (both new and updated)
       const BATCH_SIZE = 100;
       for (let i = 0; i < opportunities.length; i += BATCH_SIZE) {
         const batch = opportunities.slice(i, i + BATCH_SIZE);
@@ -579,7 +615,14 @@ export async function POST(request: NextRequest) {
           console.error('Failed to insert batch:', insertError);
           recordsFailed += batch.length;
         } else {
-          recordsCreated += batch.length;
+          // Count as created or updated based on whether they existed before
+          batch.forEach(record => {
+            if (existingNames.has(record.customer_name)) {
+              // Already counted in recordsUpdated via delete
+            } else {
+              recordsCreated++;
+            }
+          });
         }
       }
     }
@@ -601,7 +644,7 @@ export async function POST(request: NextRequest) {
         total_records: rows.length,
         valid_records: customers.length,
         records_created: dryRun ? 0 : recordsCreated,
-        records_updated: 0,
+        records_updated: dryRun ? 0 : recordsUpdated,
         records_skipped: rows.length - customers.length,
         records_failed: recordsFailed,
         parsing_errors: 0,
