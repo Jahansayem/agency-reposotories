@@ -181,8 +181,8 @@ export function TodayOpportunitiesPanel() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <span className="ml-4 text-gray-600">Loading today's priorities...</span>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--accent)]"></div>
+        <span className="ml-4 text-[var(--text-muted)]">Loading today's priorities...</span>
       </div>
     );
   }
@@ -190,15 +190,15 @@ export function TodayOpportunitiesPanel() {
   // Error state
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+      <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
-          <XCircle className="h-6 w-6 text-red-600" />
-          <h3 className="text-lg font-semibold text-red-900">Error Loading Opportunities</h3>
+          <XCircle className="h-6 w-6 text-[var(--danger)]" />
+          <h3 className="text-lg font-semibold text-[var(--foreground)]">Error Loading Opportunities</h3>
         </div>
-        <p className="text-red-700 mb-4">{error.message}</p>
+        <p className="text-[var(--danger)] mb-4">{error.message}</p>
         <button
           onClick={() => refresh()}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          className="px-4 py-2 bg-[var(--danger)] text-white rounded-lg hover:opacity-90 transition-colors"
         >
           Try Again
         </button>
@@ -209,16 +209,16 @@ export function TodayOpportunitiesPanel() {
   // Empty state
   if (opportunities.length === 0) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
-        <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-green-900 mb-2">
+      <div className="bg-[var(--success)]/10 border border-[var(--success)]/30 rounded-lg p-8 text-center">
+        <CheckCircle className="h-12 w-12 text-[var(--success)] mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
           All Caught Up!
         </h3>
-        <p className="text-green-700">
+        <p className="text-[var(--success)]">
           No opportunities renewing today. Great job! 🎉
         </p>
         {meta && meta.urgentCount > 0 && (
-          <p className="text-green-600 mt-2">
+          <p className="text-[var(--success)] mt-2">
             You have {meta.urgentCount} opportunities renewing in the next 7 days.
           </p>
         )}
@@ -242,10 +242,10 @@ export function TodayOpportunitiesPanel() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-3xl font-bold text-[var(--foreground)]">
             📅 Today's Top Opportunities
           </h2>
-          <p className="text-gray-600 mt-1">
+          <p className="text-[var(--text-muted)] mt-1">
             Policies renewing TODAY - {new Date().toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
@@ -257,7 +257,7 @@ export function TodayOpportunitiesPanel() {
 
         <button
           onClick={() => refresh()}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition-colors"
         >
           <RefreshCw className="h-4 w-4" />
           Refresh
@@ -267,25 +267,25 @@ export function TodayOpportunitiesPanel() {
       {/* Summary Stats */}
       {meta && (
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-red-600">
+          <div className="bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-lg p-4">
+            <div className="text-2xl font-bold text-[var(--danger)]">
               {meta.todayCount}
             </div>
-            <div className="text-sm text-red-700">Renewing TODAY</div>
+            <div className="text-sm text-[var(--danger)]">Renewing TODAY</div>
           </div>
 
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-orange-600">
+          <div className="bg-[var(--warning)]/10 border border-[var(--warning)]/30 rounded-lg p-4">
+            <div className="text-2xl font-bold text-[var(--warning)]">
               {meta.urgentCount}
             </div>
-            <div className="text-sm text-orange-700">Next 7 Days</div>
+            <div className="text-sm text-[var(--warning)]">Next 7 Days</div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg p-4">
+            <div className="text-2xl font-bold text-[var(--accent)]">
               {meta.upcomingCount}
             </div>
-            <div className="text-sm text-blue-700">Next 30 Days</div>
+            <div className="text-sm text-[var(--accent)]">Next 30 Days</div>
           </div>
         </div>
       )}
@@ -295,12 +295,12 @@ export function TodayOpportunitiesPanel() {
         {opportunities.map((opp) => (
           <div
             key={opp.id}
-            className="border-2 border-gray-200 rounded-lg p-6 hover:border-blue-400 hover:shadow-lg transition-all bg-white"
+            className="border-2 border-[var(--border)] rounded-lg p-6 hover:border-[var(--accent)] hover:shadow-lg transition-all bg-[var(--surface-2)]"
           >
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-bold text-[var(--foreground)]">
                     {opp.customerName}
                   </h3>
 
@@ -323,32 +323,32 @@ export function TodayOpportunitiesPanel() {
                   </span>
                 </div>
 
-                <p className="text-gray-700 font-medium">
-                  {opp.currentProducts} → <span className="text-blue-600">{opp.recommendedProduct}</span>
+                <p className="text-[var(--text-secondary)] font-medium">
+                  {opp.currentProducts} → <span className="text-[var(--accent)]">{opp.recommendedProduct}</span>
                 </p>
 
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-[var(--text-muted)] mt-1">
                   {opp.segment}
                 </p>
               </div>
 
               <div className="text-right">
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-3xl font-bold text-[var(--success)]">
                   +${opp.potentialPremiumAdd.toLocaleString()}
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-[var(--text-muted)]">
                   Current: ${opp.currentPremium.toLocaleString()}
                 </div>
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-[var(--text-muted)] mt-1">
                   {opp.expectedConversionPct}% conversion rate
                 </div>
               </div>
             </div>
 
             {/* Talking Points */}
-            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-              <h4 className="font-semibold text-blue-900 mb-2">💡 Talking Points:</h4>
-              <ul className="space-y-1 text-sm text-blue-800">
+            <div className="bg-[var(--accent)]/10 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-[var(--foreground)] mb-2">💡 Talking Points:</h4>
+              <ul className="space-y-1 text-sm text-[var(--text-secondary)]">
                 <li>• {opp.talkingPoint1}</li>
                 <li>• {opp.talkingPoint2}</li>
                 <li>• {opp.talkingPoint3}</li>
@@ -390,7 +390,7 @@ export function TodayOpportunitiesPanel() {
                 {/* Call Button */}
                 <a
                   href={`tel:${opp.phone}`}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition-colors font-medium"
                 >
                   <Phone className="h-5 w-5" />
                   Call {opp.phone}
@@ -399,7 +399,7 @@ export function TodayOpportunitiesPanel() {
                 {/* Email Button */}
                 <a
                   href={`mailto:${opp.email}`}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-[var(--brand-sky)] text-white rounded-lg hover:opacity-90 transition-colors font-medium"
                 >
                   <Mail className="h-5 w-5" />
                   Email
@@ -407,26 +407,26 @@ export function TodayOpportunitiesPanel() {
               </div>
 
               {/* Log Contact Outcome Button - Expands to show all options */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="border border-[var(--border)] rounded-lg overflow-hidden">
                 <button
                   onClick={() => toggleOutcomeSelector(opp.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors font-medium text-gray-700"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[var(--surface)] hover:bg-[var(--surface-3)] transition-colors font-medium text-[var(--text-secondary)]"
                 >
                   <span className="flex items-center gap-2">
-                    <CheckCircle className="h-5 w-5 text-gray-500" />
+                    <CheckCircle className="h-5 w-5 text-[var(--text-muted)]" />
                     Log Contact Outcome
                   </span>
                   {expandedOutcomes.has(opp.id) ? (
-                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                    <ChevronUp className="h-5 w-5 text-[var(--text-muted)]" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                    <ChevronDown className="h-5 w-5 text-[var(--text-muted)]" />
                   )}
                 </button>
 
                 {/* Expanded Outcome Options */}
                 {expandedOutcomes.has(opp.id) && (
-                  <div className="p-3 bg-white border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-3 px-1">
+                  <div className="p-3 bg-[var(--surface-2)] border-t border-[var(--border)]">
+                    <p className="text-xs text-[var(--text-muted)] mb-3 px-1">
                       Select the outcome of your contact attempt:
                     </p>
                     <div className="grid grid-cols-2 gap-2">
@@ -453,7 +453,7 @@ export function TodayOpportunitiesPanel() {
                       })}
                     </div>
                     {loggingContact === opp.id && (
-                      <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
+                      <div className="mt-3 flex items-center justify-center gap-2 text-sm text-[var(--text-muted)]">
                         <RefreshCw className="h-4 w-4 animate-spin" />
                         Logging contact...
                       </div>
@@ -465,33 +465,33 @@ export function TodayOpportunitiesPanel() {
 
             {/* Customer Details (Expandable) */}
             <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-gray-600 hover:text-gray-900 font-medium">
+              <summary className="cursor-pointer text-sm text-[var(--text-muted)] hover:text-[var(--foreground)] font-medium">
                 View Customer Details
               </summary>
               <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">Address:</span>
-                  <p className="font-medium">{opp.address}, {opp.city} {opp.zipCode}</p>
+                  <span className="text-[var(--text-muted)]">Address:</span>
+                  <p className="font-medium text-[var(--foreground)]">{opp.address}, {opp.city} {opp.zipCode}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Tenure:</span>
-                  <p className="font-medium">{opp.tenureYears} years</p>
+                  <span className="text-[var(--text-muted)]">Tenure:</span>
+                  <p className="font-medium text-[var(--foreground)]">{opp.tenureYears} years</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Policy Count:</span>
-                  <p className="font-medium">{opp.policyCount} policies</p>
+                  <span className="text-[var(--text-muted)]">Policy Count:</span>
+                  <p className="font-medium text-[var(--foreground)]">{opp.policyCount} policies</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">EZ-Pay:</span>
-                  <p className="font-medium">{opp.ezpayStatus}</p>
+                  <span className="text-[var(--text-muted)]">EZ-Pay:</span>
+                  <p className="font-medium text-[var(--foreground)]">{opp.ezpayStatus}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Balance Due:</span>
-                  <p className="font-medium">${opp.balanceDue.toFixed(2)}</p>
+                  <span className="text-[var(--text-muted)]">Balance Due:</span>
+                  <p className="font-medium text-[var(--foreground)]">${opp.balanceDue.toFixed(2)}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">Renewal Status:</span>
-                  <p className="font-medium">{opp.renewalStatus}</p>
+                  <span className="text-[var(--text-muted)]">Renewal Status:</span>
+                  <p className="font-medium text-[var(--foreground)]">{opp.renewalStatus}</p>
                 </div>
               </div>
             </details>
@@ -500,7 +500,7 @@ export function TodayOpportunitiesPanel() {
       </div>
 
       {/* Footer */}
-      <div className="text-center text-gray-500 text-sm">
+      <div className="text-center text-[var(--text-muted)] text-sm">
         Showing {opportunities.length} of {meta?.todayCount} opportunities renewing today
       </div>
     </div>
