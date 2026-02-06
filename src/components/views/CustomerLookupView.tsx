@@ -59,6 +59,9 @@ export function CustomerLookupView({
   const {
     customers: allCustomers,
     loading: listLoading,
+    loadingMore,
+    hasMore,
+    loadMore,
   } = useCustomerList({
     agencyId,
     segment: selectedSegment === 'all' ? undefined : selectedSegment,
@@ -182,11 +185,53 @@ export function CustomerLookupView({
           ) : displayCustomers.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-12 h-12 mx-auto text-[var(--text-muted)] opacity-50 mb-3" />
-              <p className="text-[var(--text-muted)]">
-                {query.length >= 2
-                  ? `No customers found for "${query}"`
-                  : 'No customers in this segment'}
-              </p>
+              {query.length >= 2 ? (
+                // Search with no results
+                <>
+                  <p className="text-[var(--foreground)] font-medium mb-1">
+                    No customers found for &quot;{query}&quot;
+                  </p>
+                  <p className="text-sm text-[var(--text-muted)] mb-4">
+                    {query.match(/^[a-zA-Z\s]+$/)
+                      ? 'Try searching by phone number or email instead'
+                      : 'Try a different search term'}
+                  </p>
+                  <button
+                    onClick={clearSearch}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                    Clear search
+                  </button>
+                </>
+              ) : selectedSegment !== 'all' ? (
+                // Segment filter with no results
+                <>
+                  <p className="text-[var(--foreground)] font-medium mb-1">
+                    No {selectedSegment} customers found
+                  </p>
+                  <p className="text-sm text-[var(--text-muted)] mb-4">
+                    Try selecting a different segment or view all customers
+                  </p>
+                  <button
+                    onClick={() => setSelectedSegment('all')}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    View all customers
+                  </button>
+                </>
+              ) : (
+                // General empty (no customers at all)
+                <>
+                  <p className="text-[var(--foreground)] font-medium mb-1">
+                    No customers in your book of business yet
+                  </p>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Customers will appear here as you add them to your agency
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid gap-3 sm:gap-4">
@@ -208,6 +253,29 @@ export function CustomerLookupView({
                   </motion.div>
                 ))}
               </AnimatePresence>
+
+              {/* Load More button - only show when browsing (not searching) and there are more results */}
+              {query.length < 2 && hasMore && (
+                <div className="flex justify-center pt-4 pb-2">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[var(--surface-2)] text-[var(--foreground)] font-medium hover:bg-[var(--surface-3)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Users className="w-4 h-4" />
+                        Load More Customers
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

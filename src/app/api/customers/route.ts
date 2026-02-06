@@ -7,7 +7,8 @@
  * - q: Search query (name only - email/phone are encrypted)
  * - agency_id: Filter by agency
  * - segment: Filter by segment tier (elite, premium, standard, entry)
- * - limit: Max results (default 20)
+ * - limit: Max results (default 20, max 100)
+ * - offset: Skip first N results for pagination (default 0)
  *
  * SECURITY: Email and phone fields are encrypted at rest using AES-256-GCM.
  * These fields are decrypted when returned to authorized clients.
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
     const agencyId = searchParams.get('agency_id');
     const segmentFilter = searchParams.get('segment');
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
     // First, try customer_insights table
     let insightsQuery = supabase
@@ -221,13 +223,17 @@ export async function GET(request: NextRequest) {
       return a.name.localeCompare(b.name);
     });
 
-    // Limit results
-    customers = customers.slice(0, limit);
+    // Apply pagination (offset and limit)
+    const totalCount = customers.length;
+    customers = customers.slice(offset, offset + limit);
 
     return NextResponse.json({
       success: true,
       customers,
       count: customers.length,
+      totalCount,
+      offset,
+      limit,
       query: query || null,
     });
   } catch (error) {

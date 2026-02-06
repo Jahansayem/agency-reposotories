@@ -7,7 +7,7 @@
  * Shows customer info, opportunities, and linked tasks.
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -25,8 +25,12 @@ import {
   ExternalLink,
   Plus,
   Loader2,
+  Copy,
+  Check,
+  X,
 } from 'lucide-react';
-import { useCustomerDetail, useCreateTaskFromOpportunity } from '@/hooks/useCustomers';
+import { useToast } from '@/components/ui/Toast';
+import { useCustomerDetail, useCreateTaskFromOpportunity, useDismissOpportunity } from '@/hooks/useCustomers';
 import { SegmentIndicator } from './CustomerBadge';
 import type { CustomerOpportunity, CustomerTask } from '@/types/customer';
 
@@ -47,6 +51,28 @@ export function CustomerDetailPanel({
 }: CustomerDetailPanelProps) {
   const { customer, opportunities, tasks, stats, loading, error } = useCustomerDetail(customerId);
   const [expandedSection, setExpandedSection] = useState<'opportunities' | 'tasks' | null>('opportunities');
+  const [copiedPhone, setCopiedPhone] = useState(false);
+  const toast = useToast();
+
+  // Check if device has hover capability (desktop) vs touch-only (mobile)
+  const isDesktop = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
+
+  const handlePhoneClick = useCallback(async (e: React.MouseEvent<HTMLAnchorElement>, phone: string) => {
+    // On desktop, copy to clipboard instead of opening tel: link
+    if (isDesktop) {
+      e.preventDefault();
+      try {
+        await navigator.clipboard.writeText(phone);
+        setCopiedPhone(true);
+        toast.success('Phone number copied!', { duration: 2000 });
+        setTimeout(() => setCopiedPhone(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy phone number:', err);
+        toast.error('Failed to copy phone number');
+      }
+    }
+    // On mobile, let the tel: link work normally
+  }, [isDesktop, toast]);
 
   if (loading) {
     return (
@@ -109,10 +135,16 @@ export function CustomerDetailPanel({
           {customer.phone && (
             <a
               href={`tel:${customer.phone}`}
+              onClick={(e) => handlePhoneClick(e, customer.phone!)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              title={isDesktop ? 'Click to copy' : 'Click to call'}
             >
-              <Phone className="w-4 h-4" />
-              {customer.phone}
+              {copiedPhone ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <Phone className="w-4 h-4" />
+              )}
+              {copiedPhone ? 'Copied!' : customer.phone}
             </a>
           )}
           {customer.email && (
@@ -315,14 +347,18 @@ function OpportunityItem({
   opportunity,
   onCreateTask,
   onViewTask,
+  onDismiss,
   currentUser,
 }: {
   opportunity: CustomerOpportunity;
   onCreateTask?: (taskId: string) => void;
   onViewTask?: (taskId: string) => void;
+  onDismiss?: (opportunityId: string) => void;
   currentUser: string;
 }) {
   const { createTask, loading } = useCreateTaskFromOpportunity();
+  const { dismissOpportunity, loading: dismissLoading } = useDismissOpportunity();
+  const [isDismissed, setIsDismissed] = useState(false);
 
   const handleCreateTask = async () => {
     const taskId = await createTask({
@@ -334,12 +370,52 @@ function OpportunityItem({
     onCreateTask?.(taskId);
   };
 
+  const handleDismiss = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Optimistic update - hide immediately
+    setIsDismissed(true);
+
+    try {
+      await dismissOpportunity({
+        opportunityId: opportunity.id,
+        dismissedBy: currentUser,
+      });
+      onDismiss?.(opportunity.id);
+    } catch (error) {
+      // Rollback on error
+      setIsDismissed(false);
+      console.error('Failed to dismiss opportunity:', error);
+    }
+  };
+
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
 
+  // Don't render if dismissed (optimistic update)
+  if (isDismissed) {
+    return null;
+  }
+
   return (
-    <div className="p-3 bg-[var(--surface-2)] rounded-lg">
-      <div className="flex items-start justify-between gap-2">
+    <div className="p-3 bg-[var(--surface-2)] rounded-lg relative group">
+      {/* Dismiss button - top right corner */}
+      <button
+        type="button"
+        onClick={handleDismiss}
+        disabled={dismissLoading}
+        className="absolute top-2 right-2 p-1 rounded-full text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all disabled:opacity-50"
+        title="Dismiss opportunity"
+        aria-label="Dismiss opportunity"
+      >
+        {dismissLoading ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <X className="w-3.5 h-3.5" />
+        )}
+      </button>
+
+      <div className="flex items-start justify-between gap-2 pr-6">
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span className={`

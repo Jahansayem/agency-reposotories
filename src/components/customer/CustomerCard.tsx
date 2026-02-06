@@ -7,6 +7,7 @@
  * Used in search results, lists, and task detail panels.
  */
 
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Phone,
@@ -17,7 +18,10 @@ import {
   AlertTriangle,
   ChevronRight,
   ExternalLink,
+  Copy,
+  Check,
 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 import { SegmentIndicator } from './CustomerBadge';
 import type { Customer, CustomerDetail } from '@/types/customer';
 
@@ -36,6 +40,31 @@ export function CustomerCard({
   compact = false,
   className = '',
 }: CustomerCardProps) {
+  const [copiedPhone, setCopiedPhone] = useState(false);
+  const toast = useToast();
+
+  // Check if device has hover capability (desktop) vs touch-only (mobile)
+  const isDesktop = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
+
+  const handlePhoneClick = useCallback(async (e: React.MouseEvent<HTMLAnchorElement>, phone: string) => {
+    e.stopPropagation(); // Prevent card click when clicking phone
+
+    // On desktop, copy to clipboard instead of opening tel: link
+    if (isDesktop) {
+      e.preventDefault();
+      try {
+        await navigator.clipboard.writeText(phone);
+        setCopiedPhone(true);
+        toast.success('Phone number copied!', { duration: 2000 });
+        setTimeout(() => setCopiedPhone(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy phone number:', err);
+        toast.error('Failed to copy phone number');
+      }
+    }
+    // On mobile, let the tel: link work normally
+  }, [isDesktop, toast]);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -154,11 +183,16 @@ export function CustomerCard({
             {customer.phone && (
               <a
                 href={`tel:${customer.phone}`}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => handlePhoneClick(e, customer.phone!)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                title={isDesktop ? 'Click to copy' : 'Click to call'}
               >
-                <Phone className="w-3.5 h-3.5" />
-                Call
+                {copiedPhone ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : (
+                  <Phone className="w-3.5 h-3.5" />
+                )}
+                {copiedPhone ? 'Copied!' : 'Call'}
               </a>
             )}
             {customer.email && (

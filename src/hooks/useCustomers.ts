@@ -243,6 +243,56 @@ export function useCreateTaskFromOpportunity() {
 }
 
 // ============================================
+// Dismiss Opportunity Hook
+// ============================================
+
+interface DismissOpportunityParams {
+  opportunityId: string;
+  dismissedBy?: string;
+  reason?: string;
+}
+
+export function useDismissOpportunity() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const dismissOpportunity = useCallback(async (params: DismissOpportunityParams) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/opportunities/${params.opportunityId}/dismiss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dismissed_by: params.dismissedBy,
+          reason: params.reason,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to dismiss opportunity');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to dismiss opportunity');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    dismissOpportunity,
+    loading,
+    error,
+  };
+}
+
+// ============================================
 // Customer List Hook (for browse/filter)
 // ============================================
 
@@ -257,14 +307,26 @@ export function useCustomerList(options: UseCustomerListOptions = {}) {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
 
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
+  const fetchCustomers = useCallback(async (resetList = true) => {
+    if (resetList) {
+      setLoading(true);
+      setOffset(0);
+    } else {
+      setLoadingMore(true);
+    }
     setError(null);
 
     try {
-      const params = new URLSearchParams({ limit: String(limit) });
+      const currentOffset = resetList ? 0 : offset;
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(currentOffset),
+      });
 
       if (segment) {
         params.append('segment', segment);
@@ -280,22 +342,45 @@ export function useCustomerList(options: UseCustomerListOptions = {}) {
       }
 
       const data: CustomerSearchResult = await response.json();
-      setCustomers(data.customers);
+
+      if (resetList) {
+        setCustomers(data.customers);
+        setOffset(data.customers.length);
+      } else {
+        setCustomers(prev => [...prev, ...data.customers]);
+        setOffset(prev => prev + data.customers.length);
+      }
+
+      // If we got back exactly the limit, there might be more
+      setHasMore(data.customers.length === limit);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch customers'));
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [segment, limit, agencyId]);
+  }, [segment, limit, agencyId, offset]);
 
+  // Load more function for pagination
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      fetchCustomers(false);
+    }
+  }, [fetchCustomers, loadingMore, hasMore]);
+
+  // Reset and fetch when filters change
   useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+    fetchCustomers(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segment, limit, agencyId]);
 
   return {
     customers,
     loading,
+    loadingMore,
     error,
-    refresh: fetchCustomers,
+    hasMore,
+    loadMore,
+    refresh: () => fetchCustomers(true),
   };
 }
