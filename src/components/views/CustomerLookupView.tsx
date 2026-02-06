@@ -4,7 +4,8 @@
  * Customer Lookup View
  *
  * Standalone view for browsing and searching customers from book of business.
- * Provides customer search, filtering by segment, and access to customer details.
+ * Provides customer search, filtering by segment and opportunity type, sorting,
+ * and access to customer details.
  */
 
 import { useState, useCallback } from 'react';
@@ -18,11 +19,22 @@ import {
   X,
   TrendingUp,
   Loader2,
+  Home,
+  Car,
+  Heart,
+  Umbrella,
+  Package,
+  ChevronDown,
+  ChevronLeft,
+  Flame,
+  DollarSign,
+  ArrowUpDown,
+  Target,
 } from 'lucide-react';
 import { useCustomerSearch, useCustomerList } from '@/hooks/useCustomers';
 import { CustomerCard } from '../customer/CustomerCard';
 import { CustomerDetailPanel } from '../customer/CustomerDetailPanel';
-import type { Customer, CustomerSegment } from '@/types/customer';
+import type { Customer, CustomerSegment, OpportunityType, CustomerSortOption } from '@/types/customer';
 
 interface CustomerLookupViewProps {
   agencyId?: string;
@@ -30,13 +42,45 @@ interface CustomerLookupViewProps {
   onClose?: () => void;
 }
 
+// Customer value tier filters
 const SEGMENT_FILTERS: { value: CustomerSegment | 'all'; label: string; icon: React.ReactNode }[] = [
-  { value: 'all', label: 'All Customers', icon: <Users className="w-4 h-4" /> },
+  { value: 'all', label: 'All Tiers', icon: <Users className="w-4 h-4" /> },
   { value: 'elite', label: 'Elite', icon: <Crown className="w-4 h-4 text-amber-500" /> },
   { value: 'premium', label: 'Premium', icon: <Star className="w-4 h-4 text-purple-500" /> },
   { value: 'standard', label: 'Standard', icon: <Shield className="w-4 h-4 text-blue-500" /> },
   { value: 'entry', label: 'Entry', icon: <Users className="w-4 h-4 text-sky-500" /> },
 ];
+
+// Cross-sell opportunity type filters
+const OPPORTUNITY_TYPE_FILTERS: { value: OpportunityType | 'all'; label: string; icon: React.ReactNode; color: string }[] = [
+  { value: 'all', label: 'All Opps', icon: <TrendingUp className="w-4 h-4" />, color: '' },
+  { value: 'auto_to_home', label: 'Need Home', icon: <Home className="w-4 h-4" />, color: 'text-emerald-500' },
+  { value: 'home_to_auto', label: 'Need Auto', icon: <Car className="w-4 h-4" />, color: 'text-blue-500' },
+  { value: 'add_life', label: 'Add Life', icon: <Heart className="w-4 h-4" />, color: 'text-pink-500' },
+  { value: 'add_umbrella', label: 'Add Umbrella', icon: <Umbrella className="w-4 h-4" />, color: 'text-purple-500' },
+  { value: 'mono_to_bundle', label: 'Bundle', icon: <Package className="w-4 h-4" />, color: 'text-orange-500' },
+];
+
+// Sort options
+const SORT_OPTIONS: { value: CustomerSortOption; label: string }[] = [
+  { value: 'priority', label: 'Priority (Hot First)' },
+  { value: 'premium_high', label: 'Premium (High to Low)' },
+  { value: 'premium_low', label: 'Premium (Low to High)' },
+  { value: 'opportunity_value', label: 'Opportunity Value' },
+  { value: 'renewal_date', label: 'Renewal Date (Soonest)' },
+  { value: 'name_asc', label: 'Name (A-Z)' },
+];
+
+// Format currency helper
+const formatCurrency = (amount: number) => {
+  if (amount >= 1000000) {
+    return `$${(amount / 1000000).toFixed(1)}M`;
+  }
+  if (amount >= 1000) {
+    return `$${(amount / 1000).toFixed(0)}K`;
+  }
+  return `$${amount.toFixed(0)}`;
+};
 
 export function CustomerLookupView({
   agencyId,
@@ -44,6 +88,9 @@ export function CustomerLookupView({
   onClose,
 }: CustomerLookupViewProps) {
   const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>('all');
+  const [selectedOpportunityType, setSelectedOpportunityType] = useState<OpportunityType | 'all'>('all');
+  const [sortBy, setSortBy] = useState<CustomerSortOption>('priority');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // Search hook for search input
@@ -58,6 +105,7 @@ export function CustomerLookupView({
   // List hook for browsing (when no search query)
   const {
     customers: allCustomers,
+    stats,
     loading: listLoading,
     loadingMore,
     hasMore,
@@ -65,14 +113,20 @@ export function CustomerLookupView({
   } = useCustomerList({
     agencyId,
     segment: selectedSegment === 'all' ? undefined : selectedSegment,
+    opportunityType: selectedOpportunityType,
+    sortBy,
     limit: 50,
   });
 
   // Determine which customers to show
-  // Filter search results by segment if one is selected
-  const filteredSearchResults = selectedSegment === 'all'
-    ? searchResults
-    : searchResults.filter(c => c.segment === selectedSegment);
+  // Filter search results by segment and opportunity type
+  let filteredSearchResults = searchResults;
+  if (selectedSegment !== 'all') {
+    filteredSearchResults = filteredSearchResults.filter(c => c.segment === selectedSegment);
+  }
+  if (selectedOpportunityType !== 'all') {
+    filteredSearchResults = filteredSearchResults.filter(c => c.opportunityType === selectedOpportunityType);
+  }
   const displayCustomers = query.length >= 2 ? filteredSearchResults : allCustomers;
   const isLoading = query.length >= 2 ? searchLoading : listLoading;
 
@@ -86,13 +140,8 @@ export function CustomerLookupView({
     setSelectedCustomerId(null);
   }, []);
 
-  // Stats summary
-  const stats = {
-    total: allCustomers.length,
-    elite: allCustomers.filter(c => c.segment === 'elite').length,
-    premium: allCustomers.filter(c => c.segment === 'premium').length,
-    withOpportunities: allCustomers.filter(c => c.hasOpportunity).length,
-  };
+  // Get sort option label
+  const currentSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort';
 
   return (
     <div className="flex flex-col h-full bg-[var(--background)]">
@@ -117,27 +166,65 @@ export function CustomerLookupView({
           )}
         </div>
 
-        {/* Search input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search customers by name, phone, or email..."
-            className="w-full pl-10 pr-10 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
-          />
-          {query && (
+        {/* Search input with sort dropdown */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-muted)]" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search customers by name..."
+              className="w-full pl-10 pr-10 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:border-transparent"
+            />
+            {query && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[var(--surface-2)] text-[var(--text-muted)]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Sort dropdown */}
+          <div className="relative">
             <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[var(--surface-2)] text-[var(--text-muted)]"
+              onClick={() => setShowSortDropdown(!showSortDropdown)}
+              className="flex items-center gap-2 px-3 py-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-2)] transition-colors"
             >
-              <X className="w-4 h-4" />
+              <ArrowUpDown className="w-4 h-4" />
+              <span className="hidden sm:inline text-sm">{currentSortLabel}</span>
+              <ChevronDown className="w-4 h-4" />
             </button>
-          )}
+            {showSortDropdown && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowSortDropdown(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 z-20 w-48 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg overflow-hidden">
+                  {SORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value);
+                        setShowSortDropdown(false);
+                      }}
+                      className={`w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-2)] transition-colors ${
+                        sortBy === option.value ? 'bg-[var(--accent)]/10 text-[var(--accent)] font-medium' : 'text-[var(--foreground)]'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Segment filter chips */}
+        {/* Customer tier filter chips */}
         <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 -mx-1 px-1">
           {SEGMENT_FILTERS.map((filter) => (
             <button
@@ -154,29 +241,89 @@ export function CustomerLookupView({
             </button>
           ))}
         </div>
+
+        {/* Opportunity type filter chips */}
+        <div className="flex items-center gap-2 mt-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <span className="text-xs text-[var(--text-muted)] font-medium flex-shrink-0">Cross-sell:</span>
+          {OPPORTUNITY_TYPE_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setSelectedOpportunityType(filter.value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex-shrink-0 whitespace-nowrap ${
+                selectedOpportunityType === filter.value
+                  ? 'bg-[var(--accent)] text-white'
+                  : `bg-[var(--surface-2)] ${filter.color || 'text-[var(--text-muted)]'} hover:text-[var(--foreground)]`
+              }`}
+            >
+              <span className={selectedOpportunityType === filter.value ? '' : filter.color}>
+                {filter.icon}
+              </span>
+              {filter.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Stats bar */}
-      <div className="flex-shrink-0 px-4 sm:px-6 py-3 bg-[var(--surface-2)]/50 border-b border-[var(--border)]">
-        <div className="flex items-center gap-6 text-sm">
-          <span className="text-[var(--text-muted)]">
-            <span className="font-semibold text-[var(--foreground)]">{stats.total}</span> customers
-          </span>
-          <span className="text-[var(--text-muted)] flex items-center gap-1">
-            <Crown className="w-3.5 h-3.5 text-amber-500" />
-            <span className="font-semibold text-[var(--foreground)]">{stats.elite}</span> elite
-          </span>
-          <span className="text-[var(--text-muted)] flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
-            <span className="font-semibold text-[var(--foreground)]">{stats.withOpportunities}</span> opportunities
-          </span>
+      {/* Enhanced Stats bar */}
+      <div className="flex-shrink-0 px-4 sm:px-6 py-3 bg-gradient-to-r from-[var(--surface)] to-[var(--surface-2)] border-b border-[var(--border)]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          {/* Total Customers */}
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-[var(--surface-2)]">
+              <Users className="w-4 h-4 text-[var(--text-muted)]" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-[var(--foreground)]">{stats?.total || 0}</div>
+              <div className="text-xs text-[var(--text-muted)]">Customers</div>
+            </div>
+          </div>
+
+          {/* Book Value */}
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/30">
+              <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                {formatCurrency(stats?.totalPremium || 0)}
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">Book Value</div>
+            </div>
+          </div>
+
+          {/* Hot Leads */}
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30">
+              <Flame className="w-4 h-4 text-red-500" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-[var(--foreground)]">
+                {stats?.hotCount || 0}
+                {stats?.highCount ? <span className="text-sm font-normal text-[var(--text-muted)]"> + {stats.highCount}</span> : null}
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">Hot + High</div>
+            </div>
+          </div>
+
+          {/* Potential Revenue */}
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+              <Target className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
+                +{formatCurrency(stats?.potentialPremiumAdd || 0)}
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">Potential Add</div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Content area */}
       <div className="flex-1 flex min-h-0">
         {/* Customer list */}
-        <div className={`flex-1 overflow-y-auto p-4 sm:p-6 ${selectedCustomerId ? 'hidden lg:block lg:w-1/2' : ''}`}>
+        <div className={`flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 ${selectedCustomerId ? 'hidden lg:block lg:w-1/2' : ''}`}>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
@@ -204,21 +351,24 @@ export function CustomerLookupView({
                     Clear search
                   </button>
                 </>
-              ) : selectedSegment !== 'all' ? (
-                // Segment filter with no results
+              ) : selectedSegment !== 'all' || selectedOpportunityType !== 'all' ? (
+                // Segment or opportunity filter with no results
                 <>
                   <p className="text-[var(--foreground)] font-medium mb-1">
-                    No {selectedSegment} customers found
+                    No customers match your filters
                   </p>
                   <p className="text-sm text-[var(--text-muted)] mb-4">
-                    Try selecting a different segment or view all customers
+                    Try different filter combinations or clear all filters
                   </p>
                   <button
-                    onClick={() => setSelectedSegment('all')}
+                    onClick={() => {
+                      setSelectedSegment('all');
+                      setSelectedOpportunityType('all');
+                    }}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] transition-colors"
                   >
                     <Users className="w-4 h-4" />
-                    View all customers
+                    Clear all filters
                   </button>
                 </>
               ) : (
@@ -287,13 +437,36 @@ export function CustomerLookupView({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={{ left: 0, right: 0.3 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.x > 100) handleCloseDetail();
+              }}
               className="w-full lg:w-1/2 border-l border-[var(--border)] bg-[var(--surface)] overflow-y-auto"
             >
+              {/* Mobile drag handle */}
+              <div className="lg:hidden flex justify-center pt-2 pb-1">
+                <div className="w-10 h-1 bg-[var(--border)] rounded-full" />
+              </div>
+
               <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)]">
-                <h2 className="font-semibold text-[var(--foreground)]">Customer Details</h2>
+                {/* Mobile: Back button with count */}
                 <button
                   onClick={handleCloseDetail}
-                  className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)]"
+                  className="lg:hidden flex items-center gap-1 text-[var(--accent)] font-medium"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                  <span>Back ({displayCustomers.length})</span>
+                </button>
+
+                {/* Desktop: Title */}
+                <h2 className="hidden lg:block font-semibold text-[var(--foreground)]">Customer Details</h2>
+
+                {/* Desktop: Close button */}
+                <button
+                  onClick={handleCloseDetail}
+                  className="hidden lg:block p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)]"
                   aria-label="Close customer details"
                 >
                   <X className="w-5 h-5" />
