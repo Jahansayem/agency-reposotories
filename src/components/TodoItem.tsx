@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2 } from 'lucide-react';
+import { Check, Trash2, Calendar, User, Flag, Copy, MessageSquare, ChevronDown, ChevronUp, Repeat, ListTree, Plus, Mail, Pencil, FileText, Paperclip, Music, Mic, Clock, MoreVertical, AlertTriangle, Bell, BellOff, Loader2, CheckCircle2, Lock } from 'lucide-react';
 import { Todo, TodoPriority, TodoStatus, PRIORITY_CONFIG, RecurrencePattern, Subtask, Attachment, MAX_ATTACHMENTS_PER_TODO, WaitingContactType } from '@/types/todo';
 import { Badge, Button, IconButton } from '@/components/ui';
 import AttachmentList from './AttachmentList';
@@ -151,6 +151,7 @@ interface TodoItemProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onEmailCustomer?: (todo: Todo) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
   onClearWaiting?: (id: string) => Promise<void>;
   onOpenDetail?: (todoId: string) => void;
@@ -224,6 +225,7 @@ function areTodoItemPropsEqual(
     prevTodo.due_date !== nextTodo.due_date ||
     prevTodo.assigned_to !== nextTodo.assigned_to ||
     prevTodo.waiting_for_response !== nextTodo.waiting_for_response ||
+    prevTodo.is_private !== nextTodo.is_private ||
     prevTodo.notes !== nextTodo.notes ||
     prevTodo.recurrence !== nextTodo.recurrence ||
     prevTodo.reminder_at !== nextTodo.reminder_at ||
@@ -301,6 +303,7 @@ function TodoItemComponent({
   onUpdateAttachments,
   onEmailCustomer,
   onSetReminder,
+  onSetPrivacy,
   onMarkWaiting,
   onClearWaiting,
   onOpenDetail,
@@ -312,11 +315,12 @@ function TodoItemComponent({
   const canEditAnyTask = usePermission('can_edit_any_task');
   const canAssignTasks = usePermission('can_assign_tasks');
 
-  // Ownership check - users can always modify their own tasks
+  // Task relationship checks - users can modify tasks they own or are assigned
   const isOwner = todo.created_by === currentUserName;
+  const isAssignee = todo.assigned_to === currentUserName;
 
-  // Derived permissions combining permission flags with ownership
-  const canEdit = canEditAnyTask || isOwner;
+  // Derived permissions combining permission flags with task relationship
+  const canEdit = canEditAnyTask || isOwner || isAssignee;
   const canDeleteTasks = canDeleteTasksPerm || isOwner;
 
   // Auto-expand when triggered from external navigation (e.g., dashboard task click)
@@ -357,6 +361,7 @@ function TodoItemComponent({
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const priority = todo.priority || 'medium';
   const status = todo.status || 'todo';
+  const isPrivate = !!todo.is_private;
   void status; // Used for status-based logic elsewhere
 
   // Long-press context menu state (Issue #20)
@@ -540,6 +545,7 @@ function TodoItemComponent({
   };
   const priorityConfig = PRIORITY_CONFIG[priority];
   const dueDateStatus = todo.due_date ? getDueDateStatus(todo.due_date, todo.completed) : null;
+  const canTogglePrivacy = !!onSetPrivacy && canEdit;
 
   const handleToggle = () => {
     if (!todo.completed) {
@@ -860,6 +866,37 @@ function TodoItemComponent({
                   className="flex-shrink-0 max-w-[80px] sm:max-w-none"
                 >
                   <span className="truncate">{todo.assigned_to}</span>
+                </Badge>
+              )}
+
+              {/* Privacy badge - indicates whether task is public or private */}
+              {canTogglePrivacy ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSetPrivacy?.(todo.id, !isPrivate);
+                  }}
+                  className="inline-flex items-center touch-manipulation"
+                  aria-label={isPrivate ? 'Make task public' : 'Make task private'}
+                  title={isPrivate ? 'Private: visible to creator and assignee' : 'Public: visible to team'}
+                >
+                  <Badge
+                    variant={isPrivate ? 'default' : 'success'}
+                    size="sm"
+                    icon={isPrivate ? <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                    interactive
+                  >
+                    {isPrivate ? 'Private' : 'Public'}
+                  </Badge>
+                </button>
+              ) : (
+                <Badge
+                  variant={isPrivate ? 'default' : 'success'}
+                  size="sm"
+                  icon={isPrivate ? <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                  className="flex-shrink-0"
+                >
+                  {isPrivate ? 'Private' : 'Public'}
                 </Badge>
               )}
 
@@ -1240,6 +1277,19 @@ function TodoItemComponent({
                       >
                         <FileText className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
                         Save as Template
+                      </button>
+                    )}
+
+                    {/* Privacy toggle */}
+                    {onSetPrivacy && canEdit && (
+                      <button
+                        ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                        role="menuitem"
+                        onClick={() => { onSetPrivacy(todo.id, !isPrivate); setShowActionsMenu(false); }}
+                        className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+                      >
+                        <Lock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                        {isPrivate ? 'Make Public' : 'Make Private'}
                       </button>
                     )}
 

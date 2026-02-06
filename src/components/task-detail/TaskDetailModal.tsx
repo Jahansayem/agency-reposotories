@@ -69,13 +69,16 @@ export default function TaskDetailModal({
   const canAssignTasks = usePermission('can_assign_tasks');
   const canUseAiFeatures = usePermission('can_use_ai_features');
 
-  // Derived permission: user owns the task OR has the general permission
+  // Derived permissions: user can edit if they own or are assigned, or have global edit permission
   const isOwner = useMemo(() => {
     return todo ? todo.created_by === currentUser?.name : false;
   }, [todo, currentUser?.name]);
+  const isAssignee = useMemo(() => {
+    return todo ? todo.assigned_to === currentUser?.name : false;
+  }, [todo, currentUser?.name]);
 
   const canDelete = canDeleteTasks || isOwner;
-  const canEdit = canEditAnyTask || isOwner;
+  const canEdit = canEditAnyTask || isOwner || isAssignee;
 
   const detail = useTaskDetail({
     todo: todo!,  // Assert non-null since parent guards with conditional render
