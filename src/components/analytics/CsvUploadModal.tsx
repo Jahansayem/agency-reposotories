@@ -209,7 +209,7 @@ function FileDropZone({
           or click to browse
         </p>
         <p className="text-xs text-[var(--text-muted)]">
-          Supports Renewal Audit Report & All Purpose Audit • CSV, Excel (.xlsx, .xls) • Max 5MB
+          AI auto-detects any Allstate report format • CSV, Excel (.xlsx, .xls) • Max 5MB
         </p>
       </div>
 
@@ -509,7 +509,8 @@ export function CsvUploadModal({ isOpen, onClose, onUploadComplete, currentUserN
       formData.append('uploaded_by', currentUserName);
       formData.append('data_source', 'book_of_business');
 
-      const response = await fetchWithCsrf('/api/analytics/upload', {
+      // Use AI-powered parsing for automatic column detection
+      const response = await fetchWithCsrf('/api/analytics/ai-upload', {
         method: 'POST',
         body: formData,
       });
