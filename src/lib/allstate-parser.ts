@@ -29,25 +29,39 @@ import type {
 const COLUMN_MAPPINGS: Record<string, string[]> = {
   customer_name: ['Customer Name', 'Name', 'Full Name', 'Client Name', 'Insured Name', 'Named Insured'],
   // Renewal Audit Report uses separate first/last name columns
-  first_name: ['Insured First Name', 'First Name', 'FirstName'],
-  last_name: ['Insured Last Name', 'Last Name', 'LastName'],
+  // Book of Business with Email uses First_Name/Last_Name (underscore format)
+  first_name: ['Insured First Name', 'First Name', 'FirstName', 'First_Name'],
+  last_name: ['Insured Last Name', 'Last Name', 'LastName', 'Last_Name'],
   // All Purpose Audit uses 'Insured Contact' for phone
-  phone: ['Phone', 'Phone Number', 'Primary Phone', 'Contact Phone', 'Tel', 'Telephone', 'Insured Phone', 'Insured Contact'],
+  // Book of Business with Email uses 'Phone_Number'
+  phone: ['Phone', 'Phone Number', 'Primary Phone', 'Contact Phone', 'Tel', 'Telephone', 'Insured Phone', 'Insured Contact', 'Phone_Number'],
   // All Purpose Audit uses 'Insured E-mail' (with hyphen)
-  email: ['Email', 'Email Address', 'E-mail', 'Primary Email', 'Contact Email', 'Insured Email', 'Insured E-mail'],
+  // Book of Business with Email uses 'Email_Address'
+  email: ['Email', 'Email Address', 'E-mail', 'Primary Email', 'Contact Email', 'Insured Email', 'Insured E-mail', 'Email_Address'],
   // All Purpose Audit uses 'Insured Address'
-  address: ['Address', 'Street Address', 'Street', 'Mailing Address', 'Address Line 1', 'Insured Address'],
+  // Book of Business with Email uses 'Street_Address'
+  address: ['Address', 'Street Address', 'Street', 'Mailing Address', 'Address Line 1', 'Insured Address', 'Street_Address'],
   city: ['City', 'Town', 'Municipality'],
-  zip_code: ['Zip', 'ZIP Code', 'Zip Code', 'Postal Code', 'ZIP'],
+  // Book of Business with Email uses 'Zip_Code' (underscore)
+  zip_code: ['Zip', 'ZIP Code', 'Zip Code', 'Postal Code', 'ZIP', 'Zip_Code'],
+  // Book of Business with Email uses 'Renewal Date' (with space)
   renewal_date: ['Renewal Date', 'Renewal', 'Expiration Date', 'Policy Renewal', 'Exp Date', 'Next Renewal', 'Renewal Effective Date', 'Anniversary Effective Date'],
-  current_products: ['Current Products', 'Products', 'Product', 'Policy Type', 'Coverage', 'Line of Business', 'LOB', 'Product Name'],
+  // Book of Business with Email uses 'Product_Name'
+  current_products: ['Current Products', 'Products', 'Product', 'Policy Type', 'Coverage', 'Line of Business', 'LOB', 'Product Name', 'Product_Name'],
   // All Purpose Audit uses 'Premium new' and 'Premium Old' (different casing)
   current_premium: ['Premium', 'Current Premium', 'Total Premium', 'Annual Premium', 'Written Premium', 'Premium New($)', 'Premium Old($)', 'Premium new', 'Premium Old'],
   tenure_years: ['Tenure', 'Years', 'Tenure Years', 'Customer Since', 'Years as Customer', 'Years Prior Insurance', 'Original Year'],
+  // Book of Business with Email has 'Presence_of_Auto', 'Presence_of_Property', 'Presence_of_Life' which we use to detect multiline
   policy_count: ['Policy Count', 'Policies', 'Number of Policies', '# Policies', 'Total Policies', 'Item Count'],
   ezpay_status: ['EZPay', 'EZ Pay', 'Auto Pay', 'Autopay', 'Payment Status', 'Easy Pay'],
   balance_due: ['Balance', 'Balance Due', 'Amount Due', 'Outstanding Balance', 'Amount Due($)'],
   renewal_status: ['Status', 'Renewal Status', 'Policy Status', 'Account Status'],
+  // Book of Business with Email has 'Monoline_or_Multiline_Household' for bundle detection
+  multiline_status: ['Monoline_or_Multiline_Household'],
+  // Book of Business with Email product presence flags
+  presence_auto: ['Presence_of_Auto'],
+  presence_property: ['Presence_of_Property'],
+  presence_life: ['Presence_of_Life'],
 };
 
 // ============================================
@@ -83,6 +97,29 @@ function parseDate(value: string | undefined): string | null {
   if (match) {
     const [, month, day, year] = match;
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+
+  // Try MM/DD format (Book of Business with Email uses this for renewal dates)
+  // Assume current year, or next year if the date has already passed
+  const mmdd = /^(\d{1,2})\/(\d{1,2})$/;
+  const mmddMatch = trimmed.match(mmdd);
+  if (mmddMatch) {
+    const [, month, day] = mmddMatch;
+    const now = new Date();
+    let year = now.getFullYear();
+
+    // Create date for this year
+    let date = new Date(year, parseInt(month) - 1, parseInt(day));
+
+    // If the date has already passed, use next year
+    if (date < now) {
+      year++;
+      date = new Date(year, parseInt(month) - 1, parseInt(day));
+    }
+
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
@@ -312,7 +349,36 @@ export function parseAllstateRow(
   }
 
   // Parse financial and policy data
-  const currentProducts = (getValue('current_products') as string || 'Unknown').trim();
+  // For Book of Business with Email format, build products from presence flags
+  let currentProducts = (getValue('current_products') as string || '').trim();
+
+  // Check if this is the Book of Business format where Product_Name is just the report name
+  if (currentProducts === 'Book of Business with Email' || !currentProducts || currentProducts === 'Unknown') {
+    // Build products from presence flags
+    const products: string[] = [];
+    const hasAuto = String(getValue('presence_auto') || '').toUpperCase() === 'Y';
+    const hasProperty = String(getValue('presence_property') || '').toUpperCase() === 'Y';
+    const hasLife = String(getValue('presence_life') || '').toUpperCase() === 'Y';
+
+    if (hasAuto) products.push('Auto');
+    if (hasProperty) products.push('Property');
+    if (hasLife) products.push('Life');
+
+    // Also check multiline status as fallback
+    const multilineStatus = (getValue('multiline_status') as string || '').trim();
+    if (products.length === 0 && multilineStatus) {
+      if (multilineStatus.toLowerCase().includes('multi')) {
+        currentProducts = 'Multiple Products';
+      } else if (multilineStatus.toLowerCase().includes('mono')) {
+        currentProducts = 'Single Product';
+      }
+    } else if (products.length > 0) {
+      currentProducts = products.join(', ');
+    } else {
+      currentProducts = 'Unknown';
+    }
+  }
+
   const currentPremium = parseCurrency(getValue('current_premium'));
   const tenureYears = parseInt_(getValue('tenure_years'));
   const policyCount = parseInt_(getValue('policy_count')) || 1;

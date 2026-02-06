@@ -67,6 +67,7 @@ function parseExcelFile(buffer: ArrayBuffer): AllstateBookOfBusinessRow[] {
 
   // Find the header row by looking for common column names
   // Renewal Audit Report has headers on row 5, All Purpose Audit on row 34
+  // Book of Business with Email has headers on row 0 with underscore naming
   const headerIndicators = [
     'Insured First Name',
     'Insured Last Name',
@@ -80,6 +81,13 @@ function parseExcelFile(buffer: ArrayBuffer): AllstateBookOfBusinessRow[] {
     'Renewal Date',
     'Policy',
     'Product',
+    // Book of Business with Email format (underscore naming)
+    'First_Name',
+    'Last_Name',
+    'Phone_Number',
+    'Email_Address',
+    'Street_Address',
+    'Zip_Code',
   ];
 
   let headerRowIndex = 0;
