@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 // ============================================================================
 // Types
@@ -508,7 +509,7 @@ export function CsvUploadModal({ isOpen, onClose, onUploadComplete, currentUserN
       formData.append('uploaded_by', currentUserName);
       formData.append('data_source', 'book_of_business');
 
-      const response = await fetch('/api/analytics/upload', {
+      const response = await fetchWithCsrf('/api/analytics/upload', {
         method: 'POST',
         body: formData,
       });
