@@ -96,10 +96,10 @@ export default function CalendarDayCell({
           transition-all duration-200 border
           ${
             isToday
-              ? 'ring-2 ring-[var(--brand-blue)] dark:ring-[var(--accent)] bg-[var(--brand-blue)]/5 dark:bg-[var(--accent)]/10 border-[var(--brand-blue)]/20 dark:border-[var(--accent)]/30'
+              ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30'
               : isCurrentMonth
-                ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600'
-                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50'
+                ? 'bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)]'
+                : 'bg-[var(--surface)] border-[var(--border-muted)]'
           }
         `}
       >
@@ -109,10 +109,10 @@ export default function CalendarDayCell({
             text-sm font-semibold mb-1
             ${
               isToday
-                ? 'text-[var(--brand-blue)] dark:text-[var(--accent)]'
+                ? 'text-[var(--accent)]'
                 : isCurrentMonth
-                  ? 'text-slate-900 dark:text-white'
-                  : 'text-slate-400 dark:text-slate-500'
+                  ? 'text-[var(--foreground)]'
+                  : 'text-[var(--text-muted)]'
             }
           `}
         >
@@ -129,14 +129,14 @@ export default function CalendarDayCell({
                   title={`${count} ${CATEGORY_LABELS[category]}${count > 1 ? 's' : ''}`}
                 />
                 {count > 1 && (
-                  <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                  <span className="text-[10px] font-medium text-[var(--text-muted)]">
                     {count}
                   </span>
                 )}
               </div>
             ))}
             {hiddenCount > 0 && (
-              <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] font-medium text-[var(--text-muted)]">
                 +{hiddenCount}
               </span>
             )}
@@ -152,11 +152,11 @@ export default function CalendarDayCell({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 top-full left-0 mt-1 min-w-[200px] max-w-[280px] p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg"
+            className="absolute z-50 top-full left-0 mt-1 min-w-[200px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg"
             style={{ pointerEvents: 'auto' }}
           >
             {/* Header */}
-            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+            <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">
               {format(date, 'EEEE, MMM d')}
             </div>
 
@@ -171,16 +171,16 @@ export default function CalendarDayCell({
                       e.stopPropagation();
                       onTaskClick(todo);
                     }}
-                    className="w-full flex items-start gap-2 p-1.5 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left"
+                    className="w-full flex items-start gap-2 p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors text-left"
                   >
                     <div
                       className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${CATEGORY_COLORS[category]}`}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-900 dark:text-white truncate">
+                      <p className="text-sm text-[var(--foreground)] truncate">
                         {todo.customer_name || todo.text}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-[var(--text-muted)]">
                         {CATEGORY_LABELS[category]}
                         {todo.premium_amount && (
                           <span className="ml-1">
@@ -193,7 +193,7 @@ export default function CalendarDayCell({
                 );
               })}
               {todos.length > 5 && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 text-center pt-1">
+                <p className="text-xs text-[var(--text-muted)] text-center pt-1">
                   +{todos.length - 5} more tasks
                 </p>
               )}

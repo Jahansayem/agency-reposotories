@@ -663,7 +663,7 @@ function TodoItemComponent({
 
     // Completed tasks - keep priority bar but fade overall
     if (todo.completed) {
-      return `bg-white dark:bg-[#162236] border-[var(--border-subtle)] opacity-75 ${priorityBorder}`;
+      return `bg-[var(--surface)] border-[var(--border-subtle)] opacity-75 ${priorityBorder}`;
     }
     // Selected state
     if (selected) {
@@ -686,7 +686,7 @@ function TodoItemComponent({
       return `${overdueBg} border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
     }
     // Default card with priority border
-    return `bg-white dark:bg-[#162236] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
+    return `bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]/40 hover:shadow-[var(--shadow-md)] ${priorityBorder}`;
   };
 
   // Check if task is overdue for metadata visibility

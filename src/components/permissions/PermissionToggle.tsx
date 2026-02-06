@@ -49,7 +49,7 @@ export function PermissionToggle({
     <div
       className={`
         flex items-center justify-between py-2.5 px-3 rounded-lg
-        hover:bg-gray-50 dark:hover:bg-gray-700/50
+        hover:bg-[var(--surface)]
         transition-colors
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
       `}
@@ -57,7 +57,7 @@ export function PermissionToggle({
     >
       <div className="flex-1 min-w-0 mr-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
+          <span className="text-sm font-medium text-[var(--foreground)]">
             {label}
           </span>
           {isElevated && enabled && (
@@ -67,7 +67,7 @@ export function PermissionToggle({
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+        <p className="text-xs text-[var(--text-muted)] mt-0.5">
           {description}
         </p>
       </div>
@@ -86,9 +86,9 @@ export function PermissionToggle({
         className={`
           relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full
           transition-colors duration-200 ease-in-out
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+          focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2
           disabled:cursor-not-allowed disabled:opacity-50
-          ${enabled ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}
+          ${enabled ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'}
         `}
       >
         {isSaving ? (

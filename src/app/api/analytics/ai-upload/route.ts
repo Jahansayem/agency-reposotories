@@ -335,6 +335,24 @@ function transformRow(
   const currentProducts = products.length > 0 ? products.join(', ') : 'Unknown';
   const isMonoline = products.length === 1;
 
+  // DEBUG: Log for ZOROB and first few rows
+  const isDebugRow = customerName.includes('ZOROB');
+  if (isDebugRow) {
+    console.log('DEBUG ZOROB RAW:', {
+      customerName,
+      products,
+      'products.length': products.length,
+      isMonoline,
+      'mapping.has_auto': mapping.has_auto,
+      'row[mapping.has_auto]': mapping.has_auto ? row[mapping.has_auto] : 'N/A',
+      'row value lowercase': mapping.has_auto ? String(row[mapping.has_auto] || '').toLowerCase() : 'N/A',
+      'mapping.has_property': mapping.has_property,
+      'row[mapping.has_property]': mapping.has_property ? row[mapping.has_property] : 'N/A',
+      'mapping.monoline_flag': mapping.monoline_flag,
+      'row[mapping.monoline_flag]': mapping.monoline_flag ? row[mapping.monoline_flag] : 'N/A',
+    });
+  }
+
   // Check monoline flag if available
   // IMPORTANT: "Multiline" contains "mono" so we need to check for "multi" first
   let monolineFromFlag = false;
@@ -387,6 +405,23 @@ function transformRow(
     // Fully loaded customer
     segmentType = 'add_umbrella';
     recommendedProduct = 'Umbrella Coverage';
+  }
+
+  // DEBUG: Log segment determination for ZOROB
+  if (isDebugRow) {
+    console.log('DEBUG ZOROB SEGMENT:', {
+      customerName,
+      products,
+      hasAuto,
+      hasProperty,
+      hasLife,
+      hasUmbrella,
+      isMonoline,
+      monolineFromFlag,
+      isTrueMonoline,
+      segmentType,
+      recommendedProduct,
+    });
   }
 
   // Calculate priority score
@@ -528,8 +563,28 @@ export async function POST(request: NextRequest) {
     // Use AI to detect column mapping (single API call)
     console.log('Detecting column mapping with AI...');
     const aiResponse = await detectColumnMapping(headers, rows.slice(0, 10));
-    console.log('AI Column Mapping:', aiResponse.column_mapping);
+    console.log('AI Column Mapping:', JSON.stringify(aiResponse.column_mapping, null, 2));
     console.log('Product Detection:', aiResponse.product_detection);
+
+    // Log presence flag mappings specifically
+    console.log('PRESENCE FLAG MAPPING:', {
+      has_auto: aiResponse.column_mapping.has_auto,
+      has_property: aiResponse.column_mapping.has_property,
+      has_life: aiResponse.column_mapping.has_life,
+      has_umbrella: aiResponse.column_mapping.has_umbrella,
+      monoline_flag: aiResponse.column_mapping.monoline_flag,
+    });
+
+    // Log first row's values for these columns
+    const firstRow = rows[0];
+    console.log('FIRST ROW PRESENCE VALUES:', {
+      has_auto_col: aiResponse.column_mapping.has_auto,
+      has_auto_val: aiResponse.column_mapping.has_auto ? firstRow[aiResponse.column_mapping.has_auto] : 'N/A',
+      has_property_col: aiResponse.column_mapping.has_property,
+      has_property_val: aiResponse.column_mapping.has_property ? firstRow[aiResponse.column_mapping.has_property] : 'N/A',
+      monoline_col: aiResponse.column_mapping.monoline_flag,
+      monoline_val: aiResponse.column_mapping.monoline_flag ? firstRow[aiResponse.column_mapping.monoline_flag] : 'N/A',
+    });
 
     // Apply mapping to all rows programmatically (fast!)
     console.log('Transforming rows...');
@@ -542,6 +597,33 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Transformed ${customers.length} valid records from ${rows.length} rows`);
+
+    // Log segment distribution to verify scoring
+    const segmentCounts: Record<string, number> = {};
+    const productCounts: Record<number, number> = {};
+    customers.forEach(c => {
+      segmentCounts[c.segment_type] = (segmentCounts[c.segment_type] || 0) + 1;
+      const productCount = c.current_products.split(',').length;
+      productCounts[productCount] = (productCounts[productCount] || 0) + 1;
+    });
+    console.log('SEGMENT DISTRIBUTION:', segmentCounts);
+    console.log('PRODUCT COUNT DISTRIBUTION:', productCounts);
+
+    // Log some examples of multiline customers to verify fix
+    const multilineWithAutoHome = customers.filter(c =>
+      c.current_products.includes('Auto') &&
+      c.current_products.includes('Property') &&
+      c.segment_type === 'auto_to_home'
+    );
+    if (multilineWithAutoHome.length > 0) {
+      console.log('WARNING: Found bundled customers with auto_to_home segment:', multilineWithAutoHome.slice(0, 3).map(c => ({
+        name: c.customer_name,
+        products: c.current_products,
+        segment: c.segment_type,
+      })));
+    } else {
+      console.log('GOOD: No bundled customers incorrectly assigned auto_to_home segment');
+    }
 
     if (customers.length === 0) {
       return NextResponse.json({ error: 'Could not extract any valid records' }, { status: 400 });
@@ -647,6 +729,47 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+
+      // ALSO populate customer_insights table for Customer Lookup to show the data
+      console.log('Populating customer_insights table...');
+      const insights = customers.map(c => ({
+        agency_id: agencyId || null,
+        customer_name: c.customer_name,
+        customer_email: c.email || null,
+        customer_phone: c.phone || null,
+        total_premium: c.current_premium,
+        total_policies: c.policy_count,
+        products_held: c.current_products.split(',').map((p: string) => p.trim()).filter(Boolean),
+        tenure_years: c.tenure_years,
+        retention_risk: c.priority_tier === 'LOW' ? 'low' : c.priority_tier === 'HOT' ? 'high' : 'medium',
+        upcoming_renewal: c.renewal_date || null,
+      }));
+
+      // Delete existing customer_insights for the same customers (upsert pattern)
+      const insightNames = insights.map(i => i.customer_name);
+      let deleteInsightsQuery = supabase
+        .from('customer_insights')
+        .delete()
+        .in('customer_name', insightNames);
+
+      if (agencyId) {
+        deleteInsightsQuery = deleteInsightsQuery.eq('agency_id', agencyId);
+      }
+
+      await deleteInsightsQuery;
+
+      // Insert all insights
+      for (let i = 0; i < insights.length; i += BATCH_SIZE) {
+        const batch = insights.slice(i, i + BATCH_SIZE);
+        const { error: insightError } = await supabase
+          .from('customer_insights')
+          .insert(batch);
+
+        if (insightError) {
+          console.error('Failed to insert customer_insights batch:', insightError);
+        }
+      }
+      console.log(`Inserted ${insights.length} records into customer_insights`);
     }
 
     // Calculate summary stats

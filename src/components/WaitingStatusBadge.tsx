@@ -184,7 +184,7 @@ export function WaitingStatusBadge({
                     disabled={loading}
                     className="flex items-center gap-2 w-full px-3 py-2 rounded-[var(--radius-md)] hover:bg-[var(--surface-hover)] text-left transition-colors disabled:opacity-50"
                   >
-                    <MessageSquare className="w-4 h-4 text-gray-500" />
+                    <MessageSquare className="w-4 h-4 text-[var(--text-muted)]" />
                     <span>Other Contact</span>
                   </button>
                 </div>

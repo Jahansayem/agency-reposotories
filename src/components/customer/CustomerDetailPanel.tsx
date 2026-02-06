@@ -136,7 +136,7 @@ export function CustomerDetailPanel({
             <a
               href={`tel:${customer.phone}`}
               onClick={(e) => handlePhoneClick(e, customer.phone!)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-[var(--accent)] rounded-lg hover:opacity-90 transition-colors"
               title={isDesktop ? 'Click to copy' : 'Click to call'}
             >
               {copiedPhone ? (
@@ -207,7 +207,7 @@ export function CustomerDetailPanel({
             </div>
           )}
           {customer.upcomingRenewal && (
-            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+            <div className="flex items-center gap-2 text-sm text-[var(--accent)]">
               <Calendar className="w-4 h-4" />
               <span>Upcoming renewal: <strong>{formatDate(customer.upcomingRenewal)}</strong></span>
             </div>
@@ -423,7 +423,7 @@ function OpportunityItem({
               ${opportunity.priorityTier === 'HOT' ? 'bg-red-500 text-white' :
                 opportunity.priorityTier === 'HIGH' ? 'bg-orange-500 text-white' :
                 opportunity.priorityTier === 'MEDIUM' ? 'bg-yellow-500 text-white' :
-                'bg-gray-400 text-white'}
+                'bg-[var(--text-muted)] text-white'}
             `}>
               {opportunity.priorityTier}
             </span>
@@ -440,7 +440,7 @@ function OpportunityItem({
           <button
             type="button"
             onClick={() => onViewTask?.(opportunity.taskId!)}
-            className="px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            className="px-2 py-1 text-xs font-medium text-[var(--accent)] hover:underline"
           >
             View Task
           </button>
@@ -449,7 +449,7 @@ function OpportunityItem({
             type="button"
             onClick={handleCreateTask}
             disabled={loading}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-[var(--accent)] rounded hover:opacity-90 disabled:opacity-50 transition-colors"
           >
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
             Task
@@ -461,7 +461,7 @@ function OpportunityItem({
           <ul className="text-xs text-[var(--text-muted)] space-y-1">
             {opportunity.talkingPoints.slice(0, 2).map((point, i) => (
               <li key={i} className="flex items-start gap-1">
-                <span className="text-blue-500">•</span>
+                <span className="text-[var(--accent)]">•</span>
                 <span>{point}</span>
               </li>
             ))}

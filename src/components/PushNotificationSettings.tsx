@@ -82,14 +82,14 @@ export function PushNotificationSettings({
   // Not supported
   if (!supported) {
     return (
-      <div className={`p-4 rounded-lg bg-gray-100 dark:bg-gray-800 ${className}`}>
+      <div className={`p-4 rounded-lg bg-[var(--surface-2)] ${className}`}>
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-[var(--text-muted)] flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-white">
+            <h4 className="font-semibold text-[var(--foreground)]">
               Push Notifications Not Supported
             </h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-sm text-[var(--text-muted)] mt-1">
               Your browser doesn't support push notifications. Try using a modern browser like Chrome, Firefox, or Edge.
             </p>
           </div>
@@ -101,14 +101,14 @@ export function PushNotificationSettings({
   // Permission denied
   if (permission === 'denied') {
     return (
-      <div className={`p-4 rounded-lg bg-red-50 dark:bg-red-900/20 ${className}`}>
+      <div className={`p-4 rounded-lg bg-[var(--danger)]/10 ${className}`}>
         <div className="flex items-start gap-3">
-          <BellOff className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <BellOff className="w-5 h-5 text-[var(--danger)] flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-red-900 dark:text-red-100">
+            <h4 className="font-semibold text-[var(--danger)]">
               Notifications Blocked
             </h4>
-            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+            <p className="text-sm text-[var(--danger)]/80 mt-1">
               You've blocked notifications for this site. To enable them, go to your browser settings and allow notifications for this website.
             </p>
           </div>
@@ -120,16 +120,16 @@ export function PushNotificationSettings({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Main toggle */}
-      <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="flex items-center justify-between p-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)]">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${isSubscribed ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
-            <Bell className={`w-5 h-5 ${isSubscribed ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'}`} />
+          <div className={`p-2 rounded-lg ${isSubscribed ? 'bg-[var(--accent)]/10' : 'bg-[var(--surface)]'}`}>
+            <Bell className={`w-5 h-5 ${isSubscribed ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`} />
           </div>
           <div>
-            <h4 className="font-semibold text-gray-900 dark:text-white">
+            <h4 className="font-semibold text-[var(--foreground)]">
               Push Notifications
             </h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-[var(--text-muted)]">
               {isSubscribed
                 ? 'You will receive push notifications for task reminders and mentions'
                 : 'Enable notifications to stay updated on tasks and mentions'
@@ -143,9 +143,9 @@ export function PushNotificationSettings({
           disabled={loading}
           className={`
             relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
-            transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+            transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${isSubscribed ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}
+            ${isSubscribed ? 'bg-[var(--accent)]' : 'bg-[var(--surface)]'}
           `}
           role="switch"
           aria-checked={isSubscribed}
@@ -175,15 +175,15 @@ export function PushNotificationSettings({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-start gap-3 p-4 rounded-lg bg-red-50 dark:bg-red-900/20"
+            className="flex items-start gap-3 p-4 rounded-lg bg-[var(--danger)]/10"
           >
-            <X className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <X className="w-5 h-5 text-[var(--danger)] flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+              <p className="text-sm text-[var(--danger)]">{error}</p>
             </div>
             <button
               onClick={clearError}
-              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+              className="text-[var(--danger)] hover:text-[var(--danger)]/80"
               aria-label="Dismiss error"
             >
               <X className="w-4 h-4" />
@@ -199,10 +199,10 @@ export function PushNotificationSettings({
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20"
+            className="flex items-center gap-3 p-4 rounded-lg bg-[var(--success)]/10"
           >
-            <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <p className="text-sm text-green-700 dark:text-green-300">
+            <Check className="w-5 h-5 text-[var(--success)]" />
+            <p className="text-sm text-[var(--success)]">
               {isSubscribed
                 ? "Push notifications enabled! You'll now receive notifications for task reminders and mentions."
                 : 'Push notifications disabled.'
@@ -214,25 +214,25 @@ export function PushNotificationSettings({
 
       {/* Info about what notifications are sent */}
       {isSubscribed && (
-        <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-          <h5 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+        <div className="p-4 rounded-lg bg-[var(--accent)]/10">
+          <h5 className="font-medium text-[var(--accent)] mb-2">
             You'll receive notifications for:
           </h5>
-          <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+          <ul className="space-y-1 text-sm text-[var(--accent)]/80">
             <li className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
               Task reminders (when you set a reminder)
             </li>
             <li className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
               When someone mentions you in chat
             </li>
             <li className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
               When a task is assigned to you
             </li>
             <li className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
               Daily briefing (if enabled in settings)
             </li>
           </ul>
@@ -241,8 +241,8 @@ export function PushNotificationSettings({
 
       {/* Permission request hint */}
       {permission === 'default' && !isSubscribed && (
-        <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+        <div className="p-4 rounded-lg bg-[var(--surface-2)]">
+          <p className="text-sm text-[var(--text-muted)]">
             💡 Enabling notifications will ask for browser permission. Make sure to click "Allow" when prompted.
           </p>
         </div>
@@ -290,8 +290,8 @@ export function PushNotificationToggle({
       className={`
         p-2 rounded-lg transition-colors
         ${isSubscribed
-          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+          ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+          : 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
         }
         disabled:opacity-50 disabled:cursor-not-allowed
         ${className}

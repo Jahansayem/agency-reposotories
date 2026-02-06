@@ -27,12 +27,12 @@ const categoryIcons: Record<AttachmentCategory, React.ElementType> = {
 };
 
 const categoryColors: Record<AttachmentCategory, string> = {
-  document: 'text-blue-500 bg-blue-500/10',
-  image: 'text-green-500 bg-green-500/10',
+  document: 'text-[var(--accent)] bg-[var(--accent)]/10',
+  image: 'text-[var(--success)] bg-[var(--success)]/10',
   audio: 'text-[var(--accent)] bg-[var(--accent)]/10',
   video: 'text-pink-500 bg-pink-500/10',
   archive: 'text-amber-500 bg-amber-500/10',
-  other: 'text-gray-500 bg-gray-500/10', // Default color for unknown types
+  other: 'text-[var(--text-muted)] bg-[var(--surface-2)]', // Default color for unknown types
 };
 
 function formatFileSize(bytes: number): string {
@@ -62,7 +62,7 @@ function AttachmentItem({ attachment, todoId, onRemove, canRemove }: AttachmentI
 
   const category = attachment.file_type as AttachmentCategory;
   const Icon = categoryIcons[category] || File;
-  const colorClass = categoryColors[category] || 'text-gray-500 bg-gray-500/10';
+  const colorClass = categoryColors[category] || 'text-[var(--text-muted)] bg-[var(--surface-2)]';
 
   // Load thumbnail for image attachments (Issue #26)
   const isImage = category === 'image';

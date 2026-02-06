@@ -36,7 +36,7 @@ export function OAuthLoginButtons() {
         className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--surface)] border-2 border-[var(--border)] rounded-[var(--radius-lg)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading === 'google' ? (
-          <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[var(--text-muted)] border-t-transparent rounded-full animate-spin" />
         ) : (
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -57,7 +57,7 @@ export function OAuthLoginButtons() {
             />
           </svg>
         )}
-        <span className="font-medium text-gray-700 dark:text-gray-200">
+        <span className="font-medium text-[var(--foreground)]">
           {loading === 'google' ? 'Signing in...' : 'Sign in with Google'}
         </span>
       </button>
@@ -66,10 +66,10 @@ export function OAuthLoginButtons() {
       <button
         onClick={() => handleOAuthLogin('apple')}
         disabled={loading !== null}
-        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white rounded-[var(--radius-lg)] hover:bg-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--foreground)] text-[var(--background)] border-2 border-[var(--foreground)] rounded-[var(--radius-lg)] hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading === 'apple' ? (
-          <div className="w-5 h-5 border-2 border-white dark:border-black border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-[var(--background)] border-t-transparent rounded-full animate-spin" />
         ) : (
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
@@ -83,7 +83,7 @@ export function OAuthLoginButtons() {
       {/* Divider */}
       <div className="relative py-2">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+          <div className="w-full border-t border-[var(--border)]"></div>
         </div>
         <div className="relative flex justify-center text-sm">
           <span className="px-4 bg-[var(--surface)] text-[var(--text-muted)]">

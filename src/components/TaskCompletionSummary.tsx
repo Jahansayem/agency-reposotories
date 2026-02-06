@@ -151,11 +151,11 @@ export function TaskCompletionSummary({
   const getCopyButtonStyles = () => {
     switch (copyState) {
       case 'success':
-        return 'bg-green-500 hover:bg-green-600 text-white';
+        return 'bg-[var(--success)] hover:bg-[var(--success)]/90 text-white';
       case 'error':
-        return 'bg-red-500 hover:bg-red-600 text-white';
+        return 'bg-[var(--danger)] hover:bg-[var(--danger)]/90 text-white';
       default:
-        return 'bg-blue-600 hover:bg-blue-700 text-white';
+        return 'bg-[var(--accent)] hover:bg-[var(--accent)]/90 text-white';
     }
   };
 
@@ -181,7 +181,7 @@ export function TaskCompletionSummary({
           <>
             <Copy className="w-4 h-4" aria-hidden="true" />
             Copy to eAgent
-            <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-blue-700/50 rounded">
+            <kbd className="ml-2 px-1.5 py-0.5 text-xs bg-[var(--accent)]/50 rounded">
               {getModifierSymbol()}C
             </kbd>
           </>
@@ -223,21 +223,21 @@ export function TaskCompletionSummary({
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-green-600 dark:text-green-400" aria-hidden="true" />
+              <div className="w-10 h-10 rounded-full bg-[var(--success)]/10 flex items-center justify-center">
+                <FileText className="w-5 h-5 text-[var(--success)]" aria-hidden="true" />
               </div>
               <div>
                 <h2
                   id="summary-modal-title"
-                  className="text-lg font-semibold text-gray-900 dark:text-white"
+                  className="text-lg font-semibold text-[var(--foreground)]"
                 >
                   Task Summary
                 </h2>
                 <p
                   id="summary-modal-description"
-                  className="text-sm text-gray-500 dark:text-gray-400"
+                  className="text-sm text-[var(--text-muted)]"
                 >
                   Copy to paste into eAgent
                 </p>
@@ -245,10 +245,10 @@ export function TaskCompletionSummary({
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-[var(--radius-lg)] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              className="p-2 rounded-[var(--radius-lg)] hover:bg-[var(--surface-2)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
               aria-label="Close task summary modal"
             >
-              <X className="w-5 h-5 text-gray-500" aria-hidden="true" />
+              <X className="w-5 h-5 text-[var(--text-muted)]" aria-hidden="true" />
             </button>
           </div>
 
@@ -257,19 +257,19 @@ export function TaskCompletionSummary({
             {/* Quick Stats */}
             <div className="flex gap-4 mb-4">
               {subtasksTotal > 0 && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Check className="w-4 h-4 text-green-500" aria-hidden="true" />
+                <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                  <Check className="w-4 h-4 text-[var(--success)]" aria-hidden="true" />
                   <span>{subtasksCompleted}/{subtasksTotal} subtasks</span>
                 </div>
               )}
               {todo.attachments && todo.attachments.length > 0 && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                   <Paperclip className="w-4 h-4" aria-hidden="true" />
                   <span>{todo.attachments.length} attachments</span>
                 </div>
               )}
               {todo.transcription && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                   <MessageSquare className="w-4 h-4" aria-hidden="true" />
                   <span>Transcription</span>
                 </div>
@@ -278,7 +278,7 @@ export function TaskCompletionSummary({
 
             {/* Format Selector */}
             <fieldset className="mb-3">
-              <legend className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+              <legend className="text-xs font-medium text-[var(--text-muted)] mb-2">
                 Export Format
               </legend>
               <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Select export format">
@@ -291,10 +291,10 @@ export function TaskCompletionSummary({
                       role="radio"
                       aria-checked={isSelected}
                       aria-label={`${option.label}${isSelected ? ' (selected)' : ''}`}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] ${
                         isSelected
-                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? 'bg-[var(--accent)]/10 text-[var(--accent)] ring-2 ring-[var(--accent)]'
+                          : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
                       }`}
                     >
                       {option.icon}
@@ -317,10 +317,10 @@ export function TaskCompletionSummary({
                 aria-controls={showPreview ? 'summary-panel' : undefined}
                 id="preview-tab"
                 tabIndex={showPreview ? 0 : -1}
-                className={`px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                className={`px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] ${
                   showPreview
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-[var(--surface-2)] text-[var(--foreground)]'
+                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
                 }`}
               >
                 Preview
@@ -332,10 +332,10 @@ export function TaskCompletionSummary({
                 aria-controls={!showPreview ? 'summary-panel' : undefined}
                 id="raw-tab"
                 tabIndex={!showPreview ? 0 : -1}
-                className={`px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                className={`px-3 py-1.5 text-sm rounded-[var(--radius-lg)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] ${
                   !showPreview
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-[var(--surface-2)] text-[var(--foreground)]'
+                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
                 }`}
               >
                 Raw {selectedFormat.toUpperCase()}
@@ -348,21 +348,21 @@ export function TaskCompletionSummary({
                 id="summary-panel"
                 role="tabpanel"
                 aria-labelledby="preview-tab"
-                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-5 space-y-4"
+                className="bg-[var(--surface-2)] rounded-[var(--radius-xl)] p-5 space-y-4"
               >
-                <div className="text-base font-medium text-gray-900 dark:text-white">
+                <div className="text-base font-medium text-[var(--foreground)]">
                   {todo.text}
                 </div>
 
-                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
+                <div className="text-sm text-[var(--text-muted)] space-y-1.5">
                   <p>Completed by {completedBy}</p>
                   <p>Priority: <span className="capitalize">{todo.priority}</span></p>
                   {todo.assigned_to && <p>Assigned to: {todo.assigned_to}</p>}
                 </div>
 
                 {subtasksTotal > 0 && (
-                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">
+                  <div className="pt-2 border-t border-[var(--border)]">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
                       Subtasks
                     </p>
                     <ul className="space-y-1.5">
@@ -371,12 +371,12 @@ export function TaskCompletionSummary({
                           key={subtask.id}
                           className={`text-sm flex items-center gap-2 ${
                             subtask.completed
-                              ? 'text-gray-500 dark:text-gray-400'
-                              : 'text-gray-700 dark:text-gray-300'
+                              ? 'text-[var(--text-muted)]'
+                              : 'text-[var(--foreground)]'
                           }`}
                         >
                           <span
-                            className={subtask.completed ? 'text-green-500' : 'text-gray-400'}
+                            className={subtask.completed ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'}
                             aria-hidden="true"
                           >
                             {subtask.completed ? '✓' : '○'}
@@ -394,17 +394,17 @@ export function TaskCompletionSummary({
                 )}
 
                 {todo.notes && (
-                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-1">
+                  <div className="pt-2 border-t border-[var(--border)]">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-1">
                       Notes
                     </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">
                       {todo.notes}
                     </p>
                   </div>
                 )}
 
-                <div className="pt-2 text-xs text-gray-400 dark:text-gray-500 text-center">
+                <div className="pt-2 text-xs text-[var(--text-muted)] text-center">
                   Generated by Bealer Agency Todo App
                 </div>
               </div>
@@ -413,7 +413,7 @@ export function TaskCompletionSummary({
                 id="summary-panel"
                 role="tabpanel"
                 aria-labelledby="raw-tab"
-                className="bg-gray-50 dark:bg-gray-900 rounded-[var(--radius-xl)] p-5 text-sm font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap overflow-x-auto leading-relaxed"
+                className="bg-[var(--surface-2)] rounded-[var(--radius-xl)] p-5 text-sm font-mono text-[var(--foreground)] whitespace-pre-wrap overflow-x-auto leading-relaxed"
               >
                 {summaryText}
               </pre>
@@ -421,10 +421,10 @@ export function TaskCompletionSummary({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3">
+          <div className="px-6 py-4 border-t border-[var(--border)] flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-[var(--radius-xl)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-[var(--foreground)] bg-[var(--surface-2)] rounded-[var(--radius-xl)] hover:bg-[var(--surface-3)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
             >
               Close
             </button>
@@ -433,7 +433,7 @@ export function TaskCompletionSummary({
               data-primary-action
               disabled={copyState === 'success'}
               aria-describedby={statusMessage ? 'copy-status' : undefined}
-              className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-[var(--radius-xl)] flex items-center justify-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${getCopyButtonStyles()} ${
+              className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-[var(--radius-xl)] flex items-center justify-center gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)] ${getCopyButtonStyles()} ${
                 copyState === 'success' ? 'cursor-default' : ''
               }`}
             >

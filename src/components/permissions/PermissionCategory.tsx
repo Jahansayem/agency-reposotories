@@ -54,28 +54,28 @@ export function PermissionCategory({
   const totalCount = permissions.length;
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-[var(--border)] rounded-lg overflow-hidden">
       {/* Header */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className={`
           w-full flex items-center justify-between px-4 py-3
-          bg-gray-50 dark:bg-gray-800/50
-          hover:bg-gray-100 dark:hover:bg-gray-800
+          bg-[var(--surface)]
+          hover:bg-[var(--surface-2)]
           transition-colors
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
         disabled={disabled}
       >
         <div className="flex items-center gap-3">
-          <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+          <div className="p-1.5 rounded-md bg-[var(--accent)]/10 text-[var(--accent)]">
             <IconComponent className="w-4 h-4" />
           </div>
-          <span className="font-medium text-gray-900 dark:text-white">
+          <span className="font-medium text-[var(--foreground)]">
             {label}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-[var(--text-muted)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full">
             {enabledCount}/{totalCount}
           </span>
         </div>
@@ -83,7 +83,7 @@ export function PermissionCategory({
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="w-5 h-5 text-gray-400" />
+          <ChevronDown className="w-5 h-5 text-[var(--text-muted)]" />
         </motion.div>
       </button>
 
@@ -97,7 +97,7 @@ export function PermissionCategory({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="p-2 bg-white dark:bg-gray-900 space-y-1">
+            <div className="p-2 bg-[var(--surface)] space-y-1">
               {permissions.map((perm) => {
                 const isEnabled = currentPermissions[perm.key];
                 const isDefault = roleDefaults[perm.key];

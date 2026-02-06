@@ -7,6 +7,8 @@
  * - q: Search query (name only - email/phone are encrypted)
  * - agency_id: Filter by agency
  * - segment: Filter by segment tier (elite, premium, standard, entry)
+ * - opportunity_type: Filter by cross-sell type (auto_to_home, home_to_auto, add_life, etc.)
+ * - sort: Sort order (priority, premium_high, premium_low, opportunity_value, renewal_date, name_asc)
  * - limit: Max results (default 20, max 100)
  * - offset: Skip first N results for pagination (default 0)
  *
@@ -47,6 +49,8 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q')?.trim() || '';
     const agencyId = searchParams.get('agency_id');
     const segmentFilter = searchParams.get('segment');
+    const opportunityTypeFilter = searchParams.get('opportunity_type');
+    const sortBy = searchParams.get('sort') || 'premium_high';
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
@@ -92,6 +96,11 @@ export async function GET(request: NextRequest) {
       opportunitiesQuery = opportunitiesQuery.ilike('customer_name', `%${query}%`);
     }
 
+    // Filter by opportunity type (segment_type in database)
+    if (opportunityTypeFilter && opportunityTypeFilter !== 'all') {
+      opportunitiesQuery = opportunitiesQuery.eq('segment_type', opportunityTypeFilter);
+    }
+
     const { data: opportunities, error: oppError } = await opportunitiesQuery;
     console.log('[Customers API] cross_sell_opportunities results:', {
       count: opportunities?.length || 0,
@@ -118,7 +127,10 @@ export async function GET(request: NextRequest) {
       hasOpportunity: boolean;
       opportunityId: string | null;
       priorityTier: string | null;
+      priorityScore: number | null;
       recommendedProduct: string | null;
+      opportunityType: string | null;
+      potentialPremiumAdd: number | null;
       upcomingRenewal: string | null;
     }>();
 
@@ -163,7 +175,10 @@ export async function GET(request: NextRequest) {
           hasOpportunity: false,
           opportunityId: null,
           priorityTier: null,
+          priorityScore: null,
           recommendedProduct: null,
+          opportunityType: null,
+          potentialPremiumAdd: null,
           upcomingRenewal: customer.upcoming_renewal,
         });
       }
@@ -178,7 +193,10 @@ export async function GET(request: NextRequest) {
           existing.hasOpportunity = true;
           existing.opportunityId = opp.id;
           existing.priorityTier = opp.priority_tier;
+          existing.priorityScore = opp.priority_score;
           existing.recommendedProduct = opp.recommended_product;
+          existing.opportunityType = opp.segment_type;
+          existing.potentialPremiumAdd = opp.potential_premium_add;
           existing.upcomingRenewal = opp.renewal_date;
         } else {
           // Add new customer from opportunity
@@ -201,27 +219,88 @@ export async function GET(request: NextRequest) {
             hasOpportunity: true,
             opportunityId: opp.id,
             priorityTier: opp.priority_tier,
+            priorityScore: opp.priority_score,
             recommendedProduct: opp.recommended_product,
+            opportunityType: opp.segment_type,
+            potentialPremiumAdd: opp.potential_premium_add,
             upcomingRenewal: opp.renewal_date,
           });
         }
       }
     }
 
-    // Convert to array and filter by segment if needed
+    // Convert to array and apply filters
     let customers = Array.from(customerMap.values());
 
+    // Filter by customer segment tier if specified
     if (segmentFilter) {
       customers = customers.filter(c => c.segment === segmentFilter);
     }
 
-    // Sort by premium (highest first) then by name
-    customers.sort((a, b) => {
-      if (b.totalPremium !== a.totalPremium) {
-        return b.totalPremium - a.totalPremium;
-      }
-      return a.name.localeCompare(b.name);
-    });
+    // Filter by opportunity type - only show customers with matching opportunity
+    if (opportunityTypeFilter && opportunityTypeFilter !== 'all') {
+      customers = customers.filter(c => c.opportunityType === opportunityTypeFilter);
+    }
+
+    // Calculate stats before sorting/pagination
+    const stats = {
+      total: customers.length,
+      totalPremium: customers.reduce((sum, c) => sum + c.totalPremium, 0),
+      potentialPremiumAdd: customers.reduce((sum, c) => sum + (c.potentialPremiumAdd || 0), 0),
+      hotCount: customers.filter(c => c.priorityTier === 'HOT').length,
+      highCount: customers.filter(c => c.priorityTier === 'HIGH').length,
+      mediumCount: customers.filter(c => c.priorityTier === 'MEDIUM').length,
+      withOpportunities: customers.filter(c => c.hasOpportunity).length,
+    };
+
+    // Apply sorting based on sortBy parameter
+    switch (sortBy) {
+      case 'priority':
+        // Sort by priority tier (HOT > HIGH > MEDIUM > LOW > null) then by score
+        const priorityOrder: Record<string, number> = { HOT: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+        customers.sort((a, b) => {
+          const aPriority = a.priorityTier ? priorityOrder[a.priorityTier] ?? 4 : 5;
+          const bPriority = b.priorityTier ? priorityOrder[b.priorityTier] ?? 4 : 5;
+          if (aPriority !== bPriority) return aPriority - bPriority;
+          // Within same tier, sort by score descending
+          return (b.priorityScore || 0) - (a.priorityScore || 0);
+        });
+        break;
+
+      case 'premium_low':
+        customers.sort((a, b) => a.totalPremium - b.totalPremium);
+        break;
+
+      case 'opportunity_value':
+        // Sort by potential premium add descending
+        customers.sort((a, b) => (b.potentialPremiumAdd || 0) - (a.potentialPremiumAdd || 0));
+        break;
+
+      case 'renewal_date':
+        // Sort by renewal date ascending (soonest first), nulls last
+        customers.sort((a, b) => {
+          if (!a.upcomingRenewal && !b.upcomingRenewal) return 0;
+          if (!a.upcomingRenewal) return 1;
+          if (!b.upcomingRenewal) return -1;
+          return new Date(a.upcomingRenewal).getTime() - new Date(b.upcomingRenewal).getTime();
+        });
+        break;
+
+      case 'name_asc':
+        customers.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+
+      case 'premium_high':
+      default:
+        // Sort by premium descending, then by name
+        customers.sort((a, b) => {
+          if (b.totalPremium !== a.totalPremium) {
+            return b.totalPremium - a.totalPremium;
+          }
+          return a.name.localeCompare(b.name);
+        });
+        break;
+    }
 
     // Apply pagination (offset and limit)
     const totalCount = customers.length;
@@ -235,6 +314,7 @@ export async function GET(request: NextRequest) {
       offset,
       limit,
       query: query || null,
+      stats,
     });
   } catch (error) {
     console.error('Error fetching customers:', error);

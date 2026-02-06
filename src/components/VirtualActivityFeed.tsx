@@ -75,7 +75,7 @@ const actionColors: Record<string, string> = {
   subtask_added: 'text-green-600 dark:text-green-400',
   subtask_completed: 'text-green-600 dark:text-green-400',
   subtask_deleted: 'text-red-600 dark:text-red-400',
-  notes_updated: 'text-gray-600 dark:text-gray-400',
+  notes_updated: 'text-[var(--text-muted)]',
   attachment_added: 'text-blue-600 dark:text-blue-400',
   attachment_removed: 'text-red-600 dark:text-red-400',
   tasks_merged: 'text-purple-600 dark:text-purple-400',
@@ -163,7 +163,7 @@ export function VirtualActivityFeed({
         {rowVirtualizer.getVirtualItems().map((virtualItem) => {
           const entry = activityLog[virtualItem.index];
           const Icon = actionIcons[entry.action] || FileText;
-          const colorClass = actionColors[entry.action] || 'text-gray-600 dark:text-gray-400';
+          const colorClass = actionColors[entry.action] || 'text-[var(--text-muted)]';
 
           return (
             <div
@@ -177,9 +177,9 @@ export function VirtualActivityFeed({
                 width: '100%',
                 transform: `translateY(${virtualItem.start}px)`,
               }}
-              className="border-b border-gray-200 dark:border-gray-700"
+              className="border-b border-[var(--border)]"
             >
-              <div className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <div className="p-4 hover:bg-[var(--surface-2)] transition-colors">
                 <div className="flex items-start gap-3">
                   <div className={`mt-1 ${colorClass}`}>
                     <Icon className="w-5 h-5" />
@@ -188,20 +188,20 @@ export function VirtualActivityFeed({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        <p className="text-sm font-medium text-[var(--foreground)]">
                           {entry.user_name}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
+                        <p className="text-sm text-[var(--text-muted)] mt-0.5">
                           {formatAction(entry)}
                         </p>
                         {entry.todo_text && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                          <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
                             {entry.todo_text}
                           </p>
                         )}
                       </div>
 
-                      <time className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      <time className="text-xs text-[var(--text-muted)] whitespace-nowrap">
                         {formatDistance(new Date(entry.created_at), new Date(), {
                           addSuffix: true,
                         })}
@@ -216,7 +216,7 @@ export function VirtualActivityFeed({
       </div>
 
       {activityLog.length === 0 && (
-        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
           <p>No activity yet</p>
         </div>
       )}

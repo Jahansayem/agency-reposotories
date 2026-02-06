@@ -119,7 +119,7 @@ export function TypingIndicator({
         className={`
           inline-flex items-center gap-2
           rounded-full
-          bg-gray-100 dark:bg-gray-800
+          bg-[var(--surface-2)]
           ${sizeClasses[size]}
           ${className}
         `}
@@ -135,7 +135,7 @@ export function TypingIndicator({
               className={`
                 flex items-center justify-center
                 rounded-full
-                border-2 border-white dark:border-gray-900
+                border-2 border-[var(--surface)]
                 ${size === 'sm' ? 'w-5 h-5 text-xs' : ''}
                 ${size === 'md' ? 'w-6 h-6 text-xs' : ''}
                 ${size === 'lg' ? 'w-8 h-8 text-sm' : ''}
@@ -154,7 +154,7 @@ export function TypingIndicator({
         </div>
 
         {/* Typing text */}
-        <span className="text-gray-600 dark:text-gray-300 font-medium">
+        <span className="text-[var(--text-muted)] font-medium">
           {formatUserNames()}
         </span>
 
@@ -195,7 +195,7 @@ export function TypingIndicatorMinimal({
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
         transition={{ duration: 0.2 }}
-        className={`flex items-center gap-2 px-4 py-2 text-sm text-gray-500 dark:text-gray-400 ${className}`}
+        className={`flex items-center gap-2 px-4 py-2 text-sm text-[var(--text-muted)] ${className}`}
         role="status"
         aria-live="polite"
         aria-label={formatUserNames()}

@@ -63,22 +63,22 @@ const getRoleLabel = (role: AgencyRole): string => {
 const getRoleColor = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
-      return 'text-yellow-600 dark:text-yellow-500';
+      return 'text-[var(--warning)]';
     case 'manager':
-      return 'text-blue-600 dark:text-blue-500';
+      return 'text-[var(--accent)]';
     default:
-      return 'text-gray-600 dark:text-gray-400';
+      return 'text-[var(--text-muted)]';
   }
 };
 
 const getRoleBadgeColor = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
-      return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+      return 'bg-[var(--warning)]/10 text-[var(--warning)]';
     case 'manager':
-      return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
+      return 'bg-[var(--accent)]/10 text-[var(--accent)]';
     default:
-      return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300';
+      return 'bg-[var(--surface)] text-[var(--text-muted)]';
   }
 };
 
@@ -343,7 +343,7 @@ export function AgencyMembersModal({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
               className="
-                bg-white dark:bg-gray-800
+                bg-[var(--surface-2)]
                 rounded-xl shadow-2xl
                 w-full max-w-3xl
                 max-h-[90vh] overflow-y-auto
@@ -351,16 +351,16 @@ export function AgencyMembersModal({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between z-10">
+              <div className="sticky top-0 bg-[var(--surface-2)] border-b border-[var(--border)] px-6 py-4 flex items-center justify-between z-10">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
                     <Users className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-xl font-bold text-[var(--foreground)]">
                       Agency Members
                     </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-[var(--text-muted)]">
                       {currentAgency?.name} • {members.length} member{members.length !== 1 ? 's' : ''}
                     </p>
                   </div>
@@ -368,24 +368,24 @@ export function AgencyMembersModal({
                 <button
                   onClick={handleClose}
                   disabled={isSubmitting}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  className="p-2 rounded-lg hover:bg-[var(--surface)] transition-colors disabled:opacity-50"
                   aria-label="Close modal"
                 >
-                  <X className="w-5 h-5 text-gray-500" />
+                  <X className="w-5 h-5 text-[var(--text-muted)]" />
                 </button>
               </div>
 
               {/* Tabs */}
               {canManageMembers && (
-                <div className="border-b border-gray-200 dark:border-gray-700 px-6">
+                <div className="border-b border-[var(--border)] px-6">
                   <nav className="flex -mb-px gap-4" aria-label="Tabs">
                     <button
                       onClick={() => setActiveTab('members')}
                       className={`
                         py-3 px-1 text-sm font-medium border-b-2 transition-colors
                         ${activeTab === 'members'
-                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                          ? 'border-[var(--accent)] text-[var(--accent)]'
+                          : 'border-transparent text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border)]'
                         }
                       `}
                     >
@@ -399,8 +399,8 @@ export function AgencyMembersModal({
                       className={`
                         py-3 px-1 text-sm font-medium border-b-2 transition-colors
                         ${activeTab === 'invite'
-                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                          ? 'border-[var(--accent)] text-[var(--accent)]'
+                          : 'border-transparent text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border)]'
                         }
                       `}
                     >
@@ -414,8 +414,8 @@ export function AgencyMembersModal({
                       className={`
                         py-3 px-1 text-sm font-medium border-b-2 transition-colors
                         ${activeTab === 'pending'
-                          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
+                          ? 'border-[var(--accent)] text-[var(--accent)]'
+                          : 'border-transparent text-[var(--text-muted)] hover:text-[var(--foreground)] hover:border-[var(--border)]'
                         }
                       `}
                     >
@@ -432,23 +432,23 @@ export function AgencyMembersModal({
               <div className="p-6 space-y-6">
                 {/* Error/Success Messages */}
                 {error && (
-                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+                  <div className="p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-lg flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-[var(--danger)] flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-[var(--danger)]">{error}</p>
                   </div>
                 )}
 
                 {success && (
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3">
-                    <Check className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-green-800 dark:text-green-200">{success}</p>
+                  <div className="p-4 bg-[var(--success)]/10 border border-[var(--success)]/30 rounded-lg flex items-start gap-3">
+                    <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-[var(--success)]">{success}</p>
                   </div>
                 )}
 
                 {/* ========== Invite Tab ========== */}
                 {activeTab === 'invite' && canManageMembers && currentAgency && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
                       Invite a Team Member
                     </h3>
                     <InvitationForm
@@ -462,7 +462,7 @@ export function AgencyMembersModal({
                 {/* ========== Pending Tab ========== */}
                 {activeTab === 'pending' && canManageMembers && currentAgency && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
                       Pending Invitations
                     </h3>
                     <PendingInvitationsList
@@ -482,10 +482,9 @@ export function AgencyMembersModal({
                         onClick={() => setShowAddForm(true)}
                         className="
                           w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg
-                          border-2 border-dashed border-gray-300 dark:border-gray-600
-                          text-gray-600 dark:text-gray-400
-                          hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50
-                          dark:hover:border-blue-500 dark:hover:text-blue-400 dark:hover:bg-blue-900/20
+                          border-2 border-dashed border-[var(--border)]
+                          text-[var(--text-muted)]
+                          hover:border-[var(--accent)] hover:text-[var(--accent)] hover:bg-[var(--accent)]/10
                           transition-all
                         "
                       >
@@ -496,11 +495,11 @@ export function AgencyMembersModal({
 
                     {/* Add Member Form */}
                     {showAddForm && (
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg space-y-4">
-                        <h3 className="font-medium text-gray-900 dark:text-white">Add New Member</h3>
+                      <div className="p-4 bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-lg space-y-4">
+                        <h3 className="font-medium text-[var(--foreground)]">Add New Member</h3>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">
                             User Name
                           </label>
                           <input
@@ -511,21 +510,21 @@ export function AgencyMembersModal({
                             disabled={isSubmitting}
                             className="
                               w-full px-4 py-2 rounded-lg
-                              bg-white dark:bg-gray-700
-                              border border-gray-300 dark:border-gray-600
-                              text-gray-900 dark:text-white
-                              placeholder:text-gray-400
-                              focus:outline-none focus:ring-2 focus:ring-blue-500
+                              bg-[var(--surface-2)]
+                              border border-[var(--border)]
+                              text-[var(--foreground)]
+                              placeholder:text-[var(--text-muted)]
+                              focus:outline-none focus:ring-2 focus:ring-[var(--accent)]
                               disabled:opacity-50
                             "
                           />
-                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
                             User must already have an account in the system
                           </p>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">
                             Role
                           </label>
                           <div className="grid grid-cols-3 gap-2">
@@ -538,8 +537,8 @@ export function AgencyMembersModal({
                                 className={`
                                   px-4 py-2 rounded-lg border-2 transition-all
                                   ${selectedRole === role
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                    : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                                    ? 'border-[var(--accent)] bg-[var(--accent)]/10'
+                                    : 'border-[var(--border)] hover:border-[var(--text-muted)]'
                                   }
                                   disabled:opacity-50 disabled:cursor-not-allowed
                                 `}
@@ -552,7 +551,7 @@ export function AgencyMembersModal({
                             ))}
                           </div>
                           {currentRole !== 'owner' && (
-                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
                               Only owners can assign the owner role
                             </p>
                           )}
@@ -564,8 +563,8 @@ export function AgencyMembersModal({
                             disabled={isSubmitting}
                             className="
                               flex-1 px-4 py-2 rounded-lg
-                              text-gray-700 dark:text-gray-300
-                              hover:bg-gray-100 dark:hover:bg-gray-700
+                              text-[var(--text-muted)]
+                              hover:bg-[var(--surface)]
                               transition-colors
                               disabled:opacity-50
                             "
@@ -577,7 +576,7 @@ export function AgencyMembersModal({
                             disabled={isSubmitting || !selectedUser.trim()}
                             className="
                               flex-1 px-4 py-2 rounded-lg
-                              bg-blue-600 hover:bg-blue-700
+                              bg-[var(--accent)] hover:opacity-90
                               text-white font-medium
                               transition-colors
                               disabled:opacity-50
@@ -603,12 +602,12 @@ export function AgencyMembersModal({
                     {/* Members List */}
                     {isLoading ? (
                       <div className="flex items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                        <Loader2 className="w-8 h-8 animate-spin text-[var(--text-muted)]" />
                       </div>
                     ) : members.length === 0 ? (
                       <div className="text-center py-12">
-                        <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                        <p className="text-gray-500 dark:text-gray-400">No members yet</p>
+                        <Users className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-3" />
+                        <p className="text-[var(--text-muted)]">No members yet</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -624,8 +623,8 @@ export function AgencyMembersModal({
                               key={member.id}
                               className={`
                                 p-4 rounded-lg
-                                bg-gray-50 dark:bg-gray-700/50
-                                ${!isPermissionsExpanded ? 'hover:bg-gray-100 dark:hover:bg-gray-700' : ''}
+                                bg-[var(--surface)]
+                                ${!isPermissionsExpanded ? 'hover:bg-[var(--surface-2)]' : ''}
                                 transition-colors
                               `}
                             >
@@ -640,13 +639,13 @@ export function AgencyMembersModal({
 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-900 dark:text-white truncate">
+                                  <p className="font-medium text-[var(--foreground)] truncate">
                                     {member.user_name}
                                     {member.user_name === currentUserName && (
-                                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(You)</span>
+                                      <span className="ml-2 text-xs text-[var(--text-muted)]">(You)</span>
                                     )}
                                   </p>
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                  <p className="text-sm text-[var(--text-muted)]">
                                     Joined {new Date(member.joined_at).toLocaleDateString()}
                                   </p>
                                 </div>
@@ -680,8 +679,8 @@ export function AgencyMembersModal({
                                             transition={{ duration: 0.15 }}
                                             className="
                                               absolute right-0 top-full mt-2 z-20
-                                              bg-white dark:bg-gray-800
-                                              border border-gray-200 dark:border-gray-700
+                                              bg-[var(--surface-2)]
+                                              border border-[var(--border)]
                                               rounded-lg shadow-xl
                                               py-1 min-w-[140px]
                                             "
@@ -701,20 +700,20 @@ export function AgencyMembersModal({
                                                 className={`
                                                   w-full px-3 py-2 text-left
                                                   flex items-center gap-2
-                                                  hover:bg-gray-100 dark:hover:bg-gray-700
+                                                  hover:bg-[var(--surface)]
                                                   transition-colors
                                                   disabled:opacity-50 disabled:cursor-not-allowed
-                                                  ${role === member.agency_role ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                                                  ${role === member.agency_role ? 'bg-[var(--accent)]/10' : ''}
                                                 `}
                                               >
                                                 <div className={getRoleColor(role)}>
                                                   {getRoleIcon(role)}
                                                 </div>
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                <span className="text-sm font-medium text-[var(--foreground)]">
                                                   {getRoleLabel(role)}
                                                 </span>
                                                 {role === member.agency_role && (
-                                                  <Check className="w-4 h-4 ml-auto text-blue-600 dark:text-blue-400" />
+                                                  <Check className="w-4 h-4 ml-auto text-[var(--accent)]" />
                                                 )}
                                               </button>
                                             ))}
@@ -745,8 +744,8 @@ export function AgencyMembersModal({
                                     className={`
                                       p-2 rounded-lg transition-colors
                                       ${isPermissionsExpanded
-                                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                        ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                                        : 'text-[var(--text-muted)] hover:bg-[var(--surface)]'
                                       }
                                       disabled:opacity-50 disabled:cursor-not-allowed
                                     `}
@@ -764,8 +763,8 @@ export function AgencyMembersModal({
                                     disabled={isSubmitting || isChangingRole || (member.agency_role === 'owner' && currentRole !== 'owner')}
                                     className="
                                       p-2 rounded-lg
-                                      text-red-600 dark:text-red-400
-                                      hover:bg-red-50 dark:hover:bg-red-900/20
+                                      text-[var(--danger)]
+                                      hover:bg-[var(--danger)]/10
                                       transition-colors
                                       disabled:opacity-50 disabled:cursor-not-allowed
                                     "
@@ -799,7 +798,7 @@ export function AgencyMembersModal({
 
                     {/* Info Text */}
                     {!canManageMembers && (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                      <p className="text-sm text-[var(--text-muted)] text-center">
                         Only agency owners and managers can manage members
                       </p>
                     )}

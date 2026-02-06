@@ -14,6 +14,9 @@ import type {
   CustomerTask,
   CustomerSearchResult,
   CustomerDetailResult,
+  CustomerListStats,
+  OpportunityType,
+  CustomerSortOption,
 } from '@/types/customer';
 
 // ============================================
@@ -298,14 +301,17 @@ export function useDismissOpportunity() {
 
 interface UseCustomerListOptions {
   segment?: string;
+  opportunityType?: OpportunityType | 'all';
+  sortBy?: CustomerSortOption;
   limit?: number;
   agencyId?: string;
 }
 
 export function useCustomerList(options: UseCustomerListOptions = {}) {
-  const { segment, limit = 50, agencyId } = options;
+  const { segment, opportunityType, sortBy = 'premium_high', limit = 50, agencyId } = options;
 
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [stats, setStats] = useState<CustomerListStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -326,10 +332,15 @@ export function useCustomerList(options: UseCustomerListOptions = {}) {
       const params = new URLSearchParams({
         limit: String(limit),
         offset: String(currentOffset),
+        sort: sortBy,
       });
 
       if (segment) {
         params.append('segment', segment);
+      }
+
+      if (opportunityType && opportunityType !== 'all') {
+        params.append('opportunity_type', opportunityType);
       }
 
       if (agencyId) {
@@ -346,6 +357,7 @@ export function useCustomerList(options: UseCustomerListOptions = {}) {
       if (resetList) {
         setCustomers(data.customers);
         setOffset(data.customers.length);
+        setStats(data.stats || null);
       } else {
         setCustomers(prev => [...prev, ...data.customers]);
         setOffset(prev => prev + data.customers.length);
@@ -359,7 +371,7 @@ export function useCustomerList(options: UseCustomerListOptions = {}) {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [segment, limit, agencyId, offset]);
+  }, [segment, opportunityType, sortBy, limit, agencyId, offset]);
 
   // Load more function for pagination
   const loadMore = useCallback(() => {
@@ -372,10 +384,11 @@ export function useCustomerList(options: UseCustomerListOptions = {}) {
   useEffect(() => {
     fetchCustomers(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segment, limit, agencyId]);
+  }, [segment, opportunityType, sortBy, limit, agencyId]);
 
   return {
     customers,
+    stats,
     loading,
     loadingMore,
     error,

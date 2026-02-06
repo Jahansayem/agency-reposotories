@@ -12,14 +12,13 @@ import { motion } from 'framer-motion';
 import {
   Phone,
   Mail,
-  MapPin,
   Calendar,
   TrendingUp,
   AlertTriangle,
   ChevronRight,
   ExternalLink,
-  Copy,
   Check,
+  Flame,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { SegmentIndicator } from './CustomerBadge';
@@ -79,6 +78,19 @@ export function CustomerCard({
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // Priority-based styling for visual hierarchy
+  const getPriorityStyles = () => {
+    if (!customer.hasOpportunity || !customer.priorityTier) return '';
+    switch (customer.priorityTier) {
+      case 'HOT':
+        return 'border-l-4 border-l-red-500 bg-red-50/50 dark:bg-red-900/10';
+      case 'HIGH':
+        return 'border-l-4 border-l-orange-500 bg-orange-50/30 dark:bg-orange-900/10';
+      default:
+        return '';
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -87,6 +99,7 @@ export function CustomerCard({
         bg-[var(--surface)]
         border border-[var(--border)]
         rounded-lg overflow-hidden
+        ${getPriorityStyles()}
         ${onClick ? 'cursor-pointer hover:border-[var(--accent)] transition-colors' : ''}
         ${className}
       `}
@@ -103,15 +116,21 @@ export function CustomerCard({
                 {customer.name}
               </h3>
               {customer.hasOpportunity && customer.priorityTier && (
-                <span className={`
-                  px-1.5 py-0.5 text-xs font-medium rounded
-                  ${customer.priorityTier === 'HOT' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                    customer.priorityTier === 'HIGH' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                    customer.priorityTier === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}
-                `}>
-                  {customer.priorityTier}
-                </span>
+                customer.priorityTier === 'HOT' ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-bold bg-red-500 text-white rounded-md shadow-sm">
+                    <Flame className="w-3 h-3" />
+                    HOT
+                  </span>
+                ) : (
+                  <span className={`
+                    px-1.5 py-0.5 text-xs font-medium rounded
+                    ${customer.priorityTier === 'HIGH' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                      customer.priorityTier === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                      'bg-[var(--surface-2)] text-[var(--foreground)]'}
+                  `}>
+                    {customer.priorityTier}
+                  </span>
+                )
               )}
             </div>
 
@@ -152,11 +171,18 @@ export function CustomerCard({
 
         {/* Opportunity */}
         {customer.recommendedProduct && !compact && (
-          <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span className="font-medium">Opportunity:</span>
-              <span>{customer.recommendedProduct}</span>
+          <div className="mt-2 p-2 bg-[var(--accent)]/10 rounded-lg">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 text-[var(--accent)]">
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span className="font-medium">Opportunity:</span>
+                <span>{customer.recommendedProduct}</span>
+              </div>
+              {customer.potentialPremiumAdd && customer.potentialPremiumAdd > 0 && (
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  +{formatCurrency(customer.potentialPremiumAdd)}/yr
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -184,7 +210,7 @@ export function CustomerCard({
               <a
                 href={`tel:${customer.phone}`}
                 onClick={(e) => handlePhoneClick(e, customer.phone!)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--accent)] bg-[var(--accent)]/10 rounded-lg hover:bg-[var(--accent)]/20 transition-colors"
                 title={isDesktop ? 'Click to copy' : 'Click to call'}
               >
                 {copiedPhone ? (
@@ -199,7 +225,7 @@ export function CustomerCard({
               <a
                 href={`mailto:${customer.email}`}
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/20 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/30 transition-colors"
               >
                 <Mail className="w-3.5 h-3.5" />
                 Email

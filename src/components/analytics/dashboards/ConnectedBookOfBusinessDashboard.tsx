@@ -139,7 +139,7 @@ export function ConnectedBookOfBusinessDashboard() {
 
         <div className="flex items-center gap-2">
           {/* Connection Status */}
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 border border-white/10">
             {connectionStatus.overall === 'healthy' ? (
               <Wifi className="w-3.5 h-3.5 text-sky-400" />
             ) : (
@@ -249,19 +249,21 @@ function StatCard({
   color: 'sky' | 'gold' | 'purple' | 'rose';
 }) {
   const colorClasses = {
-    sky: 'from-sky-500/20 to-sky-500/5 border-sky-500/30 text-sky-400',
-    gold: 'from-amber-500/20 to-amber-500/5 border-amber-500/30 text-amber-400',
-    purple: 'from-purple-500/20 to-purple-500/5 border-purple-500/30 text-purple-400',
-    rose: 'from-rose-500/20 to-rose-500/5 border-rose-500/30 text-rose-400',
+    sky: { bg: 'from-sky-500/20 to-sky-500/5', border: 'border-sky-500/30', text: 'text-sky-400' },
+    gold: { bg: 'from-amber-500/20 to-amber-500/5', border: 'border-amber-500/30', text: 'text-amber-400' },
+    purple: { bg: 'from-purple-500/20 to-purple-500/5', border: 'border-purple-500/30', text: 'text-purple-400' },
+    rose: { bg: 'from-rose-500/20 to-rose-500/5', border: 'border-rose-500/30', text: 'text-rose-400' },
   };
 
+  const classes = colorClasses[color];
+
   return (
-    <div className={`glass-card p-4 bg-gradient-to-br ${colorClasses[color]}`}>
+    <div className={`glass-card p-4 bg-gradient-to-br ${classes.bg} border ${classes.border}`}>
       <div className="flex items-center gap-2 mb-2">
-        <Icon className={`w-4 h-4 ${colorClasses[color].split(' ')[3]}`} />
+        <Icon className={`w-4 h-4 ${classes.text}`} />
         <span className="text-xs text-white/60">{title}</span>
       </div>
-      <p className={`text-xl font-bold font-mono ${colorClasses[color].split(' ')[3]}`}>{value}</p>
+      <p className={`text-xl font-bold font-mono ${classes.text}`}>{value}</p>
     </div>
   );
 }

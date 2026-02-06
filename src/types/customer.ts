@@ -6,6 +6,36 @@
 
 export type CustomerSegment = 'elite' | 'premium' | 'standard' | 'entry';
 
+// Cross-sell opportunity types (from Allstate segment_type field)
+export type OpportunityType =
+  | 'auto_to_home'
+  | 'home_to_auto'
+  | 'add_life'
+  | 'add_umbrella'
+  | 'mono_to_bundle'
+  | 'commercial_add'
+  | 'other';
+
+// Sort options for customer list
+export type CustomerSortOption =
+  | 'priority'
+  | 'premium_high'
+  | 'premium_low'
+  | 'opportunity_value'
+  | 'renewal_date'
+  | 'name_asc';
+
+// Aggregated stats for the customer list
+export interface CustomerListStats {
+  total: number;
+  totalPremium: number;
+  potentialPremiumAdd: number;
+  hotCount: number;
+  highCount: number;
+  mediumCount: number;
+  withOpportunities: number;
+}
+
 export interface SegmentConfig {
   label: string;
   color: string;
@@ -58,7 +88,10 @@ export interface Customer {
   hasOpportunity: boolean;
   opportunityId: string | null;
   priorityTier: 'HOT' | 'HIGH' | 'MEDIUM' | 'LOW' | null;
+  priorityScore: number | null;
   recommendedProduct: string | null;
+  opportunityType: OpportunityType | null;
+  potentialPremiumAdd: number | null;
   upcomingRenewal: string | null;
 }
 
@@ -107,7 +140,9 @@ export interface CustomerSearchResult {
   success: boolean;
   customers: Customer[];
   count: number;
+  totalCount?: number;
   query: string | null;
+  stats?: CustomerListStats;
 }
 
 export interface CustomerDetailResult {

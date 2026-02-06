@@ -172,17 +172,17 @@ export default function CalendarView({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+    <div className="flex flex-col h-full bg-[var(--surface-2)] rounded-xl border border-[var(--border)] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="flex items-center gap-3">
           {/* Previous Month Button */}
           <button
             onClick={goToPreviousMonth}
-            className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
             aria-label="Previous month"
           >
-            <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <ChevronLeft className="w-5 h-5 text-[var(--text-muted)]" />
           </button>
 
           {/* Month/Year Display */}
@@ -195,7 +195,7 @@ export default function CalendarView({
               animate="center"
               exit="exit"
               transition={{ duration: 0.2 }}
-              className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white min-w-[160px] text-center"
+              className="text-lg sm:text-xl font-semibold text-[var(--foreground)] min-w-[160px] text-center"
             >
               {format(currentMonth, 'MMMM yyyy')}
             </motion.h2>
@@ -204,16 +204,16 @@ export default function CalendarView({
           {/* Next Month Button */}
           <button
             onClick={goToNextMonth}
-            className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
             aria-label="Next month"
           >
-            <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <ChevronRight className="w-5 h-5 text-[var(--text-muted)]" />
           </button>
 
           {/* Today Button */}
           <button
             onClick={goToToday}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--brand-blue)] dark:text-[var(--accent)] hover:bg-[var(--brand-blue)]/10 dark:hover:bg-[var(--accent)]/10 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
           >
             <CalendarIcon className="w-4 h-4" />
             Today
@@ -228,8 +228,8 @@ export default function CalendarView({
               flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
               ${
                 showFilterMenu || selectedCategories.size < ALL_CATEGORIES.length
-                  ? 'bg-[var(--brand-blue)] dark:bg-[var(--accent)] text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  ? 'bg-[var(--accent)] text-white'
+                  : 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
               }
             `}
           >
@@ -258,20 +258,20 @@ export default function CalendarView({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl z-50"
+                  className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-xl z-50"
                 >
                   {/* Quick Actions */}
-                  <div className="flex items-center gap-2 px-2 py-1.5 mb-2 border-b border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center gap-2 px-2 py-1.5 mb-2 border-b border-[var(--border)]">
                     <button
                       onClick={selectAllCategories}
-                      className="text-xs font-medium text-[var(--brand-blue)] dark:text-[var(--accent)] hover:underline"
+                      className="text-xs font-medium text-[var(--accent)] hover:underline"
                     >
                       Select All
                     </button>
-                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                    <span className="text-[var(--text-muted)]">|</span>
                     <button
                       onClick={clearAllCategories}
-                      className="text-xs font-medium text-slate-500 dark:text-slate-400 hover:underline"
+                      className="text-xs font-medium text-[var(--text-muted)] hover:underline"
                     >
                       Clear All
                     </button>
@@ -291,8 +291,8 @@ export default function CalendarView({
                             w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors
                             ${
                               isSelected
-                                ? 'bg-slate-100 dark:bg-slate-700'
-                                : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                                ? 'bg-[var(--surface)]'
+                                : 'hover:bg-[var(--surface-hover)]'
                             }
                           `}
                         >
@@ -302,8 +302,8 @@ export default function CalendarView({
                               w-4 h-4 rounded flex items-center justify-center transition-colors
                               ${
                                 isSelected
-                                  ? 'bg-[var(--brand-blue)] dark:bg-[var(--accent)]'
-                                  : 'border-2 border-slate-300 dark:border-slate-600'
+                                  ? 'bg-[var(--accent)]'
+                                  : 'border-2 border-[var(--border)]'
                               }
                             `}
                           >
@@ -318,12 +318,12 @@ export default function CalendarView({
                           />
 
                           {/* Label */}
-                          <span className="flex-1 text-left text-sm text-slate-700 dark:text-slate-300">
+                          <span className="flex-1 text-left text-sm text-[var(--foreground)]">
                             {CATEGORY_LABELS[category]}
                           </span>
 
                           {/* Count */}
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
+                          <span className="text-xs text-[var(--text-muted)]">
                             {count}
                           </span>
                         </button>
@@ -346,7 +346,7 @@ export default function CalendarView({
             {WEEKDAYS.map((day) => (
               <div
                 key={day}
-                className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide py-2"
+                className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide py-2"
               >
                 {day}
               </div>
@@ -386,8 +386,8 @@ export default function CalendarView({
         </div>
 
         {/* Category Legend Sidebar (visible on larger screens) */}
-        <div className="hidden lg:flex flex-col w-48 p-4 border-l border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-          <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
+        <div className="hidden lg:flex flex-col w-48 p-4 border-l border-[var(--border)] bg-[var(--surface)]">
+          <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
             Category Filters
           </h3>
 
@@ -404,7 +404,7 @@ export default function CalendarView({
                     w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors
                     ${
                       isSelected
-                        ? 'bg-white dark:bg-slate-700 shadow-sm'
+                        ? 'bg-[var(--surface-2)] shadow-sm'
                         : 'opacity-50 hover:opacity-75'
                     }
                   `}
@@ -412,10 +412,10 @@ export default function CalendarView({
                   <div
                     className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[category]}`}
                   />
-                  <span className="flex-1 text-sm text-slate-700 dark:text-slate-300">
+                  <span className="flex-1 text-sm text-[var(--foreground)]">
                     {CATEGORY_LABELS[category]}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                  <span className="text-xs text-[var(--text-muted)]">
                     {count}
                   </span>
                 </button>
@@ -424,14 +424,14 @@ export default function CalendarView({
           </div>
 
           {/* Legend Divider */}
-          <div className="mt-auto pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+          <div className="mt-auto pt-4 border-t border-[var(--border)]">
+            <div className="text-xs text-[var(--text-muted)] space-y-1">
               <p className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full ring-2 ring-[var(--brand-blue)] dark:ring-[var(--accent)]" />
+                <span className="w-2.5 h-2.5 rounded-full ring-2 ring-[var(--accent)]" />
                 Today
               </p>
               <p className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-200 dark:bg-slate-600" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[var(--border)]" />
                 Other months
               </p>
             </div>

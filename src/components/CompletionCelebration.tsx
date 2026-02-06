@@ -69,7 +69,7 @@ export function CompletionCelebration({
           {/* Header with checkmark */}
           <div className="relative overflow-hidden">
             {/* Gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-emerald-500/20" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--success)]/20 to-[var(--success)]/10" />
 
             <div className="relative px-6 py-8 text-center">
               {/* Checkmark animation */}
@@ -77,14 +77,14 @@ export function CompletionCelebration({
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', damping: 10, stiffness: 200, delay: 0.1 }}
-                className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
+                className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--success)]/10 flex items-center justify-center"
               >
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <CheckCircle className="w-10 h-10 text-green-500" />
+                  <CheckCircle className="w-10 h-10 text-[var(--success)]" />
                 </motion.div>
               </motion.div>
 
@@ -93,7 +93,7 @@ export function CompletionCelebration({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-xl font-semibold text-gray-900 dark:text-white mb-2"
+                className="text-xl font-semibold text-[var(--foreground)] mb-2"
               >
                 {encouragementMessage}
               </motion.h2>
@@ -103,7 +103,7 @@ export function CompletionCelebration({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.5 }}
-                className="text-gray-600 dark:text-gray-300 line-through text-base"
+                className="text-[var(--text-muted)] line-through text-base"
               >
                 {completedTask.text}
               </motion.p>
@@ -114,10 +114,10 @@ export function CompletionCelebration({
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.6 }}
-                  className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-orange-100 dark:bg-orange-900/30 rounded-full"
+                  className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[var(--warning)]/10 rounded-full"
                 >
-                  <Flame className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                  <Flame className="w-4 h-4 text-[var(--warning)]" />
+                  <span className="text-sm font-medium text-[var(--warning)]">
                     {streakBadge}
                   </span>
                 </motion.div>
@@ -133,7 +133,7 @@ export function CompletionCelebration({
               transition={{ delay: 0.7 }}
               className="px-6 pb-4"
             >
-              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+              <h3 className="text-sm font-medium text-[var(--text-muted)] mb-3">
                 Up next for you:
               </h3>
               <div className="space-y-2">
@@ -144,7 +144,7 @@ export function CompletionCelebration({
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.8 + index * 0.1 }}
                     onClick={() => onNextTaskClick(task.id)}
-                    className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-[var(--radius-xl)] hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left group"
+                    className="w-full flex items-center gap-3 p-3 bg-[var(--surface-2)] rounded-[var(--radius-xl)] hover:bg-[var(--surface-3)] transition-colors text-left group"
                   >
                     {/* Priority indicator */}
                     <div
@@ -153,21 +153,21 @@ export function CompletionCelebration({
                     />
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <p className="text-sm font-medium text-[var(--foreground)] truncate">
                         {task.text}
                       </p>
                       {task.due_date && (
                         <p className={`text-xs ${
                           isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date))
-                            ? 'text-red-500'
-                            : 'text-gray-500 dark:text-gray-400'
+                            ? 'text-[var(--danger)]'
+                            : 'text-[var(--text-muted)]'
                         }`}>
                           {formatDueDate(task.due_date)}
                         </p>
                       )}
                     </div>
 
-                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors flex-shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors flex-shrink-0" />
                   </motion.button>
                 ))}
               </div>
@@ -179,18 +179,18 @@ export function CompletionCelebration({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9 }}
-            className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3"
+            className="px-6 py-4 border-t border-[var(--border)] flex gap-3"
           >
             <button
               onClick={onShowSummary}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-[var(--radius-xl)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-[var(--foreground)] bg-[var(--surface-2)] rounded-[var(--radius-xl)] hover:bg-[var(--surface-3)] transition-colors flex items-center justify-center gap-2"
             >
               <Copy className="w-4 h-4" />
               Copy to eAgent
             </button>
             <button
               onClick={onDismiss}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-[var(--radius-xl)] hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[var(--accent)] rounded-[var(--radius-xl)] hover:bg-[var(--accent)]/90 transition-colors"
             >
               {dismissText}
             </button>

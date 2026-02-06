@@ -135,15 +135,15 @@ export function MemberPermissionsPanel({
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.2 }}
-      className="mt-2 pt-4 border-t border-gray-200 dark:border-gray-700"
+      className="mt-2 pt-4 border-t border-[var(--border)]"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4 px-1">
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <h4 className="text-sm font-semibold text-[var(--foreground)]">
             Permissions
           </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-[var(--text-muted)] mt-0.5">
             Customize {memberName}&apos;s access beyond {memberRole} defaults
           </p>
         </div>
@@ -157,8 +157,8 @@ export function MemberPermissionsPanel({
             flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
             transition-colors
             ${hasCustomPermissions
-              ? 'text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-              : 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              ? 'text-[var(--accent)] hover:bg-[var(--accent)]/10'
+              : 'text-[var(--text-muted)] cursor-not-allowed'
             }
             disabled:opacity-50
           `}
@@ -206,7 +206,7 @@ export function MemberPermissionsPanel({
       </div>
 
       {/* Info text */}
-      <p className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
+      <p className="mt-4 text-xs text-[var(--text-muted)] text-center">
         Changes are saved automatically. Elevated permissions are marked with a warning badge.
       </p>
     </motion.div>

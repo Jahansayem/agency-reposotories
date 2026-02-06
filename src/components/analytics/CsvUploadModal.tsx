@@ -307,7 +307,11 @@ function UploadComplete({
   result: UploadResult;
   onDone: () => void;
 }) {
-  const hasIssues = result.stats.records_skipped > 0 || result.stats.records_failed > 0;
+  // Safely access nested properties with defaults
+  const stats = result?.stats || { records_created: 0, records_skipped: 0, records_failed: 0 };
+  const summary = result?.summary || { priority_breakdown: { high: 0, medium: 0, low: 0 } };
+  const errors = result?.errors || [];
+  const hasIssues = (stats.records_skipped || 0) > 0 || (stats.records_failed || 0) > 0;
 
   return (
     <div className="space-y-6 py-4">
@@ -332,7 +336,7 @@ function UploadComplete({
           Import Complete!
         </h3>
         <p className="text-sm text-[var(--text-muted)]">
-          {result.stats.records_created} cross-sell opportunities ready
+          {stats.records_created} cross-sell opportunities ready
         </p>
       </div>
 
@@ -340,21 +344,21 @@ function UploadComplete({
       <div className="grid grid-cols-3 gap-3">
         <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--success)]/10 border border-[var(--success)]/20 text-center">
           <Users className="w-5 h-5 text-[var(--success)] mx-auto mb-1" />
-          <p className="text-2xl font-bold text-[var(--success)]">{result.stats.records_created}</p>
+          <p className="text-2xl font-bold text-[var(--success)]">{stats.records_created}</p>
           <p className="text-xs text-[var(--text-muted)]">Imported</p>
         </div>
         <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-center">
           <TrendingUp className="w-5 h-5 text-[var(--accent)] mx-auto mb-1" />
           <p className="text-2xl font-bold text-[var(--accent)]">
-            {result.summary.priority_breakdown?.high || 0}
+            {summary.priority_breakdown?.high || 0}
           </p>
           <p className="text-xs text-[var(--text-muted)]">High Priority</p>
         </div>
-        {(result.stats.records_skipped > 0 || result.stats.records_failed > 0) ? (
+        {hasIssues ? (
           <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--warning)]/10 border border-[var(--warning)]/20 text-center">
             <AlertTriangle className="w-5 h-5 text-[var(--warning)] mx-auto mb-1" />
             <p className="text-2xl font-bold text-[var(--warning)]">
-              {result.stats.records_skipped + result.stats.records_failed}
+              {(stats.records_skipped || 0) + (stats.records_failed || 0)}
             </p>
             <p className="text-xs text-[var(--text-muted)]">Skipped</p>
           </div>
@@ -368,27 +372,27 @@ function UploadComplete({
       </div>
 
       {/* Priority Breakdown */}
-      {result.summary.priority_breakdown && (
+      {summary.priority_breakdown && stats.records_created > 0 && (
         <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--surface-2)] border border-[var(--border)]">
           <p className="text-sm font-medium text-[var(--foreground)] mb-3">Priority Breakdown</p>
           <div className="flex items-center gap-2">
             <div className="flex-1 h-3 rounded-full bg-[var(--surface-3)] overflow-hidden flex">
-              {result.summary.priority_breakdown.high > 0 && (
+              {(summary.priority_breakdown.high || 0) > 0 && (
                 <div
                   className="h-full bg-[var(--danger)]"
-                  style={{ width: `${(result.summary.priority_breakdown.high / result.stats.records_created) * 100}%` }}
+                  style={{ width: `${((summary.priority_breakdown.high || 0) / stats.records_created) * 100}%` }}
                 />
               )}
-              {result.summary.priority_breakdown.medium > 0 && (
+              {(summary.priority_breakdown.medium || 0) > 0 && (
                 <div
                   className="h-full bg-[var(--warning)]"
-                  style={{ width: `${(result.summary.priority_breakdown.medium / result.stats.records_created) * 100}%` }}
+                  style={{ width: `${((summary.priority_breakdown.medium || 0) / stats.records_created) * 100}%` }}
                 />
               )}
-              {result.summary.priority_breakdown.low > 0 && (
+              {(summary.priority_breakdown.low || 0) > 0 && (
                 <div
                   className="h-full bg-[var(--success)]"
-                  style={{ width: `${(result.summary.priority_breakdown.low / result.stats.records_created) * 100}%` }}
+                  style={{ width: `${((summary.priority_breakdown.low || 0) / stats.records_created) * 100}%` }}
                 />
               )}
             </div>
@@ -396,32 +400,32 @@ function UploadComplete({
           <div className="flex justify-between mt-2 text-xs text-[var(--text-muted)]">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-[var(--danger)]" />
-              High ({result.summary.priority_breakdown.high})
+              High ({summary.priority_breakdown.high || 0})
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-[var(--warning)]" />
-              Medium ({result.summary.priority_breakdown.medium})
+              Medium ({summary.priority_breakdown.medium || 0})
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
-              Low ({result.summary.priority_breakdown.low})
+              Low ({summary.priority_breakdown.low || 0})
             </span>
           </div>
         </div>
       )}
 
       {/* Errors/Warnings */}
-      {result.errors.length > 0 && (
+      {errors.length > 0 && (
         <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--danger)]/10 border border-[var(--danger)]/20">
           <p className="text-sm font-medium text-[var(--danger)] mb-2">
-            {result.errors.length} Error{result.errors.length !== 1 ? 's' : ''}
+            {errors.length} Error{errors.length !== 1 ? 's' : ''}
           </p>
           <ul className="text-xs text-[var(--danger)]/80 space-y-1">
-            {result.errors.slice(0, 3).map((err, i) => (
+            {errors.slice(0, 3).map((err, i) => (
               <li key={i}>• {err.message}</li>
             ))}
-            {result.errors.length > 3 && (
-              <li>• ...and {result.errors.length - 3} more</li>
+            {errors.length > 3 && (
+              <li>• ...and {errors.length - 3} more</li>
             )}
           </ul>
         </div>

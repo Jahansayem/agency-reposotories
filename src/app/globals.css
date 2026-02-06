@@ -432,6 +432,29 @@ button:disabled:active {
   }
 }
 
+/* ─── Glass Card Elevated (Modal and Panel variant) ─── */
+.glass-card-elevated {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border: 1px solid rgba(0, 51, 160, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+}
+
+:root.dark .glass-card-elevated {
+  background: rgba(22, 34, 54, 0.95);
+  border-color: rgba(114, 181, 232, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.dark):not(.light) .glass-card-elevated {
+    background: rgba(22, 34, 54, 0.95);
+    border-color: rgba(114, 181, 232, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  }
+}
+
 /* ─── Animated Gradient Background ─── */
 .gradient-animate {
   background-size: 200% 200%;
