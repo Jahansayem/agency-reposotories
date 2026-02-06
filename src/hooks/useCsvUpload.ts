@@ -64,7 +64,12 @@ export type CsvUploadState = 'idle' | 'parsing' | 'mapped' | 'uploading' | 'succ
 // ============================================================================
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ['text/csv', 'application/vnd.ms-excel'];
+const ALLOWED_TYPES = [
+  'text/csv',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+];
+const ALLOWED_EXTENSIONS = ['csv', 'xlsx', 'xls'];
 const PREVIEW_ROWS = 5;
 
 // Database fields that can be mapped
@@ -322,9 +327,9 @@ export function useCsvUpload(options: UseCsvUploadOptions = {}) {
    */
   const validateFile = useCallback((file: File): string | null => {
     // Check file type
-    const extension = file.name.toLowerCase().split('.').pop();
-    if (extension !== 'csv' && !ALLOWED_TYPES.includes(file.type)) {
-      return 'Only CSV files are supported';
+    const extension = file.name.toLowerCase().split('.').pop() || '';
+    if (!ALLOWED_EXTENSIONS.includes(extension) && !ALLOWED_TYPES.includes(file.type)) {
+      return 'Supported formats: CSV, Excel (.xlsx, .xls)';
     }
 
     // Check file size

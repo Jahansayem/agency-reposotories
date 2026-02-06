@@ -162,7 +162,7 @@ function FileDropZone({
           ref={fileInputRef}
           type="file"
           onChange={handleInputChange}
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
           disabled={isLoading}
           className="hidden"
         />
@@ -171,7 +171,7 @@ function FileDropZone({
           <div className="space-y-3">
             <Loader2 className="w-12 h-12 mx-auto text-[var(--accent)] animate-spin" />
             <p className="text-sm font-medium text-[var(--foreground)]">
-              Parsing CSV file...
+              Parsing file...
             </p>
           </div>
         ) : (
@@ -187,13 +187,13 @@ function FileDropZone({
               />
             </motion.div>
             <p className="text-sm font-medium text-[var(--foreground)] mb-1">
-              {isDragging ? 'Drop your CSV file here' : 'Drag & drop your CSV file'}
+              {isDragging ? 'Drop your file here' : 'Drag & drop your file'}
             </p>
             <p className="text-sm text-[var(--text-muted)] mb-4">
               or click to browse
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              Maximum file size: 5MB
+              CSV, Excel (.xlsx, .xls) • Max 5MB
             </p>
           </>
         )}
@@ -606,7 +606,7 @@ export function CsvUploadModal({ isOpen, onClose, onUploadComplete }: CsvUploadM
           Import Book of Business
         </h2>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Upload a CSV file with your customer data
+          Upload your Allstate report (CSV or Excel)
         </p>
       </ModalHeader>
 
