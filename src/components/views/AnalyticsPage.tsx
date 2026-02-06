@@ -16,12 +16,14 @@ import {
   CsvUploadModal,
 } from '@/components/analytics';
 import { BarChart2, Calendar, Users, Upload } from 'lucide-react';
+import { useCurrentUser } from '@/contexts/UserContext';
 
 type AnalyticsTab = 'overview' | 'opportunities' | 'customers';
 
 export function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const currentUser = useCurrentUser();
 
   return (
     <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
@@ -144,9 +146,10 @@ export function AnalyticsPage() {
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onUploadComplete={(result) => {
-          console.log(`Imported ${result.recordsCreated} customers`);
+          console.log(`Imported ${result.recordsCreated} cross-sell opportunities`);
           // Refresh analytics data if needed
         }}
+        currentUserName={currentUser?.name || 'Unknown'}
       />
     </div>
   );

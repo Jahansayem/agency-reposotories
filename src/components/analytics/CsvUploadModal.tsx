@@ -7,20 +7,14 @@ import {
   FileSpreadsheet,
   Check,
   AlertCircle,
-  ChevronRight,
-  ChevronLeft,
   Loader2,
-  Table,
-  ArrowRight,
-  HelpCircle,
+  Users,
+  TrendingUp,
+  AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import {
-  useCsvUpload,
-  CUSTOMER_INSIGHT_FIELDS,
-  type CustomerInsightRow,
-} from '@/hooks/useCsvUpload';
 
 // ============================================================================
 // Types
@@ -29,10 +23,40 @@ import {
 interface CsvUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUploadComplete?: (result: { recordsCreated: number; recordsUpdated: number }) => void;
+  onUploadComplete?: (result: { recordsCreated: number }) => void;
+  currentUserName: string;
 }
 
-type Step = 'upload' | 'preview' | 'mapping' | 'uploading' | 'complete';
+type Step = 'upload' | 'processing' | 'complete' | 'error';
+
+interface UploadSummary {
+  total_records: number;
+  by_segment?: Record<string, number>;
+  priority_breakdown?: {
+    high: number;
+    medium: number;
+    low: number;
+  };
+  top_recommendations?: string[];
+}
+
+interface UploadResult {
+  success: boolean;
+  batch_id: string | null;
+  summary: UploadSummary;
+  stats: {
+    total_records: number;
+    valid_records: number;
+    records_created: number;
+    records_updated: number;
+    records_skipped: number;
+    records_failed: number;
+    parsing_errors: number;
+    parsing_warnings: number;
+  };
+  errors: Array<{ row?: number; message: string }>;
+  warnings: Array<{ row?: number; message: string }>;
+}
 
 // ============================================================================
 // Subcomponents
@@ -42,15 +66,15 @@ type Step = 'upload' | 'preview' | 'mapping' | 'uploading' | 'complete';
  * Step indicator showing current progress
  */
 function StepIndicator({ currentStep }: { currentStep: Step }) {
-  const steps: { key: Step; label: string }[] = [
+  const steps = [
     { key: 'upload', label: 'Upload' },
-    { key: 'preview', label: 'Preview' },
-    { key: 'mapping', label: 'Map Columns' },
-    { key: 'uploading', label: 'Import' },
+    { key: 'processing', label: 'Processing' },
+    { key: 'complete', label: 'Done' },
   ];
 
   const getStepIndex = (step: Step) => {
     if (step === 'complete') return steps.length;
+    if (step === 'error') return 1; // Show as stuck on processing
     return steps.findIndex(s => s.key === step);
   };
 
@@ -62,7 +86,7 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
         <div key={step.key} className="flex items-center">
           <div
             className={`
-              flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium
+              flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium
               transition-colors duration-200
               ${index < currentIndex
                 ? 'bg-[var(--success)] text-white'
@@ -73,7 +97,7 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
             `}
           >
             {index < currentIndex ? (
-              <Check className="w-3.5 h-3.5" />
+              <Check className="w-4 h-4" />
             ) : (
               index + 1
             )}
@@ -81,7 +105,7 @@ function StepIndicator({ currentStep }: { currentStep: Step }) {
           {index < steps.length - 1 && (
             <div
               className={`
-                w-12 h-0.5 mx-1
+                w-16 h-0.5 mx-2
                 ${index < currentIndex
                   ? 'bg-[var(--success)]'
                   : 'bg-[var(--border)]'
@@ -148,7 +172,7 @@ function FileDropZone({
         onDrop={handleDrop}
         onClick={() => !isLoading && fileInputRef.current?.click()}
         className={`
-          relative border-2 border-dashed rounded-[var(--radius-xl)] p-10 text-center
+          relative border-2 border-dashed rounded-[var(--radius-xl)] p-12 text-center
           cursor-pointer transition-all duration-200
           ${isDragging
             ? 'border-[var(--accent)] bg-[var(--accent)]/5 scale-[1.02]'
@@ -167,269 +191,107 @@ function FileDropZone({
           className="hidden"
         />
 
-        {isLoading ? (
-          <div className="space-y-3">
-            <Loader2 className="w-12 h-12 mx-auto text-[var(--accent)] animate-spin" />
-            <p className="text-sm font-medium text-[var(--foreground)]">
-              Parsing file...
-            </p>
-          </div>
-        ) : (
-          <>
-            <motion.div
-              animate={isDragging ? { scale: 1.1, y: -4 } : { scale: 1, y: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            >
-              <FileSpreadsheet
-                className={`w-12 h-12 mx-auto mb-4 ${
-                  isDragging ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
-                }`}
-              />
-            </motion.div>
-            <p className="text-sm font-medium text-[var(--foreground)] mb-1">
-              {isDragging ? 'Drop your file here' : 'Drag & drop your file'}
-            </p>
-            <p className="text-sm text-[var(--text-muted)] mb-4">
-              or click to browse
-            </p>
-            <p className="text-xs text-[var(--text-muted)]">
-              CSV, Excel (.xlsx, .xls) • Max 5MB
-            </p>
-          </>
-        )}
+        <motion.div
+          animate={isDragging ? { scale: 1.1, y: -4 } : { scale: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
+          <FileSpreadsheet
+            className={`w-14 h-14 mx-auto mb-4 ${
+              isDragging ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
+            }`}
+          />
+        </motion.div>
+        <p className="text-base font-medium text-[var(--foreground)] mb-1">
+          {isDragging ? 'Drop your file here' : 'Drag & drop your Allstate report'}
+        </p>
+        <p className="text-sm text-[var(--text-muted)] mb-4">
+          or click to browse
+        </p>
+        <p className="text-xs text-[var(--text-muted)]">
+          Supports Renewal Audit Report & All Purpose Audit • CSV, Excel (.xlsx, .xls) • Max 5MB
+        </p>
       </div>
 
       {error && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-start gap-2 p-3 rounded-[var(--radius-lg)] bg-[var(--danger)]/10 border border-[var(--danger)]/20"
+          className="flex items-start gap-3 p-4 rounded-[var(--radius-lg)] bg-[var(--danger)]/10 border border-[var(--danger)]/20"
         >
           <AlertCircle className="w-5 h-5 text-[var(--danger)] flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-[var(--danger)]">{error}</p>
+          <div>
+            <p className="text-sm font-medium text-[var(--danger)]">Upload Failed</p>
+            <p className="text-sm text-[var(--danger)]/80 mt-1">{error}</p>
+          </div>
         </motion.div>
       )}
-    </div>
-  );
-}
 
-/**
- * CSV data preview table
- */
-function DataPreview({
-  headers,
-  rows,
-  totalRows,
-}: {
-  headers: string[];
-  rows: string[][];
-  totalRows: number;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Table className="w-4 h-4 text-[var(--accent)]" />
-          <span className="text-sm font-medium text-[var(--foreground)]">
-            Data Preview
-          </span>
-        </div>
-        <span className="text-xs text-[var(--text-muted)]">
-          Showing {rows.length} of {totalRows} rows
-        </span>
-      </div>
-
-      <div className="overflow-x-auto rounded-[var(--radius-lg)] border border-[var(--border)]">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-[var(--surface-2)]">
-              {headers.map((header, i) => (
-                <th
-                  key={i}
-                  className="px-3 py-2 text-left font-medium text-[var(--foreground)] whitespace-nowrap border-b border-[var(--border)]"
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, rowIndex) => (
-              <tr
-                key={rowIndex}
-                className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]/50"
-              >
-                {headers.map((_, colIndex) => (
-                  <td
-                    key={colIndex}
-                    className="px-3 py-2 text-[var(--text-secondary)] whitespace-nowrap max-w-[200px] truncate"
-                    title={row[colIndex] || ''}
-                  >
-                    {row[colIndex] || <span className="text-[var(--text-muted)] italic">empty</span>}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex items-center gap-2 p-3 rounded-[var(--radius-lg)] bg-[var(--accent)]/5 border border-[var(--accent)]/20">
+        <Sparkles className="w-4 h-4 text-[var(--accent)]" />
+        <p className="text-xs text-[var(--text-secondary)]">
+          AI automatically detects columns and calculates cross-sell priority scores
+        </p>
       </div>
     </div>
   );
 }
 
 /**
- * Column mapping interface
+ * Processing state with progress
  */
-function ColumnMapping({
-  headers,
-  mappings,
-  onUpdateMapping,
-  validationErrors,
-}: {
-  headers: string[];
-  mappings: Map<string, keyof CustomerInsightRow | null>;
-  onUpdateMapping: (csvColumn: string, dbField: keyof CustomerInsightRow | null) => void;
-  validationErrors: Array<{ column: string; message: string }>;
-}) {
-  const dbFields = Object.entries(CUSTOMER_INSIGHT_FIELDS);
-
-  // Get already mapped fields to prevent duplicates
-  const usedFields = new Set(Array.from(mappings.values()).filter(Boolean));
-
+function ProcessingState({ fileName }: { fileName: string }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <ArrowRight className="w-4 h-4 text-[var(--accent)]" />
-        <span className="text-sm font-medium text-[var(--foreground)]">
-          Map CSV Columns to Database Fields
-        </span>
-      </div>
-
-      <p className="text-xs text-[var(--text-muted)]">
-        Match your CSV columns to the corresponding database fields. Customer Name is required.
-      </p>
-
-      <div className="space-y-2 max-h-[300px] overflow-y-auto">
-        {headers.map((header) => {
-          const currentMapping = mappings.get(header);
-          const fieldError = validationErrors.find(e => e.column === header);
-
-          return (
-            <div
-              key={header}
-              className={`
-                flex items-center gap-3 p-3 rounded-[var(--radius-lg)] border
-                ${fieldError ? 'border-[var(--danger)]/50 bg-[var(--danger)]/5' : 'border-[var(--border)] bg-[var(--surface)]'}
-              `}
-            >
-              {/* CSV Column */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" />
-                  <span className="text-sm font-medium text-[var(--foreground)] truncate">
-                    {header}
-                  </span>
-                </div>
-              </div>
-
-              {/* Arrow */}
-              <ArrowRight className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" />
-
-              {/* Database Field Selector */}
-              <div className="flex-1 min-w-0">
-                <select
-                  value={currentMapping || ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    onUpdateMapping(header, value ? value as keyof CustomerInsightRow : null);
-                  }}
-                  className={`
-                    w-full px-3 py-2 text-sm rounded-[var(--radius-md)]
-                    bg-[var(--surface-2)] text-[var(--foreground)]
-                    border border-[var(--border)]
-                    focus:outline-none focus:ring-2 focus:ring-[var(--accent)]
-                    ${currentMapping ? 'border-[var(--success)]/50' : ''}
-                  `}
-                >
-                  <option value="">-- Skip this column --</option>
-                  {dbFields.map(([field, config]) => {
-                    const isUsed = usedFields.has(field as keyof CustomerInsightRow) && currentMapping !== field;
-                    return (
-                      <option
-                        key={field}
-                        value={field}
-                        disabled={isUsed}
-                      >
-                        {config.label}
-                        {config.required ? ' (required)' : ''}
-                        {isUsed ? ' (already mapped)' : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {/* Status indicator */}
-              <div className="flex-shrink-0 w-5">
-                {currentMapping && (
-                  <Check className="w-4 h-4 text-[var(--success)]" />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Mapping summary */}
-      <div className="flex items-center gap-4 p-3 rounded-[var(--radius-lg)] bg-[var(--surface-2)]">
-        <div className="flex items-center gap-2">
-          <HelpCircle className="w-4 h-4 text-[var(--text-muted)]" />
-          <span className="text-xs text-[var(--text-muted)]">
-            {Array.from(mappings.values()).filter(Boolean).length} of {headers.length} columns mapped
-          </span>
-        </div>
-        {!Array.from(mappings.values()).includes('customer_name') && (
-          <span className="text-xs text-[var(--danger)]">
-            Customer Name must be mapped
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Upload progress indicator
- */
-function UploadProgress({ progress }: { progress: number }) {
-  return (
-    <div className="space-y-4 py-8">
+    <div className="space-y-6 py-8">
       <div className="flex justify-center">
         <motion.div
           animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          className="w-16 h-16 rounded-full bg-[var(--accent)]/10 flex items-center justify-center"
         >
-          <Upload className="w-12 h-12 text-[var(--accent)]" />
+          <Loader2 className="w-8 h-8 text-[var(--accent)]" />
         </motion.div>
       </div>
 
       <div className="text-center space-y-2">
-        <p className="text-sm font-medium text-[var(--foreground)]">
-          Importing customers...
+        <p className="text-lg font-medium text-[var(--foreground)]">
+          Processing your data...
         </p>
         <p className="text-sm text-[var(--text-muted)]">
-          {progress}% complete
+          {fileName}
         </p>
       </div>
 
-      <div className="w-full max-w-xs mx-auto h-2 bg-[var(--surface-3)] rounded-full overflow-hidden">
-        <motion.div
-          className="h-full bg-[var(--accent)]"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3 }}
-        />
+      <div className="space-y-3 max-w-xs mx-auto">
+        <ProcessingStep label="Parsing Excel file" done />
+        <ProcessingStep label="Detecting columns" done />
+        <ProcessingStep label="Calculating priority scores" active />
+        <ProcessingStep label="Importing to database" />
       </div>
+    </div>
+  );
+}
+
+function ProcessingStep({ label, done, active }: { label: string; done?: boolean; active?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`
+        w-5 h-5 rounded-full flex items-center justify-center
+        ${done ? 'bg-[var(--success)]' : active ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'}
+      `}>
+        {done ? (
+          <Check className="w-3 h-3 text-white" />
+        ) : active ? (
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          >
+            <Loader2 className="w-3 h-3 text-white" />
+          </motion.div>
+        ) : null}
+      </div>
+      <span className={`text-sm ${done || active ? 'text-[var(--foreground)]' : 'text-[var(--text-muted)]'}`}>
+        {label}
+      </span>
     </div>
   );
 }
@@ -441,16 +303,10 @@ function UploadComplete({
   result,
   onDone,
 }: {
-  result: {
-    recordsCreated: number;
-    recordsUpdated: number;
-    recordsSkipped: number;
-    recordsFailed: number;
-  };
+  result: UploadResult;
   onDone: () => void;
 }) {
-  const total = result.recordsCreated + result.recordsUpdated;
-  const hasIssues = result.recordsSkipped > 0 || result.recordsFailed > 0;
+  const hasIssues = result.stats.records_skipped > 0 || result.stats.records_failed > 0;
 
   return (
     <div className="space-y-6 py-4">
@@ -470,40 +326,136 @@ function UploadComplete({
         </motion.div>
       </div>
 
-      <div className="text-center space-y-2">
-        <h3 className="text-lg font-semibold text-[var(--foreground)]">
-          Import Complete
+      <div className="text-center space-y-1">
+        <h3 className="text-xl font-semibold text-[var(--foreground)]">
+          Import Complete!
         </h3>
         <p className="text-sm text-[var(--text-muted)]">
-          Successfully imported {total} customer{total !== 1 ? 's' : ''}
+          {result.stats.records_created} cross-sell opportunities ready
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--success)]/10 border border-[var(--success)]/20">
-          <p className="text-2xl font-bold text-[var(--success)]">{result.recordsCreated}</p>
-          <p className="text-xs text-[var(--text-muted)]">New customers</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--success)]/10 border border-[var(--success)]/20 text-center">
+          <Users className="w-5 h-5 text-[var(--success)] mx-auto mb-1" />
+          <p className="text-2xl font-bold text-[var(--success)]">{result.stats.records_created}</p>
+          <p className="text-xs text-[var(--text-muted)]">Imported</p>
         </div>
-        <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-          <p className="text-2xl font-bold text-[var(--accent)]">{result.recordsUpdated}</p>
-          <p className="text-xs text-[var(--text-muted)]">Updated</p>
+        <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--accent)]/10 border border-[var(--accent)]/20 text-center">
+          <TrendingUp className="w-5 h-5 text-[var(--accent)] mx-auto mb-1" />
+          <p className="text-2xl font-bold text-[var(--accent)]">
+            {result.summary.priority_breakdown?.high || 0}
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">High Priority</p>
         </div>
-        {result.recordsSkipped > 0 && (
-          <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--warning)]/10 border border-[var(--warning)]/20">
-            <p className="text-2xl font-bold text-[var(--warning)]">{result.recordsSkipped}</p>
+        {(result.stats.records_skipped > 0 || result.stats.records_failed > 0) ? (
+          <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--warning)]/10 border border-[var(--warning)]/20 text-center">
+            <AlertTriangle className="w-5 h-5 text-[var(--warning)] mx-auto mb-1" />
+            <p className="text-2xl font-bold text-[var(--warning)]">
+              {result.stats.records_skipped + result.stats.records_failed}
+            </p>
             <p className="text-xs text-[var(--text-muted)]">Skipped</p>
           </div>
-        )}
-        {result.recordsFailed > 0 && (
-          <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--danger)]/10 border border-[var(--danger)]/20">
-            <p className="text-2xl font-bold text-[var(--danger)]">{result.recordsFailed}</p>
-            <p className="text-xs text-[var(--text-muted)]">Failed</p>
+        ) : (
+          <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--surface-2)] border border-[var(--border)] text-center">
+            <Check className="w-5 h-5 text-[var(--text-muted)] mx-auto mb-1" />
+            <p className="text-2xl font-bold text-[var(--foreground)]">100%</p>
+            <p className="text-xs text-[var(--text-muted)]">Success</p>
           </div>
         )}
       </div>
 
-      <Button onClick={onDone} fullWidth variant="primary">
-        Done
+      {/* Priority Breakdown */}
+      {result.summary.priority_breakdown && (
+        <div className="p-4 rounded-[var(--radius-lg)] bg-[var(--surface-2)] border border-[var(--border)]">
+          <p className="text-sm font-medium text-[var(--foreground)] mb-3">Priority Breakdown</p>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-3 rounded-full bg-[var(--surface-3)] overflow-hidden flex">
+              {result.summary.priority_breakdown.high > 0 && (
+                <div
+                  className="h-full bg-[var(--danger)]"
+                  style={{ width: `${(result.summary.priority_breakdown.high / result.stats.records_created) * 100}%` }}
+                />
+              )}
+              {result.summary.priority_breakdown.medium > 0 && (
+                <div
+                  className="h-full bg-[var(--warning)]"
+                  style={{ width: `${(result.summary.priority_breakdown.medium / result.stats.records_created) * 100}%` }}
+                />
+              )}
+              {result.summary.priority_breakdown.low > 0 && (
+                <div
+                  className="h-full bg-[var(--success)]"
+                  style={{ width: `${(result.summary.priority_breakdown.low / result.stats.records_created) * 100}%` }}
+                />
+              )}
+            </div>
+          </div>
+          <div className="flex justify-between mt-2 text-xs text-[var(--text-muted)]">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[var(--danger)]" />
+              High ({result.summary.priority_breakdown.high})
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[var(--warning)]" />
+              Medium ({result.summary.priority_breakdown.medium})
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
+              Low ({result.summary.priority_breakdown.low})
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Errors/Warnings */}
+      {result.errors.length > 0 && (
+        <div className="p-3 rounded-[var(--radius-lg)] bg-[var(--danger)]/10 border border-[var(--danger)]/20">
+          <p className="text-sm font-medium text-[var(--danger)] mb-2">
+            {result.errors.length} Error{result.errors.length !== 1 ? 's' : ''}
+          </p>
+          <ul className="text-xs text-[var(--danger)]/80 space-y-1">
+            {result.errors.slice(0, 3).map((err, i) => (
+              <li key={i}>• {err.message}</li>
+            ))}
+            {result.errors.length > 3 && (
+              <li>• ...and {result.errors.length - 3} more</li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      <Button onClick={onDone} fullWidth variant="primary" size="lg">
+        View Opportunities
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Error state
+ */
+function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  return (
+    <div className="space-y-6 py-8 text-center">
+      <div className="flex justify-center">
+        <div className="w-16 h-16 rounded-full bg-[var(--danger)]/10 flex items-center justify-center">
+          <AlertCircle className="w-8 h-8 text-[var(--danger)]" />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-lg font-semibold text-[var(--foreground)]">
+          Import Failed
+        </h3>
+        <p className="text-sm text-[var(--text-muted)] max-w-sm mx-auto">
+          {error}
+        </p>
+      </div>
+
+      <Button onClick={onRetry} variant="secondary">
+        Try Again
       </Button>
     </div>
   );
@@ -513,100 +465,99 @@ function UploadComplete({
 // Main Component
 // ============================================================================
 
-export function CsvUploadModal({ isOpen, onClose, onUploadComplete }: CsvUploadModalProps) {
+export function CsvUploadModal({ isOpen, onClose, onUploadComplete, currentUserName }: CsvUploadModalProps) {
   const [step, setStep] = useState<Step>('upload');
-
-  const {
-    state,
-    file,
-    parsedData,
-    columnMappings,
-    validationErrors,
-    uploadResult,
-    progress,
-    error,
-    parseFile,
-    updateMapping,
-    upload,
-    reset,
-    getPreviewRows,
-    isMappingValid,
-  } = useCsvUpload({
-    onSuccess: (result) => {
-      setStep('complete');
-      onUploadComplete?.({
-        recordsCreated: result.recordsCreated,
-        recordsUpdated: result.recordsUpdated,
-      });
-    },
-    onError: () => {
-      // Stay on current step to show error
-    },
-  });
-
-  // Sync step with upload state
-  useEffect(() => {
-    if (state === 'uploading') {
-      setStep('uploading');
-    }
-  }, [state]);
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<UploadResult | null>(null);
 
   // Reset when modal closes
   useEffect(() => {
     if (!isOpen) {
-      reset();
       setStep('upload');
+      setFile(null);
+      setError(null);
+      setResult(null);
     }
-  }, [isOpen, reset]);
+  }, [isOpen]);
 
-  const handleFileSelect = async (selectedFile: File) => {
-    const success = await parseFile(selectedFile);
-    if (success) {
-      setStep('preview');
+  const handleFileSelect = useCallback(async (selectedFile: File) => {
+    // Validate file
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_EXTENSIONS = ['csv', 'xlsx', 'xls'];
+
+    const extension = selectedFile.name.toLowerCase().split('.').pop() || '';
+    if (!ALLOWED_EXTENSIONS.includes(extension)) {
+      setError('Supported formats: CSV, Excel (.xlsx, .xls)');
+      return;
     }
-  };
 
-  const handleBack = () => {
-    if (step === 'preview') {
-      reset();
-      setStep('upload');
-    } else if (step === 'mapping') {
-      setStep('preview');
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      setError(`File size (${(selectedFile.size / (1024 * 1024)).toFixed(1)}MB) exceeds the 5MB limit`);
+      return;
     }
-  };
 
-  const handleNext = () => {
-    if (step === 'preview') {
-      setStep('mapping');
-    } else if (step === 'mapping') {
-      upload();
+    setFile(selectedFile);
+    setError(null);
+    setStep('processing');
+
+    try {
+      // Send directly to backend API
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('uploaded_by', currentUserName);
+      formData.append('data_source', 'book_of_business');
+
+      const response = await fetch('/api/analytics/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to process file');
+      }
+
+      setResult(data);
+      setStep('complete');
+      onUploadComplete?.({ recordsCreated: data.stats.records_created });
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to process file';
+      setError(message);
+      setStep('error');
     }
-  };
+  }, [currentUserName, onUploadComplete]);
 
-  const handleClose = () => {
-    if (state !== 'uploading') {
+  const handleRetry = useCallback(() => {
+    setStep('upload');
+    setFile(null);
+    setError(null);
+    setResult(null);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    if (step !== 'processing') {
       onClose();
     }
-  };
-
-  const canProceed = step === 'preview' || (step === 'mapping' && isMappingValid());
+  }, [step, onClose]);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title="Import Book of Business"
-      description="Upload a CSV file to import customer data"
-      size="lg"
-      closeOnBackdropClick={state !== 'uploading'}
-      closeOnEscape={state !== 'uploading'}
+      size="md"
+      closeOnBackdropClick={step !== 'processing'}
+      closeOnEscape={step !== 'processing'}
     >
       <ModalHeader>
         <h2 className="text-xl font-semibold text-[var(--foreground)] pr-8">
-          Import Book of Business
+          Import Cross-Sell Opportunities
         </h2>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Upload your Allstate report (CSV or Excel)
+          Upload your Allstate report to generate prioritized opportunities
         </p>
       </ModalHeader>
 
@@ -617,90 +568,32 @@ export function CsvUploadModal({ isOpen, onClose, onUploadComplete }: CsvUploadM
           {step === 'upload' && (
             <motion.div
               key="upload"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
             >
               <FileDropZone
                 onFileSelect={handleFileSelect}
-                isLoading={state === 'parsing'}
+                isLoading={false}
                 error={error}
               />
             </motion.div>
           )}
 
-          {step === 'preview' && parsedData && (
+          {step === 'processing' && file && (
             <motion.div
-              key="preview"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              key="processing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
-              className="space-y-4"
             >
-              <div className="flex items-center gap-2 p-3 rounded-[var(--radius-lg)] bg-[var(--surface-2)]">
-                <FileSpreadsheet className="w-5 h-5 text-[var(--accent)]" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--foreground)] truncate">
-                    {file?.name}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {parsedData.totalRows} rows, {parsedData.headers.length} columns
-                  </p>
-                </div>
-                <Check className="w-5 h-5 text-[var(--success)]" />
-              </div>
-
-              <DataPreview
-                headers={parsedData.headers}
-                rows={getPreviewRows()}
-                totalRows={parsedData.totalRows}
-              />
+              <ProcessingState fileName={file.name} />
             </motion.div>
           )}
 
-          {step === 'mapping' && parsedData && (
-            <motion.div
-              key="mapping"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ColumnMapping
-                headers={parsedData.headers}
-                mappings={columnMappings}
-                onUpdateMapping={updateMapping}
-                validationErrors={validationErrors.slice(0, 5)}
-              />
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 flex items-start gap-2 p-3 rounded-[var(--radius-lg)] bg-[var(--danger)]/10 border border-[var(--danger)]/20"
-                >
-                  <AlertCircle className="w-5 h-5 text-[var(--danger)] flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-[var(--danger)]">{error}</p>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-
-          {step === 'uploading' && (
-            <motion.div
-              key="uploading"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              <UploadProgress progress={progress} />
-            </motion.div>
-          )}
-
-          {step === 'complete' && uploadResult && (
+          {step === 'complete' && result && (
             <motion.div
               key="complete"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -708,49 +601,29 @@ export function CsvUploadModal({ isOpen, onClose, onUploadComplete }: CsvUploadM
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
             >
-              <UploadComplete result={uploadResult} onDone={handleClose} />
+              <UploadComplete result={result} onDone={handleClose} />
+            </motion.div>
+          )}
+
+          {step === 'error' && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ErrorState error={error || 'Unknown error'} onRetry={handleRetry} />
             </motion.div>
           )}
         </AnimatePresence>
       </ModalBody>
 
-      {step !== 'uploading' && step !== 'complete' && (
+      {step === 'upload' && (
         <ModalFooter>
-          <Button
-            variant="secondary"
-            onClick={step === 'upload' ? handleClose : handleBack}
-            disabled={state === 'parsing'}
-          >
-            {step === 'upload' ? (
-              'Cancel'
-            ) : (
-              <>
-                <ChevronLeft className="w-4 h-4" />
-                Back
-              </>
-            )}
+          <Button variant="secondary" onClick={handleClose}>
+            Cancel
           </Button>
-
-          {step !== 'upload' && (
-            <Button
-              variant="primary"
-              onClick={handleNext}
-              disabled={!canProceed || state === 'parsing'}
-              loading={state === 'uploading'}
-            >
-              {step === 'mapping' ? (
-                <>
-                  Import {parsedData?.totalRows || 0} Customers
-                  <ChevronRight className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ChevronRight className="w-4 h-4" />
-                </>
-              )}
-            </Button>
-          )}
         </ModalFooter>
       )}
     </Modal>
