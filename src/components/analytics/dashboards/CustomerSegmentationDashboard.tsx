@@ -8,7 +8,7 @@
  * with LTV analysis and marketing allocation recommendations.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -23,7 +23,8 @@ import {
   RefreshCw,
   Info,
 } from 'lucide-react';
-import { useSegmentation, type CustomerSegment } from '../hooks';
+import { type CustomerSegment } from '../hooks';
+import { useCustomerList } from '@/hooks/useCustomers';
 
 // Animation variants
 const containerVariants = {
@@ -91,11 +92,113 @@ const DEMO_SEGMENTS: CustomerSegment[] = [
   { segment: 'entry', count: 560, percentage: 63.9, avgLtv: 1800, characteristics: ['Single policy', 'New customer', 'Conversion target'] },
 ];
 
+// Segment name mapping: API uses low_value, dashboard uses entry
+const API_TO_DASHBOARD_SEGMENT: Record<string, string> = {
+  elite: 'elite',
+  premium: 'premium',
+  standard: 'standard',
+  low_value: 'entry',
+};
+
+// Characteristics for each segment (used when transforming API response)
+const SEGMENT_CHARACTERISTICS: Record<string, string[]> = {
+  elite: ['4+ policies', 'High retention', 'Referral source'],
+  premium: ['2-3 policies', 'Bundled', 'Auto + Home'],
+  standard: ['1-2 policies', 'Mid-tenure', 'Growth potential'],
+  entry: ['Single policy', 'New customer', 'Conversion target'],
+};
+
 export function CustomerSegmentationDashboard() {
-  const segmentation = useSegmentation();
+  const customerList = useCustomerList({ limit: 1000 }); // Fetch all customers for segmentation
   const [segments, setSegments] = useState<CustomerSegment[]>(DEMO_SEGMENTS);
   const [isLiveData, setIsLiveData] = useState(false);
   const [showMethodology, setShowMethodology] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [segmentationError, setSegmentationError] = useState<string | null>(null);
+
+  // Fetch segmentation data from API
+  const fetchSegmentation = useCallback(async (customers: typeof customerList.customers) => {
+    if (customers.length === 0) return;
+
+    setIsRefreshing(true);
+    setSegmentationError(null);
+
+    try {
+      // Transform customers to API format (productCount, annualPremium)
+      const customerData = customers.map(c => ({
+        customerId: c.id,
+        productCount: c.policyCount,  // API expects productCount
+        annualPremium: c.totalPremium, // API expects annualPremium
+      }));
+
+      // Call segmentation API directly
+      const response = await fetch('/api/analytics/segmentation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customers: customerData,
+          marketingBudget: 50000, // For allocation calculation
+          options: { groupBySegment: false },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch segmentation');
+      }
+
+      const result = await response.json();
+
+      if (result?.success && result.portfolioAnalysis?.segments) {
+        // Transform API response to dashboard format
+        const apiSegments = result.portfolioAnalysis.segments;
+        const transformedSegments: CustomerSegment[] = Object.entries(apiSegments).map(
+          ([apiSegmentName, analysis]) => {
+            const segmentAnalysis = analysis as { count: number; percentageOfBook: number; avgLtv: number };
+            const dashboardSegment = API_TO_DASHBOARD_SEGMENT[apiSegmentName] || apiSegmentName;
+            return {
+              segment: dashboardSegment,
+              count: segmentAnalysis.count,
+              percentage: segmentAnalysis.percentageOfBook,
+              avgLtv: Math.round(segmentAnalysis.avgLtv),
+              characteristics: SEGMENT_CHARACTERISTICS[dashboardSegment] || [],
+            };
+          }
+        );
+
+        // Sort by LTV (elite first)
+        transformedSegments.sort((a, b) => b.avgLtv - a.avgLtv);
+
+        setSegments(transformedSegments);
+        setIsLiveData(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch segmentation:', error);
+      setSegmentationError(error instanceof Error ? error.message : 'Failed to load segmentation');
+      // Keep demo data on error
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  // Fetch segmentation when customers are loaded
+  useEffect(() => {
+    if (customerList.customers.length > 0 && !customerList.loading) {
+      fetchSegmentation(customerList.customers);
+    }
+  }, [customerList.customers.length, customerList.loading, fetchSegmentation]);
+
+  // Handle refresh button - wait for customer refresh to complete
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    customerList.refresh();
+  }, [customerList]);
+
+  // When customer list finishes refreshing, run segmentation
+  useEffect(() => {
+    if (!customerList.loading && isRefreshing && customerList.customers.length > 0) {
+      fetchSegmentation(customerList.customers);
+    }
+  }, [customerList.loading, customerList.customers, isRefreshing, fetchSegmentation]);
 
   // Calculate totals
   const totalCustomers = segments.reduce((sum, s) => sum + s.count, 0);
@@ -143,6 +246,14 @@ export function CustomerSegmentationDashboard() {
               {isLiveData ? '● Live Data' : '○ Demo Data'}
             </span>
             <button
+              onClick={handleRefresh}
+              disabled={isRefreshing || customerList.loading}
+              className="p-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors disabled:opacity-50"
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing || customerList.loading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
               onClick={() => setShowMethodology(!showMethodology)}
               className="p-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
             >
@@ -186,7 +297,7 @@ export function CustomerSegmentationDashboard() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="glass-card p-6 bg-blue-500/10 border-blue-500/30"
+          className="glass-card p-6 bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30"
         >
           <h3 className="font-semibold text-blue-400 mb-3">Segmentation Methodology</h3>
           <div className="grid md:grid-cols-2 gap-4 text-sm text-white/70">
@@ -219,7 +330,7 @@ export function CustomerSegmentationDashboard() {
             <motion.div
               key={segment.segment}
               variants={itemVariants}
-              className={`glass-card p-6 bg-gradient-to-br ${config.gradient} ${config.border} border`}
+              className={`glass-card p-6 bg-gradient-to-br ${config.gradient} border ${config.border}`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -245,8 +356,12 @@ export function CustomerSegmentationDashboard() {
                   initial={{ width: 0 }}
                   animate={{ width: `${segment.percentage}%` }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
-                  className={`h-full bg-${config.color}-500 rounded-full`}
-                  style={{ backgroundColor: `var(--${config.color}-500, currentColor)` }}
+                  className={`h-full rounded-full ${
+                    config.color === 'amber' ? 'bg-amber-500' :
+                    config.color === 'purple' ? 'bg-purple-500' :
+                    config.color === 'blue' ? 'bg-blue-500' :
+                    'bg-sky-500'
+                  }`}
                 />
               </div>
 
@@ -291,7 +406,7 @@ export function CustomerSegmentationDashboard() {
       {/* Marketing Allocation */}
       <motion.div variants={itemVariants} className="glass-card-elevated p-6">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-sky-500/20 border-sky-500/30">
+          <div className="p-2 rounded-lg bg-sky-500/20 border border-sky-500/30">
             <Target className="w-5 h-5 text-sky-400" />
           </div>
           <div>
@@ -310,7 +425,7 @@ export function CustomerSegmentationDashboard() {
             return (
               <div
                 key={alloc.segment}
-                className={`p-4 rounded-lg bg-gradient-to-br ${config.gradient} ${config.border} border text-center`}
+                className={`p-4 rounded-lg bg-gradient-to-br ${config.gradient} border ${config.border} text-center`}
               >
                 <p className="text-xs text-white/50 capitalize mb-1">{alloc.segment}</p>
                 <p className={`text-xl font-bold font-mono ${config.text}`}>
@@ -348,19 +463,21 @@ function SummaryCard({
   color: 'sky' | 'gold' | 'purple' | 'amber';
 }) {
   const colorClasses = {
-    sky: 'bg-sky-500/10 border-sky-500/20 text-sky-400',
-    gold: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
-    purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
-    amber: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+    sky: { bg: 'from-sky-500/20 to-sky-500/5', border: 'border-sky-500/30', text: 'text-sky-400' },
+    gold: { bg: 'from-amber-500/20 to-amber-500/5', border: 'border-amber-500/30', text: 'text-amber-400' },
+    purple: { bg: 'from-purple-500/20 to-purple-500/5', border: 'border-purple-500/30', text: 'text-purple-400' },
+    amber: { bg: 'from-amber-500/20 to-amber-500/5', border: 'border-amber-500/30', text: 'text-amber-400' },
   };
 
+  const classes = colorClasses[color];
+
   return (
-    <div className={`glass-card p-4 ${colorClasses[color]} text-center lg:text-left`}>
+    <div className={`glass-card p-4 bg-gradient-to-br ${classes.bg} border ${classes.border} text-center lg:text-left`}>
       <div className="flex items-center gap-2 justify-center lg:justify-start mb-1">
-        <Icon className={`w-4 h-4 ${colorClasses[color].split(' ')[2]}`} />
+        <Icon className={`w-4 h-4 ${classes.text}`} />
         <span className="text-xs text-white/50">{label}</span>
       </div>
-      <p className={`text-xl font-bold font-mono ${colorClasses[color].split(' ')[2]}`}>
+      <p className={`text-xl font-bold font-mono ${classes.text}`}>
         {value}
       </p>
     </div>
