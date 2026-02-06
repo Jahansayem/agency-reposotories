@@ -65,18 +65,23 @@ export default function TaskDetailModal({
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   // Permission checks
-  const canDeleteTasks = usePermission('can_delete_tasks');
+  const canDeleteTasksPerm = usePermission('can_delete_tasks');
+  const canDeleteOwnTasks = usePermission('can_delete_own_tasks');
   const canEditAnyTask = usePermission('can_edit_any_task');
+  const canEditOwnTasks = usePermission('can_edit_own_tasks');
   const canAssignTasks = usePermission('can_assign_tasks');
   const canUseAiFeatures = usePermission('can_use_ai_features');
 
-  // Derived permission: user owns the task OR has the general permission
-  const isOwner = useMemo(() => {
-    return todo ? todo.created_by === currentUser?.name : false;
+  // Ownership check - includes tasks created by OR assigned to the user
+  const isOwnTask = useMemo(() => {
+    return todo ? (todo.created_by === currentUser?.name || todo.assigned_to === currentUser?.name) : false;
   }, [todo, currentUser?.name]);
 
-  const canDelete = canDeleteTasks || isOwner;
-  const canEdit = canEditAnyTask || isOwner;
+  // Derived permissions combining permission flags with ownership
+  // Can delete if: has can_delete_tasks, OR (has can_delete_own_tasks AND it's their task)
+  const canDelete = canDeleteTasksPerm || (canDeleteOwnTasks && isOwnTask);
+  // Can edit if: has can_edit_any_task, OR (has can_edit_own_tasks AND it's their task)
+  const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask);
 
   const detail = useTaskDetail({
     todo: todo!,  // Assert non-null since parent guards with conditional render

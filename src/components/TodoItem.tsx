@@ -326,15 +326,19 @@ function TodoItemComponent({
 
   // Permission checks
   const canDeleteTasksPerm = usePermission('can_delete_tasks');
+  const canDeleteOwnTasks = usePermission('can_delete_own_tasks');
   const canEditAnyTask = usePermission('can_edit_any_task');
+  const canEditOwnTasks = usePermission('can_edit_own_tasks');
   const canAssignTasks = usePermission('can_assign_tasks');
 
-  // Ownership check - users can always modify their own tasks
-  const isOwner = todo.created_by === currentUserName;
+  // Ownership check - includes tasks created by OR assigned to the user
+  const isOwnTask = todo.created_by === currentUserName || todo.assigned_to === currentUserName;
 
   // Derived permissions combining permission flags with ownership
-  const canEdit = canEditAnyTask || isOwner;
-  const canDeleteTasks = canDeleteTasksPerm || isOwner;
+  // Can edit if: has can_edit_any_task, OR (has can_edit_own_tasks AND it's their task)
+  const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask);
+  // Can delete if: has can_delete_tasks, OR (has can_delete_own_tasks AND it's their task)
+  const canDeleteTasks = canDeleteTasksPerm || (canDeleteOwnTasks && isOwnTask);
 
   // Auto-expand when triggered from external navigation (e.g., dashboard task click)
   useEffect(() => {

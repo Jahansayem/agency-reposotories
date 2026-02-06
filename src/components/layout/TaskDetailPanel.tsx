@@ -72,6 +72,7 @@ function filterSystemUserName(name: string | null | undefined): string | null {
 interface TaskDetailPanelProps {
   task: Todo;
   users: UserType[];
+  currentUserName?: string;
   onClose: () => void;
   onUpdate: (taskId: string, updates: Partial<Todo>) => Promise<void>;
   onDelete: (taskId: string) => Promise<void>;
@@ -82,6 +83,7 @@ interface TaskDetailPanelProps {
 export default function TaskDetailPanel({
   task,
   users,
+  currentUserName,
   onClose,
   onUpdate,
   onDelete,
@@ -89,10 +91,23 @@ export default function TaskDetailPanel({
   onGenerateEmail,
 }: TaskDetailPanelProps) {
   const { theme } = useTheme();
-  const canDeleteTasks = usePermission('can_delete_tasks');
+
+  // Permission checks
+  const canDeleteTasksPerm = usePermission('can_delete_tasks');
+  const canDeleteOwnTasks = usePermission('can_delete_own_tasks');
   const canEditAnyTask = usePermission('can_edit_any_task');
+  const canEditOwnTasks = usePermission('can_edit_own_tasks');
   const canAssignTasks = usePermission('can_assign_tasks');
   const canUseAiFeatures = usePermission('can_use_ai_features');
+
+  // Ownership check - includes tasks created by OR assigned to the user
+  const isOwnTask = currentUserName ? (task.created_by === currentUserName || task.assigned_to === currentUserName) : false;
+
+  // Derived permissions combining permission flags with ownership
+  // Can edit if: has can_edit_any_task, OR (has can_edit_own_tasks AND it's their task)
+  const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask);
+  // Can delete if: has can_delete_tasks, OR (has can_delete_own_tasks AND it's their task)
+  const canDeleteTasks = canDeleteTasksPerm || (canDeleteOwnTasks && isOwnTask);
 
   // Editing states
   const [isEditingText, setIsEditingText] = useState(false);
@@ -472,18 +487,18 @@ export default function TaskDetailPanel({
               </div>
             ) : (
               <button
-                onClick={() => canEditAnyTask && setIsEditingText(true)}
-                disabled={!canEditAnyTask}
+                onClick={() => canEdit && setIsEditingText(true)}
+                disabled={!canEdit}
                 className={`
                   w-full text-left text-lg font-medium p-2 -m-2 rounded-[var(--radius-lg)]
                   transition-colors group
                   ${task.completed ? 'line-through opacity-60' : ''}
-                  ${canEditAnyTask ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)] cursor-pointer' : 'text-[var(--foreground)] cursor-default'}
+                  ${canEdit ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)] cursor-pointer' : 'text-[var(--foreground)] cursor-default'}
                 `}
-                title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
+                title={!canEdit ? 'You do not have permission to edit tasks' : undefined}
               >
                 {task.text}
-                {canEditAnyTask && (
+                {canEdit && (
                   <Edit3 className={`
                     inline-block w-4 h-4 ml-2 opacity-0 group-hover:opacity-50
                     ${'text-[var(--foreground)]'}
@@ -505,10 +520,10 @@ export default function TaskDetailPanel({
                 id={`task-status-${task.id}`}
                 value={task.status}
                 onChange={(e) => handleStatusChange(e.target.value as TodoStatus)}
-                disabled={!canEditAnyTask}
+                disabled={!canEdit}
                 className={`
                   w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
-                  ${canEditAnyTask ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
               >
@@ -528,10 +543,10 @@ export default function TaskDetailPanel({
                 id={`task-priority-${task.id}`}
                 value={task.priority}
                 onChange={(e) => handlePriorityChange(e.target.value as TodoPriority)}
-                disabled={!canEditAnyTask}
+                disabled={!canEdit}
                 className={`
                   w-full px-3 py-2 rounded-[var(--radius-lg)] border text-sm font-medium
-                  ${canEditAnyTask ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
+                  ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2
                   ${'bg-[var(--surface)] border-[var(--border)] text-[var(--foreground)]'}
                 `}
                 style={{ color: priorityConfig.color }}
@@ -732,20 +747,20 @@ export default function TaskDetailPanel({
               </div>
             ) : (
               <button
-                onClick={() => canEditAnyTask && setIsEditingNotes(true)}
-                disabled={!canEditAnyTask}
+                onClick={() => canEdit && setIsEditingNotes(true)}
+                disabled={!canEdit}
                 className={`
                   w-full text-left text-sm p-3 rounded-[var(--radius-lg)]
                   transition-colors
-                  ${!canEditAnyTask
+                  ${!canEdit
                     ? 'text-[var(--text-muted)] cursor-default'
                     : task.notes
                       ? 'text-[var(--foreground)] hover:bg-[var(--surface-2)] cursor-pointer'
                       : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] italic cursor-pointer'}
                 `}
-                title={!canEditAnyTask ? 'You do not have permission to edit tasks' : undefined}
+                title={!canEdit ? 'You do not have permission to edit tasks' : undefined}
               >
-                {task.notes || (canEditAnyTask ? 'Click to add notes...' : 'No notes')}
+                {task.notes || (canEdit ? 'Click to add notes...' : 'No notes')}
               </button>
             )}
           </CollapsibleSection>
