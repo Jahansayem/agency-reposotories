@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import * as XLSX from 'xlsx';
 
 // ============================================================================
 // Types
@@ -88,6 +89,107 @@ export const CUSTOMER_INSIGHT_FIELDS: Record<keyof CustomerInsightRow, { label: 
 // ============================================================================
 // CSV Parsing Utilities
 // ============================================================================
+
+/**
+ * Check if file is an Excel file based on extension
+ */
+function isExcelFile(fileName: string): boolean {
+  const extension = fileName.toLowerCase().split('.').pop() || '';
+  return extension === 'xlsx' || extension === 'xls';
+}
+
+/**
+ * Parse Excel file (.xlsx/.xls) and convert to headers + rows format
+ * Handles Allstate Renewal Audit Report format (headers on row 5, data starts row 6)
+ * and All Purpose Audit format (headers on row 34)
+ */
+function parseExcelContent(buffer: ArrayBuffer): { headers: string[]; rows: string[][] } {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+
+  // Convert sheet to JSON with header detection
+  // First, get all data as raw arrays to find the header row
+  const rawData: (string | number | undefined)[][] = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    defval: '',
+    blankrows: false,
+  });
+
+  if (rawData.length === 0) {
+    return { headers: [], rows: [] };
+  }
+
+  // Find the header row by looking for common column names
+  // Renewal Audit Report has headers on row 5, All Purpose Audit on row 34
+  const headerIndicators = [
+    'Insured First Name',
+    'Insured Last Name',
+    'Insured Name',      // All Purpose Audit
+    'Insured Contact',   // All Purpose Audit (phone)
+    'Customer Name',
+    'Name',
+    'Phone',
+    'Email',
+    'Premium',
+    'Renewal Date',
+    'Policy',
+    'Product',
+  ];
+
+  let headerRowIndex = 0;
+  // Scan up to 50 rows to handle All Purpose Audit (headers at row 34)
+  for (let i = 0; i < Math.min(rawData.length, 50); i++) {
+    const row = rawData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    // Skip rows with fewer than 5 columns (likely metadata rows)
+    if (row.length < 5) continue;
+
+    const rowStr = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+    const matchCount = headerIndicators.filter(indicator =>
+      rowStr.includes(indicator.toLowerCase())
+    ).length;
+
+    // If we find at least 2 header indicators, this is likely the header row
+    if (matchCount >= 2) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  // Extract headers from the header row
+  const headerRow = rawData[headerRowIndex] as (string | number | undefined)[];
+  const headers = headerRow.map(cell => String(cell || '').trim()).filter(h => h !== '');
+
+  // Convert remaining rows to string arrays
+  const rows: string[][] = [];
+  for (let i = headerRowIndex + 1; i < rawData.length; i++) {
+    const dataRow = rawData[i] as (string | number | undefined)[];
+    if (!dataRow || dataRow.length === 0) continue;
+
+    // Skip rows that appear to be empty or contain only whitespace
+    const hasData = dataRow.some(cell => {
+      const val = String(cell || '').trim();
+      return val !== '' && val !== 'undefined';
+    });
+    if (!hasData) continue;
+
+    // Convert all cells to strings, maintaining column alignment with headers
+    const rowData: string[] = [];
+    for (let j = 0; j < headers.length; j++) {
+      const cellValue = dataRow[j];
+      if (typeof cellValue === 'number') {
+        rowData.push(cellValue.toString());
+      } else {
+        rowData.push(String(cellValue || '').trim());
+      }
+    }
+    rows.push(rowData);
+  }
+
+  return { headers, rows };
+}
 
 /**
  * Parse CSV content handling quoted fields and escaped quotes
@@ -346,7 +448,7 @@ export function useCsvUpload(options: UseCsvUploadOptions = {}) {
   }, []);
 
   /**
-   * Parse CSV file and auto-detect mappings
+   * Parse CSV or Excel file and auto-detect mappings
    */
   const parseFile = useCallback(async (selectedFile: File): Promise<boolean> => {
     const validationError = validateFile(selectedFile);
@@ -361,21 +463,41 @@ export function useCsvUpload(options: UseCsvUploadOptions = {}) {
     setFile(selectedFile);
 
     try {
-      const content = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsText(selectedFile);
-      });
+      let headers: string[];
+      let rows: string[][];
 
-      const { headers, rows } = parseCsvContent(content);
+      if (isExcelFile(selectedFile.name)) {
+        // Parse Excel file using xlsx library
+        const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsArrayBuffer(selectedFile);
+        });
+
+        const result = parseExcelContent(buffer);
+        headers = result.headers;
+        rows = result.rows;
+      } else {
+        // Parse CSV file as text
+        const content = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsText(selectedFile);
+        });
+
+        const result = parseCsvContent(content);
+        headers = result.headers;
+        rows = result.rows;
+      }
 
       if (headers.length === 0) {
-        throw new Error('No headers found in CSV file');
+        throw new Error('No headers found in file');
       }
 
       if (rows.length === 0) {
-        throw new Error('No data rows found in CSV file');
+        throw new Error('No data rows found in file');
       }
 
       if (isMountedRef.current) {
@@ -395,7 +517,7 @@ export function useCsvUpload(options: UseCsvUploadOptions = {}) {
       return true;
     } catch (err) {
       if (isMountedRef.current) {
-        const message = err instanceof Error ? err.message : 'Failed to parse CSV file';
+        const message = err instanceof Error ? err.message : 'Failed to parse file';
         setError(message);
         setState('error');
         onError?.(err instanceof Error ? err : new Error(message));
