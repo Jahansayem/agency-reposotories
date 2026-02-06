@@ -336,21 +336,31 @@ function transformRow(
   const isMonoline = products.length === 1;
 
   // Check monoline flag if available
+  // IMPORTANT: "Multiline" contains "mono" so we need to check for "multi" first
   let monolineFromFlag = false;
   if (mapping.monoline_flag && row[mapping.monoline_flag]) {
-    const val = String(row[mapping.monoline_flag]).toLowerCase();
-    monolineFromFlag = val.includes('mono') || val === '1' || val === 'yes';
+    const val = String(row[mapping.monoline_flag]).toLowerCase().trim();
+    // Check for multiline first (it contains "mono" so would match incorrectly)
+    const isMultiline = val.includes('multi');
+    // Only set monoline if explicitly monoline and NOT multiline
+    monolineFromFlag = !isMultiline && (val.includes('mono') || val === '1' || val === 'yes' || val === 'single');
   }
 
-  // Determine segment and recommendation
-  let segmentType = 'other';
-  let recommendedProduct = 'Additional Coverage';
-
+  // Determine segment and recommendation based on ACTUAL products held
   const hasAuto = products.some(p => p.toLowerCase().includes('auto'));
   const hasProperty = products.some(p => p.toLowerCase().includes('property') || p.toLowerCase().includes('home'));
   const hasLife = products.some(p => p.toLowerCase().includes('life'));
+  const hasUmbrella = products.some(p => p.toLowerCase().includes('umbrella'));
 
-  if (isMonoline || monolineFromFlag) {
+  // TRUE monoline = only ONE product line
+  // Even if the flag says "monoline", if they have multiple products, they're NOT monoline
+  const isTrueMonoline = (isMonoline || monolineFromFlag) && products.length <= 1;
+
+  let segmentType = 'other';
+  let recommendedProduct = 'Additional Coverage';
+
+  if (isTrueMonoline) {
+    // Customer has only ONE product - good cross-sell opportunity
     if (hasAuto && !hasProperty) {
       segmentType = 'auto_to_home';
       recommendedProduct = 'Homeowners/Renters';
@@ -361,10 +371,20 @@ function transformRow(
       segmentType = 'mono_to_bundle';
       recommendedProduct = 'Bundle Package';
     }
+  } else if (hasAuto && hasProperty && !hasLife) {
+    // Already bundled auto+home, suggest life
+    segmentType = 'add_life';
+    recommendedProduct = 'Life Insurance';
+  } else if (hasAuto && hasProperty && hasLife && !hasUmbrella) {
+    // Has auto+home+life, suggest umbrella
+    segmentType = 'add_umbrella';
+    recommendedProduct = 'Umbrella Coverage';
   } else if (!hasLife) {
+    // Has some products but no life
     segmentType = 'add_life';
     recommendedProduct = 'Life Insurance';
   } else {
+    // Fully loaded customer
     segmentType = 'add_umbrella';
     recommendedProduct = 'Umbrella Coverage';
   }
@@ -372,8 +392,8 @@ function transformRow(
   // Calculate priority score
   let priorityScore = 0;
 
-  // Mono-line customers are high priority
-  if (isMonoline || monolineFromFlag) {
+  // TRUE mono-line customers are high priority for cross-sell
+  if (isTrueMonoline) {
     priorityScore += 40;
   }
 
@@ -420,8 +440,10 @@ function transformRow(
   // Generate talking points
   const talkingPoints: string[] = [];
 
-  if (isMonoline || monolineFromFlag) {
+  if (isTrueMonoline) {
     talkingPoints.push(`Currently ${currentProducts}-only - great opportunity to discuss ${recommendedProduct}`);
+  } else if (hasAuto && hasProperty && !hasLife) {
+    talkingPoints.push(`Already bundled (${currentProducts}) - perfect candidate for ${recommendedProduct}`);
   }
 
   if (renewalDate) {
