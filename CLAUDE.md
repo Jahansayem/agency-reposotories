@@ -2572,6 +2572,69 @@ git push origin main
 
 **See also:** [Railway Deployment Issues](#railway-deployment-issues) section for comprehensive guide.
 
+#### Analytics & Segmentation Issues
+**Symptoms:** Customer Segmentation shows Demo Data, segmentation API fails, customers not appearing
+
+**Common Issues:**
+1. **Dashboard Shows Demo Data:**
+   - No customer data uploaded yet
+   - API segmentation call failing
+   - Field name mismatch between database and API
+
+2. **Segment Names Show "low_value":**
+   - API uses `low_value`, UI should display `entry`
+   - Check `API_TO_DASHBOARD_SEGMENT` mapping is applied
+
+3. **Refresh Button Spinning Forever:**
+   - `useCustomers` hook not completing
+   - Circular dependency in useEffect
+   - Network timeout
+
+4. **Segment Counts Don't Match:**
+   - Review segmentation criteria (see `src/lib/segmentation.ts`)
+   - Check for missing data (null premium/policy count)
+   - Verify algorithm thresholds
+
+**Quick Debug Steps:**
+```typescript
+// Check customer data loaded
+console.log('Customers:', {
+  count: customerList.customers.length,
+  loading: customerList.loading,
+  sample: customerList.customers[0]
+});
+
+// Check segmentation request
+console.log('Segmentation request:', {
+  customerCount: customerData.length,
+  sampleCustomer: customerData[0]
+});
+
+// Test segmentation algorithm
+import { getCustomerSegment } from '@/lib/segmentation';
+const segment = getCustomerSegment(18000, 4);
+console.log('Test customer segment:', segment); // Should be "elite"
+```
+
+**Database Checks:**
+```sql
+-- Check if customer data exists
+SELECT COUNT(*) FROM customer_insights WHERE agency_id = 'your-agency-id';
+
+-- Check for duplicates
+SELECT customer_name, COUNT(*) FROM customer_insights GROUP BY customer_name HAVING COUNT(*) > 1;
+
+-- Verify data quality
+SELECT customer_name, total_premium, total_policies FROM customer_insights WHERE total_premium IS NULL OR total_policies IS NULL;
+```
+
+**Detailed Troubleshooting:** See [docs/ANALYTICS_TROUBLESHOOTING.md](./docs/ANALYTICS_TROUBLESHOOTING.md) for comprehensive analytics troubleshooting guide including:
+- Data upload problems
+- API errors and authentication
+- Performance optimization
+- Data quality issues
+- Security and encryption troubleshooting
+
 ### Console Debugging
 
 Enable verbose logging:

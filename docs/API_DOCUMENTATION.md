@@ -895,6 +895,312 @@ Get AI-powered suggestions for workflow improvements.
 }
 ```
 
+### POST /api/analytics/segmentation
+
+**NEW (February 2026):** Segment customers by lifetime value (LTV) and recommend service tiers.
+
+**Description:**
+The segmentation API classifies customers into four tiers (Elite, Premium, Standard, Entry) based on their total premium and policy count. It uses a canonical algorithm from `src/lib/segmentation.ts` that combines premium thresholds with policy count logic.
+
+**Request Body:**
+```json
+{
+  "customer": {
+    "customerId": "123",
+    "productCount": 4,
+    "annualPremium": 18000,
+    "claimsHistory": [500, 1200]
+  },
+  "customers": [
+    { "customerId": "123", "productCount": 4, "annualPremium": 18000 },
+    { "customerId": "456", "productCount": 2, "annualPremium": 8000 }
+  ],
+  "marketingBudget": 50000,
+  "options": {
+    "includeRecommendations": true,
+    "groupBySegment": false
+  }
+}
+```
+
+**Request Parameters:**
+- `customer` (optional): Single customer to classify
+  - `customerId` (optional): Customer ID for reference
+  - `productCount`: Number of policies/products (required)
+  - `annualPremium`: Total annual premium in dollars (required)
+  - `claimsHistory` (optional): Array of claim amounts for risk scoring
+- `customers` (optional): Array of customers for portfolio analysis
+- `marketingBudget` (optional): Marketing budget for allocation recommendations
+- `options` (optional):
+  - `includeRecommendations` (default: true): Include marketing recommendations
+  - `groupBySegment` (default: false): Group customers by segment in response
+
+**Response:**
+```json
+{
+  "success": true,
+  "customerClassification": {
+    "customerId": "123",
+    "segment": "elite",
+    "ltv": 18000,
+    "serviceTier": "white_glove",
+    "retentionRate": 0.97,
+    "recommendedCac": 1200,
+    "segmentDetails": {
+      "label": "Elite",
+      "color": "#C9A227",
+      "avgLtv": 18000,
+      "avgRetention": 0.97,
+      "description": "High-value multi-product customer"
+    }
+  },
+  "portfolioAnalysis": {
+    "totalCustomers": 876,
+    "segments": {
+      "elite": {
+        "count": 112,
+        "percentageOfBook": 12.8,
+        "avgLtv": 18000,
+        "totalBookValue": 2016000
+      },
+      "premium": {
+        "count": 52,
+        "percentageOfBook": 5.9,
+        "avgLtv": 9000,
+        "totalBookValue": 468000
+      },
+      "standard": {
+        "count": 152,
+        "percentageOfBook": 17.4,
+        "avgLtv": 4500,
+        "totalBookValue": 684000
+      },
+      "low_value": {
+        "count": 560,
+        "percentageOfBook": 63.9,
+        "avgLtv": 1800,
+        "totalBookValue": 1008000
+      }
+    },
+    "keyInsights": [
+      "Top 18.7% of customers (Elite + Premium) generate 60% of book value",
+      "563 customers in Standard/Entry segments have cross-sell potential"
+    ]
+  },
+  "marketingAllocation": {
+    "totalBudget": 50000,
+    "allocations": {
+      "elite": { "amount": 7500, "percentage": 15 },
+      "premium": { "amount": 17500, "percentage": 35 },
+      "standard": { "amount": 20000, "percentage": 40 },
+      "low_value": { "amount": 5000, "percentage": 10 }
+    }
+  }
+}
+```
+
+**Segment Tier Criteria:**
+
+| Tier | Criteria | Avg LTV | Target CAC | Service Tier |
+|------|----------|---------|------------|--------------|
+| **Elite** | (Premium ≥$15K AND 3+ policies) OR Premium ≥$20K OR 5+ policies | $18,000 | $1,200 | White Glove |
+| **Premium** | (Premium ≥$7K AND 2+ policies) OR Premium ≥$10K OR 4+ policies | $9,000 | $700 | Standard |
+| **Standard** | Premium ≥$3K OR 2+ policies | $4,500 | $400 | Standard |
+| **Entry** | Everything else | $1,800 | $200 | Automated |
+
+**Important:** The API response uses `low_value` as the segment name, but the UI displays it as `entry`. Always map `low_value` → `entry` when rendering in the dashboard.
+
+**Field Name Mappings:**
+
+| Frontend/UI | API Request | Database Column | Notes |
+|-------------|-------------|-----------------|-------|
+| `policyCount` | `productCount` | `total_policies` | Number of policies |
+| `totalPremium` | `annualPremium` | `total_premium` | Annual premium |
+| `entry` | `low_value` | `entry` | **API returns "low_value"** |
+
+**Example Usage:**
+```typescript
+// Segment a batch of customers
+const response = await fetch('/api/analytics/segmentation', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    customers: customers.map(c => ({
+      customerId: c.id,
+      productCount: c.policyCount,    // Map field name
+      annualPremium: c.totalPremium,  // Map field name
+    })),
+    marketingBudget: 50000,
+  }),
+});
+
+const result = await response.json();
+
+// Transform API segment names to UI names
+const segments = Object.entries(result.portfolioAnalysis.segments).map(
+  ([apiName, data]) => ({
+    segment: apiName === 'low_value' ? 'entry' : apiName,  // Transform name
+    count: data.count,
+    percentage: data.percentageOfBook,
+    avgLtv: data.avgLtv,
+  })
+);
+```
+
+**Performance:**
+- Segmentation of 1,000 customers: ~64ms (tested baseline)
+- Recommended max batch size: 5,000 customers
+- Response size: ~5KB for 100 customers, ~50KB for 1,000 customers
+
+### GET /api/analytics/segmentation
+
+Get segment definitions and benchmarks (no customer data required).
+
+**Response:**
+```json
+{
+  "segments": {
+    "elite": {
+      "label": "Elite",
+      "color": "#C9A227",
+      "avgLtv": 18000,
+      "avgRetention": 0.97,
+      "recommendedCac": 1200,
+      "serviceTier": "white_glove",
+      "description": "High-value multi-product customer"
+    }
+  },
+  "segmentSummary": {
+    "elite": {
+      "name": "Elite",
+      "requirements": "3+ products AND $3,000+ premium",
+      "characteristics": [
+        "Average LTV: $18,000",
+        "Retention rate: 97%"
+      ],
+      "strategy": "Protect and nurture - proactive service"
+    }
+  },
+  "keyInsight": "Top 40% of customers (Elite + Premium) = 83% of profit"
+}
+```
+
+### GET /api/customers
+
+**NEW (February 2026):** Search and list customers with segmentation data.
+
+**Description:**
+Unified customer lookup endpoint that combines data from `customer_insights` (aggregated customer data) and `cross_sell_opportunities` (opportunity records). Each customer includes their segment tier, LTV, and cross-sell opportunities.
+
+**Query Parameters:**
+- `q` (optional): Search query (searches customer name only - email/phone are encrypted)
+- `agency_id` (optional): Filter by agency ID
+- `segment` (optional): Filter by segment tier (`elite` | `premium` | `standard` | `entry`)
+- `opportunity_type` (optional): Filter by cross-sell type (`auto_to_home` | `home_to_auto` | `add_life` | `add_umbrella` | etc.)
+- `sort` (optional): Sort order
+  - `priority` - Sort by opportunity priority tier (HOT > HIGH > MEDIUM > LOW)
+  - `premium_high` - Sort by total premium descending (default)
+  - `premium_low` - Sort by total premium ascending
+  - `opportunity_value` - Sort by potential premium add descending
+  - `renewal_date` - Sort by renewal date ascending (soonest first)
+  - `name_asc` - Sort alphabetically by name
+- `limit` (optional): Max results (default 20, max 100)
+- `offset` (optional): Skip first N results for pagination (default 0)
+
+**Response:**
+```json
+{
+  "success": true,
+  "customers": [
+    {
+      "id": "uuid",
+      "name": "John Smith",
+      "email": "john@example.com",
+      "phone": "(555) 123-4567",
+      "address": "123 Main St",
+      "city": "Chicago",
+      "zipCode": "60601",
+      "totalPremium": 18500,
+      "policyCount": 4,
+      "products": ["Auto", "Home", "Life", "Umbrella"],
+      "tenureYears": 8,
+      "segment": "elite",
+      "segmentConfig": {
+        "label": "Elite",
+        "color": "#C9A227",
+        "avgLtv": 18000,
+        "avgRetention": 0.97,
+        "recommendedCac": 1200,
+        "serviceTier": "white_glove",
+        "description": "High-value multi-product customer"
+      },
+      "retentionRisk": "low",
+      "hasOpportunity": false,
+      "opportunityId": null,
+      "priorityTier": null,
+      "priorityScore": null,
+      "recommendedProduct": null,
+      "opportunityType": null,
+      "potentialPremiumAdd": null,
+      "upcomingRenewal": "2026-05-15"
+    }
+  ],
+  "count": 20,
+  "totalCount": 876,
+  "offset": 0,
+  "limit": 20,
+  "query": "Smith",
+  "stats": {
+    "total": 876,
+    "totalPremium": 4176000,
+    "potentialPremiumAdd": 423000,
+    "hotCount": 12,
+    "highCount": 34,
+    "mediumCount": 78,
+    "withOpportunities": 234
+  }
+}
+```
+
+**Field Descriptions:**
+- `segment`: Customer tier (`elite` | `premium` | `standard` | `entry`)
+- `segmentConfig`: Full segment configuration with display properties
+- `retentionRisk`: Risk level (`low` | `medium` | `high`) based on tenure and claims
+- `hasOpportunity`: Whether customer has active cross-sell opportunities
+- `opportunityId`: ID of primary cross-sell opportunity (if any)
+- `priorityTier`: Opportunity priority (`HOT` | `HIGH` | `MEDIUM` | `LOW`)
+- `priorityScore`: Numeric priority score (0-150)
+- `recommendedProduct`: Suggested product for cross-sell
+- `opportunityType`: Type of cross-sell (e.g., `auto_to_home`, `add_life`)
+- `potentialPremiumAdd`: Additional premium if opportunity converted
+- `upcomingRenewal`: Next renewal date (ISO 8601 format)
+
+**Security:**
+- Email and phone fields are encrypted at rest using AES-256-GCM
+- Fields are automatically decrypted when returned to authorized clients
+- Decryption failures return `null` instead of ciphertext (graceful degradation)
+- Search only supports name field (encrypted fields cannot be searched)
+
+**Example Usage:**
+```typescript
+// Search for elite customers with cross-sell opportunities
+const response = await fetch(
+  '/api/customers?segment=elite&opportunity_type=add_life&sort=opportunity_value&limit=50'
+);
+const { customers, stats } = await response.json();
+
+// Paginate through results
+const nextPage = await fetch(
+  '/api/customers?segment=premium&sort=premium_high&limit=20&offset=20'
+);
+```
+
+**Data Sources:**
+1. `customer_insights` table - Aggregated customer analytics with segmentation
+2. `cross_sell_opportunities` table - Active cross-sell opportunities
+3. Data is merged and deduplicated by customer name
+4. Customers appear if present in either table
+
 ---
 
 ## File Attachments

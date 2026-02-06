@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 import {
   Users,
   Crown,
@@ -26,8 +26,8 @@ import {
 import { type CustomerSegment } from '../hooks';
 import { useCustomerList } from '@/hooks/useCustomers';
 
-// Animation variants
-const containerVariants = {
+// Animation variants (explicitly typed per CLAUDE.md to prevent CI failures)
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -35,7 +35,7 @@ const containerVariants = {
   }
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 }
 };
@@ -248,14 +248,15 @@ export function CustomerSegmentationDashboard() {
             <button
               onClick={handleRefresh}
               disabled={isRefreshing || customerList.loading}
-              className="p-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors disabled:opacity-50"
+              className="p-3 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors disabled:opacity-50"
               title="Refresh data"
             >
               <RefreshCw className={`w-5 h-5 ${isRefreshing || customerList.loading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={() => setShowMethodology(!showMethodology)}
-              className="p-2 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
+              className="p-3 rounded-lg bg-white/10 text-white/60 hover:bg-white/20 transition-colors"
+              title="Toggle methodology panel"
             >
               <Info className="w-5 h-5" />
             </button>

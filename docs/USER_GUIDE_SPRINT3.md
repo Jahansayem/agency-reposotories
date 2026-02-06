@@ -488,6 +488,204 @@ A: Not yet. The app requires internet connection. Offline mode planned for futur
 
 ---
 
+## 📈 Customer Segmentation (NEW - February 2026)
+
+### What It Does
+The Customer Segmentation Dashboard helps you understand your customer book of business by grouping customers into value tiers based on their lifetime value (LTV).
+
+### How to Access
+1. Navigate to **Analytics** page
+2. Select **Customer Segmentation** tab
+3. View your live customer data automatically segmented
+
+### Understanding the Segments
+
+#### 🏆 Elite Tier (Gold)
+- **Who:** High-value customers with 4+ policies or $15K+ annual premium
+- **Average LTV:** $18,000 per customer
+- **Characteristics:** Multiple products, high retention (97%), referral source
+- **Strategy:** White-glove service, proactive outreach, personalized communication
+- **Marketing:** Allocate 15% of budget to acquire similar customers
+
+#### ⭐ Premium Tier (Purple)
+- **Who:** Bundled customers with 2-3 policies and $7K+ premium
+- **Average LTV:** $9,000 per customer
+- **Characteristics:** Auto + Home bundled, solid retention (91%)
+- **Strategy:** Focus on adding a third product (life, umbrella)
+- **Marketing:** Allocate 35% of budget here (highest ROI segment)
+
+#### 🛡️ Standard Tier (Blue)
+- **Who:** Growing customers with 1-2 policies and $3K+ premium
+- **Average LTV:** $4,500 per customer
+- **Characteristics:** Mid-tenure, single or dual product, cross-sell potential
+- **Strategy:** Cross-sell to increase retention and move to Premium tier
+- **Marketing:** Allocate 40% of budget for volume growth
+
+#### 👤 Entry Tier (Sky Blue)
+- **Who:** New or single-policy customers under $3K premium
+- **Average LTV:** $1,800 per customer
+- **Characteristics:** Single policy, newer relationship, conversion target
+- **Strategy:** Automated service, efficient onboarding, bundle opportunities
+- **Marketing:** Allocate 10% of budget (focus on efficiency)
+
+### Live Data vs Demo Data
+
+**Understanding the Badge:**
+- **● Live Data** (sky blue badge): Dashboard is showing real customer data from your book of business
+- **○ Demo Data** (amber badge): Dashboard is showing example data because:
+  - No customer data has been uploaded yet
+  - Customer data failed to load
+  - You're viewing the dashboard before uploading your first file
+
+**Why does it matter?**
+- **Live Data:** Use these insights to make actual business decisions
+- **Demo Data:** Learn how the dashboard works, but don't base decisions on it
+
+### How to Get Live Data
+
+1. **Upload Customer Data:**
+   - Go to **Analytics** → **Upload Data**
+   - Upload your Book of Business export from Allstate Gateway
+   - Supported formats: CSV, Excel (.xls, .xlsx)
+
+2. **Wait for Processing:**
+   - Upload takes 5-30 seconds depending on file size
+   - AI automatically detects customer names, premiums, and policy counts
+
+3. **View Segmentation:**
+   - Return to **Customer Segmentation** tab
+   - Dashboard now shows **● Live Data**
+   - See your actual customer distribution across tiers
+
+### Key Metrics Explained
+
+#### Total Portfolio LTV
+The combined lifetime value of all customers in your book. This estimates how much commission revenue your customer base will generate over their lifetime with you.
+
+**Example:** If you have 876 customers with a Total Portfolio LTV of $7.2M, that's the estimated total commission value of your entire book.
+
+#### Avg LTV/Customer
+Average lifetime value per customer across all tiers. Industry benchmark is $4,500-$6,000.
+
+**What's good:** Higher is better. If your average is above $5,000, you have a strong book.
+
+#### High-Value Customers
+Count and percentage of Elite + Premium customers combined. These are your most profitable relationships.
+
+**Industry insight:** Top 20% of customers typically generate 80% of profit. Elite + Premium should be 15-25% of your book.
+
+#### LTV:CAC Ratio
+Lifetime Value divided by Customer Acquisition Cost. Shows return on marketing spend.
+
+**Example:** 15:1 ratio means you earn $15 for every $1 spent acquiring that customer.
+
+**Benchmarks:**
+- **Elite:** 15:1 (spend up to $1,200 to acquire)
+- **Premium:** 13:1 (spend up to $700)
+- **Standard:** 11:1 (spend up to $400)
+- **Entry:** 9:1 (spend up to $200 max)
+
+### Marketing Allocation
+
+The dashboard recommends how to split your marketing budget based on your customer mix:
+
+**Example Budget: $50,000/month**
+- **Elite (15%):** $7,500 - Target high-value prospects similar to your Elite customers
+- **Premium (35%):** $17,500 - Best ROI segment, focus acquisition here
+- **Standard (40%):** $20,000 - Volume play, cross-sell to Premium
+- **Entry (10%):** $5,000 - Efficiency focus, automated marketing
+
+**Strategy Insight:**
+- **Acquisition:** Focus 75% of spending on Premium + Standard (volume segments)
+- **Retention:** Protect Elite + Premium with proactive service (prevent churn)
+
+### How Segmentation Works (Technical)
+
+The segmentation algorithm evaluates two dimensions:
+
+1. **Annual Premium:** Total premium across all policies
+2. **Policy Count:** Number of products/policies held
+
+**Qualification Logic:**
+- **Elite:** (Premium ≥$15K AND 3+ policies) OR Premium ≥$20K OR 5+ policies
+- **Premium:** (Premium ≥$7K AND 2+ policies) OR Premium ≥$10K OR 4+ policies
+- **Standard:** Premium ≥$3K OR 2+ policies
+- **Entry:** Everything else
+
+**Why both dimensions?**
+- A customer with $25K in a single policy is Elite (high premium alone)
+- A customer with $4K across 5 policies is also Elite (high policy count)
+- This captures value from both revenue AND relationship depth
+
+### Using Segmentation Data
+
+#### For Business Planning
+1. **Identify Growth Opportunities:** Standard tier customers are ripe for cross-selling
+2. **Protect Your Base:** Elite/Premium need proactive service to prevent churn
+3. **Marketing ROI:** Focus acquisition budget on Premium-tier prospects
+
+#### For Customer Service
+1. **White-Glove Elite Customers:** Assign your best agents, respond within 2 hours
+2. **Standard Service for Premium/Standard:** Normal response times, quality service
+3. **Automated for Entry:** Self-service tools, chatbots, batch processing
+
+#### For Cross-Selling
+1. **Entry → Standard:** Bundle auto + home
+2. **Standard → Premium:** Add third product (life, umbrella)
+3. **Premium → Elite:** Add commercial, specialty coverage
+
+### Refreshing Data
+
+**When to Refresh:**
+- After uploading new customer data
+- Weekly to see portfolio changes
+- Before quarterly business reviews
+
+**How to Refresh:**
+1. Click the **Refresh** button (circular arrow icon)
+2. Wait 2-5 seconds for recalculation
+3. Dashboard updates with latest segmentation
+
+**What refreshing does:**
+- Re-fetches customer data from database
+- Recalculates segment tiers for all customers
+- Updates portfolio analysis and marketing allocation
+- Checks for new cross-sell opportunities
+
+### Tips for Success
+
+1. **Upload Fresh Data Monthly:** Keep segmentation accurate by uploading current Book of Business exports
+2. **Monitor Segment Movement:** Watch customers move between tiers over time
+3. **Set Goals by Segment:**
+   - Goal: Grow Elite segment by 10% this year
+   - Goal: Move 30% of Standard customers to Premium
+4. **Compare to Benchmarks:** Elite+Premium should be 15-25% of your book
+5. **Review Marketing Allocation Quarterly:** Adjust spend based on results
+
+### Troubleshooting
+
+**"Dashboard shows Demo Data"**
+- **Cause:** No customer data uploaded or data failed to load
+- **Fix:** Upload your Book of Business from Analytics → Upload Data
+
+**"Segmentation seems wrong"**
+- **Cause:** Uploaded data missing premium or policy count columns
+- **Fix:** Re-upload with all required fields (Name, Premium, Policy Count)
+
+**"Refresh button spinning forever"**
+- **Cause:** Network issue or database timeout
+- **Fix:** Wait 30 seconds, then refresh the page (browser refresh)
+
+**"Customer counts don't match my records"**
+- **Cause:** Duplicate customers in uploaded data or missing entries
+- **Fix:** Verify uploaded file has one row per customer with unique names
+
+**"Portfolio LTV seems too high/low"**
+- **Cause:** Algorithm uses industry averages for retention and servicing costs
+- **Note:** LTV is an estimate, not exact. Use for directional insights, not precise forecasting
+
+---
+
 ## Support
 
 ### Getting Help
