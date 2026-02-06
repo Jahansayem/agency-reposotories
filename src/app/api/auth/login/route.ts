@@ -9,6 +9,39 @@ import { apiErrorResponse } from '@/lib/apiResponse';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const AUTH_OPERATION_TIMEOUT_MS = 10000;
+
+class AuthOperationTimeoutError extends Error {
+  operation: string;
+
+  constructor(operation: string) {
+    super(`Authentication operation timed out: ${operation}`);
+    this.name = 'AuthOperationTimeoutError';
+    this.operation = operation;
+  }
+}
+
+async function withOperationTimeout<T>(
+  operation: string,
+  fn: () => Promise<T>,
+  timeoutMs: number = AUTH_OPERATION_TIMEOUT_MS
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new AuthOperationTimeoutError(operation));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([fn(), timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
 
 /**
  * Type for agency_members join with agencies table
@@ -71,7 +104,7 @@ export async function POST(request: NextRequest) {
     const lockoutId = getLockoutIdentifier(userId, ip);
 
     // Check server-side lockout
-    const lockoutStatus = await checkLockout(lockoutId);
+    const lockoutStatus = await withOperationTimeout('check_lockout', () => checkLockout(lockoutId));
     if (lockoutStatus.isLocked) {
       return NextResponse.json(
         {
@@ -85,15 +118,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch user from database (server-side only - never expose pin_hash to client)
-    const { data: user, error: userError } = await getSupabase()
-      .from('users')
-      .select('id, name, color, pin_hash, role')
-      .eq('id', userId)
-      .single();
+    const { data: user, error: userError } = await withOperationTimeout('fetch_user', () =>
+      getSupabase()
+        .from('users')
+        .select('id, name, color, pin_hash, role')
+        .eq('id', userId)
+        .single()
+    );
 
     if (userError || !user) {
       // Record failed attempt even if user not found (prevents user enumeration)
-      await recordFailedAttempt(lockoutId, { ip, userAgent });
+      await withOperationTimeout('record_failed_attempt_missing_user', () =>
+        recordFailedAttempt(lockoutId, { ip, userAgent })
+      );
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -106,11 +143,13 @@ export async function POST(request: NextRequest) {
     const isValid = storedHash.length === pinHash.length &&
       timingSafeEqual(Buffer.from(storedHash), Buffer.from(pinHash));
     if (!isValid) {
-      const status = await recordFailedAttempt(lockoutId, {
-        ip,
-        userAgent,
-        userName: user.name,
-      });
+      const status = await withOperationTimeout('record_failed_attempt_invalid_pin', () =>
+        recordFailedAttempt(lockoutId, {
+          ip,
+          userAgent,
+          userName: user.name,
+        })
+      );
 
       return NextResponse.json(
         {
@@ -129,13 +168,15 @@ export async function POST(request: NextRequest) {
     }
 
     // PIN is correct - clear lockout and create session
-    await clearLockout(lockoutId);
+    await withOperationTimeout('clear_lockout', () => clearLockout(lockoutId));
 
     // Update last_login timestamp
-    await getSupabase()
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', userId);
+    await withOperationTimeout('update_last_login', () =>
+      getSupabase()
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', userId)
+    );
 
     // Look up user's default agency membership (including role and agency name)
     let agencyId: string | null = null;
@@ -143,14 +184,16 @@ export async function POST(request: NextRequest) {
     let agencyRole: string | null = null;
 
     // First try: default agency
-    const { data: defaultMembership } = await getSupabase()
-      .from('agency_members')
-      .select('agency_id, role, agencies!inner(name)')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .eq('is_default_agency', true)
-      .limit(1)
-      .maybeSingle();
+    const { data: defaultMembership } = await withOperationTimeout('fetch_default_membership', () =>
+      getSupabase()
+        .from('agency_members')
+        .select('agency_id, role, agencies!inner(name)')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .eq('is_default_agency', true)
+        .limit(1)
+        .maybeSingle()
+    );
 
     if (defaultMembership?.agency_id) {
       const membership = defaultMembership as unknown as AgencyMembershipWithAgency;
@@ -159,13 +202,15 @@ export async function POST(request: NextRequest) {
       agencyName = membership.agencies?.name || null;
     } else {
       // Fallback: any active agency
-      const { data: anyMembership } = await getSupabase()
-        .from('agency_members')
-        .select('agency_id, role, agencies!inner(name)')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .limit(1)
-        .maybeSingle();
+      const { data: anyMembership } = await withOperationTimeout('fetch_any_membership', () =>
+        getSupabase()
+          .from('agency_members')
+          .select('agency_id, role, agencies!inner(name)')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .limit(1)
+          .maybeSingle()
+      );
 
       if (anyMembership?.agency_id) {
         const membership = anyMembership as unknown as AgencyMembershipWithAgency;
@@ -178,11 +223,13 @@ export async function POST(request: NextRequest) {
     // Fetch all agencies the user belongs to
     let agencies: Array<{ id: string; name: string; slug: string; role: string; is_default: boolean }> = [];
     {
-      const { data: membershipRows } = await getSupabase()
-        .from('agency_members')
-        .select('agency_id, role, is_default_agency, agencies!inner(id, name, slug)')
-        .eq('user_id', userId)
-        .eq('status', 'active');
+      const { data: membershipRows } = await withOperationTimeout('fetch_all_memberships', () =>
+        getSupabase()
+          .from('agency_members')
+          .select('agency_id, role, is_default_agency, agencies!inner(id, name, slug)')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+      );
 
       if (membershipRows && Array.isArray(membershipRows)) {
         agencies = membershipRows.map((row) => {
@@ -199,7 +246,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create DB-backed session with agency context
-    const session = await createSession(userId, ip, userAgent, agencyId || undefined);
+    const session = await withOperationTimeout('create_session', () =>
+      createSession(userId, ip, userAgent, agencyId || undefined)
+    );
     if (!session) {
       logger.error('Failed to create session for user', null, { userId });
       return apiErrorResponse('SESSION_FAILED', 'Failed to create session', 500);
@@ -237,6 +286,18 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    if (error instanceof AuthOperationTimeoutError) {
+      logger.error('Login endpoint timeout', error, { operation: error.operation });
+      return NextResponse.json(
+        {
+          error: 'Authentication request timed out',
+          code: 'AUTH_TIMEOUT',
+          operation: error.operation,
+        },
+        { status: 503 }
+      );
+    }
+
     logger.error('Login endpoint error', error, {});
     return apiErrorResponse('INTERNAL_ERROR', 'Internal server error', 500);
   }

@@ -16,6 +16,36 @@ interface UserSwitcherProps {
 }
 
 type ModalState = 'closed' | 'pin';
+const CSRF_REQUEST_TIMEOUT_MS = 8000;
+const SWITCH_LOGIN_TIMEOUT_MS = 12000;
+
+class UserSwitchTimeoutError extends Error {
+  constructor(stage: 'csrf' | 'login') {
+    super(stage === 'csrf' ? 'USER_SWITCH_CSRF_TIMEOUT' : 'USER_SWITCH_LOGIN_TIMEOUT');
+    this.name = 'UserSwitchTimeoutError';
+  }
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+  stage: 'csrf' | 'login'
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new UserSwitchTimeoutError(stage);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcherProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,21 +139,40 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
     setError('');
 
     try {
+      const csrfResponse = await fetchWithTimeout(
+        '/api/csrf',
+        { method: 'GET' },
+        CSRF_REQUEST_TIMEOUT_MS,
+        'csrf'
+      );
+      if (!csrfResponse.ok) {
+        throw new Error('CSRF setup failed');
+      }
+      const { token: csrfToken } = await csrfResponse.json();
+
       // Use server-side login endpoint (handles lockout via Redis)
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: selectedUser.id,
-          pin: pinString,
-        }),
-      });
+      const response = await fetchWithTimeout(
+        '/api/auth/login',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
+          },
+          body: JSON.stringify({
+            userId: selectedUser.id,
+            pin: pinString,
+          }),
+        },
+        SWITCH_LOGIN_TIMEOUT_MS,
+        'login'
+      );
 
       const result = await response.json();
 
       if (response.ok && result.success) {
         // Login successful
-        onUserChange(selectedUser);
+        onUserChange(result.user || selectedUser);
         setModalState('closed');
       } else {
         // Login failed
@@ -140,11 +189,17 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
         setPin(['', '', '', '']);
         pinInputRefs.current[0]?.focus();
       }
-    } catch {
-      setError('An error occurred.');
+    } catch (error) {
+      if (error instanceof UserSwitchTimeoutError) {
+        setError('Login timed out. Please try again.');
+      } else {
+        setError('An error occurred.');
+      }
+      setPin(['', '', '', '']);
+      pinInputRefs.current[0]?.focus();
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
 
   // Auto-submit PIN when all digits entered - intentional async trigger pattern
