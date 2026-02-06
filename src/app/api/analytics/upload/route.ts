@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import * as XLSX from 'xlsx';
 import {
   parseCSV,
   parseAllstateData,
@@ -28,6 +29,7 @@ import {
   type EnhancedScoreResult,
 } from '@/lib/analytics/enhanced-scoring';
 import type {
+  AllstateBookOfBusinessRow,
   AllstateDataSource,
   CrossSellOpportunity,
   DataUploadBatch,
@@ -40,6 +42,100 @@ function getSupabaseClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
+}
+
+/**
+ * Parse Excel file (.xlsx/.xls) and convert to array of row objects
+ * Handles Allstate Renewal Audit Report format (headers on row 5, data starts row 6)
+ */
+function parseExcelFile(buffer: ArrayBuffer): AllstateBookOfBusinessRow[] {
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const firstSheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[firstSheetName];
+
+  // Convert sheet to JSON with header detection
+  // First, get all data as raw arrays to find the header row
+  const rawData: (string | number | undefined)[][] = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    defval: '',
+    blankrows: false,
+  });
+
+  if (rawData.length === 0) {
+    return [];
+  }
+
+  // Find the header row by looking for common column names
+  // Renewal Audit Report has headers on row 5, All Purpose Audit on row 34
+  const headerIndicators = [
+    'Insured First Name',
+    'Insured Last Name',
+    'Insured Name',      // All Purpose Audit
+    'Insured Contact',   // All Purpose Audit (phone)
+    'Customer Name',
+    'Name',
+    'Phone',
+    'Email',
+    'Premium',
+    'Renewal Date',
+    'Policy',
+    'Product',
+  ];
+
+  let headerRowIndex = 0;
+  // Scan up to 50 rows to handle All Purpose Audit (headers at row 34)
+  for (let i = 0; i < Math.min(rawData.length, 50); i++) {
+    const row = rawData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    // Skip rows with fewer than 5 columns (likely metadata rows)
+    if (row.length < 5) continue;
+
+    const rowStr = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+    const matchCount = headerIndicators.filter(indicator =>
+      rowStr.includes(indicator.toLowerCase())
+    ).length;
+
+    // If we find at least 2 header indicators, this is likely the header row
+    if (matchCount >= 2) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  // Extract headers from the header row
+  const headerRow = rawData[headerRowIndex] as (string | number | undefined)[];
+  const headers = headerRow.map(cell => String(cell || '').trim());
+
+  // Convert remaining rows to objects using the headers
+  const rows: AllstateBookOfBusinessRow[] = [];
+  for (let i = headerRowIndex + 1; i < rawData.length; i++) {
+    const dataRow = rawData[i] as (string | number | undefined)[];
+    if (!dataRow || dataRow.length === 0) continue;
+
+    // Skip rows that appear to be empty or contain only whitespace
+    const hasData = dataRow.some(cell => {
+      const val = String(cell || '').trim();
+      return val !== '' && val !== 'undefined';
+    });
+    if (!hasData) continue;
+
+    const rowObject: AllstateBookOfBusinessRow = {};
+    for (let j = 0; j < headers.length; j++) {
+      if (headers[j]) {
+        // Keep numeric values as numbers for premium/balance fields
+        const cellValue = dataRow[j];
+        if (typeof cellValue === 'number') {
+          rowObject[headers[j]] = cellValue;
+        } else {
+          rowObject[headers[j]] = String(cellValue || '').trim();
+        }
+      }
+    }
+    rows.push(rowObject);
+  }
+
+  return rows;
 }
 
 export async function POST(request: NextRequest) {
@@ -91,20 +187,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Read file content
-    const fileContent = await file.text();
-
     // Parse file based on type
-    let rows;
+    let rows: AllstateBookOfBusinessRow[];
     if (fileType === 'csv') {
+      // Read as text for CSV
+      const fileContent = await file.text();
       rows = parseCSV(fileContent);
     } else {
-      // For Excel files, we would need xlsx library
-      // For now, return error asking for CSV
-      return NextResponse.json(
-        { error: 'Excel files not yet supported. Please export as CSV.' },
-        { status: 400 }
-      );
+      // Read as ArrayBuffer for Excel files
+      const buffer = await file.arrayBuffer();
+      try {
+        rows = parseExcelFile(buffer);
+      } catch (parseError) {
+        console.error('Excel parsing error:', parseError);
+        return NextResponse.json(
+          { error: 'Failed to parse Excel file. Please ensure the file is a valid .xlsx or .xls file.' },
+          { status: 400 }
+        );
+      }
     }
 
     if (rows.length === 0) {

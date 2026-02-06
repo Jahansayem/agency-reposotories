@@ -28,18 +28,25 @@ import type {
  */
 const COLUMN_MAPPINGS: Record<string, string[]> = {
   customer_name: ['Customer Name', 'Name', 'Full Name', 'Client Name', 'Insured Name', 'Named Insured'],
-  phone: ['Phone', 'Phone Number', 'Primary Phone', 'Contact Phone', 'Tel', 'Telephone'],
-  email: ['Email', 'Email Address', 'E-mail', 'Primary Email', 'Contact Email'],
-  address: ['Address', 'Street Address', 'Street', 'Mailing Address', 'Address Line 1'],
+  // Renewal Audit Report uses separate first/last name columns
+  first_name: ['Insured First Name', 'First Name', 'FirstName'],
+  last_name: ['Insured Last Name', 'Last Name', 'LastName'],
+  // All Purpose Audit uses 'Insured Contact' for phone
+  phone: ['Phone', 'Phone Number', 'Primary Phone', 'Contact Phone', 'Tel', 'Telephone', 'Insured Phone', 'Insured Contact'],
+  // All Purpose Audit uses 'Insured E-mail' (with hyphen)
+  email: ['Email', 'Email Address', 'E-mail', 'Primary Email', 'Contact Email', 'Insured Email', 'Insured E-mail'],
+  // All Purpose Audit uses 'Insured Address'
+  address: ['Address', 'Street Address', 'Street', 'Mailing Address', 'Address Line 1', 'Insured Address'],
   city: ['City', 'Town', 'Municipality'],
   zip_code: ['Zip', 'ZIP Code', 'Zip Code', 'Postal Code', 'ZIP'],
-  renewal_date: ['Renewal Date', 'Renewal', 'Expiration Date', 'Policy Renewal', 'Exp Date', 'Next Renewal'],
-  current_products: ['Current Products', 'Products', 'Product', 'Policy Type', 'Coverage', 'Line of Business', 'LOB'],
-  current_premium: ['Premium', 'Current Premium', 'Total Premium', 'Annual Premium', 'Written Premium'],
-  tenure_years: ['Tenure', 'Years', 'Tenure Years', 'Customer Since', 'Years as Customer'],
-  policy_count: ['Policy Count', 'Policies', 'Number of Policies', '# Policies', 'Total Policies'],
-  ezpay_status: ['EZPay', 'EZ Pay', 'Auto Pay', 'Autopay', 'Payment Status'],
-  balance_due: ['Balance', 'Balance Due', 'Amount Due', 'Outstanding Balance'],
+  renewal_date: ['Renewal Date', 'Renewal', 'Expiration Date', 'Policy Renewal', 'Exp Date', 'Next Renewal', 'Renewal Effective Date', 'Anniversary Effective Date'],
+  current_products: ['Current Products', 'Products', 'Product', 'Policy Type', 'Coverage', 'Line of Business', 'LOB', 'Product Name'],
+  // All Purpose Audit uses 'Premium new' and 'Premium Old' (different casing)
+  current_premium: ['Premium', 'Current Premium', 'Total Premium', 'Annual Premium', 'Written Premium', 'Premium New($)', 'Premium Old($)', 'Premium new', 'Premium Old'],
+  tenure_years: ['Tenure', 'Years', 'Tenure Years', 'Customer Since', 'Years as Customer', 'Years Prior Insurance', 'Original Year'],
+  policy_count: ['Policy Count', 'Policies', 'Number of Policies', '# Policies', 'Total Policies', 'Item Count'],
+  ezpay_status: ['EZPay', 'EZ Pay', 'Auto Pay', 'Autopay', 'Payment Status', 'Easy Pay'],
+  balance_due: ['Balance', 'Balance Due', 'Amount Due', 'Outstanding Balance', 'Amount Due($)'],
   renewal_status: ['Status', 'Renewal Status', 'Policy Status', 'Account Status'],
 };
 
@@ -276,7 +283,15 @@ export function parseAllstateRow(
   };
 
   // Extract customer name (required)
-  const customerName = (getValue('customer_name') as string || '').trim();
+  // Try full name first, then fall back to first_name + last_name (Renewal Audit Report format)
+  let customerName = (getValue('customer_name') as string || '').trim();
+  if (!customerName) {
+    const firstName = (getValue('first_name') as string || '').trim();
+    const lastName = (getValue('last_name') as string || '').trim();
+    if (firstName || lastName) {
+      customerName = `${firstName} ${lastName}`.trim();
+    }
+  }
   if (!customerName) {
     errors.push('Customer name is required');
   }
@@ -348,8 +363,47 @@ export function parseAllstateRow(
 }
 
 /**
+ * Finds the header row index in Allstate reports
+ * Allstate reports often have metadata rows before the actual headers
+ * (e.g., "Book Of Business-Renewal Audit Report", "Download Date", etc.)
+ */
+function findHeaderRowIndex(lines: string[]): number {
+  // Known header indicators - if a line contains these, it's likely the header row
+  // Includes both Renewal Audit Report and All Purpose Audit column names
+  const headerIndicators = [
+    'Insured First Name',
+    'Insured Name',      // All Purpose Audit
+    'Insured Contact',   // All Purpose Audit (phone)
+    'Customer Name',
+    'Name',
+    'Phone',
+    'Email',
+    'Premium',
+    'Renewal Date',
+    'Policy',
+  ];
+
+  // Scan up to 50 rows to handle All Purpose Audit (headers at row 34)
+  for (let i = 0; i < Math.min(lines.length, 50); i++) {
+    const line = lines[i].toLowerCase();
+    // Check if this line contains multiple header indicators
+    const matchCount = headerIndicators.filter(indicator =>
+      line.includes(indicator.toLowerCase())
+    ).length;
+
+    if (matchCount >= 2) {
+      return i;
+    }
+  }
+
+  // Default to first row if no header row detected
+  return 0;
+}
+
+/**
  * Parses CSV content string into rows
  * Simple CSV parser that handles quoted fields
+ * Automatically detects and skips Allstate report metadata rows
  */
 export function parseCSV(content: string): AllstateBookOfBusinessRow[] {
   const lines = content.split(/\r?\n/).filter(line => line.trim());
@@ -358,13 +412,16 @@ export function parseCSV(content: string): AllstateBookOfBusinessRow[] {
     return [];
   }
 
-  // Parse header row
-  const headers = parseCSVLine(lines[0]);
+  // Find the actual header row (skip Allstate metadata rows)
+  const headerRowIndex = findHeaderRowIndex(lines);
 
-  // Parse data rows
+  // Parse header row
+  const headers = parseCSVLine(lines[headerRowIndex]);
+
+  // Parse data rows (starting after header row)
   const rows: AllstateBookOfBusinessRow[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = headerRowIndex + 1; i < lines.length; i++) {
     const values = parseCSVLine(lines[i]);
 
     if (values.length !== headers.length) {
