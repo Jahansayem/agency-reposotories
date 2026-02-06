@@ -70,35 +70,49 @@ UPSTASH_REDIS_REST_TOKEN=<from upstash>  # Optional: rate limiting (fallback to 
 ### Overview
 
 The Allstate Analytics integration enables:
-1. **Weekly Data Import** - Upload CSV exports from Allstate Gateway
-2. **Cross-Sell Analysis** - Automatic priority scoring and opportunity identification
-3. **Renewal Calendar** - Visual calendar of upcoming renewals with cross-sell links
-4. **Task Generation** - Auto-create tasks from high-priority opportunities
+1. **Weekly Data Import** - Upload CSV/Excel exports from Allstate Gateway
+2. **Customer Segmentation** - LTV-based tiering (Elite/Premium/Standard/Entry)
+3. **Cross-Sell Analysis** - Automatic priority scoring and opportunity identification
+4. **Renewal Calendar** - Visual calendar of upcoming renewals with cross-sell links
+5. **Task Generation** - Auto-create tasks from high-priority opportunities
 
 ### Key Files
 
 ```
 # Type Definitions
 src/types/allstate-analytics.ts      # CrossSellOpportunity, RenewalCalendarEntry, etc.
+src/types/customer.ts                 # Customer, CustomerSegment types
+
+# Segmentation Logic
+src/lib/segmentation.ts               # Single source of truth for segmentation algorithm
+src/lib/analytics.ts                  # Portfolio analysis, LTV calculation
 
 # Parser & Scoring
-src/lib/allstate-parser.ts           # CSV parsing, scoring algorithms, talking points
+src/lib/allstate-parser.ts            # CSV/Excel parsing, scoring algorithms, talking points
 
 # API Endpoints
-src/app/api/analytics/upload/        # POST - Upload CSV data
-src/app/api/analytics/cross-sell/    # GET/POST/PATCH/DELETE - Opportunity CRUD
+src/app/api/analytics/upload/         # POST - Upload CSV/Excel data
+src/app/api/analytics/ai-upload/      # POST - AI-powered schema detection and upload
+src/app/api/analytics/cross-sell/     # GET/POST/PATCH/DELETE - Opportunity CRUD
 src/app/api/analytics/cross-sell/generate-tasks/  # POST - Create tasks from opportunities
-src/app/api/analytics/calendar/      # GET - Renewal calendar data
+src/app/api/analytics/calendar/       # GET - Renewal calendar data
+src/app/api/analytics/segmentation/   # POST - Segment customers by LTV
+src/app/api/customers/                # GET - Customer lookup with segmentation
 
 # React Hooks
-src/hooks/useCrossSellData.ts        # Hook for managing cross-sell data
+src/hooks/useCrossSellData.ts         # Hook for managing cross-sell data
+src/hooks/useCustomers.ts             # Hook for customer data with segmentation
 
 # UI Components
-src/components/analytics/AllstateDataUploader.tsx      # Upload modal
-src/components/analytics/CrossSellOpportunitiesPanel.tsx  # Opportunities list
+src/components/analytics/AllstateDataUploader.tsx           # Upload modal
+src/components/analytics/CsvUploadModal.tsx                 # AI-powered CSV upload
+src/components/analytics/CrossSellOpportunitiesPanel.tsx    # Opportunities list
+src/components/analytics/dashboards/CustomerSegmentationDashboard.tsx  # Segmentation dashboard
+src/components/analytics/dashboards/CustomerSegmentationDashboard.tsx  # Book of Business dashboard
+src/components/views/CustomerLookupView.tsx                 # Customer search and detail view
 
 # Database Migration
-supabase/migrations/20260204_allstate_analytics.sql    # 4 new tables
+supabase/migrations/20260204_allstate_analytics.sql         # 4 new tables
 ```
 
 ### Database Tables
@@ -108,7 +122,77 @@ supabase/migrations/20260204_allstate_analytics.sql    # 4 new tables
 | `data_upload_batches` | Track each file upload for auditing |
 | `cross_sell_opportunities` | Main opportunity records with scoring |
 | `renewal_calendar` | Calendar view of upcoming renewals |
-| `customer_insights` | Aggregated customer analytics |
+| `customer_insights` | Aggregated customer analytics with segmentation |
+
+### Customer Segmentation
+
+**Live Data Implementation:** The Customer Segmentation Dashboard now uses **real customer data** from the `customer_insights` table instead of demo data.
+
+#### Segment Tiers
+
+| Tier | Criteria | Characteristics | Avg LTV | Target CAC |
+|------|----------|-----------------|---------|------------|
+| **Elite** | (Premium ≥$15K AND 3+ policies) OR Premium ≥$20K OR 5+ policies | 4+ policies, 97% retention, referral source | $18,000 | $1,200 |
+| **Premium** | (Premium ≥$7K AND 2+ policies) OR Premium ≥$10K OR 4+ policies | 2-3 policies, bundled, Auto + Home | $9,000 | $700 |
+| **Standard** | Premium ≥$3K OR 2+ policies | 1-2 policies, mid-tenure, growth potential | $4,500 | $400 |
+| **Entry** | Everything else | Single policy, new customer, conversion target | $1,800 | $200 |
+
+**Key Insight:** Elite + Premium segments represent ~19% of customers but generate 83% of profit.
+
+#### Segmentation Algorithm
+
+The canonical segmentation algorithm is in `src/lib/segmentation.ts`:
+
+```typescript
+import { getCustomerSegment } from '@/lib/segmentation';
+
+// Segment a customer based on premium and policy count
+const segment = getCustomerSegment(totalPremium, policyCount);
+// Returns: 'elite' | 'premium' | 'standard' | 'entry'
+```
+
+**Important:** Always import from `src/lib/segmentation.ts` - this is the single source of truth. Do NOT duplicate this logic elsewhere.
+
+#### API Field Mappings
+
+The segmentation API uses different field names than the database. The dashboard handles these mappings automatically:
+
+| Dashboard UI | API Request | Database Table | Notes |
+|--------------|-------------|----------------|-------|
+| `elite` | `elite` | `elite` | Consistent naming |
+| `premium` | `premium` | `premium` | Consistent naming |
+| `standard` | `standard` | `standard` | Consistent naming |
+| `entry` | `low_value` | `entry` | **API uses "low_value", dashboard displays "entry"** |
+
+**Transform Example (CustomerSegmentationDashboard):**
+```typescript
+// Map API segment names to dashboard display names
+const API_TO_DASHBOARD_SEGMENT = {
+  elite: 'elite',
+  premium: 'premium',
+  standard: 'standard',
+  low_value: 'entry',  // API: low_value → Dashboard: entry
+};
+
+// Transform customer data for API
+const customerData = customers.map(c => ({
+  customerId: c.id,
+  productCount: c.policyCount,   // Dashboard: policyCount → API: productCount
+  annualPremium: c.totalPremium, // Dashboard: totalPremium → API: annualPremium
+}));
+```
+
+#### Live Data vs Demo Data
+
+The Customer Segmentation Dashboard automatically switches between live and demo data:
+
+- **Live Data**: Shows `● Live Data` badge (sky blue) when customer data is successfully loaded
+- **Demo Data**: Shows `○ Demo Data` badge (amber) when:
+  - No customers have been uploaded yet
+  - API segmentation call fails
+  - Customer list is empty
+
+**Performance:** Segmentation of 1,000 customers completes in ~64ms (tested baseline).
 
 ### Priority Tier System
 
@@ -119,7 +203,30 @@ supabase/migrations/20260204_allstate_analytics.sql    # 4 new tables
 | **MEDIUM** | Renewal ≤30 days + score ≥50 | Plan outreach |
 | **LOW** | Other opportunities | Batch process |
 
-### Usage Example
+### Usage Examples
+
+#### Customer Segmentation
+
+```typescript
+// Fetch customer segmentation
+const response = await fetch('/api/analytics/segmentation', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    customers: [
+      { customerId: '123', productCount: 4, annualPremium: 18000 },
+      { customerId: '456', productCount: 2, annualPremium: 8000 },
+    ],
+    marketingBudget: 50000,
+    options: { groupBySegment: false },
+  }),
+});
+
+const { portfolioAnalysis, marketingAllocation } = await response.json();
+// portfolioAnalysis.segments: { elite: {...}, premium: {...}, standard: {...}, low_value: {...} }
+```
+
+#### Cross-Sell Opportunities
 
 ```typescript
 // Upload data
@@ -139,16 +246,33 @@ await fetch('/api/analytics/cross-sell/generate-tasks', {
 });
 ```
 
+#### Customer Lookup
+
+```typescript
+// Search customers with segmentation
+const response = await fetch('/api/customers?q=Smith&segment=elite&sort=premium_high&limit=20');
+const { customers, stats } = await response.json();
+
+// Each customer includes:
+// - segment: 'elite' | 'premium' | 'standard' | 'entry'
+// - segmentConfig: { label, color, avgLtv, ... }
+// - totalPremium, policyCount, products, tenureYears
+// - hasOpportunity, priorityTier, recommendedProduct
+```
+
 ### Data Flow
 
 ```
-Allstate Gateway → CSV Export → Upload API → Parser → Scorer
-                                                ↓
-                                         Database Tables
-                                                ↓
-                    Dashboard ← Cross-Sell Panel ← Calendar Panel
-                                                ↓
-                                         Task Generation
+Allstate Gateway → CSV/Excel Export → Upload API → Parser → Scorer
+                                                      ↓
+                                               Database Tables
+                                                      ↓
+                          ┌───────────────────────────┴────────────────────────┐
+                          ↓                           ↓                        ↓
+                 Segmentation Dashboard    Cross-Sell Panel          Customer Lookup
+                    (Live Data)              (Opportunities)        (Search & Detail)
+                          ↓
+                 Marketing Allocation
 ```
 
 ---
@@ -197,6 +321,76 @@ When creating new features that need new types:
 4. **Run `npm run build`** before pushing
 
 **Never push components that reference types you haven't pushed yet.**
+
+### Railway Deployment Issues
+
+**CRITICAL: Railway can cache outdated builds even when your code is correct.**
+
+#### Symptoms
+- ✅ Local build succeeds (`npm run build`)
+- ✅ TypeScript passes (`tsc --noEmit`)
+- ✅ Git history shows correct code
+- ❌ Railway deployment fails with "Module has no exported member" errors
+
+#### Root Cause
+Railway may build from a stale commit hash that doesn't exist in your current git history. This happens when:
+1. Railway's cache points to an old deployment
+2. A force-push or rebase rewrote git history
+3. Railway's internal state is out of sync with your repository
+
+#### Quick Fix
+
+```bash
+# Force Railway to rebuild from latest code
+git commit --allow-empty -m "Trigger Railway rebuild"
+git push origin main
+
+# Railway will automatically detect the push and redeploy
+```
+
+#### Verification Steps
+
+Before assuming it's a Railway cache issue, verify locally:
+
+```bash
+# 1. Verify build succeeds
+npm run build
+
+# 2. Verify TypeScript passes
+npx tsc --noEmit
+
+# 3. Check what's in the repository
+git show HEAD:src/types/your-file.ts | grep "YourType"
+
+# 4. Verify local and remote are in sync
+git fetch origin
+git diff origin/main HEAD  # Should show no output
+```
+
+#### Prevention
+
+1. **Never force-push to `main`** - This can desync Railway's build cache
+2. **Check Railway logs** - Look for the commit hash being built
+3. **Use Railway's "Redeploy" button** - Manually trigger fresh builds when suspicious
+4. **Monitor build logs** - Compare the commit hash in Railway vs. `git log`
+
+#### When to Suspect Railway Cache Issues
+
+| Scenario | Likely Cause |
+|----------|--------------|
+| Build fails but local works | Railway cache |
+| Railway builds unknown commit hash (e.g., `7e46f017` not in `git log`) | Railway cache |
+| Recently force-pushed or rebased | Railway cache |
+| Error mentions exports that clearly exist | Railway cache |
+| Railway shows "scheduled build" message | Railway cache being cleared |
+
+#### Railway Dashboard Actions
+
+If empty commit doesn't work:
+1. Go to Railway dashboard → Your deployment
+2. Click "Settings" → "Redeploy"
+3. Or click "Settings" → "Reset Build Cache"
+4. Monitor the build logs for the correct commit hash
 
 ---
 
@@ -2342,6 +2536,42 @@ if (error) console.error('Upload error:', error);
 - Use `useEffect` for initialization, but render children immediately
 - Test in Safari during development (not just Chrome)
 
+#### Railway Deployment Fails (But Local Build Works)
+**Symptoms:** Railway build fails with TypeScript errors, but local build succeeds
+
+**Root Cause:** Railway building from stale/cached commit that doesn't match repository
+
+**Quick Fix:**
+```bash
+# Verify local build works
+npm run build  # Should succeed
+
+# Check TypeScript
+npx tsc --noEmit  # Should succeed
+
+# Verify code is in repository
+git show HEAD:src/types/your-file.ts | grep "YourType"
+
+# Force Railway rebuild
+git commit --allow-empty -m "Trigger Railway rebuild"
+git push origin main
+```
+
+**Debug steps:**
+1. Check Railway build logs for commit hash (e.g., `7e46f017`)
+2. Compare with local git history: `git log --oneline | grep <hash>`
+3. If commit doesn't exist locally, Railway has stale cache
+4. Verify local and remote are in sync: `git diff origin/main HEAD`
+5. Use Railway dashboard → "Redeploy" button if needed
+
+**Prevention:**
+- Never force-push to `main` branch
+- Monitor Railway build logs for correct commit hashes
+- Keep Railway dashboard open during critical deployments
+- Use Railway's "Reset Build Cache" when suspicious
+
+**See also:** [Railway Deployment Issues](#railway-deployment-issues) section for comprehensive guide.
+
 ### Console Debugging
 
 Enable verbose logging:
@@ -2733,6 +2963,7 @@ const USER_COLORS = [
 
 | Issue | Quick Fix |
 |-------|-----------|
+| Railway build fails but local works | Run `git commit --allow-empty -m "Trigger rebuild" && git push` (see [Railway Deployment Issues](#railway-deployment-issues)) |
 | Real-time not syncing | Check table is in `supabase_realtime` publication |
 | AI timeout | Verify `ANTHROPIC_API_KEY` is set and valid |
 | File upload fails | Use `SUPABASE_SERVICE_ROLE_KEY` not anon key |
