@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
@@ -102,6 +102,13 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)' },
   follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)' },
   task_reordered: { icon: ArrowRight, label: 'reordered task', color: 'var(--accent-vivid)' },
+  agency_created: { icon: Building, label: 'created agency', color: 'var(--success-vivid)' },
+  member_added: { icon: UserPlus, label: 'added member', color: 'var(--success-vivid)' },
+  member_removed: { icon: UserMinus, label: 'removed member', color: 'var(--danger)' },
+  member_role_changed: { icon: Shield, label: 'changed member role', color: 'var(--warning)' },
+  member_permissions_changed: { icon: Settings, label: 'updated permissions', color: 'var(--state-info)' },
+  member_role_and_permissions_changed: { icon: Shield, label: 'updated role and permissions', color: 'var(--warning)' },
+  customer_import: { icon: User, label: 'imported customers', color: 'var(--success-vivid)' },
 };
 
 // Activity type filter options
@@ -660,7 +667,8 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
   );
 }
 
-function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
+// Memoized to prevent re-renders when activity data hasn't changed
+const ActivityItem = memo(function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
   const config = ACTION_CONFIG[activity.action];
   const Icon = config.icon;
   const details = activity.details as Record<string, string | number | undefined>;
@@ -761,4 +769,4 @@ function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
       </div>
     </div>
   );
-}
+});

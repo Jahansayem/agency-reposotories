@@ -49,7 +49,8 @@ interface SubtaskItemProps {
   onUpdate: (id: string, text: string) => void;
 }
 
-function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps) {
+// Memoized to prevent re-renders when subtask data hasn't changed
+const SubtaskItem = memo(function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(subtask.text);
 
@@ -141,7 +142,7 @@ function SubtaskItem({ subtask, onToggle, onDelete, onUpdate }: SubtaskItemProps
       </button>
     </div>
   );
-}
+});
 
 interface TodoItemProps {
   todo: Todo;
