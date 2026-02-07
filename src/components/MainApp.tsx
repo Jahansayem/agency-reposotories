@@ -18,6 +18,9 @@ import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import SkipLink from './SkipLink';
+import { OnboardingModal } from './AIOnboarding';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { AIPreferencesModal } from './AIPreferences';
 
 // Lazy load TodoList - large component with subtasks, kanban, etc.
 const TodoList = dynamic(() => import('./TodoList'), {
@@ -127,6 +130,20 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const [hasCheckedDailyDashboard, setHasCheckedDailyDashboard] = useState(false);
   // Track which task to auto-expand when navigating from dashboard/notifications
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  // Track customer segment filter when navigating from CustomerSegmentationDashboard
+  const [customerSegmentFilter, setCustomerSegmentFilter] = useState<'elite' | 'premium' | 'standard' | 'entry' | 'all'>('all');
+
+  // AI Onboarding state
+  const {
+    shouldShowOnboarding,
+    startOnboarding,
+    dismissOnboarding,
+    skipOnboarding,
+  } = useOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // AI Preferences state
+  const [showAIPreferences, setShowAIPreferences] = useState(false);
 
   // Navigate to dashboard on first login of the day
   // Only check ONCE after initial data load - prevents flash on hard refresh
@@ -139,6 +156,18 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       }
     }
   }, [loading, hasCheckedDailyDashboard, setActiveView]);
+
+  // Show AI onboarding on first visit
+  useEffect(() => {
+    if (!loading && shouldShowOnboarding()) {
+      // Delay showing onboarding slightly to let the app load
+      const timer = setTimeout(() => {
+        startOnboarding();
+        setShowOnboarding(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, shouldShowOnboarding, startOnboarding]);
 
   const handleNavigateToTasks = useCallback((filter?: QuickFilter) => {
     if (filter) {
@@ -205,6 +234,12 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const handleSelectedTaskHandled = useCallback(() => {
     setSelectedTaskId(null);
   }, []);
+
+  // Handle navigation from CustomerSegmentationDashboard to CustomerLookupView with segment filter
+  const handleNavigateToCustomerSegment = useCallback((segment: 'elite' | 'premium' | 'standard' | 'entry') => {
+    setCustomerSegmentFilter(segment);
+    setActiveView('customers');
+  }, [setActiveView]);
 
   // Handle restoring an archived task
   const handleRestoreTask = useCallback(async (taskId: string) => {
@@ -431,7 +466,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // Analytics dashboard with book of business insights
         return (
           <ErrorBoundary>
-            <AnalyticsPage key={agencyKey} />
+            <AnalyticsPage key={agencyKey} onNavigateToSegment={handleNavigateToCustomerSegment} />
           </ErrorBoundary>
         );
 
@@ -444,6 +479,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               agencyId={currentAgencyId || undefined}
               currentUser={currentUser.name}
               onClose={() => setActiveView('tasks')}
+              initialSegment={customerSegmentFilter}
             />
           </ErrorBoundary>
         );
@@ -587,6 +623,18 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <div className="fixed bottom-4 right-4 z-40">
         <SyncStatusIndicator showLabel />
       </div>
+
+      {/* AI Onboarding Tutorial */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
+
+      {/* AI Preferences Settings */}
+      <AIPreferencesModal
+        isOpen={showAIPreferences}
+        onClose={() => setShowAIPreferences(false)}
+      />
     </>
   );
 }

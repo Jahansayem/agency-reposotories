@@ -20,7 +20,11 @@ import { useCurrentUser } from '@/contexts/UserContext';
 
 type AnalyticsTab = 'overview' | 'opportunities' | 'customers';
 
-export function AnalyticsPage() {
+interface AnalyticsPageProps {
+  onNavigateToSegment?: (segment: 'elite' | 'premium' | 'standard' | 'entry') => void;
+}
+
+export function AnalyticsPage({ onNavigateToSegment }: AnalyticsPageProps = {}) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const currentUser = useCurrentUser();
@@ -105,7 +109,7 @@ export function AnalyticsPage() {
             className="space-y-6"
           >
             {/* Customer Segmentation Dashboard */}
-            <CustomerSegmentationDashboard />
+            <CustomerSegmentationDashboard onSegmentClick={onNavigateToSegment} />
           </motion.div>
         )}
       </div>

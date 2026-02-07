@@ -40,6 +40,7 @@ interface CustomerLookupViewProps {
   agencyId?: string;
   currentUser: string;
   onClose?: () => void;
+  initialSegment?: CustomerSegment | 'all'; // For navigation from segmentation dashboard
 }
 
 // Customer value tier filters
@@ -86,8 +87,9 @@ export function CustomerLookupView({
   agencyId,
   currentUser,
   onClose,
+  initialSegment = 'all',
 }: CustomerLookupViewProps) {
-  const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>('all');
+  const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>(initialSegment);
   const [selectedOpportunityType, setSelectedOpportunityType] = useState<OpportunityType | 'all'>('all');
   const [sortBy, setSortBy] = useState<CustomerSortOption>('priority');
   const [showSortDropdown, setShowSortDropdown] = useState(false);

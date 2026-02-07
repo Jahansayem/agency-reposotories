@@ -108,7 +108,11 @@ const SEGMENT_CHARACTERISTICS: Record<string, string[]> = {
   entry: ['Single policy', 'New customer', 'Conversion target'],
 };
 
-export function CustomerSegmentationDashboard() {
+interface CustomerSegmentationDashboardProps {
+  onSegmentClick?: (segment: 'elite' | 'premium' | 'standard' | 'entry') => void;
+}
+
+export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmentationDashboardProps = {}) {
   const customerList = useCustomerList({ limit: 1000 }); // Fetch all customers for segmentation
   const [segments, setSegments] = useState<CustomerSegment[]>(DEMO_SEGMENTS);
   const [isLiveData, setIsLiveData] = useState(false);
@@ -327,11 +331,19 @@ export function CustomerSegmentationDashboard() {
           const config = SEGMENT_CONFIG[segment.segment as keyof typeof SEGMENT_CONFIG];
           if (!config) return null;
 
+          const isClickable = !!onSegmentClick && segment.segment !== 'all';
+          const segmentKey = segment.segment as 'elite' | 'premium' | 'standard' | 'entry';
+
           return (
-            <motion.div
+            <motion.button
               key={segment.segment}
               variants={itemVariants}
-              className={`glass-card p-6 bg-gradient-to-br ${config.gradient} border ${config.border}`}
+              onClick={() => isClickable && onSegmentClick(segmentKey)}
+              disabled={!isClickable}
+              className={`glass-card p-6 bg-gradient-to-br ${config.gradient} border ${config.border} text-left w-full transition-all ${
+                isClickable ? 'cursor-pointer hover:scale-105 hover:border-white/30 hover:shadow-xl' : ''
+              }`}
+              title={isClickable ? `View ${segment.segment} customers` : undefined}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -399,7 +411,16 @@ export function CustomerSegmentationDashboard() {
                   </span>
                 ))}
               </div>
-            </motion.div>
+
+              {/* Click hint for clickable cards */}
+              {isClickable && (
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <p className="text-xs text-white/40 text-center">
+                    Click to view customers →
+                  </p>
+                </div>
+              )}
+            </motion.button>
           );
         })}
       </div>
