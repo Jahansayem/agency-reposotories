@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { BookOfBusinessDashboard, bookOfBusinessData } from './BookOfBusinessDashboard';
 import { useCashFlow, useDataUpload, useAnalyticsConnectionStatus, useAnalyticsRealtime } from '../hooks';
+import { logger } from '@/lib/logger';
 
 type DataMode = 'demo' | 'live' | 'loading' | 'error';
 
@@ -92,7 +93,10 @@ export function ConnectedBookOfBusinessDashboard() {
         setDataMode('demo');
       }
     } catch (error) {
-      console.error('Failed to fetch live data:', error);
+      logger.error('Failed to fetch live data', error instanceof Error ? error : new Error(String(error)), {
+        component: 'ConnectedBookOfBusinessDashboard',
+        action: 'fetchLiveData',
+      });
       setDataMode('demo');
     }
   }, [cashFlow]);

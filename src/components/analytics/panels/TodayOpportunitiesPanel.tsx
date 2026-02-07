@@ -18,6 +18,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTodayOpportunities, type ContactRequest, type TodayOpportunity } from '../hooks/useTodayOpportunities';
 import { CONTACT_OUTCOME_CONFIG, type ContactOutcome } from '@/types/allstate-analytics';
 import { CustomerDetailPanel } from '@/components/customer/CustomerDetailPanel';
+import { useCurrentUser } from '@/contexts/UserContext';
+import { logger } from '@/lib/logger';
 import {
   Phone,
   Mail,
@@ -73,6 +75,8 @@ interface TodayOpportunitiesPanelProps {
 }
 
 export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayOpportunitiesPanelProps = {}) {
+  const currentUser = useCurrentUser();
+
   const {
     opportunities,
     meta,
@@ -113,21 +117,17 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
     setLoggingContact(opportunityId);
 
     try {
-      // For now, use a placeholder user ID - in production this would come from auth context
-      // TODO: Get actual user ID from auth context
       const request: ContactRequest = {
         contactMethod: 'phone',
         outcome,
         notes: notes || `Contact logged via Today panel: ${CONTACT_OUTCOME_CONFIG[outcome].label}`,
       };
 
-      // The hook now requires userId - we'll need to get this from context
-      // For now, we'll call the API directly with a workaround
       const response = await fetch(`/api/opportunities/${opportunityId}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_id: '00000000-0000-0000-0000-000000000000', // Placeholder - should come from auth
+          user_id: currentUser.id,
           contact_method: request.contactMethod,
           contact_outcome: request.outcome,
           notes: request.notes,
@@ -149,7 +149,11 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
       refresh();
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err) {
-      console.error('Failed to log contact:', err);
+      logger.error('Failed to log contact', err instanceof Error ? err : new Error(String(err)), {
+        component: 'TodayOpportunitiesPanel',
+        action: 'logContact',
+        opportunityId,
+      });
       setToastMessage({ type: 'error', message: 'Failed to log contact. Please try again.' });
       setTimeout(() => setToastMessage(null), 3000);
     } finally {
@@ -199,7 +203,11 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
       }
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err) {
-      console.error('Failed to create task:', err);
+      logger.error('Failed to create task', err instanceof Error ? err : new Error(String(err)), {
+        component: 'TodayOpportunitiesPanel',
+        action: 'createTask',
+        opportunityId: opp.id,
+      });
       setToastMessage({ type: 'error', message: 'Failed to create task. Please try again.' });
       setTimeout(() => setToastMessage(null), 3000);
     } finally {
@@ -627,14 +635,24 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
               <div className="p-6">
                 <CustomerDetailPanel
                   customerId={selectedCustomerId}
-                  currentUser="Derrick"
+                  currentUser={currentUser.name}
                   onCreateTask={(taskId) => {
-                    console.log('Created task:', taskId);
+                    logger.info('Task created from customer detail panel', {
+                      component: 'TodayOpportunitiesPanel',
+                      action: 'createTaskFromDetail',
+                      taskId,
+                      customerId: selectedCustomerId,
+                    });
                     setToastMessage({ type: 'success', message: 'Task created successfully' });
                     setTimeout(() => setToastMessage(null), 3000);
                   }}
                   onViewTask={(taskId) => {
-                    console.log('View task:', taskId);
+                    logger.info('Viewing task from customer detail panel', {
+                      component: 'TodayOpportunitiesPanel',
+                      action: 'viewTaskFromDetail',
+                      taskId,
+                      customerId: selectedCustomerId,
+                    });
                   }}
                 />
               </div>

@@ -24,6 +24,7 @@ import {
 import { type CustomerSegment } from '../hooks';
 import { useCustomerList } from '@/hooks/useCustomers';
 import { SEGMENT_CONFIGS, type SegmentConfig as ImportedSegmentConfig } from '@/constants/customerSegments';
+import { logger } from '@/lib/logger';
 
 // Animation variants (explicitly typed per CLAUDE.md to prevent CI failures)
 const containerVariants: Variants = {
@@ -128,7 +129,11 @@ export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmen
         setIsLiveData(true);
       }
     } catch (error) {
-      console.error('Failed to fetch segmentation:', error);
+      logger.error('Failed to fetch segmentation', error instanceof Error ? error : new Error(String(error)), {
+        component: 'CustomerSegmentationDashboard',
+        action: 'fetchSegmentation',
+        customerCount: customers.length,
+      });
       setSegmentationError(error instanceof Error ? error.message : 'Failed to load segmentation');
       // Keep demo data on error
     } finally {
