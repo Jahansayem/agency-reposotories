@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { withSystemAuth } from '@/lib/agencyAuth';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 /**
  * GET /api/todos/check-waiting

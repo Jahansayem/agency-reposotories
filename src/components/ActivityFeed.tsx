@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield } from 'lucide-react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';

@@ -13,8 +13,6 @@ import { motion, type Variants } from 'framer-motion';
 import {
   Users,
   Crown,
-  Star,
-  Shield,
   Target,
   DollarSign,
   TrendingUp,
@@ -25,6 +23,7 @@ import {
 } from 'lucide-react';
 import { type CustomerSegment } from '../hooks';
 import { useCustomerList } from '@/hooks/useCustomers';
+import { SEGMENT_CONFIGS, type SegmentConfig as ImportedSegmentConfig } from '@/constants/customerSegments';
 
 // Animation variants (explicitly typed per CLAUDE.md to prevent CI failures)
 const containerVariants: Variants = {
@@ -40,49 +39,8 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0 }
 };
 
-// Segment configuration
-const SEGMENT_CONFIG = {
-  elite: {
-    icon: Crown,
-    color: 'amber',
-    gradient: 'from-amber-500/20 to-amber-500/5',
-    border: 'border-amber-500/30',
-    text: 'text-amber-400',
-    description: 'High-value customers with 4+ products',
-    avgLtv: 18000,
-    targetCac: 1200,
-  },
-  premium: {
-    icon: Star,
-    color: 'purple',
-    gradient: 'from-purple-500/20 to-purple-500/5',
-    border: 'border-purple-500/30',
-    text: 'text-purple-400',
-    description: 'Multi-product bundled customers',
-    avgLtv: 9000,
-    targetCac: 700,
-  },
-  standard: {
-    icon: Shield,
-    color: 'blue',
-    gradient: 'from-blue-500/20 to-blue-500/5',
-    border: 'border-blue-500/30',
-    text: 'text-blue-400',
-    description: 'Single or dual product customers',
-    avgLtv: 4500,
-    targetCac: 400,
-  },
-  entry: {
-    icon: Users,
-    color: 'sky',
-    gradient: 'from-sky-500/20 to-sky-500/5',
-    border: 'border-sky-500/30',
-    text: 'text-sky-400',
-    description: 'New or low-premium customers',
-    avgLtv: 1800,
-    targetCac: 200,
-  },
-};
+// Note: Segment configurations now imported from @/constants/customerSegments
+// This eliminates duplication and ensures consistency across the app
 
 // Demo data (used when API is not available)
 const DEMO_SEGMENTS: CustomerSegment[] = [
@@ -100,13 +58,7 @@ const API_TO_DASHBOARD_SEGMENT: Record<string, string> = {
   low_value: 'entry',
 };
 
-// Characteristics for each segment (used when transforming API response)
-const SEGMENT_CHARACTERISTICS: Record<string, string[]> = {
-  elite: ['4+ policies', 'High retention', 'Referral source'],
-  premium: ['2-3 policies', 'Bundled', 'Auto + Home'],
-  standard: ['1-2 policies', 'Mid-tenure', 'Growth potential'],
-  entry: ['Single policy', 'New customer', 'Conversion target'],
-};
+// Note: Segment characteristics now part of SEGMENT_CONFIGS from @/constants/customerSegments
 
 interface CustomerSegmentationDashboardProps {
   onSegmentClick?: (segment: 'elite' | 'premium' | 'standard' | 'entry') => void;
@@ -164,7 +116,7 @@ export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmen
               count: segmentAnalysis.count,
               percentage: segmentAnalysis.percentageOfBook,
               avgLtv: Math.round(segmentAnalysis.avgLtv),
-              characteristics: SEGMENT_CHARACTERISTICS[dashboardSegment] || [],
+              characteristics: SEGMENT_CONFIGS[dashboardSegment as keyof typeof SEGMENT_CONFIGS]?.characteristics || [],
             };
           }
         );
@@ -215,7 +167,7 @@ export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmen
   // Marketing allocation (simplified)
   const marketingBudget = 50000; // Example budget
   const allocations = segments.map(s => {
-    const config = SEGMENT_CONFIG[s.segment as keyof typeof SEGMENT_CONFIG];
+    const config = SEGMENT_CONFIGS[s.segment as keyof typeof SEGMENT_CONFIGS];
     const weight = s.segment === 'elite' ? 0.1 : s.segment === 'premium' ? 0.2 : s.segment === 'standard' ? 0.35 : 0.35;
     return {
       segment: s.segment,
@@ -328,7 +280,7 @@ export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmen
       {/* Segment Cards */}
       <div className="grid md:grid-cols-2 gap-6">
         {segments.map((segment) => {
-          const config = SEGMENT_CONFIG[segment.segment as keyof typeof SEGMENT_CONFIG];
+          const config = SEGMENT_CONFIGS[segment.segment as keyof typeof SEGMENT_CONFIGS];
           if (!config) return null;
 
           const isClickable = !!onSegmentClick && segment.segment !== 'all';
@@ -441,7 +393,7 @@ export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmen
 
         <div className="grid md:grid-cols-4 gap-4">
           {allocations.map((alloc) => {
-            const config = SEGMENT_CONFIG[alloc.segment as keyof typeof SEGMENT_CONFIG];
+            const config = SEGMENT_CONFIGS[alloc.segment as keyof typeof SEGMENT_CONFIGS];
             if (!config) return null;
 
             return (

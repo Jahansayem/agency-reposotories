@@ -48,7 +48,7 @@ const sizeStyles: Record<AvatarSize, {
     statusOffset: '-right-0.5 -bottom-0.5',
   },
   md: {
-    container: 'w-10 h-10',
+    container: 'w-11 h-11',
     text: 'text-sm',
     status: 'w-3 h-3',
     statusOffset: '-right-0.5 -bottom-0.5',

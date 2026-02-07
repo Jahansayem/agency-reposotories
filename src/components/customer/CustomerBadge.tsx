@@ -7,8 +7,8 @@
  * Used on task cards and in lists.
  */
 
-import { Crown, Star, Shield, Users } from 'lucide-react';
 import type { CustomerSegment } from '@/types/customer';
+import { SEGMENT_CONFIGS, type CustomerSegment as ImportedSegment } from '@/constants/customerSegments';
 
 interface CustomerBadgeProps {
   name: string;
@@ -18,32 +18,23 @@ interface CustomerBadgeProps {
   onClick?: () => void;
 }
 
-const SEGMENT_STYLES = {
-  elite: {
-    bg: 'bg-amber-500/20',
-    border: 'border-amber-500/30',
-    text: 'text-amber-600 dark:text-amber-400',
-    icon: Crown,
-  },
-  premium: {
-    bg: 'bg-purple-500/20',
-    border: 'border-purple-500/30',
-    text: 'text-purple-600 dark:text-purple-400',
-    icon: Star,
-  },
-  standard: {
-    bg: 'bg-blue-500/20',
-    border: 'border-blue-500/30',
-    text: 'text-blue-600 dark:text-blue-400',
-    icon: Shield,
-  },
-  entry: {
-    bg: 'bg-sky-500/20',
-    border: 'border-sky-500/30',
-    text: 'text-sky-600 dark:text-sky-400',
-    icon: Users,
-  },
-};
+// Generate segment styles from shared constants
+const SEGMENT_STYLES = Object.fromEntries(
+  Object.entries(SEGMENT_CONFIGS).map(([key, config]) => [
+    key,
+    {
+      bg: config.gradient.split(' ')[0].replace('from-', 'bg-'), // Extract base color from gradient
+      border: config.border,
+      text: config.text,
+      icon: config.icon,
+    },
+  ])
+) as Record<CustomerSegment, {
+  bg: string;
+  border: string;
+  text: string;
+  icon: typeof SEGMENT_CONFIGS.elite.icon;
+}>;
 
 export function CustomerBadge({
   name,

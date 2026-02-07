@@ -20,6 +20,9 @@ export { TodayOpportunitiesPanel } from './panels/TodayOpportunitiesPanel';
 // Modals
 export { CsvUploadModal } from './CsvUploadModal';
 
+// Banners
+export { DataFlowBanner } from './DataFlowBanner';
+
 // Hooks - Today's Opportunities
 export { useTodayOpportunities } from './hooks/useTodayOpportunities';
 export type {

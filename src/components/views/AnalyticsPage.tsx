@@ -14,20 +14,26 @@ import {
   TodayOpportunitiesPanel,
   CustomerSegmentationDashboard,
   CsvUploadModal,
+  DataFlowBanner,
 } from '@/components/analytics';
 import { BarChart2, Calendar, Users, Upload } from 'lucide-react';
 import { useCurrentUser } from '@/contexts/UserContext';
+import { useCustomerList } from '@/hooks/useCustomers';
 
 type AnalyticsTab = 'overview' | 'opportunities' | 'customers';
 
 interface AnalyticsPageProps {
   onNavigateToSegment?: (segment: 'elite' | 'premium' | 'standard' | 'entry') => void;
+  onNavigateToAllOpportunities?: () => void;
 }
 
-export function AnalyticsPage({ onNavigateToSegment }: AnalyticsPageProps = {}) {
+export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunities }: AnalyticsPageProps = {}) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const currentUser = useCurrentUser();
+
+  // Fetch customer count for data flow banner
+  const { stats } = useCustomerList({ limit: 1 });
 
   return (
     <div className="h-full overflow-y-auto">
@@ -79,6 +85,15 @@ export function AnalyticsPage({ onNavigateToSegment }: AnalyticsPageProps = {}) 
         </div>
       </div>
 
+      {/* Data Flow Banner */}
+      <div className="px-6 pt-4">
+        <DataFlowBanner
+          customerCount={stats?.total || 0}
+          lastImportDate={null} // TODO: track last import in state
+          dashboardCount={3}
+        />
+      </div>
+
       {/* Content */}
       <div className="p-6">
         {activeTab === 'overview' && (
@@ -97,7 +112,7 @@ export function AnalyticsPage({ onNavigateToSegment }: AnalyticsPageProps = {}) 
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <TodayOpportunitiesPanel />
+            <TodayOpportunitiesPanel onNavigateToAllOpportunities={onNavigateToAllOpportunities} />
           </motion.div>
         )}
 

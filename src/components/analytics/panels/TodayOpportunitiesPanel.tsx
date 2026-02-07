@@ -14,9 +14,10 @@
  */
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTodayOpportunities, type ContactRequest, type TodayOpportunity } from '../hooks/useTodayOpportunities';
 import { CONTACT_OUTCOME_CONFIG, type ContactOutcome } from '@/types/allstate-analytics';
+import { CustomerDetailPanel } from '@/components/customer/CustomerDetailPanel';
 import {
   Phone,
   Mail,
@@ -38,6 +39,7 @@ import {
   Target,
   DollarSign,
   TrendingUp,
+  ArrowRight,
 } from 'lucide-react';
 
 // Animation variants matching other analytics components
@@ -66,7 +68,11 @@ const OUTCOME_ICONS: Record<ContactOutcome, React.ComponentType<{ className?: st
   declined_permanently: XCircle,
 };
 
-export function TodayOpportunitiesPanel() {
+interface TodayOpportunitiesPanelProps {
+  onNavigateToAllOpportunities?: () => void;
+}
+
+export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayOpportunitiesPanelProps = {}) {
   const {
     opportunities,
     meta,
@@ -82,6 +88,8 @@ export function TodayOpportunitiesPanel() {
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   // Track which opportunities have the outcome selector expanded
   const [expandedOutcomes, setExpandedOutcomes] = useState<Set<string>>(new Set());
+  // Track selected customer for detail panel
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // Toggle outcome selector visibility
   const toggleOutcomeSelector = (oppId: string) => {
@@ -352,9 +360,13 @@ export function TodayOpportunitiesPanel() {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <h3 className="text-xl font-bold text-white">
+                  <button
+                    onClick={() => setSelectedCustomerId(opp.id)}
+                    className="text-xl font-bold text-white hover:text-sky-400 hover:underline transition-colors cursor-pointer text-left flex items-center gap-2 group"
+                  >
                     {opp.customerName}
-                  </h3>
+                    <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
 
                   {/* Priority Badge */}
                   <span
@@ -560,10 +572,76 @@ export function TodayOpportunitiesPanel() {
         ))}
       </div>
 
-      {/* Footer */}
-      <motion.div variants={itemVariants} className="text-center text-white/50 text-sm">
-        Showing {opportunities.length} of {meta?.todayCount} opportunities renewing today
+      {/* Footer with View All Button */}
+      <motion.div variants={itemVariants} className="space-y-4">
+        {/* Stats line */}
+        <div className="text-center text-white/50 text-sm">
+          Showing {opportunities.length} of {meta?.todayCount} opportunities renewing today
+        </div>
+
+        {/* View All Opportunities Button */}
+        {onNavigateToAllOpportunities && (
+          <div className="pt-4 border-t border-white/10 text-center">
+            <button
+              onClick={onNavigateToAllOpportunities}
+              className="flex items-center gap-2 mx-auto px-6 py-3 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 font-medium transition-all hover:scale-[1.02] border border-sky-500/30"
+            >
+              <TrendingUp className="w-5 h-5" />
+              View All Opportunities
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <p className="text-xs text-white/40 mt-2">
+              Browse all {meta?.urgentCount} opportunities in the next 7 days
+            </p>
+          </div>
+        )}
       </motion.div>
+
+      {/* Customer Detail Panel Modal */}
+      <AnimatePresence>
+        {selectedCustomerId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedCustomerId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[var(--surface-1)] rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-[var(--surface-1)] border-b border-[var(--border)] p-4 flex items-center justify-between z-10">
+                <h2 className="text-xl font-bold text-[var(--text)]">Customer Details</h2>
+                <button
+                  onClick={() => setSelectedCustomerId(null)}
+                  className="p-2 hover:bg-[var(--surface-2)] rounded-lg transition-colors"
+                  aria-label="Close"
+                >
+                  <XCircle className="w-5 h-5 text-[var(--text-muted)]" />
+                </button>
+              </div>
+              <div className="p-6">
+                <CustomerDetailPanel
+                  customerId={selectedCustomerId}
+                  currentUser="Derrick"
+                  onCreateTask={(taskId) => {
+                    console.log('Created task:', taskId);
+                    setToastMessage({ type: 'success', message: 'Task created successfully' });
+                    setTimeout(() => setToastMessage(null), 3000);
+                  }}
+                  onViewTask={(taskId) => {
+                    console.log('View task:', taskId);
+                  }}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

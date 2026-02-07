@@ -13,9 +13,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Users,
-  Crown,
-  Star,
-  Shield,
   X,
   TrendingUp,
   Loader2,
@@ -35,21 +32,27 @@ import { useCustomerSearch, useCustomerList } from '@/hooks/useCustomers';
 import { CustomerCard } from '../customer/CustomerCard';
 import { CustomerDetailPanel } from '../customer/CustomerDetailPanel';
 import type { Customer, CustomerSegment, OpportunityType, CustomerSortOption } from '@/types/customer';
+import { SEGMENT_CONFIGS } from '@/constants/customerSegments';
 
 interface CustomerLookupViewProps {
   agencyId?: string;
   currentUser: string;
   onClose?: () => void;
   initialSegment?: CustomerSegment | 'all'; // For navigation from segmentation dashboard
+  initialSort?: CustomerSortOption; // For navigation from TodayOpportunitiesPanel
 }
 
-// Customer value tier filters
+// Customer value tier filters - dynamically generated from SEGMENT_CONFIGS
 const SEGMENT_FILTERS: { value: CustomerSegment | 'all'; label: string; icon: React.ReactNode }[] = [
   { value: 'all', label: 'All Tiers', icon: <Users className="w-4 h-4" /> },
-  { value: 'elite', label: 'Elite', icon: <Crown className="w-4 h-4 text-amber-500" /> },
-  { value: 'premium', label: 'Premium', icon: <Star className="w-4 h-4 text-purple-500" /> },
-  { value: 'standard', label: 'Standard', icon: <Shield className="w-4 h-4 text-blue-500" /> },
-  { value: 'entry', label: 'Entry', icon: <Users className="w-4 h-4 text-sky-500" /> },
+  ...Object.values(SEGMENT_CONFIGS).map(config => {
+    const IconComponent = config.icon;
+    return {
+      value: config.segment,
+      label: config.label,
+      icon: <IconComponent className={`w-4 h-4 ${config.text}`} />
+    };
+  })
 ];
 
 // Cross-sell opportunity type filters
@@ -88,12 +91,14 @@ export function CustomerLookupView({
   currentUser,
   onClose,
   initialSegment = 'all',
+  initialSort = 'priority',
 }: CustomerLookupViewProps) {
   const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>(initialSegment);
   const [selectedOpportunityType, setSelectedOpportunityType] = useState<OpportunityType | 'all'>('all');
-  const [sortBy, setSortBy] = useState<CustomerSortOption>('priority');
+  const [sortBy, setSortBy] = useState<CustomerSortOption>(initialSort);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [showDueTodayOnly, setShowDueTodayOnly] = useState(false);
 
   // Search hook for search input
   const {
@@ -129,7 +134,32 @@ export function CustomerLookupView({
   if (selectedOpportunityType !== 'all') {
     filteredSearchResults = filteredSearchResults.filter(c => c.opportunityType === selectedOpportunityType);
   }
-  const displayCustomers = query.length >= 2 ? filteredSearchResults : allCustomers;
+  // Apply "Due Today" filter if enabled
+  if (showDueTodayOnly) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    filteredSearchResults = filteredSearchResults.filter(c => {
+      if (!c.upcomingRenewal) return false;
+      const renewalDate = new Date(c.upcomingRenewal);
+      renewalDate.setHours(0, 0, 0, 0);
+      return renewalDate.getTime() === today.getTime();
+    });
+  }
+
+  // Apply "Due Today" filter to browse results as well
+  let displayBrowseCustomers = allCustomers;
+  if (showDueTodayOnly) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    displayBrowseCustomers = displayBrowseCustomers.filter(c => {
+      if (!c.upcomingRenewal) return false;
+      const renewalDate = new Date(c.upcomingRenewal);
+      renewalDate.setHours(0, 0, 0, 0);
+      return renewalDate.getTime() === today.getTime();
+    });
+  }
+
+  const displayCustomers = query.length >= 2 ? filteredSearchResults : displayBrowseCustomers;
   const isLoading = query.length >= 2 ? searchLoading : listLoading;
 
   // Handle customer selection
@@ -263,6 +293,32 @@ export function CustomerLookupView({
               {filter.label}
             </button>
           ))}
+        </div>
+
+        {/* Due Today quick filter */}
+        <div className="flex items-center gap-2 mt-2">
+          <button
+            onClick={() => {
+              setShowDueTodayOnly(!showDueTodayOnly);
+              // When enabling "Due Today", automatically sort by renewal date for best UX
+              if (!showDueTodayOnly) {
+                setSortBy('renewal_date');
+              }
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+              showDueTodayOnly
+                ? 'bg-gradient-to-r from-rose-500 to-orange-500 text-white shadow-lg shadow-rose-500/50 animate-pulse'
+                : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:bg-rose-500/20 hover:text-rose-500 border border-transparent hover:border-rose-500/30'
+            }`}
+          >
+            <Flame className="w-4 h-4" />
+            {showDueTodayOnly ? '🔥 Due Today (Active)' : 'Due Today'}
+          </button>
+          {showDueTodayOnly && (
+            <span className="text-xs text-rose-400 font-medium animate-pulse">
+              Showing only opportunities renewing TODAY
+            </span>
+          )}
         </div>
       </div>
 

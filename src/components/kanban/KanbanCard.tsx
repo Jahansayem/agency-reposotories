@@ -14,7 +14,6 @@ import {
   Paperclip,
   Music,
   Mic,
-  GripVertical,
 } from 'lucide-react';
 import { Todo, TodoPriority, PRIORITY_CONFIG } from '@/types/todo';
 import { formatDueDate, isOverdue, isDueToday, isDueSoon } from './kanbanUtils';

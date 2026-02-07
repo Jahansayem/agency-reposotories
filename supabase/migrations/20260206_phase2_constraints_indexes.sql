@@ -100,25 +100,43 @@ CREATE INDEX IF NOT EXISTS idx_todos_due_date
   ON todos(due_date)
   WHERE due_date IS NOT NULL AND completed = false;
 
--- Index for todos with waiting status
-CREATE INDEX IF NOT EXISTS idx_todos_waiting
-  ON todos(agency_id, waiting_for, waiting_expected_date)
-  WHERE waiting_for IS NOT NULL;
+-- Index for todos with waiting status (if columns exist)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'todos' AND column_name = 'waiting_for'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_todos_waiting
+      ON todos(agency_id, waiting_for, waiting_expected_date)
+      WHERE waiting_for IS NOT NULL;
+  END IF;
+END $$;
 
 -- Index for customer opportunities by tier
 CREATE INDEX IF NOT EXISTS idx_opportunities_tier_score
   ON cross_sell_opportunities(agency_id, priority_tier, priority_score DESC)
-  WHERE dismissed_at IS NULL;
+  WHERE dismissed = false;
 
 -- Index for customer lookup by name (case-insensitive)
-CREATE INDEX IF NOT EXISTS idx_customers_name_gin
-  ON customer_insights USING gin(to_tsvector('english', customer_name))
-  WHERE agency_id IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customer_insights') THEN
+    CREATE INDEX IF NOT EXISTS idx_customers_name_gin
+      ON customer_insights USING gin(to_tsvector('english', customer_name))
+      WHERE agency_id IS NOT NULL;
+  END IF;
+END $$;
 
 -- Index for agency members lookup
-CREATE INDEX IF NOT EXISTS idx_agency_members_user_status
-  ON agency_members(user_id, status)
-  WHERE status = 'active';
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'agency_members') THEN
+    CREATE INDEX IF NOT EXISTS idx_agency_members_user_status
+      ON agency_members(user_id, status)
+      WHERE status = 'active';
+  END IF;
+END $$;
 
 -- ==================================================
 -- STEP 4: Performance Statistics Update
@@ -129,8 +147,18 @@ ANALYZE todos;
 ANALYZE messages;
 ANALYZE activity_log;
 ANALYZE cross_sell_opportunities;
-ANALYZE customer_insights;
-ANALYZE agency_members;
+
+-- Analyze optional tables (only if they exist)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'customer_insights') THEN
+    EXECUTE 'ANALYZE customer_insights';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'agency_members') THEN
+    EXECUTE 'ANALYZE agency_members';
+  END IF;
+END $$;
 
 -- ==================================================
 -- VERIFICATION QUERIES

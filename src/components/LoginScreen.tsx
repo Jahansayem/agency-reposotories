@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion';
-import { AlertCircle, ChevronDown, ChevronLeft, ChevronUp, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap, Ticket, Loader2, Check, Building2 } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronLeft, ChevronUp, Lock, CheckSquare, Search, Shield, Sparkles, Users, Zap, Ticket, Loader2, Check, Building2, Mail } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import {
   isValidPin,
@@ -128,6 +128,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   const [teamStats, setTeamStats] = useState<{ totalTasks: number; completedThisWeek: number; activeUsers: number } | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showForgotPinModal, setShowForgotPinModal] = useState(false);
 
   const features = [
     {
@@ -759,6 +760,16 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                       )}
                     </AnimatePresence>
 
+                    {/* Forgot PIN Link */}
+                    <div className="text-center mb-4">
+                      <button
+                        onClick={() => setShowForgotPinModal(true)}
+                        className="text-sm text-white/60 hover:text-white transition-colors underline"
+                      >
+                        Forgot PIN?
+                      </button>
+                    </div>
+
                     {isSubmitting && (
                       <motion.div
                         className="flex flex-col items-center gap-3"
@@ -798,8 +809,177 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
           onLogin(user);
         }}
       />
+
+      {/* Forgot PIN Modal */}
+      <ForgotPinModal
+        isOpen={showForgotPinModal}
+        onClose={() => setShowForgotPinModal(false)}
+        userName={selectedUser?.name}
+      />
     </div>
     </MotionConfig>
+  );
+}
+
+// Forgot PIN Modal Component
+function ForgotPinModal({ isOpen, onClose, userName }: { isOpen: boolean; onClose: () => void; userName?: string }) {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  // Reset state when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setEmail('');
+      setError('');
+      setSuccess(false);
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/auth/forgot-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset email');
+      }
+
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset email. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-2xl rounded-[28px] border border-white/10 p-8 shadow-2xl max-w-md w-full"
+      >
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-[var(--radius-2xl)] bg-gradient-to-br from-[var(--brand-sky)]/20 to-[var(--brand-blue)]/20 flex items-center justify-center border border-white/10">
+            <Mail className="w-8 h-8 text-[var(--brand-sky)]" />
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Forgot Your PIN?</h2>
+          {userName && (
+            <p className="text-sm text-white/60">
+              We'll send a reset link to the email associated with <strong>{userName}</strong>
+            </p>
+          )}
+        </div>
+
+        {success ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="flex items-center justify-center gap-2 text-green-400 text-sm bg-green-500/10 py-3 px-4 rounded-[var(--radius-xl)] border border-green-500/20">
+              <Check className="w-5 h-5" />
+              <span>Check your email for a reset link!</span>
+            </div>
+            <p className="text-sm text-white/60 text-center">
+              If an account exists with that email, we've sent instructions to reset your PIN.
+            </p>
+            <button
+              onClick={onClose}
+              className="w-full py-3 px-4 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-medium rounded-[var(--radius-lg)] transition-colors"
+            >
+              Close
+            </button>
+          </motion.div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="reset-email" className="block text-sm font-medium text-white mb-2">
+                Email Address
+              </label>
+              <input
+                id="reset-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                disabled={isSubmitting}
+                className="w-full px-4 py-3 rounded-[var(--radius-lg)] border-2 border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--brand-sky)] transition-colors"
+              />
+              <p className="mt-2 text-xs text-white/40">
+                We'll send a secure link to reset your PIN.
+              </p>
+            </div>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 py-3 px-4 rounded-[var(--radius-xl)] border border-red-500/20"
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span>{error}</span>
+              </motion.div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="flex-1 py-3 px-4 text-white/60 hover:text-white font-medium transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !email.trim()}
+                className="flex-1 py-3 px-4 bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 text-white font-medium rounded-[var(--radius-lg)] transition-colors flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reset Link'
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+      </motion.div>
+    </div>
   );
 }
 

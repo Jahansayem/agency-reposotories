@@ -379,7 +379,6 @@ function TodoItemComponent({
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const priority = todo.priority || 'medium';
   const status = todo.status || 'todo';
-  void status; // Used for status-based logic elsewhere
 
   // Long-press context menu state (Issue #20)
   const [longPressTriggered, setLongPressTriggered] = useState(false);

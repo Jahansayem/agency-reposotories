@@ -126,8 +126,8 @@ export default function DashboardPage({
   // Check if user has team members (is a manager/owner)
   const hasTeam = users.length > 1;
 
-  // Determine if user is owner/manager based on role or name
-  const isOwnerOrManager = currentUser.role === 'owner' || currentUser.role === 'manager' || currentUser.name === 'Derrick';
+  // Determine if user is owner/manager based on role
+  const isOwnerOrManager = currentUser.role === 'owner' || currentUser.role === 'manager';
 
   // Use new role-based dashboards
   if (useNewDashboards) {

@@ -150,6 +150,9 @@ export async function callClaude(options: CallClaudeOptions): Promise<ClaudeCall
     return { success: false, error: 'AI service not configured' };
   }
 
+  // AI-TIMEOUT-001: 30-second timeout for all AI calls to prevent hanging requests
+  const AI_TIMEOUT_MS = 30000; // 30 seconds
+
   try {
     const messageOptions: Anthropic.MessageCreateParams = {
       model,
@@ -162,7 +165,17 @@ export async function callClaude(options: CallClaudeOptions): Promise<ClaudeCall
       messageOptions.system = systemPrompt;
     }
 
-    const message = await client.messages.create(messageOptions);
+    // AI-TIMEOUT-001: Race the API call against a timeout
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`AI request timed out after ${AI_TIMEOUT_MS}ms`));
+      }, AI_TIMEOUT_MS);
+    });
+
+    const message = await Promise.race([
+      client.messages.create(messageOptions),
+      timeoutPromise,
+    ]);
 
     // Extract text content from response
     const textContent = message.content.find((c) => c.type === 'text');
@@ -174,7 +187,19 @@ export async function callClaude(options: CallClaudeOptions): Promise<ClaudeCall
     return { success: true, content: textContent.text };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Claude API call failed', error, { component, details: errorMessage });
+
+    // AI-TIMEOUT-001: Log timeout errors specially for monitoring
+    if (errorMessage.includes('timed out')) {
+      logger.error('Claude API timeout', error, {
+        component,
+        timeoutMs: AI_TIMEOUT_MS,
+        model,
+        maxTokens,
+      });
+    } else {
+      logger.error('Claude API call failed', error, { component, details: errorMessage });
+    }
+
     return { success: false, error: errorMessage };
   }
 }

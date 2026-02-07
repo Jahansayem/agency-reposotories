@@ -36,6 +36,10 @@ export interface CustomerListStats {
   withOpportunities: number;
 }
 
+/**
+ * @deprecated Use SegmentConfig from @/constants/customerSegments instead
+ * This interface is kept for backward compatibility only
+ */
 export interface SegmentConfig {
   label: string;
   color: string;
@@ -43,6 +47,16 @@ export interface SegmentConfig {
   description?: string;
 }
 
+/**
+ * @deprecated Use SEGMENT_CONFIGS from @/constants/customerSegments instead
+ * This constant is kept for backward compatibility only.
+ *
+ * Migration guide:
+ * - Old: import { SEGMENT_CONFIG } from '@/types/customer';
+ * - New: import { SEGMENT_CONFIGS } from '@/constants/customerSegments';
+ *
+ * The new version includes additional properties: icon, gradient, border, text, targetCac, characteristics
+ */
 export const SEGMENT_CONFIG: Record<CustomerSegment, SegmentConfig> = {
   elite: {
     label: 'Elite',

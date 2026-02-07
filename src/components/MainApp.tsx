@@ -132,6 +132,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   // Track customer segment filter when navigating from CustomerSegmentationDashboard
   const [customerSegmentFilter, setCustomerSegmentFilter] = useState<'elite' | 'premium' | 'standard' | 'entry' | 'all'>('all');
+  // Track initial sort option when navigating to customer lookup
+  const [customerInitialSort, setCustomerInitialSort] = useState<'priority' | 'renewal_date'>('priority');
 
   // AI Onboarding state
   const {
@@ -238,6 +240,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   // Handle navigation from CustomerSegmentationDashboard to CustomerLookupView with segment filter
   const handleNavigateToCustomerSegment = useCallback((segment: 'elite' | 'premium' | 'standard' | 'entry') => {
     setCustomerSegmentFilter(segment);
+    setCustomerInitialSort('priority');
+    setActiveView('customers');
+  }, [setActiveView]);
+
+  // Handle navigation from TodayOpportunitiesPanel to CustomerLookupView with renewal date sort
+  const handleNavigateToAllOpportunities = useCallback(() => {
+    setCustomerSegmentFilter('all');
+    setCustomerInitialSort('renewal_date');
     setActiveView('customers');
   }, [setActiveView]);
 
@@ -466,7 +476,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         // Analytics dashboard with book of business insights
         return (
           <ErrorBoundary>
-            <AnalyticsPage key={agencyKey} onNavigateToSegment={handleNavigateToCustomerSegment} />
+            <AnalyticsPage
+              key={agencyKey}
+              onNavigateToSegment={handleNavigateToCustomerSegment}
+              onNavigateToAllOpportunities={handleNavigateToAllOpportunities}
+            />
           </ErrorBoundary>
         );
 
@@ -480,6 +494,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               currentUser={currentUser.name}
               onClose={() => setActiveView('tasks')}
               initialSegment={customerSegmentFilter}
+              initialSort={customerInitialSort}
             />
           </ErrorBoundary>
         );
@@ -515,6 +530,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     selectedTaskId,
     canViewStrategicGoals,
     canViewArchive,
+    customerSegmentFilter,
+    customerInitialSort,
     handleNavigateToTasks,
     handleTaskLinkClick,
     handleSelectedTaskHandled,
@@ -527,7 +544,10 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleAIAccept,
     handleAIDismiss,
     handleAIRefresh,
+    handleNavigateToCustomerSegment,
+    handleNavigateToAllOpportunities,
     onUserChange,
+    currentAgencyId,
   ]);
 
   // Loading state - rendered conditionally in JSX to avoid early return before hooks

@@ -30,7 +30,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { logger } from '@/lib/logger';
-import { REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
 
 export type RealtimeStatus =

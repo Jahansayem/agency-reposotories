@@ -6,8 +6,9 @@ import {
   X, Mail, Copy, Sparkles, Check,
   User, Phone, AtSign, FileText, ChevronDown, ChevronUp,
   RefreshCw, Send, AlertTriangle, Shield, Calendar, DollarSign, Info, Languages,
-  AlertCircle, CheckCircle
+  AlertCircle, CheckCircle, HelpCircle, Loader2
 } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Todo, AuthUser } from '@/types/todo';
 import { extractPhoneNumbers, extractEmails, extractPotentialNames } from '@/lib/duplicateDetection';
 import { fetchWithCsrf } from '@/lib/csrf';
@@ -46,6 +47,7 @@ interface GeneratedEmail {
   body: string;
   suggestedFollowUp?: string;
   warnings?: EmailWarning[];
+  confidence?: number; // AI confidence score (0-1)
 }
 
 export default function CustomerEmailModal({
@@ -155,6 +157,9 @@ export default function CustomerEmailModal({
   const [editedSubject, setEditedSubject] = useState('');
   const [editedBody, setEditedBody] = useState('');
 
+  // Dismissed warnings tracking
+  const [dismissedWarnings, setDismissedWarnings] = useState<Set<number>>(new Set());
+
   // UI state
   const [showTaskDetails, setShowTaskDetails] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -253,6 +258,7 @@ export default function CustomerEmailModal({
       });
       setEditedSubject(data.subject);
       setEditedBody(data.body);
+      setDismissedWarnings(new Set()); // Reset dismissed warnings on new generation
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate email');
     } finally {
@@ -341,11 +347,22 @@ export default function CustomerEmailModal({
             <div className={`p-2 rounded-xl ${'bg-[var(--accent)]/10'}`}>
               <Mail className="w-5 h-5 text-blue-500" />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold">Generate Customer Email</h2>
-              <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
-                Create an update email for {taskSummary.total} task{taskSummary.total !== 1 ? 's' : ''}
-              </p>
+            <div className="flex items-center gap-2">
+              <div>
+                <h2 className="text-lg font-semibold">Generate Customer Email</h2>
+                <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
+                  Create an update email for {taskSummary.total} task{taskSummary.total !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <Tooltip content="AI drafts professional emails using your task context, with automatic warnings for sensitive info, date promises, and pricing details" position="bottom">
+                <button
+                  type="button"
+                  className="p-1 rounded-full hover:bg-[var(--surface-2)] transition-colors"
+                  aria-label="Help"
+                >
+                  <HelpCircle className="w-4 h-4 text-[var(--text-muted)]" />
+                </button>
+              </Tooltip>
             </div>
           </div>
           <button
@@ -653,28 +670,51 @@ export default function CustomerEmailModal({
           </div>
 
           {/* Generate Button */}
-          {!generatedEmail && (
+          {!generatedEmail && !isGenerating && (
             <button
               onClick={generateEmail}
-              disabled={isGenerating || !customerName.trim() || (fieldTouched.customerEmail === true && !!fieldErrors.customerEmail) || (fieldTouched.customerPhone === true && !!fieldErrors.customerPhone)}
+              disabled={!customerName.trim() || (fieldTouched.customerEmail === true && !!fieldErrors.customerEmail) || (fieldTouched.customerPhone === true && !!fieldErrors.customerPhone)}
               className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
-                isGenerating || !customerName.trim()
+                !customerName.trim()
                   ? 'bg-[var(--surface-2)] text-[var(--text-muted)] cursor-not-allowed'
                   : 'bg-[var(--accent)] hover:opacity-90 text-white'
               }`}
             >
-              {isGenerating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Generate Email
-                </>
-              )}
+              <Sparkles className="w-4 h-4" />
+              Generate Email
             </button>
+          )}
+
+          {/* Loading Skeleton during generation */}
+          {isGenerating && !generatedEmail && (
+            <div className={`p-4 rounded-xl border-2 ${'bg-[var(--accent)]/5 border-[var(--accent)]/20'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-blue-500" />
+                  <span className="font-medium">Generating Email...</span>
+                </div>
+                <Loader2 className="w-4 h-4 text-[var(--accent)] animate-spin" />
+              </div>
+
+              {/* Subject skeleton */}
+              <div className="mb-3">
+                <div className="text-xs text-[var(--text-muted)] mb-1">Subject</div>
+                <div className="skeleton h-8 w-4/5 rounded-lg"></div>
+              </div>
+
+              {/* Body skeleton */}
+              <div>
+                <div className="text-xs text-[var(--text-muted)] mb-1">Body</div>
+                <div className="space-y-2">
+                  <div className="skeleton h-4 w-full rounded"></div>
+                  <div className="skeleton h-4 w-full rounded"></div>
+                  <div className="skeleton h-4 w-11/12 rounded"></div>
+                  <div className="skeleton h-4 w-full rounded mt-3"></div>
+                  <div className="skeleton h-4 w-full rounded"></div>
+                  <div className="skeleton h-4 w-4/5 rounded"></div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Error */}
@@ -691,10 +731,21 @@ export default function CustomerEmailModal({
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium flex items-center gap-2">
                   <Mail className="w-4 h-4 text-blue-500" />
-                  Generated Email
+                  <span>Generated Email</span>
                   {language === 'spanish' && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)]">
                       Español
+                    </span>
+                  )}
+                  {generatedEmail.confidence !== undefined && (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      generatedEmail.confidence >= 0.7
+                        ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                        : generatedEmail.confidence >= 0.5
+                        ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                        : 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
+                    }`}>
+                      {Math.round(generatedEmail.confidence * 100)}% confident
                     </span>
                   )}
                 </h3>
@@ -722,18 +773,30 @@ export default function CustomerEmailModal({
                 </div>
               </div>
 
-              {/* Warnings */}
+              {/* Warnings - Dismissible */}
               {generatedEmail.warnings && generatedEmail.warnings.length > 0 && (
                 <div className={`mb-3 p-3 rounded-lg border-2 ${
                   'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'}`}>
                   <div className="flex items-start gap-2 mb-2">
                     <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-yellow-700 dark:text-yellow-400 mb-1">
-                        Review Before Sending
-                      </h4>
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">
+                          Review Before Sending
+                        </h4>
+                        {dismissedWarnings.size > 0 && (
+                          <button
+                            onClick={() => setDismissedWarnings(new Set())}
+                            className="text-xs text-yellow-600 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-300 underline"
+                          >
+                            Show all ({dismissedWarnings.size} hidden)
+                          </button>
+                        )}
+                      </div>
                       <div className="space-y-2">
                         {generatedEmail.warnings.map((warning, i) => {
+                          if (dismissedWarnings.has(i)) return null;
+
                           const getWarningIcon = (type: string) => {
                             switch (type) {
                               case 'sensitive_info': return Shield;
@@ -747,11 +810,24 @@ export default function CustomerEmailModal({
                           return (
                             <div key={i} className={`flex items-start gap-2 text-xs ${
                               'text-yellow-800 dark:text-yellow-300'}`}>
-                              <WarningIcon className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                              <div>
-                                <span className="font-medium">{warning.location}:</span>{' '}
-                                {warning.message}
-                              </div>
+                              <label className="flex items-start gap-2 flex-1 cursor-pointer group">
+                                <input
+                                  type="checkbox"
+                                  checked={false}
+                                  onChange={() => {
+                                    const newDismissed = new Set(dismissedWarnings);
+                                    newDismissed.add(i);
+                                    setDismissedWarnings(newDismissed);
+                                  }}
+                                  className="mt-0.5 w-3.5 h-3.5 rounded border-yellow-400 text-yellow-600 focus:ring-yellow-500 cursor-pointer"
+                                  title="Mark as verified"
+                                />
+                                <div className="flex-1 group-hover:opacity-70 transition-opacity">
+                                  <WarningIcon className="w-3 h-3 inline mr-1" />
+                                  <span className="font-medium">{warning.location}:</span>{' '}
+                                  {warning.message}
+                                </div>
+                              </label>
                             </div>
                           );
                         })}

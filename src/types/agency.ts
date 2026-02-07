@@ -510,3 +510,131 @@ export function isInvitationValid(invitation: AgencyInvitation): boolean {
   if (invitation.accepted_at) return false;
   return new Date(invitation.expires_at) > new Date();
 }
+
+// ============================================
+// Permission Presets for Quick Configuration
+// ============================================
+
+export type PermissionPreset = 'full_access' | 'manager' | 'task_coordinator' | 'view_only' | 'custom';
+
+export interface PermissionPresetMeta {
+  key: PermissionPreset;
+  label: string;
+  description: string;
+  permissions: AgencyPermissions;
+}
+
+/**
+ * Permission presets for quick role configuration in the UI.
+ * Makes it easier to assign common permission patterns without checking 21 individual boxes.
+ */
+export const PERMISSION_PRESETS: Record<PermissionPreset, Omit<PermissionPresetMeta, 'key'>> = {
+  full_access: {
+    label: 'Full Access',
+    description: 'All permissions enabled (equivalent to Owner role)',
+    permissions: DEFAULT_PERMISSIONS.owner,
+  },
+  manager: {
+    label: 'Manager',
+    description: 'Task management, team oversight, analytics - no strategic goals edit or team management',
+    permissions: DEFAULT_PERMISSIONS.manager,
+  },
+  task_coordinator: {
+    label: 'Task Coordinator',
+    description: 'Can create, edit, assign tasks - limited team and feature access',
+    permissions: {
+      // Task permissions
+      can_create_tasks: true,
+      can_edit_own_tasks: true,
+      can_edit_all_tasks: true,
+      can_delete_own_tasks: true,
+      can_delete_all_tasks: false,
+      can_assign_tasks: true,
+      can_view_all_tasks: true,
+      can_reorder_tasks: true,
+      // Team permissions
+      can_view_team_tasks: true,
+      can_view_team_stats: false,
+      can_manage_team: false,
+      // Chat permissions
+      can_use_chat: true,
+      can_delete_own_messages: true,
+      can_delete_all_messages: false,
+      can_pin_messages: false,
+      // Feature permissions
+      can_view_strategic_goals: false,
+      can_edit_strategic_goals: false,
+      can_view_archive: true,
+      can_use_ai_features: true,
+      can_manage_templates: false,
+      can_view_activity_log: true,
+      // Legacy aliases
+      can_edit_any_task: true,
+      can_delete_tasks: false,
+      can_delete_any_message: false,
+      can_manage_strategic_goals: false,
+    },
+  },
+  view_only: {
+    label: 'View Only',
+    description: 'Can view tasks and use chat - no editing or deletion',
+    permissions: {
+      // Task permissions - view only
+      can_create_tasks: false,
+      can_edit_own_tasks: false,
+      can_edit_all_tasks: false,
+      can_delete_own_tasks: false,
+      can_delete_all_tasks: false,
+      can_assign_tasks: false,
+      can_view_all_tasks: true,
+      can_reorder_tasks: false,
+      // Team permissions
+      can_view_team_tasks: true,
+      can_view_team_stats: false,
+      can_manage_team: false,
+      // Chat permissions - basic
+      can_use_chat: true,
+      can_delete_own_messages: true,
+      can_delete_all_messages: false,
+      can_pin_messages: false,
+      // Feature permissions
+      can_view_strategic_goals: false,
+      can_edit_strategic_goals: false,
+      can_view_archive: true,
+      can_use_ai_features: false,
+      can_manage_templates: false,
+      can_view_activity_log: true,
+      // Legacy aliases
+      can_edit_any_task: false,
+      can_delete_tasks: false,
+      can_delete_any_message: false,
+      can_manage_strategic_goals: false,
+    },
+  },
+  custom: {
+    label: 'Custom',
+    description: 'Manually configured permissions',
+    permissions: DEFAULT_PERMISSIONS.staff, // Placeholder, user will customize
+  },
+};
+
+/**
+ * Determine which preset matches the given permissions, or return 'custom' if none match.
+ */
+export function detectPermissionPreset(permissions: AgencyPermissions): PermissionPreset {
+  // Check each preset
+  for (const [presetKey, preset] of Object.entries(PERMISSION_PRESETS)) {
+    if (presetKey === 'custom') continue;
+
+    // Compare all permission keys
+    const matches = Object.keys(preset.permissions).every(
+      (key) => permissions[key as keyof AgencyPermissions] === preset.permissions[key as keyof AgencyPermissions]
+    );
+
+    if (matches) {
+      return presetKey as PermissionPreset;
+    }
+  }
+
+  return 'custom';
+}

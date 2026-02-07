@@ -42,6 +42,7 @@ import { fetchWithCsrf } from '@/lib/csrf';
 import { logger } from '@/lib/logger';
 import { sanitizeTranscription } from '@/lib/sanitize';
 import { usePermission } from '@/hooks/usePermission';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * Filter out internal/system user names from display
@@ -91,6 +92,7 @@ export default function TaskDetailPanel({
   onGenerateEmail,
 }: TaskDetailPanelProps) {
   const { theme } = useTheme();
+  const toast = useToast();
 
   // Permission checks
   const canDeleteTasksPerm = usePermission('can_delete_tasks');
@@ -324,10 +326,31 @@ export default function TaskDetailPanel({
 
   const handleApplyEnhancedText = useCallback(async () => {
     if (!aiEnhancedText) return;
+
+    // Store original text for undo
+    const originalText = task.text;
+
+    // Apply AI enhancement
     await onUpdate(task.id, { text: aiEnhancedText });
     setAiEnhancedText(null);
     setEditedText(aiEnhancedText);
-  }, [task.id, aiEnhancedText, onUpdate]);
+
+    // Show toast with undo button
+    toast.success('AI enhanced your task', {
+      description: 'Text has been improved for clarity',
+      duration: 5000,
+      action: {
+        label: 'Undo',
+        onClick: async () => {
+          await onUpdate(task.id, { text: originalText });
+          setEditedText(originalText);
+          toast.info('Enhancement undone', {
+            description: 'Original text restored',
+          });
+        },
+      },
+    });
+  }, [task.id, task.text, aiEnhancedText, onUpdate, toast]);
 
   // Due date info
   const dueDateInfo = task.due_date ? (() => {

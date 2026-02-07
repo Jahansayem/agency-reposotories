@@ -1,11 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, RefObject } from 'react';
+import { useCallback, useEffect, RefObject, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Users, ChevronLeft, X } from 'lucide-react';
-import { AuthUser, ChatConversation, ChatMessage } from '@/types/todo';
-import { sanitizeHTML } from '@/lib/chatUtils';
+import {
+  MessageSquare, Users, ChevronLeft, X, Search, Bell,
+  BellOff, Moon, Pin, ChevronDown
+} from 'lucide-react';
+import { AuthUser, ChatConversation, ChatMessage, Todo, TapbackType } from '@/types/todo';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
+import { ChatMessageList } from './ChatMessageList';
+import { ChatInputBar } from './ChatInputBar';
+import { ChatConversationList } from './ChatConversationList';
+import { useChatMessages } from '@/hooks/useChatMessages';
 
 interface DockedChatPanelProps {
   currentUser: AuthUser;
@@ -25,6 +32,17 @@ interface DockedChatPanelProps {
   getInitials: (name: string) => string;
   getConversationTitle: () => string;
   extractMentions: (text: string, userNames: string[]) => string[];
+
+  // Additional props for feature parity with floating mode
+  addReaction?: (messageId: string, reaction: TapbackType) => void;
+  editMessage?: (messageId: string, newText: string) => void;
+  deleteMessage?: (messageId: string) => void;
+  togglePin?: (message: ChatMessage) => void;
+  onCreateTask?: (text: string, assignedTo?: string) => void;
+  onTaskLinkClick?: (todoId: string) => void;
+  todosMap?: Map<string, Todo>;
+  markMessagesAsRead?: (messageIds: string[]) => void;
+
   /** Callback to close the chat panel (used in mobile/tablet overlay modes) */
   onClose?: () => void;
 }
@@ -47,12 +65,47 @@ export function DockedChatPanel({
   getInitials,
   getConversationTitle,
   extractMentions,
+  addReaction,
+  editMessage,
+  deleteMessage,
+  togglePin,
+  onCreateTask,
+  onTaskLinkClick,
+  todosMap,
+  markMessagesAsRead,
   onClose,
 }: DockedChatPanelProps) {
   // Responsive breakpoints: mobile (<640px), tablet (640-1024px), desktop (>1024px)
   const isMobile = useIsMobile(640);
   const isTablet = useIsMobile(1024);
-  // isTablet is true for both mobile and tablet; isMobile is true only for mobile
+
+  // Detect keyboard visibility on mobile
+  const isKeyboardVisible = useKeyboardVisible();
+
+  // Enhanced state for feature parity
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showPinnedMessages, setShowPinnedMessages] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [isDndMode, setIsDndMode] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  // Use chat messages hook for advanced features
+  const {
+    groupedMessages,
+    pinnedMessages,
+    loading,
+    hasMoreMessages,
+    isLoadingMore,
+    loadMoreMessages,
+  } = useChatMessages({
+    currentUser,
+    conversation,
+    searchQuery,
+  });
 
   // Lock body scroll when mobile overlay is open
   useEffect(() => {
@@ -63,48 +116,84 @@ export function DockedChatPanel({
       };
     }
   }, [isMobile]);
-  // Render message text with mentions
-  const renderMessageText = useCallback((text: string) => {
-    const sanitizedText = sanitizeHTML(text);
-    const parts = sanitizedText.split(/(@\w+)/g);
-    return parts.map((part, i) => {
-      if (part.startsWith('@')) {
-        const userName = part.slice(1);
-        const isMentioned = users.some(u => u.name.toLowerCase() === userName.toLowerCase());
-        const isMe = userName.toLowerCase() === currentUser.name.toLowerCase();
 
-        if (isMentioned) {
-          return (
-            <span
-              key={i}
-              className={`px-1.5 py-0.5 rounded-[var(--radius-md)] font-medium ${
-                isMe
-                  ? 'bg-[var(--accent)]/30 text-[var(--accent)]'
-                  : 'bg-[var(--accent-dark)]/30 text-[var(--accent-dark)] dark:text-[var(--accent)]'
-              }`}
-            >
-              {part}
-            </span>
-          );
-        }
-      }
-      return part;
-    });
-  }, [users, currentUser.name]);
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-  const handleSend = useCallback(() => {
-    const text = inputValue.trim();
-    if (text) {
-      const mentions = extractMentions(text, users.map(u => u.name));
-      onSendMessage(text, mentions);
-      onInputChange('');
+  // Handle scroll
+  const handleScroll = useCallback(() => {
+    if (!messagesContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+    const isBottom = scrollHeight - scrollTop - clientHeight < 50;
+    setIsAtBottom(isBottom);
+
+    if (scrollTop < 100 && hasMoreMessages && !isLoadingMore) {
+      loadMoreMessages();
     }
-  }, [inputValue, extractMentions, users, onSendMessage, onInputChange]);
+  }, [hasMoreMessages, isLoadingMore, loadMoreMessages, messagesContainerRef]);
+
+  // Scroll to bottom
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    messagesContainerRef.current?.scrollTo({
+      top: messagesContainerRef.current.scrollHeight,
+      behavior,
+    });
+  }, [messagesContainerRef]);
+
+  // Handle message actions
+  const handleReply = useCallback((message: ChatMessage) => {
+    setReplyingTo(message);
+  }, []);
+
+  const handleEdit = useCallback((message: ChatMessage) => {
+    setEditingMessage(message);
+  }, []);
+
+  const handleSaveEdit = useCallback((text: string) => {
+    if (editingMessage && text.trim() && editMessage) {
+      editMessage(editingMessage.id, text);
+      setEditingMessage(null);
+    }
+  }, [editingMessage, editMessage]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+  }, []);
+
+  const handleDelete = useCallback((messageId: string, messageText: string) => {
+    if (deleteMessage && confirm(`Delete message: "${messageText}"?`)) {
+      deleteMessage(messageId);
+    }
+  }, [deleteMessage]);
+
+  const createTaskFromMessage = useCallback((message: ChatMessage) => {
+    if (onCreateTask) {
+      onCreateTask(message.text, message.created_by);
+    }
+  }, [onCreateTask]);
+
+  // Mark messages as read when viewing
+  useEffect(() => {
+    if (!showConversationList && conversation && filteredMessages.length > 0 && markMessagesAsRead) {
+      const unreadIds = filteredMessages
+        .filter(m => m.created_by !== currentUser.name && !(m.read_by || []).includes(currentUser.name))
+        .map(m => m.id);
+
+      if (unreadIds.length > 0) {
+        markMessagesAsRead(unreadIds);
+      }
+    }
+  }, [showConversationList, conversation, filteredMessages, currentUser.name, markMessagesAsRead]);
 
   // The inner chat content is shared across all viewport sizes
   const chatContent = (
     <div className="h-full flex flex-col bg-[var(--surface-dark)]">
-      {/* Header */}
+      {/* Enhanced Header */}
       <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
           {!showConversationList && (
@@ -146,69 +235,170 @@ export function DockedChatPanel({
           </div>
         </div>
 
-        {/* Close button for mobile/tablet overlay */}
-        {(isMobile || (isTablet && !isMobile)) && onClose && (
-          <button
-            onClick={onClose}
-            className="p-2 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-            aria-label="Close chat"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        {/* Header actions */}
+        <div className="flex items-center gap-1">
+          {!showConversationList && (
+            <>
+              {/* Search toggle */}
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className={`p-2 rounded-[var(--radius-lg)] transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                  showSearch ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+                aria-label="Search messages"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              {/* Pinned messages toggle */}
+              {pinnedMessages.length > 0 && (
+                <button
+                  onClick={() => setShowPinnedMessages(!showPinnedMessages)}
+                  className={`p-2 rounded-[var(--radius-lg)] transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                    showPinnedMessages ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                  aria-label={`${pinnedMessages.length} pinned messages`}
+                >
+                  <Pin className="w-4 h-4" />
+                  <span className="ml-1 text-xs">{pinnedMessages.length}</span>
+                </button>
+              )}
+
+              {/* Notifications toggle */}
+              <button
+                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                className="p-2 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+              >
+                {notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+              </button>
+
+              {/* DND toggle */}
+              <button
+                onClick={() => setIsDndMode(!isDndMode)}
+                className={`p-2 rounded-[var(--radius-lg)] transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center ${
+                  isDndMode ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+                aria-label={isDndMode ? 'Disable do not disturb' : 'Enable do not disturb'}
+              >
+                <Moon className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
+          {/* Close button for mobile/tablet overlay */}
+          {(isMobile || (isTablet && !isMobile)) && onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Close chat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Search bar */}
+      <AnimatePresence>
+        {showSearch && !showConversationList && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b border-white/10 overflow-hidden"
+          >
+            <div className="p-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search messages..."
+                  className="w-full px-4 py-2 pl-10 rounded-[var(--radius-xl)] bg-white/10 text-white placeholder-white/40 text-sm border border-white/10 focus:border-[var(--accent)]/50 focus:outline-none"
+                  autoFocus
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                {searchInput && (
+                  <button
+                    onClick={() => {
+                      setSearchInput('');
+                      setSearchQuery('');
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10"
+                  >
+                    <X className="w-3 h-3 text-white/60" />
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <p className="text-xs text-white/50 mt-2">
+                  {filteredMessages.length} {filteredMessages.length === 1 ? 'message' : 'messages'} found
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pinned messages */}
+      <AnimatePresence>
+        {showPinnedMessages && !showConversationList && pinnedMessages.length > 0 && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b border-white/10 overflow-hidden"
+          >
+            <div className="p-3 space-y-2 max-h-48 overflow-y-auto">
+              {pinnedMessages.map((msg) => (
+                <div key={msg.id} className="p-2 rounded-[var(--radius-lg)] bg-white/5 text-sm">
+                  <p className="text-white/70 text-xs mb-1">{msg.created_by}</p>
+                  <p className="text-white">{msg.text}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Conversation List or Chat Content */}
       <div className="flex-1 overflow-hidden">
         {showConversationList ? (
-          <div className="h-full overflow-y-auto p-3 space-y-2">
-            <button
-              onClick={() => onSelectConversation({ type: 'team' })}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)] hover:bg-white/5 transition-colors text-left touch-manipulation"
-            >
-              <div className="w-10 h-10 rounded-full bg-[var(--accent)]/15 flex items-center justify-center">
-                <Users className="w-5 h-5 text-[var(--accent)]" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-medium text-sm">Team Chat</p>
-                <p className="text-white/40 text-xs truncate">All team messages</p>
-              </div>
-            </button>
-
-            {users.filter(u => u.name !== currentUser.name).map(user => (
-              <button
-                key={user.name}
-                onClick={() => onSelectConversation({ type: 'dm', userName: user.name })}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)] hover:bg-white/5 transition-colors text-left touch-manipulation"
-              >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
-                  style={{ backgroundColor: user.color }}
-                >
-                  {user.name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium text-sm">{user.name}</p>
-                  <p className="text-white/40 text-xs">Direct message</p>
-                </div>
-              </button>
-            ))}
-          </div>
+          <ChatConversationList
+            conversations={[
+              { conv: { type: 'team' }, lastMessage: null, lastActivity: 0 },
+              ...users
+                .filter(u => u.name !== currentUser.name)
+                .map(u => ({
+                  conv: { type: 'dm' as const, userName: u.name },
+                  lastMessage: null,
+                  lastActivity: 0
+                }))
+            ]}
+            currentUserName={currentUser.name}
+            unreadCounts={{}}
+            mutedConversations={new Set()}
+            userPresence={{}}
+            onSelectConversation={onSelectConversation}
+            onToggleMute={() => {}}
+            getUserColor={getUserColor}
+            formatRelativeTime={() => 'now'}
+            getInitials={getInitials}
+          />
         ) : (
           <div className="h-full flex flex-col">
-            <button
-              onClick={onShowConversationList}
-              className="flex items-center gap-2 px-4 py-2 text-white/60 hover:text-white transition-colors text-sm touch-manipulation"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Back to conversations
-            </button>
-
+            {/* Messages */}
             <div
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto px-3 py-2 space-y-2"
+              onScroll={handleScroll}
+              className="flex-1 overflow-y-auto px-3 py-2"
             >
-              {filteredMessages.length === 0 ? (
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="animate-spin w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full" />
+                </div>
+              ) : filteredMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <motion.div
                     className="w-14 h-14 rounded-[var(--radius-2xl)] bg-white/[0.06] border border-white/[0.1] flex items-center justify-center mb-4"
@@ -221,68 +411,69 @@ export function DockedChatPanel({
                   <p className="text-xs mt-1.5 text-white/40">Start the conversation below</p>
                 </div>
               ) : (
-                filteredMessages.map((message, index) => {
-                  const isOwn = message.created_by === currentUser.name;
-                  const showAvatar = !isOwn && (index === 0 || filteredMessages[index - 1]?.created_by !== message.created_by);
-
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {!isOwn && showAvatar && (
-                        <div
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
-                          style={{ backgroundColor: getUserColor(message.created_by) }}
-                        >
-                          {message.created_by[0]}
-                        </div>
-                      )}
-                      {!isOwn && !showAvatar && <div className="w-7" />}
-                      <div
-                        className={`max-w-[80%] px-3 py-2 rounded-[var(--radius-2xl)] text-sm overflow-hidden ${
-                          isOwn
-                            ? 'bg-[var(--accent)] text-white'
-                            : 'bg-white/10 text-white'
-                        }`}
-                        style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
-                      >
-                        {renderMessageText(message.text)}
-                      </div>
-                    </div>
-                  );
-                })
+                <ChatMessageList
+                  messages={groupedMessages}
+                  currentUser={currentUser}
+                  users={users}
+                  conversation={conversation}
+                  onReact={addReaction || (() => {})}
+                  onReply={handleReply}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onPin={togglePin || (() => {})}
+                  onCreateTask={onCreateTask ? createTaskFromMessage : undefined}
+                  onTaskLinkClick={onTaskLinkClick}
+                  todosMap={todosMap}
+                  firstUnreadId={null}
+                  loading={loading}
+                  hasMoreMessages={hasMoreMessages}
+                  isLoadingMore={isLoadingMore}
+                  onLoadMore={loadMoreMessages}
+                  searchQuery={searchQuery}
+                />
               )}
             </div>
 
-            <div className="p-3 border-t border-white/10" style={{ paddingBottom: isMobile ? 'max(0.75rem, env(safe-area-inset-bottom))' : undefined }}>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => {
-                    onInputChange(e.target.value);
-                    if (e.target.value.trim()) onTyping();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  className="flex-1 px-4 py-2.5 rounded-[var(--radius-xl)] bg-white/10 text-white placeholder-white/40 text-sm border border-white/10 focus:border-[var(--accent)]/50 focus:outline-none"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!inputValue.trim()}
-                  className="p-2.5 rounded-[var(--radius-xl)] bg-[var(--accent)] text-white disabled:opacity-50 transition-opacity hover:bg-[var(--accent)]/90 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+            {/* Scroll to bottom button */}
+            <AnimatePresence>
+              {!isAtBottom && filteredMessages.length > 0 && (
+                <motion.button
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  onClick={() => scrollToBottom()}
+                  className="absolute bottom-[80px] left-1/2 -translate-x-1/2 bg-[var(--surface-dark)] border border-white/10 rounded-full px-4 py-2 shadow-xl flex items-center gap-2 text-sm text-white hover:bg-white/5 transition-all z-10"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                </button>
-              </div>
+                  <ChevronDown className="w-4 h-4" />
+                  <span>New messages</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
+
+            {/* Input bar */}
+            <div
+              className="border-t border-white/10"
+              style={{
+                paddingBottom: isMobile
+                  ? (isKeyboardVisible ? '0.5rem' : 'max(0.75rem, env(safe-area-inset-bottom))')
+                  : undefined,
+                transition: 'padding-bottom 0.2s ease-out'
+              }}
+            >
+              <ChatInputBar
+                conversation={conversation}
+                users={users}
+                currentUserName={currentUser.name}
+                onSend={onSendMessage}
+                onTyping={onTyping}
+                replyingTo={replyingTo}
+                onCancelReply={() => setReplyingTo(null)}
+                editingMessage={editingMessage}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={handleCancelEdit}
+                disabled={false}
+                rateLimitWarning={null}
+              />
             </div>
           </div>
         )}
