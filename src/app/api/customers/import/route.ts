@@ -25,6 +25,7 @@ import { encryptField, decryptField } from '@/lib/fieldEncryption';
 import { checkRateLimit, rateLimiters } from '@/lib/rateLimit';
 import { logger } from '@/lib/logger';
 import { securityMonitor, SecurityEventType, AlertSeverity } from '@/lib/securityMonitor';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 // Valid retention risk values
 const VALID_RETENTION_RISKS = ['low', 'medium', 'high'] as const;
@@ -210,24 +211,18 @@ async function logImportActivity(
   errorCount: number,
   agencyId?: string
 ): Promise<void> {
-  try {
-    await supabase.from('activity_log').insert({
-      action: 'customer_import',
-      user_name: userName,
-      details: {
-        imported: importedCount,
-        duplicates: duplicateCount,
-        errors: errorCount,
-        agency_id: agencyId,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (error) {
-    logger.error('Failed to log customer import activity', error as Error, {
-      component: 'CustomerImport',
-      action: 'audit_log',
-    });
-  }
+  // Safe activity logging - will not break import if it fails
+  await safeLogActivity(supabase, {
+    action: 'customer_import',
+    user_name: userName,
+    agency_id: agencyId,
+    details: {
+      imported: importedCount,
+      duplicates: duplicateCount,
+      errors: errorCount,
+      timestamp: new Date().toISOString(),
+    },
+  });
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<ImportResponse>> {

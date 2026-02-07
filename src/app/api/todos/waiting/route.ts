@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import type { WaitingContactType } from '@/types/todo';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -80,8 +81,8 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       );
     }
 
-    // Log the activity
-    await supabase.from('activity_log').insert({
+    // Log the activity (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'marked_waiting',
       todo_id: todoId,
       todo_text: todo.text,
@@ -181,8 +182,8 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
       );
     }
 
-    // Log the activity
-    await supabase.from('activity_log').insert({
+    // Log the activity (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'customer_responded',
       todo_id: todoId,
       todo_text: todo.text,

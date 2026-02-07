@@ -19,6 +19,7 @@ import { encryptTodoPII, decryptTodoPII } from '@/lib/fieldEncryption';
 import { verifyTodoAccess } from '@/lib/apiAuth';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 import { sanitizeForPostgrestFilter } from '@/lib/sanitize';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -157,14 +158,14 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       throw error;
     }
 
-    // Log activity with agency_id
-    await supabase.from('activity_log').insert({
+    // Log activity with agency_id (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'task_created',
       todo_id: taskId,
-      todo_text: text.trim().substring(0, 100),
+      todo_text: text.trim(),
       user_name: ctx.userName,
+      agency_id: ctx.agencyId,
       details: { priority, has_transcription: !!transcription },
-      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
     });
 
     logger.info('Todo created with encryption', {
@@ -262,14 +263,14 @@ export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       throw error;
     }
 
-    // Log activity for significant changes
+    // Log activity for significant changes (safe - will not break operation if it fails)
     if (updates.completed !== undefined) {
-      await supabase.from('activity_log').insert({
+      await safeLogActivity(supabase, {
         action: updates.completed ? 'task_completed' : 'task_reopened',
         todo_id: id,
-        todo_text: data.text?.substring(0, 100),
+        todo_text: data.text,
         user_name: ctx.userName,
-        ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+        agency_id: ctx.agencyId,
       });
     }
 
@@ -337,13 +338,13 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
       throw error;
     }
 
-    // Log activity with agency_id
-    await supabase.from('activity_log').insert({
+    // Log activity with agency_id (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'task_deleted',
       todo_id: id,
-      todo_text: todo.text?.substring(0, 100),
+      todo_text: todo.text,
       user_name: ctx.userName,
-      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+      agency_id: ctx.agencyId,
     });
 
     logger.info('Todo deleted', {

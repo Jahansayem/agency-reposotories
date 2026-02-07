@@ -21,6 +21,7 @@ import {
   SecurityEventType,
   AlertSeverity,
 } from '@/lib/securityMonitor';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -243,21 +244,17 @@ export const POST = withAgencyAuth(
         return apiErrorResponse('INSERT_FAILED', 'Failed to add member', 500);
       }
 
-      // Log activity with authenticated user info
-      try {
-        await supabase.from('activity_log').insert({
-          action: 'member_added',
-          user_name: ctx.userName, // Use authenticated user, not body param
-          details: {
-            agency_id: agencyId,
-            added_user: user_name,
-            role: role,
-            added_by_user_id: ctx.userId,
-          },
-        });
-      } catch (logError) {
-        logger.error('Failed to log activity', logError, { component: 'api/agencies/members', action: 'POST' });
-      }
+      // Log activity with authenticated user info (safe - will not break operation if it fails)
+      await safeLogActivity(supabase, {
+        action: 'member_added',
+        user_name: ctx.userName, // Use authenticated user, not body param
+        agency_id: agencyId,
+        details: {
+          added_user: user_name,
+          role: role,
+          added_by_user_id: ctx.userId,
+        },
+      });
 
       // Log security event for audit
       await securityMonitor.recordEvent({
@@ -487,27 +484,24 @@ export const PATCH = withAgencyAuth(
         ? 'member_permissions_changed'
         : 'member_role_and_permissions_changed';
 
-      try {
-        await supabase.from('activity_log').insert({
-          action,
-          user_name: ctx.userName,
-          details: {
-            agency_id: agencyId,
-            updated_user: memberUserName,
-            updated_user_id: memberToUpdate.user_id,
-            ...(newRole && {
-              old_role: currentRole,
-              new_role: newRole,
-            }),
-            ...(permissionUpdates && {
-              changed_permissions: permissionUpdates,
-            }),
-            updated_by_user_id: ctx.userId,
-          },
-        });
-      } catch (logError) {
-        logger.error('Failed to log activity', logError, { component: 'api/agencies/members', action: 'PATCH' });
-      }
+      // Log activity (safe - will not break operation if it fails)
+      await safeLogActivity(supabase, {
+        action,
+        user_name: ctx.userName,
+        agency_id: agencyId,
+        details: {
+          updated_user: memberUserName,
+          updated_user_id: memberToUpdate.user_id,
+          ...(newRole && {
+            old_role: currentRole,
+            new_role: newRole,
+          }),
+          ...(permissionUpdates && {
+            changed_permissions: permissionUpdates,
+          }),
+          updated_by_user_id: ctx.userId,
+        },
+      });
 
       // ===== Security event for audit =====
 
@@ -642,21 +636,17 @@ export const DELETE = withAgencyAuth(
         return apiErrorResponse('DELETE_FAILED', 'Failed to remove member', 500);
       }
 
-      // Log activity with authenticated user info
-      try {
-        await supabase.from('activity_log').insert({
-          action: 'member_removed',
-          user_name: ctx.userName, // Use authenticated user, not query param
-          details: {
-            agency_id: agencyId,
-            removed_user: removedUserName,
-            removed_user_id: memberToRemove.user_id,
-            removed_by_user_id: ctx.userId,
-          },
-        });
-      } catch (logError) {
-        logger.error('Failed to log activity', logError, { component: 'api/agencies/members', action: 'DELETE' });
-      }
+      // Log activity with authenticated user info (safe - will not break operation if it fails)
+      await safeLogActivity(supabase, {
+        action: 'member_removed',
+        user_name: ctx.userName, // Use authenticated user, not query param
+        agency_id: agencyId,
+        details: {
+          removed_user: removedUserName,
+          removed_user_id: memberToRemove.user_id,
+          removed_by_user_id: ctx.userId,
+        },
+      });
 
       // Log security event for audit
       await securityMonitor.recordEvent({

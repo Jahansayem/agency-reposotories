@@ -5,6 +5,7 @@ import { setSessionCookie } from '@/lib/sessionCookies';
 import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { apiErrorResponse } from '@/lib/apiResponse';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 /**
  * Hash PIN using SHA-256 (matching existing format)
@@ -271,21 +272,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Log activity
-    try {
-      await supabase.from('activity_log').insert({
-        action: 'task_created', // Reuse existing action type
-        user_name: userName,
-        details: {
-          type: 'invitation_accepted',
-          agency_id: agency.id,
-          agency_name: agency.name,
-          role: invitation.role,
-        },
-      });
-    } catch {
-      // Non-critical
-    }
+    // Log activity (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
+      action: 'task_created', // Reuse existing action type
+      user_name: userName,
+      agency_id: agency.id,
+      details: {
+        type: 'invitation_accepted',
+        agency_name: agency.name,
+        role: invitation.role,
+      },
+    });
 
     // Build response
     const response = NextResponse.json({

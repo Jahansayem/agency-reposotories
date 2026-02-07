@@ -24,6 +24,10 @@ import {
   Settings,
   ChevronRight,
   ExternalLink,
+  Building,
+  UserPlus,
+  UserMinus,
+  Shield,
 } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
@@ -104,6 +108,13 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)', verb: 'got response on' },
   follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)', verb: 'needs follow-up on' },
   task_reordered: { icon: RefreshCw, label: 'reordered task', color: 'var(--accent-vivid)', verb: 'reordered' },
+  agency_created: { icon: Building, label: 'created agency', color: 'var(--success-vivid)', verb: 'created' },
+  member_added: { icon: UserPlus, label: 'added member', color: 'var(--success-vivid)', verb: 'added' },
+  member_removed: { icon: UserMinus, label: 'removed member', color: 'var(--danger)', verb: 'removed' },
+  member_role_changed: { icon: Shield, label: 'changed member role', color: 'var(--warning)', verb: 'changed role for' },
+  member_permissions_changed: { icon: Settings, label: 'updated permissions', color: 'var(--state-info)', verb: 'updated permissions for' },
+  member_role_and_permissions_changed: { icon: Shield, label: 'updated role and permissions', color: 'var(--warning)', verb: 'updated' },
+  customer_import: { icon: User, label: 'imported customers', color: 'var(--success-vivid)', verb: 'imported' },
 };
 
 // Local storage key for last seen notification

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
 import { ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton, DashboardModalSkeleton } from './LoadingSkeletons';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -19,6 +18,12 @@ import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import SkipLink from './SkipLink';
+
+// Lazy load TodoList - large component with subtasks, kanban, etc.
+const TodoList = dynamic(() => import('./TodoList'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><div className="animate-spin w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full" /></div>,
+});
 
 // Lazy load ChatView for the dedicated messages view
 const ChatView = dynamic(() => import('./views/ChatView'), {
@@ -315,46 +320,52 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     switch (activeView) {
       case 'dashboard':
         return (
-          <DashboardPage
-            key={agencyKey}
-            currentUser={currentUser}
-            todos={todos}
-            users={users}
-            onNavigateToTasks={handleNavigateToTasks}
-            onAddTask={handleAddTask}
-            onTaskClick={handleTaskLinkClick}
-            onFilterOverdue={() => handleNavigateToTasks('overdue')}
-            onFilterDueToday={() => handleNavigateToTasks('due_today')}
-          />
+          <ErrorBoundary>
+            <DashboardPage
+              key={agencyKey}
+              currentUser={currentUser}
+              todos={todos}
+              users={users}
+              onNavigateToTasks={handleNavigateToTasks}
+              onAddTask={handleAddTask}
+              onTaskClick={handleTaskLinkClick}
+              onFilterOverdue={() => handleNavigateToTasks('overdue')}
+              onFilterDueToday={() => handleNavigateToTasks('due_today')}
+            />
+          </ErrorBoundary>
         );
 
       case 'chat':
         return (
-          <ChatView
-            key={agencyKey}
-            currentUser={currentUser}
-            users={usersWithColors}
-            onBack={handleChatBack}
-            onTaskLinkClick={handleTaskLinkClick}
-          />
+          <ErrorBoundary>
+            <ChatView
+              key={agencyKey}
+              currentUser={currentUser}
+              users={usersWithColors}
+              onBack={handleChatBack}
+              onTaskLinkClick={handleTaskLinkClick}
+            />
+          </ErrorBoundary>
         );
 
       case 'activity':
         // Activity feed is handled by TodoList internally
         // Just switch to tasks view for now
         return (
-          <TodoList
-            key={agencyKey}
-            currentUser={currentUser}
-            onUserChange={onUserChange}
-            initialFilter={initialFilter}
-            autoFocusAddTask={showAddTask}
-            onAddTaskModalOpened={handleAddTaskModalOpened}
-            onInitialFilterApplied={handleInitialFilterApplied}
+          <ErrorBoundary>
+            <TodoList
+              key={agencyKey}
+              currentUser={currentUser}
+              onUserChange={onUserChange}
+              initialFilter={initialFilter}
+              autoFocusAddTask={showAddTask}
+              onAddTaskModalOpened={handleAddTaskModalOpened}
+              onInitialFilterApplied={handleInitialFilterApplied}
 
-            selectedTaskId={selectedTaskId}
-            onSelectedTaskHandled={handleSelectedTaskHandled}
-          />
+              selectedTaskId={selectedTaskId}
+              onSelectedTaskHandled={handleSelectedTaskHandled}
+            />
+          </ErrorBoundary>
         );
 
       case 'goals':
@@ -365,18 +376,20 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         }
         // Strategic goals is handled by TodoList internally
         return (
-          <TodoList
-            key={agencyKey}
-            currentUser={currentUser}
-            onUserChange={onUserChange}
-            initialFilter={initialFilter}
-            autoFocusAddTask={showAddTask}
-            onAddTaskModalOpened={handleAddTaskModalOpened}
-            onInitialFilterApplied={handleInitialFilterApplied}
+          <ErrorBoundary>
+            <TodoList
+              key={agencyKey}
+              currentUser={currentUser}
+              onUserChange={onUserChange}
+              initialFilter={initialFilter}
+              autoFocusAddTask={showAddTask}
+              onAddTaskModalOpened={handleAddTaskModalOpened}
+              onInitialFilterApplied={handleInitialFilterApplied}
 
-            selectedTaskId={selectedTaskId}
-            onSelectedTaskHandled={handleSelectedTaskHandled}
-          />
+              selectedTaskId={selectedTaskId}
+              onSelectedTaskHandled={handleSelectedTaskHandled}
+            />
+          </ErrorBoundary>
         );
 
       case 'archive':
@@ -387,61 +400,71 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         }
         // Full-featured archive browser
         return (
-          <ArchiveView
-            key={agencyKey}
-            currentUser={currentUser}
-            users={users}
-            onRestore={handleRestoreTask}
-            onDelete={handleDeleteTask}
-            onClose={handleArchiveClose}
-          />
+          <ErrorBoundary>
+            <ArchiveView
+              key={agencyKey}
+              currentUser={currentUser}
+              users={users}
+              onRestore={handleRestoreTask}
+              onDelete={handleDeleteTask}
+              onClose={handleArchiveClose}
+            />
+          </ErrorBoundary>
         );
 
       case 'ai_inbox':
         // AI Inbox view for reviewing AI-derived tasks
         return (
-          <AIInbox
-            key={agencyKey}
-            items={[]} // TODO: Connect to actual AI inbox state from store
-            users={usersWithColors.map(u => u.name)}
-            onAccept={handleAIAccept}
-            onDismiss={handleAIDismiss}
-            onRefresh={handleAIRefresh}
-          />
+          <ErrorBoundary>
+            <AIInbox
+              key={agencyKey}
+              items={[]} // TODO: Connect to actual AI inbox state from store
+              users={usersWithColors.map(u => u.name)}
+              onAccept={handleAIAccept}
+              onDismiss={handleAIDismiss}
+              onRefresh={handleAIRefresh}
+            />
+          </ErrorBoundary>
         );
 
       case 'analytics':
         // Analytics dashboard with book of business insights
         return (
-          <AnalyticsPage key={agencyKey} />
+          <ErrorBoundary>
+            <AnalyticsPage key={agencyKey} />
+          </ErrorBoundary>
         );
 
       case 'customers':
         // Customer lookup from book of business
         return (
-          <CustomerLookupView
-            key={agencyKey}
-            agencyId={currentAgencyId || undefined}
-            currentUser={currentUser.name}
-            onClose={() => setActiveView('tasks')}
-          />
+          <ErrorBoundary>
+            <CustomerLookupView
+              key={agencyKey}
+              agencyId={currentAgencyId || undefined}
+              currentUser={currentUser.name}
+              onClose={() => setActiveView('tasks')}
+            />
+          </ErrorBoundary>
         );
 
       case 'tasks':
       default:
         return (
-          <TodoList
-            key={agencyKey}
-            currentUser={currentUser}
-            onUserChange={onUserChange}
-            initialFilter={initialFilter}
-            autoFocusAddTask={showAddTask}
-            onAddTaskModalOpened={handleAddTaskModalOpened}
-            onInitialFilterApplied={handleInitialFilterApplied}
+          <ErrorBoundary>
+            <TodoList
+              key={agencyKey}
+              currentUser={currentUser}
+              onUserChange={onUserChange}
+              initialFilter={initialFilter}
+              autoFocusAddTask={showAddTask}
+              onAddTaskModalOpened={handleAddTaskModalOpened}
+              onInitialFilterApplied={handleInitialFilterApplied}
 
-            selectedTaskId={selectedTaskId}
-            onSelectedTaskHandled={handleSelectedTaskHandled}
-          />
+              selectedTaskId={selectedTaskId}
+              onSelectedTaskHandled={handleSelectedTaskHandled}
+            />
+          </ErrorBoundary>
         );
     }
   }, [

@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { apiErrorResponse } from '@/lib/apiResponse';
 import { sendInvitationEmail } from '@/lib/email';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 /**
  * Hash an invitation token for storage (store hash, not plaintext)
@@ -198,22 +199,18 @@ export async function POST(
         || 'https://shared-todo-list-production.up.railway.app';
     const inviteUrl = `${baseUrl}/join/${token}`;
 
-    // Log activity
-    try {
-      await supabase.from('activity_log').insert({
-        action: 'task_created', // Reuse existing action type; ideally 'invitation_created'
-        user_name: auth.context.userName,
-        details: {
-          type: 'invitation_created',
-          agency_id: agencyId,
-          email: email || null,
-          role,
-          invitation_id: invitation.id,
-        },
-      });
-    } catch {
-      // Non-critical
-    }
+    // Log activity (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
+      action: 'task_created', // Reuse existing action type; ideally 'invitation_created'
+      user_name: auth.context.userName,
+      agency_id: agencyId,
+      details: {
+        type: 'invitation_created',
+        email: email || null,
+        role,
+        invitation_id: invitation.id,
+      },
+    });
 
     // BUGFIX SILENT-002: Properly log email send failures instead of fire-and-forget
     if (email) {

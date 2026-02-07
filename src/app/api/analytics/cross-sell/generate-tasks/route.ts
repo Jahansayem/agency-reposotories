@@ -16,6 +16,7 @@ import type {
   DEFAULT_CROSS_SELL_SUBTASKS,
 } from '@/types/allstate-analytics';
 import type { Todo, Subtask, TodoPriority } from '@/types/todo';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 function getSupabaseClient() {
   return createClient(
@@ -272,14 +273,8 @@ export async function POST(request: NextRequest) {
         .eq('id', update.id)
     );
 
-    // Batch insert activity logs in a single call
-    const activityLogPromise = supabase.from('activity_log').insert(activityLogs);
-
-    // Execute all updates and activity log insert in parallel
-    const [updateResults, activityLogResult] = await Promise.all([
-      Promise.all(updatePromises),
-      activityLogPromise,
-    ]);
+    // Execute all updates in parallel
+    const updateResults = await Promise.all(updatePromises);
 
     // Check for errors (non-fatal - tasks were created successfully)
     const errors: Array<{ opportunity_id: string; error: string }> = [];
@@ -292,10 +287,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (activityLogResult.error) {
-      console.warn('Failed to insert activity logs:', activityLogResult.error);
-      // Non-fatal - don't add to errors array as tasks were created
-    }
+    // Safe activity logging - will not fail if individual logs have issues
+    // Use Promise.allSettled to log all entries in parallel without blocking
+    await Promise.allSettled(
+      activityLogs.map(log => safeLogActivity(supabase, log as any))
+    );
 
     return NextResponse.json({
       success: true,

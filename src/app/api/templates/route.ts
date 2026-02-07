@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -87,12 +88,12 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 
     if (error) throw error;
 
-    // Log activity with agency_id
-    await supabase.from('activity_log').insert({
+    // Log activity with agency_id (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'template_created',
       user_name: created_by,
+      agency_id: ctx.agencyId,
       details: { template_name: name, is_shared },
-      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
     });
 
     return NextResponse.json(data);
