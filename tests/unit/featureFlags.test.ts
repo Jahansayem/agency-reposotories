@@ -8,6 +8,8 @@ describe('Feature Flags', () => {
     vi.stubEnv('NEXT_PUBLIC_ENABLE_NEW_AUTH', '');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_OAUTH', '');
     vi.stubEnv('NEXT_PUBLIC_USE_OAUTH', '');
+    vi.stubEnv('NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', '');
+    vi.stubEnv('NEXT_PUBLIC_DISABLE_PIN_AUTH', '');
     vi.stubEnv('NEXT_PUBLIC_ENABLE_NORMALIZED_SCHEMA', '');
     vi.stubEnv('NEXT_PUBLIC_USE_NEW_COMPONENTS', '');
     vi.stubEnv('NEXT_PUBLIC_NEW_COMPONENTS_ROLLOUT_PERCENT', '');
@@ -213,12 +215,14 @@ describe('Feature Flags', () => {
   });
 
   describe('getAllFeatureFlags', () => {
-    it('should return all 7 feature flags', () => {
+    it('should return all 9 feature flags', () => {
       const flags = getAllFeatureFlags();
 
       const expectedFlags: FeatureFlag[] = [
         'new_auth_system',
         'oauth_login',
+        'clerk_auth',
+        'pin_auth',
         'normalized_schema',
         'refactored_components',
         'new_state_management',
@@ -230,7 +234,7 @@ describe('Feature Flags', () => {
         expect(flags).toHaveProperty(flag);
       });
 
-      expect(Object.keys(flags)).toHaveLength(7);
+      expect(Object.keys(flags)).toHaveLength(9);
     });
 
     it('should include enabled and description for each flag', () => {

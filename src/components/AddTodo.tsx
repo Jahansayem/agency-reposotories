@@ -965,7 +965,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
               </div>
               <div>
                 <p className="font-semibold text-[var(--foreground)]">Understanding your task...</p>
-                <p className="text-sm text-[var(--text-muted)] mt-1">We'll suggest subtasks and priority</p>
+                <p className="text-sm text-[var(--text-muted)] mt-1">We&apos;ll suggest subtasks and priority</p>
               </div>
             </div>
           </div>

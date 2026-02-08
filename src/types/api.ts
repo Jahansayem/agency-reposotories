@@ -160,7 +160,7 @@ export interface UserSingleResponse extends ApiSuccessResponse<User> {
 
 // ----- Authentication -----
 
-export interface LoginResponse extends ApiSuccessResponse<{
+export type LoginResponse = ApiSuccessResponse<{
   user: {
     id: string;
     name: string;
@@ -175,15 +175,15 @@ export interface LoginResponse extends ApiSuccessResponse<{
     role: string;
     is_default: boolean;
   }>;
-}> {}
+}>;
 
-export interface RegisterResponse extends ApiSuccessResponse<{
+export type RegisterResponse = ApiSuccessResponse<{
   user: {
     id: string;
     name: string;
     color: string;
   };
-}> {}
+}>;
 
 // ----- Agencies -----
 
@@ -203,7 +203,7 @@ export interface AgencyInvitationListResponse extends ApiSuccessResponse<AgencyI
   data: AgencyInvitation[];
 }
 
-export interface InvitationValidateResponse extends ApiSuccessResponse<{
+export type InvitationValidateResponse = ApiSuccessResponse<{
   valid: boolean;
   invitation?: {
     id: string;
@@ -211,11 +211,11 @@ export interface InvitationValidateResponse extends ApiSuccessResponse<{
     role: string;
     agency_name: string;
   };
-}> {}
+}>;
 
-export interface InvitationAcceptResponse extends ApiSuccessResponse<{
+export type InvitationAcceptResponse = ApiSuccessResponse<{
   membership: AgencyMember;
-}> {}
+}>;
 
 // ----- Templates -----
 
@@ -245,7 +245,7 @@ export interface GoalSingleResponse extends ApiSuccessResponse<StrategicGoal> {
 
 // ----- AI Endpoints -----
 
-export interface SmartParseResponse extends ApiSuccessResponse<{
+export type SmartParseResponse = ApiSuccessResponse<{
   mainTask: {
     text: string;
     priority: string;
@@ -257,27 +257,27 @@ export interface SmartParseResponse extends ApiSuccessResponse<{
     priority: string;
     estimatedMinutes?: number;
   }>;
-}> {}
+}>;
 
-export interface EnhanceTaskResponse extends ApiSuccessResponse<{
+export type EnhanceTaskResponse = ApiSuccessResponse<{
   enhancedText: string;
   priority?: string;
   suggestions?: {
     assignedTo?: string;
     notes?: string;
   };
-}> {}
+}>;
 
-export interface TranscribeResponse extends ApiSuccessResponse<{
+export type TranscribeResponse = ApiSuccessResponse<{
   transcription: string;
   tasks?: Array<{
     text: string;
     priority: string;
     transcription?: string;
   }>;
-}> {}
+}>;
 
-export interface GenerateEmailResponse extends ApiSuccessResponse<{
+export type GenerateEmailResponse = ApiSuccessResponse<{
   subject: string;
   body: string;
   warnings?: Array<{
@@ -285,11 +285,11 @@ export interface GenerateEmailResponse extends ApiSuccessResponse<{
     message: string;
     severity: 'low' | 'medium' | 'high';
   }>;
-}> {}
+}>;
 
 // ----- Attachments -----
 
-export interface AttachmentUploadResponse extends ApiSuccessResponse<{
+export type AttachmentUploadResponse = ApiSuccessResponse<{
   attachment: {
     id: string;
     file_name: string;
@@ -300,22 +300,22 @@ export interface AttachmentUploadResponse extends ApiSuccessResponse<{
     uploaded_by: string;
     uploaded_at: string;
   };
-}> {}
+}>;
 
 // ----- Push Notifications -----
 
-export interface PushSubscribeResponse extends ApiSuccessResponse<{
+export type PushSubscribeResponse = ApiSuccessResponse<{
   subscribed: boolean;
-}> {}
+}>;
 
-export interface PushSendResponse extends ApiSuccessResponse<{
+export type PushSendResponse = ApiSuccessResponse<{
   sent: number;
   failed: number;
-}> {}
+}>;
 
 // ----- Health Check -----
 
-export interface HealthCheckResponse extends ApiSuccessResponse<{
+export type HealthCheckResponse = ApiSuccessResponse<{
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
   services: {
@@ -323,7 +323,7 @@ export interface HealthCheckResponse extends ApiSuccessResponse<{
     redis?: boolean;
     ai?: boolean;
   };
-}> {}
+}>;
 
 // ============================================
 // Request Types (for type-safe request bodies)

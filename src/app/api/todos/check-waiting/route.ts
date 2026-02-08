@@ -19,11 +19,46 @@ export const GET = withSystemAuth(async (_request: NextRequest) => {
 
   try {
     // Get all tasks that are waiting for response (across all agencies)
-    const { data: waitingTasks, error: fetchError } = await supabase
-      .from('todos')
-      .select('id, text, waiting_since, follow_up_after_hours, assigned_to, created_by, agency_id')
-      .eq('waiting_for_response', true)
-      .eq('completed', false);
+    const baseTodosQuery = <TSelect extends string>(select: TSelect) =>
+      supabase
+        .from('todos')
+        .select(select)
+        .eq('waiting_for_response', true)
+        .eq('completed', false);
+
+    // Backward/forward compatibility: some deployments may not have multi-tenancy columns.
+    // Try selecting agency_id first; if it doesn't exist, retry without it.
+    type WaitingTask = {
+      id: string;
+      text: string;
+      waiting_since: string | null;
+      follow_up_after_hours: number | null;
+      assigned_to: string | null;
+      created_by: string;
+      agency_id?: string | null;
+    };
+
+    let waitingTasks: WaitingTask[] | null = null;
+    let fetchError: { message?: string } | null = null;
+
+    const withAgency = await baseTodosQuery(
+      'id, text, waiting_since, follow_up_after_hours, assigned_to, created_by, agency_id'
+    );
+
+    if (!withAgency.error) {
+      waitingTasks = (withAgency.data as unknown as WaitingTask[]) || [];
+    } else if (
+      withAgency.error.message?.toLowerCase().includes('agency_id') ||
+      withAgency.error.message?.toLowerCase().includes('column')
+    ) {
+      const withoutAgency = await baseTodosQuery(
+        'id, text, waiting_since, follow_up_after_hours, assigned_to, created_by'
+      );
+      fetchError = (withoutAgency.error as any) || null;
+      waitingTasks = (withoutAgency.data as unknown as WaitingTask[]) || [];
+    } else {
+      fetchError = withAgency.error as any;
+    }
 
     if (fetchError) throw fetchError;
 
@@ -42,7 +77,7 @@ export const GET = withSystemAuth(async (_request: NextRequest) => {
       todo_id: string;
       todo_text: string;
       user_name: string;
-      agency_id: string | null;
+      agency_id?: string | null;
       details: Record<string, unknown>;
     }> = [];
 
@@ -71,7 +106,7 @@ export const GET = withSystemAuth(async (_request: NextRequest) => {
           todo_id: task.id,
           todo_text: task.text,
           user_name: 'System',
-          agency_id: task.agency_id || null,
+          ...(('agency_id' in task && task.agency_id) ? { agency_id: task.agency_id } : {}),
           details: {
             hours_waiting: Math.round(hoursWaiting),
             threshold_hours: threshold,
@@ -102,9 +137,21 @@ export const GET = withSystemAuth(async (_request: NextRequest) => {
       );
 
       if (newEntries.length > 0) {
-        const { error: logError } = await supabase
+        // Similar compatibility handling for activity_log agency_id column.
+        const insertResult = await supabase
           .from('activity_log')
           .insert(newEntries);
+
+        let { error: logError } = insertResult;
+        if (
+          logError &&
+          (logError.message?.toLowerCase().includes('agency_id') ||
+            logError.message?.toLowerCase().includes('column'))
+        ) {
+          const strippedEntries = newEntries.map(({ agency_id: _aid, ...rest }) => rest);
+          const retry = await supabase.from('activity_log').insert(strippedEntries);
+          logError = retry.error;
+        }
 
         if (logError) {
           logger.error('Error logging overdue activities', logError, {

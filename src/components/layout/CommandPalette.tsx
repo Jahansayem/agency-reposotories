@@ -58,7 +58,7 @@ export default function CommandPalette({
   currentUser,
 }: CommandPaletteProps) {
   const { theme, toggleTheme } = useTheme();
-  const { setActiveView, openRightPanel, triggerNewTask } = useAppShell();
+  const { setActiveView, triggerNewTask } = useAppShell();
 
   // Permission checks for gated commands
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
@@ -191,7 +191,7 @@ export default function CommandPalette({
       shortcut: '?',
       action: () => { onClose(); /* TODO: open shortcuts modal */ },
     },
-  ], [theme, toggleTheme, setActiveView, openRightPanel, onClose]);
+  ], [theme, toggleTheme, setActiveView, triggerNewTask, onClose]);
 
   // Filter commands based on query and user permissions
   const filteredCommands = useMemo(() => {

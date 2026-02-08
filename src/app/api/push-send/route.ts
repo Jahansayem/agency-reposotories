@@ -235,15 +235,18 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     // Initialize Supabase client
     const supabase = getSupabase();
 
-    // Restrict target users to members of the same agency
-    // First get all user IDs that are members of this agency
-    const { data: agencyMembers } = await supabase
-      .from('agency_members')
-      .select('user_id')
-      .eq('agency_id', ctx.agencyId)
-      .eq('status', 'active');
+    // Restrict target users to members of the same agency (multi-tenant mode only).
+    // In single-tenant mode, `ctx.agencyId` is falsy and the agency tables may not exist.
+    let agencyMemberIds: Set<string> | null = null;
+    if (ctx.agencyId) {
+      const { data: agencyMembers } = await supabase
+        .from('agency_members')
+        .select('user_id')
+        .eq('agency_id', ctx.agencyId)
+        .eq('status', 'active');
 
-    const agencyMemberIds = new Set((agencyMembers || []).map(m => m.user_id));
+      agencyMemberIds = new Set((agencyMembers || []).map((m: any) => m.user_id));
+    }
 
     // If userNames provided but not userIds, look up the user IDs
     if ((!userIds || userIds.length === 0) && userNames && userNames.length > 0) {
@@ -274,11 +277,11 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       });
     }
 
-    // Filter userIds to only include agency members
-    const filteredUserIds = userIds.filter(id => agencyMemberIds.has(id));
+    // Filter userIds to only include agency members (multi-tenant only)
+    const filteredUserIds = agencyMemberIds ? userIds.filter((id) => agencyMemberIds!.has(id)) : userIds;
 
-    // API-009: Return early with error if target list is empty after filtering
-    if (filteredUserIds.length === 0) {
+    // API-009: Return early with error if target list is empty after filtering (multi-tenant only)
+    if (agencyMemberIds && filteredUserIds.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No valid target users found in this agency' },
         { status: 400 }

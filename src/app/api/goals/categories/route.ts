@@ -7,11 +7,16 @@ import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from('goal_categories')
       .select('*')
-      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: true });
+
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -34,25 +39,34 @@ export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agency
     }
 
     // Get max display_order within this agency
-    const { data: maxOrderData } = await supabase
+    let maxOrderQuery = supabase
       .from('goal_categories')
       .select('display_order')
-      .eq('agency_id', ctx.agencyId)
       .order('display_order', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    if (ctx.agencyId) {
+      maxOrderQuery = maxOrderQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: maxOrderData } = await maxOrderQuery.single();
 
     const nextOrder = (maxOrderData?.display_order || 0) + 1;
 
+    const insertData: Record<string, unknown> = {
+      name,
+      color: color || '#6366f1',
+      icon: icon || 'target',
+      display_order: nextOrder,
+    };
+
+    if (ctx.agencyId) {
+      insertData.agency_id = ctx.agencyId;
+    }
+
     const { data, error } = await supabase
       .from('goal_categories')
-      .insert({
-        name,
-        color: color || '#6366f1',
-        icon: icon || 'target',
-        display_order: nextOrder,
-        agency_id: ctx.agencyId,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -82,13 +96,16 @@ export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
     if (icon !== undefined) updateData.icon = icon;
     if (display_order !== undefined) updateData.display_order = display_order;
 
-    const { data, error } = await supabase
+    let updateQuery = supabase
       .from('goal_categories')
       .update(updateData)
-      .eq('id', id)
-      .eq('agency_id', ctx.agencyId)
-      .select()
-      .single();
+      .eq('id', id);
+
+    if (ctx.agencyId) {
+      updateQuery = updateQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data, error } = await updateQuery.select().single();
 
     if (error) throw error;
 
@@ -110,11 +127,16 @@ export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agen
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    const { error } = await supabase
+    let deleteQuery = supabase
       .from('goal_categories')
       .delete()
-      .eq('id', id)
-      .eq('agency_id', ctx.agencyId);
+      .eq('id', id);
+
+    if (ctx.agencyId) {
+      deleteQuery = deleteQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) throw error;
 

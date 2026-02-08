@@ -129,40 +129,6 @@ export default function DashboardPage({
   // Determine if user is owner/manager based on role
   const isOwnerOrManager = currentUser.role === 'owner' || currentUser.role === 'manager';
 
-  // Use new role-based dashboards
-  if (useNewDashboards) {
-    if (isOwnerOrManager && hasTeam) {
-      return (
-        <ManagerDashboard
-          currentUser={currentUser}
-          todos={todos}
-          activityLog={activityLog}
-          users={users}
-          allUsers={allUsers}
-          onNavigateToTasks={onNavigateToTasks}
-          onTaskClick={onTaskClick}
-          onFilterOverdue={onFilterOverdue}
-          onFilterDueToday={onFilterDueToday}
-          onFilterByCategory={onFilterByCategory}
-          onFilterByUser={onFilterByUser}
-          onRefreshTodos={onRefreshTodos}
-        />
-      );
-    } else {
-      return (
-        <DoerDashboard
-          currentUser={currentUser}
-          todos={todos}
-          activityLog={activityLog}
-          onNavigateToTasks={onNavigateToTasks}
-          onTaskClick={onTaskClick}
-          onFilterOverdue={onFilterOverdue}
-          onFilterDueToday={onFilterDueToday}
-        />
-      );
-    }
-  }
-
   // Legacy dashboard below (kept for backwards compatibility)
 
   useEffect(() => {
@@ -360,6 +326,40 @@ export default function DashboardPage({
 
   const getUrgencyColor = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyColors[urgency], [urgencyColors]);
   const getUrgencyBg = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyBgs[urgency], [urgencyBgs]);
+
+  // Use new role-based dashboards
+  if (useNewDashboards) {
+    if (isOwnerOrManager && hasTeam) {
+      return (
+        <ManagerDashboard
+          currentUser={currentUser}
+          todos={todos}
+          activityLog={activityLog}
+          users={users}
+          allUsers={allUsers}
+          onNavigateToTasks={onNavigateToTasks}
+          onTaskClick={onTaskClick}
+          onFilterOverdue={onFilterOverdue}
+          onFilterDueToday={onFilterDueToday}
+          onFilterByCategory={onFilterByCategory}
+          onFilterByUser={onFilterByUser}
+          onRefreshTodos={onRefreshTodos}
+        />
+      );
+    }
+
+    return (
+      <DoerDashboard
+        currentUser={currentUser}
+        todos={todos}
+        activityLog={activityLog}
+        onNavigateToTasks={onNavigateToTasks}
+        onTaskClick={onTaskClick}
+        onFilterOverdue={onFilterOverdue}
+        onFilterDueToday={onFilterDueToday}
+      />
+    );
+  }
 
   return (
     <div className="min-h-full bg-[var(--background)]">

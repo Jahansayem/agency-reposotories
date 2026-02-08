@@ -166,7 +166,7 @@ export function OfflineIndicator() {
                     </div>
                     <p className="text-[var(--text-muted)]">
                       You can still create and edit tasks. Changes will sync automatically when
-                      you're back online.
+                      you&apos;re back online.
                     </p>
                     {pendingSyncCount > 0 && (
                       <div className="mt-2 flex items-center gap-2 text-[var(--warning)]">

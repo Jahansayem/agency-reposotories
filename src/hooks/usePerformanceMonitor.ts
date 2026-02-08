@@ -99,7 +99,7 @@ export function usePerformanceMonitor(interval: number = 1000) {
   /**
    * Measure FPS
    */
-  const measureFPS = useCallback(() => {
+  const measureFPS = useCallback(function measureFPSFn() {
     frameCountRef.current++;
     const now = performance.now();
     const elapsed = now - lastFrameTimeRef.current;
@@ -118,7 +118,7 @@ export function usePerformanceMonitor(interval: number = 1000) {
     }
 
     if (isMonitoring) {
-      animationFrameRef.current = requestAnimationFrame(measureFPS);
+      animationFrameRef.current = requestAnimationFrame(measureFPSFn);
     }
   }, [isMonitoring]);
 

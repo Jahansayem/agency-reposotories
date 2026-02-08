@@ -45,7 +45,12 @@ const sectionStagger = {
   }),
 };
 
-export default function TaskDetailModal({
+export default function TaskDetailModal(props: TaskDetailModalProps) {
+  if (!props.todo) return null;
+  return <TaskDetailModalInner {...props} todo={props.todo} />;
+}
+
+function TaskDetailModalInner({
   todo,
   isOpen,
   onClose,
@@ -61,7 +66,7 @@ export default function TaskDetailModal({
   onSaveAsTemplate,
   onEmailCustomer,
   onUpdateAttachments,
-}: TaskDetailModalProps) {
+}: Omit<TaskDetailModalProps, 'todo'> & { todo: Todo }) {
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   // Permission checks
@@ -87,7 +92,7 @@ export default function TaskDetailModal({
   const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask) || isAssignee;
 
   const detail = useTaskDetail({
-    todo: todo!,  // Assert non-null since parent guards with conditional render
+    todo,
     currentUser,
     onUpdate,
     onDelete,
@@ -100,11 +105,6 @@ export default function TaskDetailModal({
     onEmailCustomer,
     onUpdateAttachments,
   });
-
-  // Guard against null todo after hooks
-  if (!todo) {
-    return null;
-  }
 
   const handleDelete = useCallback(() => {
     detail.deleteTodo();

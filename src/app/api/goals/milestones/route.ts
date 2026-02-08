@@ -17,12 +17,16 @@ function getSupabaseClient() {
  */
 async function verifyGoalAgency(goalId: string, agencyId: string) {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from('strategic_goals')
     .select('id')
-    .eq('id', goalId)
-    .eq('agency_id', agencyId)
-    .single();
+    .eq('id', goalId);
+
+  if (agencyId) {
+    query = query.eq('agency_id', agencyId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error || !data) return null;
   return data;
@@ -43,25 +47,37 @@ export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
       }
     }
 
-    // Fetch milestones, filtering to only those belonging to goals in this agency
+    // Fetch milestones. In multi-tenant mode, scope by filtering goal_ids that belong
+    // to the caller's agency (avoids relying on embedded select strings which may be
+    // unavailable in some generated typings).
     let query = supabase
       .from('goal_milestones')
-      .select('*, strategic_goals!inner(agency_id)')
-      .eq('strategic_goals.agency_id', ctx.agencyId)
+      .select('*')
       .order('display_order', { ascending: true });
 
     if (goalId) {
       query = query.eq('goal_id', goalId);
+    } else if (ctx.agencyId) {
+      const { data: goals, error: goalsError } = await supabase
+        .from('strategic_goals')
+        .select('id')
+        .eq('agency_id', ctx.agencyId);
+
+      if (goalsError) throw goalsError;
+
+      const goalIds = (goals || []).map((g: { id: string }) => g.id);
+      if (goalIds.length === 0) {
+        return NextResponse.json([]);
+      }
+
+      query = query.in('goal_id', goalIds);
     }
 
     const { data, error } = await query;
 
     if (error) throw error;
 
-    // Strip the joined strategic_goals data from the response
-    const milestones = (data || []).map(({ strategic_goals: _sg, ...milestone }) => milestone);
-
-    return NextResponse.json(milestones);
+    return NextResponse.json(data || []);
   } catch (error) {
     logger.error('Error fetching milestones', error, { component: 'api/goals/milestones', action: 'GET' });
     return NextResponse.json({ error: 'Failed to fetch milestones' }, { status: 500 });
@@ -130,16 +146,22 @@ export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    // Verify the milestone belongs to a goal in this agency
+    // Verify the milestone exists and (in multi-tenant mode) belongs to a goal in this agency.
     const { data: milestoneCheck } = await supabase
       .from('goal_milestones')
-      .select('goal_id, strategic_goals!inner(agency_id)')
+      .select('goal_id')
       .eq('id', id)
-      .eq('strategic_goals.agency_id', ctx.agencyId)
       .single();
 
     if (!milestoneCheck) {
       return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
+    }
+
+    if (ctx.agencyId) {
+      const goal = await verifyGoalAgency(milestoneCheck.goal_id, ctx.agencyId);
+      if (!goal) {
+        return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
+      }
     }
 
     const updateData: Record<string, unknown> = {};
@@ -180,16 +202,22 @@ export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agen
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    // Verify the milestone belongs to a goal in this agency and get goal_id
+    // Verify the milestone exists and (in multi-tenant mode) belongs to a goal in this agency.
     const { data: milestone } = await supabase
       .from('goal_milestones')
-      .select('goal_id, strategic_goals!inner(agency_id)')
+      .select('goal_id')
       .eq('id', id)
-      .eq('strategic_goals.agency_id', ctx.agencyId)
       .single();
 
     if (!milestone) {
       return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
+    }
+
+    if (ctx.agencyId) {
+      const goal = await verifyGoalAgency(milestone.goal_id, ctx.agencyId);
+      if (!goal) {
+        return NextResponse.json({ error: 'Milestone not found' }, { status: 404 });
+      }
     }
 
     const { error } = await supabase

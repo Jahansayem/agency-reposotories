@@ -58,7 +58,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     const now = new Date().toISOString();
 
     // Update the todo with waiting status, scoped to this agency
-    const { data: todo, error: updateError } = await supabase
+    let updateQuery = supabase
       .from('todos')
       .update({
         waiting_for_response: true,
@@ -68,10 +68,13 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
         updated_at: now,
         updated_by: ctx.userName,
       })
-      .eq('id', todoId)
-      .eq('agency_id', ctx.agencyId)
-      .select()
-      .single();
+      .eq('id', todoId);
+
+    if (ctx.agencyId) {
+      updateQuery = updateQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: todo, error: updateError } = await updateQuery.select().single();
 
     if (updateError) {
       logger.error('Failed to mark task as waiting', updateError, { component: 'WaitingAPI' });
@@ -87,7 +90,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       todo_id: todoId,
       todo_text: todo.text,
       user_name: ctx.userName,
-      agency_id: ctx.agencyId,
+      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
       details: {
         contact_type: contactType,
         follow_up_after_hours: followUpAfterHours,
@@ -136,12 +139,16 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
     const now = new Date().toISOString();
 
     // Get the current todo to log details, scoped to this agency
-    const { data: currentTodo } = await supabase
+    let currentTodoQuery = supabase
       .from('todos')
       .select('text, waiting_since, waiting_contact_type')
-      .eq('id', todoId)
-      .eq('agency_id', ctx.agencyId)
-      .single();
+      .eq('id', todoId);
+
+    if (ctx.agencyId) {
+      currentTodoQuery = currentTodoQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: currentTodo } = await currentTodoQuery.single();
 
     if (!currentTodo) {
       return NextResponse.json(
@@ -160,7 +167,7 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
     }
 
     // Clear the waiting status
-    const { data: todo, error: updateError } = await supabase
+    let clearQuery = supabase
       .from('todos')
       .update({
         waiting_for_response: false,
@@ -169,10 +176,13 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
         updated_at: now,
         updated_by: ctx.userName,
       })
-      .eq('id', todoId)
-      .eq('agency_id', ctx.agencyId)
-      .select()
-      .single();
+      .eq('id', todoId);
+
+    if (ctx.agencyId) {
+      clearQuery = clearQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: todo, error: updateError } = await clearQuery.select().single();
 
     if (updateError) {
       logger.error('Failed to clear waiting status', updateError, { component: 'WaitingAPI' });
@@ -188,7 +198,7 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
       todo_id: todoId,
       todo_text: todo.text,
       user_name: ctx.userName,
-      agency_id: ctx.agencyId,
+      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
       details: {
         waited_hours: waitingDuration,
         contact_type: currentTodo?.waiting_contact_type,

@@ -43,6 +43,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
   const status = searchParams.get('status');
 
   const supabase = getSupabaseClient();
+  const isMultiTenant = Boolean(ctx.agencyId);
 
   // Look up authenticated user's ID for authorization scoping
   const { data: userRecord } = await supabase
@@ -68,12 +69,16 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
   // If todoId is provided, verify the todo belongs to this agency
   if (todoId) {
-    const { data: todo } = await supabase
+    let todoQuery = supabase
       .from('todos')
       .select('id')
-      .eq('id', todoId)
-      .eq('agency_id', ctx.agencyId)
-      .single();
+      .eq('id', todoId);
+
+    if (isMultiTenant) {
+      todoQuery = todoQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: todo } = await todoQuery.single();
 
     if (!todo) {
       return NextResponse.json(
@@ -84,24 +89,23 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
   }
 
   // Build query - join through todos to enforce agency scoping
+  const joinedTodoFields = isMultiTenant
+    ? 'id, text, priority, due_date, assigned_to, completed, created_by, updated_by, agency_id'
+    : 'id, text, priority, due_date, assigned_to, completed, created_by, updated_by';
+
   let query = supabase
     .from('task_reminders')
     .select(`
       *,
       todos:todo_id!inner (
-        id,
-        text,
-        priority,
-        due_date,
-        assigned_to,
-        completed,
-        created_by,
-        updated_by,
-        agency_id
+        ${joinedTodoFields}
       )
     `)
-    .eq('todos.agency_id', ctx.agencyId)
     .order('reminder_time', { ascending: true });
+
+  if (isMultiTenant) {
+    query = query.eq('todos.agency_id', ctx.agencyId);
+  }
 
   if (todoId) {
     query = query.eq('todo_id', todoId);
@@ -131,7 +135,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
   }
 
   // Strip agency_id from the nested todos to keep response clean
-  let reminders = (data || []).map(r => {
+  const reminders = (data || []).map(r => {
     if (r.todos && typeof r.todos === 'object') {
       const { agency_id: _aid, ...todoFields } = r.todos as Record<string, unknown>;
       return { ...r, todos: todoFields };
@@ -143,26 +147,24 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     // Also include reminders for todos where this user is involved but didn't create the reminder
     // SECURITY: Sanitize userName to prevent PostgREST filter injection
     const safeUserName = sanitizeForPostgrestFilter(ctx.userName);
-    const { data: involvedReminders } = await supabase
+
+    let involvedQuery = supabase
       .from('task_reminders')
       .select(`
         *,
         todos:todo_id!inner (
-          id,
-          text,
-          priority,
-          due_date,
-          assigned_to,
-          completed,
-          created_by,
-          updated_by,
-          agency_id
+          ${joinedTodoFields}
         )
       `)
-      .eq('todos.agency_id', ctx.agencyId)
       .neq('created_by', ctx.userName)
       .or(`assigned_to.eq.${safeUserName},created_by.eq.${safeUserName}`, { referencedTable: 'todos' })
       .order('reminder_time', { ascending: true });
+
+    if (isMultiTenant) {
+      involvedQuery = involvedQuery.eq('todos.agency_id', ctx.agencyId);
+    }
+
+    const { data: involvedReminders } = await involvedQuery;
 
     if (involvedReminders && involvedReminders.length > 0) {
       const existingIds = new Set(reminders.map((r: { id: string }) => r.id));
@@ -192,6 +194,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
  */
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   const supabase = getSupabaseClient();
+  const isMultiTenant = Boolean(ctx.agencyId);
 
   try {
     const body = await request.json();
@@ -246,12 +249,16 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     }
 
     // Verify the todo belongs to this agency
-    const { data: todo, error: todoError } = await supabase
+    let todoQuery = supabase
       .from('todos')
       .select('*')
-      .eq('id', todoId)
-      .eq('agency_id', ctx.agencyId)
-      .single();
+      .eq('id', todoId);
+
+    if (isMultiTenant) {
+      todoQuery = todoQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: todo, error: todoError } = await todoQuery.single();
 
     if (todoError || !todo) {
       return NextResponse.json(
@@ -306,7 +313,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 
     // Also update the simple reminder_at field on the todo for backward compatibility
     if (!todo.reminder_at || new Date(todo.reminder_at) > reminderDate) {
-      await supabase
+      let updateTodoQuery = supabase
         .from('todos')
         .update({
           reminder_at: reminderDate.toISOString(),
@@ -314,8 +321,13 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
           updated_at: new Date().toISOString(),
           updated_by: ctx.userName,
         })
-        .eq('id', todoId)
-        .eq('agency_id', ctx.agencyId);
+        .eq('id', todoId);
+
+      if (isMultiTenant) {
+        updateTodoQuery = updateTodoQuery.eq('agency_id', ctx.agencyId);
+      }
+
+      await updateTodoQuery;
     }
 
     return NextResponse.json({
@@ -339,6 +351,7 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
   const supabase = getSupabaseClient();
   const { searchParams } = new URL(request.url);
   const reminderId = searchParams.get('id');
+  const isMultiTenant = Boolean(ctx.agencyId);
 
   if (!reminderId) {
     return NextResponse.json(
@@ -350,7 +363,11 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
   // Fetch the reminder and verify it belongs to a todo in this agency
   const { data: reminder, error: fetchError } = await supabase
     .from('task_reminders')
-    .select('*, todos:todo_id!inner (id, created_by, assigned_to, updated_by, agency_id)')
+    .select(
+      isMultiTenant
+        ? '*, todos:todo_id!inner (id, created_by, assigned_to, updated_by, agency_id)'
+        : '*, todos:todo_id!inner (id, created_by, assigned_to, updated_by)'
+    )
     .eq('id', reminderId)
     .single();
 
@@ -362,8 +379,8 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
   }
 
   // Verify agency ownership
-  const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string; agency_id: string };
-  if (todo.agency_id !== ctx.agencyId) {
+  const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string; agency_id?: string };
+  if (isMultiTenant && todo.agency_id !== ctx.agencyId) {
     return NextResponse.json(
       { success: false, error: 'Reminder not found' },
       { status: 404 }
@@ -407,6 +424,7 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
  */
 export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   const supabase = getSupabaseClient();
+  const isMultiTenant = Boolean(ctx.agencyId);
 
   try {
     const body = await request.json();
@@ -422,7 +440,11 @@ export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuth
     // Fetch the reminder and verify agency
     const { data: reminder, error: fetchError } = await supabase
       .from('task_reminders')
-      .select('*, todos:todo_id!inner (id, created_by, assigned_to, updated_by, agency_id)')
+      .select(
+        isMultiTenant
+          ? '*, todos:todo_id!inner (id, created_by, assigned_to, updated_by, agency_id)'
+          : '*, todos:todo_id!inner (id, created_by, assigned_to, updated_by)'
+      )
       .eq('id', id)
       .single();
 
@@ -434,8 +456,8 @@ export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuth
     }
 
     // Verify agency ownership
-    const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string; agency_id: string };
-    if (todo.agency_id !== ctx.agencyId) {
+    const todo = reminder.todos as { id: string; created_by: string; assigned_to: string; updated_by: string; agency_id?: string };
+    if (isMultiTenant && todo.agency_id !== ctx.agencyId) {
       return NextResponse.json(
         { success: false, error: 'Reminder not found' },
         { status: 404 }

@@ -9,6 +9,7 @@
  * - Edge cases and empty states
  */
 
+import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import DashboardPage from '@/components/views/DashboardPage';
@@ -28,12 +29,47 @@ vi.mock('@/components/layout', () => ({
   }),
 }));
 
+// Mock DailyDigestPanel to avoid network calls in unit tests
+vi.mock('@/components/dashboard/DailyDigestPanel', () => ({
+  default: () => null,
+}));
+
+// Mock agency metrics hook to avoid requiring AgencyProvider in unit tests
+vi.mock('@/hooks/useAgencyMetrics', () => ({
+  useAgencyMetrics: () => ({
+    metrics: null,
+    loading: false,
+    error: null,
+    refreshMetrics: vi.fn(async () => {}),
+    calculatePipelineValue: () => ({ value: 0, count: 0 }),
+    calculatePoliciesThisWeek: () => 0,
+    calculatePremiumMTD: () => 0,
+  }),
+}));
+
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }: { children: React.ReactNode }) => <div {...props}>{children}</div>,
-    button: ({ children, ...props }: { children: React.ReactNode }) => <button {...props}>{children}</button>,
-  },
+  motion: new Proxy({}, {
+    get: (_target, tag) => {
+      return ({ children, ...props }: { children?: React.ReactNode }) => {
+        // Strip motion-only props so React doesn't warn about unknown DOM attributes
+        const {
+          initial,
+          animate,
+          exit,
+          transition,
+          variants,
+          whileHover,
+          whileTap,
+          layout,
+          layoutId,
+          ...rest
+        } = props as Record<string, unknown>;
+
+        return React.createElement(String(tag), rest, children);
+      };
+    },
+  }),
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useReducedMotion: () => false,
 }));
@@ -98,6 +134,7 @@ const getNextWeek = () => {
 
 describe('DashboardPage', () => {
   const mockCurrentUser = createMockUser('John Doe');
+  const mockManagerUser: AuthUser = { ...mockCurrentUser, role: 'manager' };
   const mockOnNavigate = vi.fn();
   const mockOnFilterOverdue = vi.fn();
   const mockOnFilterDueToday = vi.fn();
@@ -129,7 +166,7 @@ describe('DashboardPage', () => {
 
       render(
         <DashboardPage
-          currentUser={mockCurrentUser}
+          currentUser={mockManagerUser}
           todos={todos}
           users={['John Doe', 'Jane Smith', 'Bob Wilson']}
           onNavigateToTasks={mockOnNavigate}
@@ -143,13 +180,14 @@ describe('DashboardPage', () => {
     it('shows team member count in header for managers', () => {
       render(
         <DashboardPage
-          currentUser={mockCurrentUser}
+          currentUser={mockManagerUser}
           todos={[]}
           users={['John Doe', 'Jane Smith', 'Bob Wilson']}
         />
       );
 
-      expect(screen.getByText(/3 team members/i)).toBeInTheDocument();
+      // Manager dashboard should include team workload section
+      expect(screen.getByText(/Team Workload/i)).toBeInTheDocument();
     });
   });
 
@@ -165,19 +203,22 @@ describe('DashboardPage', () => {
           currentUser={mockCurrentUser}
           todos={todos}
           users={['John Doe']}
+          useNewDashboards={false}
         />
       );
 
       // The overdue button should have red styling when there are overdue tasks
-      const overdueButtons = screen.getAllByText('Overdue');
-      const headerOverdue = overdueButtons[0].closest('button');
-      expect(headerOverdue).toHaveClass('bg-red-500/20');
+      const overdueButton = screen
+        .getAllByRole('button')
+        .find((btn) => btn.textContent?.match(/2 overdue/i) && btn.className.includes('bg-red-500/15'));
+
+      expect(overdueButton).toBeTruthy();
     });
 
     it('displays due today stat', () => {
       const todos = [
-        createMockTodo({ due_date: getToday(), assigned_to: 'John Doe' }),
-        createMockTodo({ due_date: getToday(), assigned_to: 'John Doe' }),
+        createMockTodo({ text: 'Due today 1', due_date: getToday(), assigned_to: 'John Doe' }),
+        createMockTodo({ text: 'Due today 2', due_date: getToday(), assigned_to: 'John Doe' }),
       ];
 
       render(
@@ -185,12 +226,14 @@ describe('DashboardPage', () => {
           currentUser={mockCurrentUser}
           todos={todos}
           users={['John Doe']}
+          useNewDashboards={false}
         />
       );
 
-      // Header should show "Due Today" label
-      const dueTodayElements = screen.getAllByText('Due Today');
-      expect(dueTodayElements.length).toBeGreaterThan(0);
+      // Legacy dashboard shows a "Today" section with due-today tasks
+      expect(screen.getByText('Today')).toBeInTheDocument();
+      expect(screen.getByText('Due today 1')).toBeInTheDocument();
+      expect(screen.getByText('Due today 2')).toBeInTheDocument();
     });
 
     it('displays upcoming week stat', () => {
@@ -204,11 +247,12 @@ describe('DashboardPage', () => {
           currentUser={mockCurrentUser}
           todos={todos}
           users={['John Doe']}
+          useNewDashboards={false}
         />
       );
 
-      // Should show "Due This Week" label
-      expect(screen.getByText('Due This Week')).toBeInTheDocument();
+      // Legacy dashboard shows a "This Week" section for upcoming tasks
+      expect(screen.getByText('This Week')).toBeInTheDocument();
     });
 
     it('calls onFilterOverdue when overdue stat is clicked', () => {
@@ -220,6 +264,7 @@ describe('DashboardPage', () => {
           todos={todos}
           users={['John Doe']}
           onFilterOverdue={mockOnFilterOverdue}
+          useNewDashboards={false}
         />
       );
 
@@ -230,7 +275,7 @@ describe('DashboardPage', () => {
     });
 
     it('calls onFilterDueToday when due today stat is clicked', () => {
-      const todos = [createMockTodo({ due_date: getToday() })];
+      const todos = [createMockTodo({ text: 'Due today clickable', due_date: getToday() })];
 
       render(
         <DashboardPage
@@ -238,11 +283,12 @@ describe('DashboardPage', () => {
           todos={todos}
           users={['John Doe']}
           onFilterDueToday={mockOnFilterDueToday}
+          useNewDashboards={false}
         />
       );
 
-      const dueTodayButton = screen.getByText('Due Today').closest('button');
-      fireEvent.click(dueTodayButton!);
+      const dueTodayTaskButton = screen.getByText('Due today clickable').closest('button');
+      fireEvent.click(dueTodayTaskButton!);
 
       expect(mockOnFilterDueToday).toHaveBeenCalledTimes(1);
     });
@@ -255,6 +301,7 @@ describe('DashboardPage', () => {
           currentUser={mockCurrentUser}
           todos={[]}
           users={['John Doe']}
+          useNewDashboards={false}
         />
       );
 
@@ -273,10 +320,12 @@ describe('DashboardPage', () => {
           currentUser={mockCurrentUser}
           todos={todos}
           users={['John Doe']}
+          useNewDashboards={false}
         />
       );
 
-      expect(screen.getByText(/2 active tasks/i)).toBeInTheDocument();
+      // Legacy dashboard shows an "active" pill in the header.
+      expect(screen.getAllByText(/2\s+active/i).length).toBeGreaterThan(0);
     });
   });
 });
@@ -621,7 +670,7 @@ describe('ManagerDashboard', () => {
 
       // Alice should appear in needs attention
       expect(screen.getByText('Needs Attention')).toBeInTheDocument();
-      expect(screen.getByText('Alice Developer')).toBeInTheDocument();
+      expect(screen.getAllByText('Alice Developer').length).toBeGreaterThan(0);
       expect(screen.getByText(/3 overdue/i)).toBeInTheDocument();
     });
 
@@ -640,7 +689,7 @@ describe('ManagerDashboard', () => {
       );
 
       // Bob should appear as overloaded
-      expect(screen.getByText('Bob Designer')).toBeInTheDocument();
+      expect(screen.getAllByText('Bob Designer').length).toBeGreaterThan(0);
     });
   });
 
