@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAppShell, ActiveView } from './AppShell';
 import { DURATION, EASE } from '@/lib/animations';
+import { useIsLandscape } from '@/hooks/useIsLandscape';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENHANCED BOTTOM NAVIGATION
@@ -43,6 +44,8 @@ export default function EnhancedBottomNav() {
     currentUser,
     triggerNewTask,
   } = useAppShell();
+
+  const isLandscape = useIsLandscape();
 
   // Stats for badges (these would come from props or context in real implementation)
   const [stats, setStats] = useState({
@@ -105,7 +108,9 @@ export default function EnhancedBottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-safe bg-[var(--surface)] backdrop-blur-xl border-t border-[var(--border)]"
+      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden pb-safe bg-[var(--surface)] backdrop-blur-xl border-t border-[var(--border)] ${
+        isLandscape ? 'h-12' : ''
+      }`}
       role="navigation"
       aria-label="Main navigation"
     >
@@ -122,13 +127,15 @@ export default function EnhancedBottomNav() {
               <motion.button
                 key={tab.id}
                 onClick={() => handleTabPress(tab.id)}
-                className="relative -mt-6 w-14 h-14 rounded-[var(--radius-2xl)] flex items-center justify-center bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white shadow-lg shadow-[var(--brand-blue)]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
+                className={`relative ${
+                  isLandscape ? '-mt-3 w-12 h-12' : '-mt-6 w-14 h-14'
+                } rounded-[var(--radius-2xl)] flex items-center justify-center bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white shadow-lg shadow-[var(--brand-blue)]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2`}
                 aria-label="Create new task"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: DURATION.fast, ease: EASE.default }}
               >
-                <Plus className="w-6 h-6" strokeWidth={2.5} aria-hidden="true" />
+                <Plus className={isLandscape ? 'w-5 h-5' : 'w-6 h-6'} strokeWidth={2.5} aria-hidden="true" />
 
                 {/* Subtle glow effect */}
                 <motion.div
@@ -146,8 +153,8 @@ export default function EnhancedBottomNav() {
               key={tab.id}
               onClick={() => handleTabPress(tab.id)}
               className={`
-                relative flex flex-col items-center justify-center
-                min-w-[64px] min-h-[48px] h-16 px-3
+                relative flex ${isLandscape ? 'flex-row gap-1.5' : 'flex-col'} items-center justify-center
+                min-w-[64px] min-h-[48px] ${isLandscape ? 'h-12' : 'h-16'} px-3
                 touch-manipulation
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-inset rounded-[var(--radius-lg)]
                 ${isActive
@@ -165,7 +172,7 @@ export default function EnhancedBottomNav() {
               transition={{ duration: DURATION.fast, ease: EASE.default }}
             >
               {/* Active indicator pill */}
-              {isActive && (
+              {isActive && !isLandscape && (
                 <motion.div
                   layoutId="activeTab"
                   className="absolute top-1 w-8 h-1 rounded-full bg-[var(--accent)]"
@@ -182,7 +189,7 @@ export default function EnhancedBottomNav() {
               >
                 <Icon
                   className={`
-                    w-6 h-6 transition-colors duration-200
+                    ${isLandscape ? 'w-5 h-5' : 'w-6 h-6'} transition-colors duration-200
                     ${isActive
                       ? 'text-[var(--accent)]'
                       : 'text-[var(--text-muted)]'}
@@ -205,17 +212,19 @@ export default function EnhancedBottomNav() {
                 </AnimatePresence>
               </motion.div>
 
-              {/* Label */}
-              <motion.span
-                className={`
-                  text-xs mt-1 transition-colors duration-200
-                  ${isActive
-                    ? 'text-[var(--accent)] font-medium'
-                    : 'text-[var(--text-muted)]'}
-                `}
-              >
-                {tab.label}
-              </motion.span>
+              {/* Label - hidden in landscape to save space */}
+              {!isLandscape && (
+                <motion.span
+                  className={`
+                    text-xs mt-1 transition-colors duration-200
+                    ${isActive
+                      ? 'text-[var(--accent)] font-medium'
+                      : 'text-[var(--text-muted)]'}
+                  `}
+                >
+                  {tab.label}
+                </motion.span>
+              )}
             </motion.button>
           );
         })}

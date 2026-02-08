@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, X, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
@@ -46,6 +46,32 @@ function saveNotificationSettings(settings: ActivityNotificationSettings): void 
 }
 
 /**
+ * Humanize status strings for display
+ * Converts internal values like 'in_progress' to 'In Progress'
+ */
+function humanizeStatus(status: string | undefined): string {
+  if (!status) return '';
+  const statusMap: Record<string, string> = {
+    'todo': 'To Do',
+    'in_progress': 'In Progress',
+    'done': 'Done',
+    'not_started': 'Not Started',
+    'on_hold': 'On Hold',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+  };
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Humanize priority strings for display
+ */
+function humanizePriority(priority: string | undefined): string {
+  if (!priority) return '';
+  return priority.charAt(0).toUpperCase() + priority.slice(1);
+}
+
+/**
  * Action configuration using semantic color tokens from design system.
  * Colors use CSS variables for consistent light/dark mode support.
  * @see src/lib/design-tokens.ts for ACTION_COLORS definitions
@@ -76,6 +102,13 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)' },
   follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)' },
   task_reordered: { icon: ArrowRight, label: 'reordered task', color: 'var(--accent-vivid)' },
+  agency_created: { icon: Building, label: 'created agency', color: 'var(--success-vivid)' },
+  member_added: { icon: UserPlus, label: 'added member', color: 'var(--success-vivid)' },
+  member_removed: { icon: UserMinus, label: 'removed member', color: 'var(--danger)' },
+  member_role_changed: { icon: Shield, label: 'changed member role', color: 'var(--warning)' },
+  member_permissions_changed: { icon: Settings, label: 'updated permissions', color: 'var(--state-info)' },
+  member_role_and_permissions_changed: { icon: Shield, label: 'updated role and permissions', color: 'var(--warning)' },
+  customer_import: { icon: User, label: 'imported customers', color: 'var(--success-vivid)' },
 };
 
 // Activity type filter options
@@ -634,7 +667,8 @@ export default function ActivityFeed({ currentUserName, onClose }: ActivityFeedP
   );
 }
 
-function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
+// Memoized to prevent re-renders when activity data hasn't changed
+const ActivityItem = memo(function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
   const config = ACTION_CONFIG[activity.action];
   const Icon = config.icon;
   const details = activity.details as Record<string, string | number | undefined>;
@@ -644,9 +678,9 @@ function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
       case 'status_changed':
         return (
           <span className="flex items-center gap-1">
-            <span className="text-[var(--text-muted)]">{details.from}</span>
+            <span className="text-[var(--text-muted)]">{humanizeStatus(details.from as string)}</span>
             <ArrowRight className="w-3 h-3" />
-            <span className="font-medium" style={{ color: config.color }}>{details.to}</span>
+            <span className="font-medium" style={{ color: config.color }}>{humanizeStatus(details.to as string)}</span>
           </span>
         );
       case 'priority_changed':
@@ -654,9 +688,9 @@ function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
         const toPriority = PRIORITY_CONFIG[details.to as keyof typeof PRIORITY_CONFIG];
         return (
           <span className="flex items-center gap-1">
-            <span style={{ color: fromPriority?.color }}>{details.from}</span>
+            <span style={{ color: fromPriority?.color }}>{humanizePriority(details.from as string)}</span>
             <ArrowRight className="w-3 h-3" />
-            <span className="font-medium" style={{ color: toPriority?.color }}>{details.to}</span>
+            <span className="font-medium" style={{ color: toPriority?.color }}>{humanizePriority(details.to as string)}</span>
           </span>
         );
       case 'assigned_to_changed':
@@ -735,4 +769,4 @@ function ActivityItem({ activity }: { activity: ActivityLogEntry }) {
       </div>
     </div>
   );
-}
+});

@@ -61,7 +61,7 @@ export function ReadIndicator({ readBy, sender }: { readBy: string[]; sender?: s
   if (othersRead.length === 0) {
     // Not read by anyone
     return (
-      <Check className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+      <Check className="w-3 h-3 text-[var(--text-muted)]" />
     );
   }
 
@@ -72,7 +72,7 @@ export function ReadIndicator({ readBy, sender }: { readBy: string[]; sender?: s
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.2 }}
     >
-      <CheckCheck className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+      <CheckCheck className="w-3 h-3 text-[var(--accent)]" />
     </motion.div>
   );
 }
@@ -120,7 +120,7 @@ export function ReadReceipts({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: index * 0.05, duration: 0.2 }}
-            className="w-4 h-4 rounded-full border border-white dark:border-gray-900 flex items-center justify-center"
+            className="w-4 h-4 rounded-full border border-[var(--surface)] flex items-center justify-center"
             style={{
               backgroundColor: getUserColor(userName),
               zIndex: othersRead.length - index,
@@ -134,7 +134,7 @@ export function ReadReceipts({
         ))}
         {othersRead.length > 3 && (
           <div
-            className="w-4 h-4 rounded-full border border-white dark:border-gray-900 bg-gray-400 dark:bg-gray-600 flex items-center justify-center"
+            className="w-4 h-4 rounded-full border border-[var(--surface)] bg-[var(--text-muted)] flex items-center justify-center"
             title={`+${othersRead.length - 3} more`}
           >
             <span className="text-badge text-white">
@@ -155,7 +155,7 @@ export function ReadReceipts({
         exit={{ opacity: 0, y: -10 }}
         className={`space-y-2 ${className}`}
       >
-        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
           <Eye className="w-3 h-3" />
           <span>Read by {othersRead.length}</span>
         </div>
@@ -164,7 +164,7 @@ export function ReadReceipts({
           {othersRead.map((userName) => (
             <div
               key={userName}
-              className="flex items-center justify-between gap-3 px-2 py-1 rounded bg-gray-50 dark:bg-gray-800"
+              className="flex items-center justify-between gap-3 px-2 py-1 rounded bg-[var(--surface-2)]"
             >
               <div className="flex items-center gap-2">
                 <div
@@ -175,12 +175,12 @@ export function ReadReceipts({
                     {userName.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-medium text-[var(--foreground)]">
                   {userName}
                 </span>
               </div>
 
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-[var(--text-muted)]">
                 {getReadTime(userName)}
               </span>
             </div>
@@ -207,7 +207,7 @@ export function ReadCountBadge({
   return (
     <button
       onClick={onClick}
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 transition-colors"
       type="button"
       aria-label={`Read by ${count} ${count === 1 ? 'person' : 'people'}`}
     >

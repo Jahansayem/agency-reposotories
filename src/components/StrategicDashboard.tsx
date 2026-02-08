@@ -34,6 +34,7 @@ import {
   Zap,
   Sun,
   Coffee,
+  Menu,
 } from 'lucide-react';
 import {
   StrategicGoal,
@@ -48,6 +49,12 @@ import { fetchWithCsrf } from '@/lib/csrf';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { usePermission } from '@/hooks/usePermission';
 import { useCurrentAgencyId } from '@/contexts/AgencyContext';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { ListView } from './dashboard/ListView';
+import { BoardView } from './dashboard/BoardView';
+import { TableView } from './dashboard/TableView';
+import { AddGoalModal } from './dashboard/AddGoalModal';
+import { EditGoalModal } from './dashboard/EditGoalModal';
 
 interface StrategicDashboardProps {
   userName: string;
@@ -92,7 +99,9 @@ export default function StrategicDashboard({
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const canManageGoals = usePermission('can_manage_strategic_goals');
+  const isMobile = useIsMobile(768); // Mobile breakpoint
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<GoalStatus | 'all'>('all');
   const [showAddGoal, setShowAddGoal] = useState(false);
@@ -335,14 +344,22 @@ export default function StrategicDashboard({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full h-full max-w-6xl max-h-[95vh] my-4 mx-4 rounded-2xl shadow-2xl overflow-hidden flex ${
+        className={`w-full h-full max-w-6xl max-h-[95vh] ${isMobile ? '' : 'my-4 mx-4'} ${isMobile ? '' : 'rounded-2xl'} shadow-2xl overflow-hidden flex ${
           darkMode ? 'bg-slate-900' : 'bg-white'
         }`}
       >
-        {/* Sidebar */}
-        <div className={`w-64 flex-shrink-0 border-r flex flex-col ${
-          darkMode ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-        }`}>
+        {/* Sidebar - Desktop or Mobile Drawer */}
+        <AnimatePresence>
+          {(!isMobile || showMobileMenu) && (
+            <motion.div
+              initial={isMobile ? { x: -300 } : false}
+              animate={isMobile ? { x: 0 } : undefined}
+              exit={isMobile ? { x: -300 } : undefined}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className={`${isMobile ? 'absolute inset-y-0 left-0 z-50 w-64' : 'w-64 flex-shrink-0'} border-r flex flex-col ${
+                darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
           <div className={`p-4 border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-gradient-to-br from-[#0033A0] to-[#0033A0]/70 shadow-lg shadow-[#0033A0]/20">
@@ -510,7 +527,22 @@ export default function StrategicDashboard({
               </button>
             </div>
           )}
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile backdrop */}
+        <AnimatePresence>
+          {isMobile && showMobileMenu && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowMobileMenu(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
+            />
+          )}
+        </AnimatePresence>
 
         {/* Main content */}
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -519,6 +551,18 @@ export default function StrategicDashboard({
           }`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
+                {/* Mobile hamburger menu */}
+                {isMobile && (
+                  <button
+                    onClick={() => setShowMobileMenu(true)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                    }`}
+                    aria-label="Open menu"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
+                )}
                 <span className={`${darkMode ? 'text-[#D4A853]' : 'text-[#0033A0]'}`}>
                   {greeting.icon}
                 </span>
@@ -652,6 +696,7 @@ export default function StrategicDashboard({
                 onEdit={canManageGoals ? setEditingGoal : undefined}
                 onDelete={canManageGoals ? handleDeleteGoal : undefined}
                 onStatusChange={canManageGoals ? (id, status) => handleUpdateGoal(id, { status }) : undefined}
+                categoryIcons={categoryIcons}
               />
             ) : viewMode === 'board' ? (
               <BoardView
@@ -679,6 +724,7 @@ export default function StrategicDashboard({
           <AddGoalModal
             categories={categories}
             darkMode={darkMode}
+            isMobile={isMobile}
             newGoal={newGoal}
             setNewGoal={setNewGoal}
             onClose={() => {
@@ -703,6 +749,7 @@ export default function StrategicDashboard({
             goal={editingGoal}
             categories={categories}
             darkMode={darkMode}
+            isMobile={isMobile}
             onClose={() => setEditingGoal(null)}
             onSave={(updates) => handleUpdateGoal(editingGoal.id, updates)}
             onToggleMilestone={handleToggleMilestone}
@@ -710,818 +757,6 @@ export default function StrategicDashboard({
           />
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-// List View
-interface ListViewProps {
-  goals: StrategicGoal[];
-  categories: GoalCategory[];
-  darkMode: boolean;
-  hoveredGoal: string | null;
-  setHoveredGoal: (id: string | null) => void;
-  onEdit?: (goal: StrategicGoal) => void;
-  onDelete?: (id: string) => void;
-  onStatusChange?: (id: string, status: GoalStatus) => void;
-}
-
-function ListView({
-  goals,
-  categories,
-  darkMode,
-  hoveredGoal,
-  setHoveredGoal,
-  onEdit,
-  onDelete,
-  onStatusChange,
-}: ListViewProps) {
-  return (
-    <div className="space-y-2">
-      {goals.map(goal => {
-        const category = categories.find(c => c.id === goal.category_id);
-        const statusConfig = GOAL_STATUS_CONFIG[goal.status];
-        const priorityConfig = GOAL_PRIORITY_CONFIG[goal.priority];
-        const isHovered = hoveredGoal === goal.id;
-
-        return (
-          <motion.div
-            key={goal.id}
-            layout
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            onMouseEnter={() => setHoveredGoal(goal.id)}
-            onMouseLeave={() => setHoveredGoal(null)}
-            className={`group relative rounded-xl border transition-all ${
-              darkMode
-                ? 'bg-slate-800/50 border-slate-700/50 hover:border-slate-600 hover:bg-slate-800'
-                : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-md'
-            }`}
-          >
-            <div className="p-4">
-              <div className="flex items-start gap-4">
-                <button
-                  onClick={() => {
-                    const statuses: GoalStatus[] = ['not_started', 'in_progress', 'on_hold', 'completed', 'cancelled'];
-                    const currentIndex = statuses.indexOf(goal.status);
-                    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-                    onStatusChange?.(goal.id, nextStatus);
-                  }}
-                  disabled={!onStatusChange}
-                  className={`p-2 rounded-lg transition-all ${onStatusChange ? 'hover:scale-110' : 'cursor-default'}`}
-                  style={{ backgroundColor: statusConfig.bgColor, color: statusConfig.color }}
-                  title={`Status: ${statusConfig.label}`}
-                >
-                  {statusIcons[goal.status]}
-                </button>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <h3 className={`font-medium ${
-                        goal.status === 'completed'
-                          ? 'line-through opacity-60'
-                          : darkMode ? 'text-white' : 'text-slate-800'
-                      }`}>
-                        {goal.title}
-                      </h3>
-                      {goal.description && (
-                        <p className={`text-sm mt-1 line-clamp-2 ${
-                          darkMode ? 'text-slate-400' : 'text-slate-500'
-                        }`}>
-                          {goal.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className={`flex items-center gap-1 transition-opacity ${
-                      isHovered && (onEdit || onDelete) ? 'opacity-100' : 'opacity-0'
-                    }`}>
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(goal)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            darkMode
-                              ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
-                              : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
-                          }`}
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={() => onDelete(goal.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            darkMode
-                              ? 'hover:bg-red-900/30 text-slate-400 hover:text-red-400'
-                              : 'hover:bg-red-50 text-slate-400 hover:text-red-500'
-                          }`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-3 flex-wrap">
-                    {category && (
-                      <span
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium"
-                        style={{ backgroundColor: category.color + '15', color: category.color }}
-                      >
-                        {categoryIcons[category.icon] || <Hash className="w-3 h-3" />}
-                        {category.name}
-                      </span>
-                    )}
-
-                    <span
-                      className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
-                      style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}
-                    >
-                      <Flag className="w-3 h-3" />
-                      {priorityConfig.label}
-                    </span>
-
-                    {goal.target_date && (
-                      <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs ${
-                        new Date(goal.target_date) < new Date() && goal.status !== 'completed'
-                          ? 'bg-red-500/10 text-red-500'
-                          : darkMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        <Calendar className="w-3 h-3" />
-                        {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    )}
-
-                    {goal.target_value && (
-                      <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs ${
-                        darkMode ? 'bg-[#D4A853]/10 text-[#D4A853]' : 'bg-[#0033A0]/10 text-[#0033A0]'
-                      }`}>
-                        <ArrowUpRight className="w-3 h-3" />
-                        {goal.target_value}
-                      </span>
-                    )}
-
-                    {goal.progress_percent > 0 && (
-                      <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs ${
-                        darkMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        <BarChart3 className="w-3 h-3" />
-                        {goal.progress_percent}%
-                      </span>
-                    )}
-
-                    {goal.milestones && goal.milestones.length > 0 && (
-                      <span className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs ${
-                        darkMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        <CheckCircle2 className="w-3 h-3" />
-                        {goal.milestones.filter(m => m.completed).length}/{goal.milestones.length}
-                      </span>
-                    )}
-                  </div>
-
-                  {goal.progress_percent > 0 && (
-                    <div className="mt-3">
-                      <div className={`h-1.5 rounded-full overflow-hidden ${
-                        darkMode ? 'bg-slate-700' : 'bg-slate-200'
-                      }`}>
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${goal.progress_percent}%` }}
-                          className="h-full rounded-full bg-gradient-to-r from-[#0033A0] to-[#D4A853]"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-// Board View
-interface BoardViewProps {
-  goalsByStatus: Record<GoalStatus, StrategicGoal[]>;
-  categories: GoalCategory[];
-  darkMode: boolean;
-  onEdit?: (goal: StrategicGoal) => void;
-  onStatusChange?: (id: string, status: GoalStatus) => void;
-}
-
-function BoardView({ goalsByStatus, categories, darkMode, onEdit }: BoardViewProps) {
-  const visibleStatuses: GoalStatus[] = ['not_started', 'in_progress', 'completed'];
-
-  return (
-    <div className="flex gap-4 h-full overflow-x-auto pb-4">
-      {visibleStatuses.map(status => {
-        const config = GOAL_STATUS_CONFIG[status];
-        const goals = goalsByStatus[status];
-
-        return (
-          <div
-            key={status}
-            className={`flex-shrink-0 w-80 flex flex-col rounded-xl ${
-              darkMode ? 'bg-slate-800/30' : 'bg-slate-50'
-            }`}
-          >
-            <div className={`p-3 border-b ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-              <div className="flex items-center gap-2">
-                <span style={{ color: config.color }}>{statusIcons[status]}</span>
-                <h3 className={`font-medium text-sm ${darkMode ? 'text-white' : 'text-slate-800'}`}>
-                  {config.label}
-                </h3>
-                <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
-                  darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500'
-                }`}>
-                  {goals.length}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
-              {goals.map(goal => {
-                const category = categories.find(c => c.id === goal.category_id);
-                const priorityConfig = GOAL_PRIORITY_CONFIG[goal.priority];
-
-                return (
-                  <motion.div
-                    key={goal.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className={`group p-3 rounded-lg border cursor-pointer transition-all ${
-                      darkMode
-                        ? 'bg-slate-800 border-slate-700 hover:border-slate-600'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
-                    }`}
-                    onClick={() => onEdit?.(goal)}
-                  >
-                    <h4 className={`font-medium text-sm mb-2 ${darkMode ? 'text-white' : 'text-slate-800'}`}>
-                      {goal.title}
-                    </h4>
-
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {category && (
-                        <span
-                          className="px-1.5 py-0.5 rounded text-xs"
-                          style={{ backgroundColor: category.color + '15', color: category.color }}
-                        >
-                          {category.name}
-                        </span>
-                      )}
-                      <span
-                        className="px-1.5 py-0.5 rounded text-xs"
-                        style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}
-                      >
-                        {priorityConfig.label}
-                      </span>
-                      {goal.target_date && (
-                        <span className={`px-1.5 py-0.5 rounded text-xs ${
-                          darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      )}
-                    </div>
-
-                    {goal.progress_percent > 0 && (
-                      <div className="mt-2">
-                        <div className={`h-1 rounded-full overflow-hidden ${
-                          darkMode ? 'bg-slate-700' : 'bg-slate-200'
-                        }`}>
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-[#0033A0] to-[#D4A853]"
-                            style={{ width: `${goal.progress_percent}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// Table View
-interface TableViewProps {
-  goals: StrategicGoal[];
-  categories: GoalCategory[];
-  darkMode: boolean;
-  onEdit?: (goal: StrategicGoal) => void;
-  onStatusChange?: (id: string, status: GoalStatus) => void;
-}
-
-function TableView({ goals, categories, darkMode, onEdit, onStatusChange }: TableViewProps) {
-  return (
-    <div className={`rounded-xl border overflow-hidden ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>
-      <table className="w-full">
-        <thead>
-          <tr className={darkMode ? 'bg-slate-800' : 'bg-slate-50'}>
-            <th className={`text-left px-4 py-3 text-xs font-medium uppercase tracking-wider ${
-              darkMode ? 'text-slate-400' : 'text-slate-500'
-            }`}>Goal</th>
-            <th className={`text-left px-4 py-3 text-xs font-medium uppercase tracking-wider ${
-              darkMode ? 'text-slate-400' : 'text-slate-500'
-            }`}>Status</th>
-            <th className={`text-left px-4 py-3 text-xs font-medium uppercase tracking-wider ${
-              darkMode ? 'text-slate-400' : 'text-slate-500'
-            }`}>Category</th>
-            <th className={`text-left px-4 py-3 text-xs font-medium uppercase tracking-wider ${
-              darkMode ? 'text-slate-400' : 'text-slate-500'
-            }`}>Priority</th>
-            <th className={`text-left px-4 py-3 text-xs font-medium uppercase tracking-wider ${
-              darkMode ? 'text-slate-400' : 'text-slate-500'
-            }`}>Due Date</th>
-            <th className={`text-left px-4 py-3 text-xs font-medium uppercase tracking-wider ${
-              darkMode ? 'text-slate-400' : 'text-slate-500'
-            }`}>Progress</th>
-          </tr>
-        </thead>
-        <tbody className={`divide-y ${darkMode ? 'divide-slate-700' : 'divide-slate-200'}`}>
-          {goals.map(goal => {
-            const category = categories.find(c => c.id === goal.category_id);
-            const statusConfig = GOAL_STATUS_CONFIG[goal.status];
-            const priorityConfig = GOAL_PRIORITY_CONFIG[goal.priority];
-
-            return (
-              <tr
-                key={goal.id}
-                className={`cursor-pointer transition-colors ${
-                  darkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'
-                }`}
-                onClick={() => onEdit?.(goal)}
-              >
-                <td className="px-4 py-3">
-                  <span className={`font-medium ${
-                    goal.status === 'completed' ? 'line-through opacity-60' : darkMode ? 'text-white' : 'text-slate-800'
-                  }`}>{goal.title}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const statuses: GoalStatus[] = ['not_started', 'in_progress', 'on_hold', 'completed', 'cancelled'];
-                      const currentIndex = statuses.indexOf(goal.status);
-                      const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-                      onStatusChange?.(goal.id, nextStatus);
-                    }}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all hover:scale-105"
-                    style={{ backgroundColor: statusConfig.bgColor, color: statusConfig.color }}
-                  >
-                    {statusIcons[goal.status]}
-                    {statusConfig.label}
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  {category ? (
-                    <span className="px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: category.color + '15', color: category.color }}>
-                      {category.name}
-                    </span>
-                  ) : <span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>—</span>}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="px-2 py-1 rounded-md text-xs font-medium" style={{ backgroundColor: priorityConfig.bgColor, color: priorityConfig.color }}>
-                    {priorityConfig.label}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  {goal.target_date ? (
-                    <span className={`text-sm ${
-                      new Date(goal.target_date) < new Date() && goal.status !== 'completed'
-                        ? 'text-red-500' : darkMode ? 'text-slate-300' : 'text-slate-600'
-                    }`}>
-                      {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  ) : <span className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>—</span>}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-16 h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-slate-200'}`}>
-                      <div className="h-full rounded-full bg-gradient-to-r from-[#0033A0] to-[#D4A853]" style={{ width: `${goal.progress_percent}%` }} />
-                    </div>
-                    <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{goal.progress_percent}%</span>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// Add Goal Modal
-interface AddGoalModalProps {
-  categories: GoalCategory[];
-  darkMode: boolean;
-  newGoal: { title: string; description: string; priority: GoalPriority; target_date: string; target_value: string; category_id: string };
-  setNewGoal: React.Dispatch<React.SetStateAction<{ title: string; description: string; priority: GoalPriority; target_date: string; target_value: string; category_id: string }>>;
-  onClose: () => void;
-  onCreate: () => void;
-}
-
-function AddGoalModal({ categories, darkMode, newGoal, setNewGoal, onClose, onCreate }: AddGoalModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-slate-900' : 'bg-white'}`}
-      >
-        <div className={`px-6 py-4 border-b flex items-center justify-between ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-[#0033A0] to-[#0033A0]/70">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>New Goal</h2>
-          </div>
-          <button onClick={onClose} aria-label="Close new goal form" className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <input
-            type="text"
-            value={newGoal.title}
-            onChange={(e) => setNewGoal(prev => ({ ...prev, title: e.target.value }))}
-            placeholder="What's your goal?"
-            className={`w-full px-4 py-3 rounded-xl text-lg font-medium ${
-              darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-            } border-2 focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30 focus:border-[#0033A0]`}
-            autoFocus
-          />
-
-          <textarea
-            value={newGoal.description}
-            onChange={(e) => setNewGoal(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Add a description..."
-            rows={3}
-            className={`w-full px-4 py-3 rounded-xl text-sm resize-none ${
-              darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'
-            } border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Category</label>
-              <select
-                value={newGoal.category_id}
-                onChange={(e) => setNewGoal(prev => ({ ...prev, category_id: e.target.value }))}
-                className={`w-full px-3 py-2 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-              >
-                <option value="">No Category</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Priority</label>
-              <select
-                value={newGoal.priority}
-                onChange={(e) => setNewGoal(prev => ({ ...prev, priority: e.target.value as GoalPriority }))}
-                className={`w-full px-3 py-2 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-              >
-                {(Object.keys(GOAL_PRIORITY_CONFIG) as GoalPriority[]).map(priority => (
-                  <option key={priority} value={priority}>{GOAL_PRIORITY_CONFIG[priority].label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Target Date</label>
-              <input
-                type="date"
-                value={newGoal.target_date}
-                onChange={(e) => setNewGoal(prev => ({ ...prev, target_date: e.target.value }))}
-                className={`w-full px-3 py-2 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-              />
-            </div>
-
-            <div>
-              <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Target Value</label>
-              <input
-                type="text"
-                value={newGoal.target_value}
-                onChange={(e) => setNewGoal(prev => ({ ...prev, target_value: e.target.value }))}
-                placeholder="e.g., $1M revenue"
-                className={`w-full px-3 py-2 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className={`px-6 py-4 border-t flex items-center justify-end gap-3 ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`}>
-          <button onClick={onClose} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-200'}`}>
-            Cancel
-          </button>
-          <button
-            onClick={onCreate}
-            disabled={!newGoal.title.trim()}
-            className="px-4 py-2 bg-[#0033A0] text-white text-sm font-medium rounded-lg hover:bg-[#002878] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#0033A0]/20"
-          >
-            Create Goal
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-// Edit Goal Modal
-interface EditGoalModalProps {
-  goal: StrategicGoal;
-  categories: GoalCategory[];
-  darkMode: boolean;
-  onClose: () => void;
-  onSave: (updates: Partial<StrategicGoal>) => void;
-  onToggleMilestone: (milestone: GoalMilestone) => void;
-  onAddMilestone: (goalId: string, title: string) => void;
-}
-
-function EditGoalModal({ goal, categories, darkMode, onClose, onSave, onToggleMilestone, onAddMilestone }: EditGoalModalProps) {
-  const [formData, setFormData] = useState({
-    title: goal.title,
-    description: goal.description || '',
-    category_id: goal.category_id || '',
-    status: goal.status,
-    priority: goal.priority,
-    target_date: goal.target_date?.split('T')[0] || '',
-    target_value: goal.target_value || '',
-    current_value: goal.current_value || '',
-    notes: goal.notes || '',
-  });
-  const [newMilestone, setNewMilestone] = useState('');
-  const [activeTab, setActiveTab] = useState<'details' | 'milestones'>('details');
-
-  const milestones = goal.milestones || [];
-  const completedMilestones = milestones.filter(m => m.completed).length;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`w-full max-w-2xl max-h-[85vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col ${darkMode ? 'bg-slate-900' : 'bg-white'}`}
-      >
-        <div className={`px-6 py-4 border-b flex-shrink-0 ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                className="p-2 rounded-lg transition-all hover:scale-110"
-                style={{ backgroundColor: GOAL_STATUS_CONFIG[formData.status].bgColor, color: GOAL_STATUS_CONFIG[formData.status].color }}
-              >
-                {statusIcons[formData.status]}
-              </button>
-              <div>
-                <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-800'}`}>Edit Goal</h2>
-                <p className={`text-xs ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Last updated {new Date(goal.updated_at).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-            <button onClick={onClose} aria-label="Close goal details" className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-500'}`}>
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1 mt-4">
-            {[
-              { id: 'details' as const, label: 'Details' },
-              { id: 'milestones' as const, label: `Milestones (${completedMilestones}/${milestones.length})` },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  activeTab === tab.id
-                    ? darkMode ? 'bg-slate-800 text-white' : 'bg-[#0033A0]/10 text-[#0033A0]'
-                    : darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/50' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {activeTab === 'details' ? (
-            <div className="p-6 space-y-4">
-              <div>
-                <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className={`w-full px-4 py-3 rounded-xl text-lg font-medium ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                />
-              </div>
-
-              <div>
-                <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className={`w-full px-4 py-3 rounded-xl text-sm resize-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Category</label>
-                  <select
-                    value={formData.category_id}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category_id: e.target.value }))}
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                  >
-                    <option value="">No Category</option>
-                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as GoalStatus }))}
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                  >
-                    {(Object.keys(GOAL_STATUS_CONFIG) as GoalStatus[]).map(status => (
-                      <option key={status} value={status}>{GOAL_STATUS_CONFIG[status].label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Priority</label>
-                  <select
-                    value={formData.priority}
-                    onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as GoalPriority }))}
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                  >
-                    {(Object.keys(GOAL_PRIORITY_CONFIG) as GoalPriority[]).map(priority => (
-                      <option key={priority} value={priority}>{GOAL_PRIORITY_CONFIG[priority].label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Target Date</label>
-                  <input
-                    type="date"
-                    value={formData.target_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, target_date: e.target.value }))}
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Target Value</label>
-                  <input
-                    type="text"
-                    value={formData.target_value}
-                    onChange={(e) => setFormData(prev => ({ ...prev, target_value: e.target.value }))}
-                    placeholder="e.g., $1M revenue"
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Current Value</label>
-                  <input
-                    type="text"
-                    value={formData.current_value}
-                    onChange={(e) => setFormData(prev => ({ ...prev, current_value: e.target.value }))}
-                    placeholder="e.g., $500K"
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Notes</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  rows={3}
-                  placeholder="Additional notes..."
-                  className={`w-full px-4 py-3 rounded-xl text-sm resize-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="p-6">
-              {milestones.length > 0 && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-slate-800'}`}>Progress</span>
-                    <span className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {completedMilestones} of {milestones.length} complete
-                    </span>
-                  </div>
-                  <div className={`h-2 rounded-full overflow-hidden ${darkMode ? 'bg-slate-800' : 'bg-slate-200'}`}>
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${milestones.length > 0 ? (completedMilestones / milestones.length) * 100 : 0}%` }}
-                      className="h-full rounded-full bg-gradient-to-r from-[#0033A0] to-[#D4A853]"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {milestones.map(milestone => (
-                  <motion.div
-                    key={milestone.id}
-                    layout
-                    className={`flex items-center gap-3 p-3 rounded-xl transition-all ${darkMode ? 'bg-slate-800/50 hover:bg-slate-800' : 'bg-slate-50 hover:bg-slate-100'}`}
-                  >
-                    <button
-                      onClick={() => onToggleMilestone(milestone)}
-                      className={`flex-shrink-0 transition-all ${
-                        milestone.completed ? 'text-green-500 hover:text-green-400' : darkMode ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'
-                      }`}
-                    >
-                      {milestone.completed ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
-                    </button>
-                    <span className={`flex-1 text-sm ${milestone.completed ? 'line-through opacity-60' : darkMode ? 'text-white' : 'text-slate-800'}`}>
-                      {milestone.title}
-                    </span>
-                  </motion.div>
-                ))}
-
-                <div className="flex items-center gap-2 mt-4">
-                  <input
-                    type="text"
-                    value={newMilestone}
-                    onChange={(e) => setNewMilestone(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newMilestone.trim()) {
-                        onAddMilestone(goal.id, newMilestone.trim());
-                        setNewMilestone('');
-                      }
-                    }}
-                    placeholder="Add a milestone..."
-                    className={`flex-1 px-4 py-2.5 rounded-xl text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400'} border focus:outline-none focus:ring-2 focus:ring-[#0033A0]/30`}
-                  />
-                  <button
-                    onClick={() => {
-                      if (newMilestone.trim()) {
-                        onAddMilestone(goal.id, newMilestone.trim());
-                        setNewMilestone('');
-                      }
-                    }}
-                    disabled={!newMilestone.trim()}
-                    className="p-2.5 bg-[#0033A0] text-white rounded-xl hover:bg-[#002878] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className={`px-6 py-4 border-t flex items-center justify-end gap-3 flex-shrink-0 ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`}>
-          <button onClick={onClose} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-200'}`}>
-            Cancel
-          </button>
-          <button
-            onClick={() => {
-              onSave({
-                title: formData.title,
-                description: formData.description || null,
-                category_id: formData.category_id || null,
-                status: formData.status,
-                priority: formData.priority,
-                target_date: formData.target_date || null,
-                target_value: formData.target_value || null,
-                current_value: formData.current_value || null,
-                notes: formData.notes || null,
-              } as Partial<StrategicGoal>);
-            }}
-            className="px-4 py-2 bg-[#0033A0] text-white text-sm font-medium rounded-lg hover:bg-[#002878] transition-all shadow-lg shadow-[#0033A0]/20"
-          >
-            Save Changes
-          </button>
-        </div>
-      </motion.div>
     </div>
   );
 }

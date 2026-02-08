@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import dynamic from 'next/dynamic';
 import { Todo, AuthUser, CelebrationData, Subtask } from '@/types/todo';
+import type { LinkedCustomer } from '@/types/customer';
 import { DuplicateMatch } from '@/lib/duplicateDetection';
 import CelebrationEffect from '../CelebrationEffect';
 import ProgressSummary from '../ProgressSummary';
@@ -90,8 +91,10 @@ interface TodoModalsProps {
     sourceFile?: File,
     reminderAt?: string,
     notes?: string,
-    recurrence?: 'daily' | 'weekly' | 'monthly' | null
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null,
+    customer?: LinkedCustomer
   ) => void;
+  agencyId?: string;
 
   // Template
   templateTodo: Todo | null;
@@ -167,6 +170,7 @@ function TodoModals({
   selectedArchivedTodo,
   selectArchivedTodo,
   onNextTaskClick,
+  agencyId,
 }: TodoModalsProps) {
   const canManageTemplates = usePermission('can_manage_templates');
 
@@ -211,6 +215,7 @@ function TodoModals({
         onAdd={onAddTodo}
         users={users}
         currentUserId={currentUser.id}
+        agencyId={agencyId}
       />
 
       {/* Save Template Modal - gated on can_manage_templates permission */}

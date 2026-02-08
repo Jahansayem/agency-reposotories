@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Check, Clock, Flag, Calendar, User, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { X, Sparkles, Check, Clock, Flag, Calendar, User, ChevronDown, ChevronUp, Loader2, HelpCircle } from 'lucide-react';
 import { TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useEscapeKey, useFocusTrap } from '@/hooks';
 import {
   backdropVariants,
@@ -29,6 +30,7 @@ interface SmartParseResult {
   };
   subtasks: ParsedSubtask[];
   summary: string;
+  confidence?: number; // AI confidence score (0-1)
 }
 
 interface SmartParseModalProps {
@@ -166,7 +168,25 @@ export default function SmartParseModal({
             <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-[var(--border-subtle)] flex items-center justify-between bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]">
               <div className="flex items-center gap-2 text-white">
                 <Sparkles className="w-5 h-5" />
-                <h2 id="smart-parse-title" className="font-semibold text-base sm:text-lg">AI Task Organizer</h2>
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h2 id="smart-parse-title" className="font-semibold text-base sm:text-lg">AI Task Organizer</h2>
+                    {parsedResult?.confidence !== undefined && (
+                      <p className="text-xs text-white/80 mt-0.5">
+                        {Math.round(parsedResult.confidence * 100)}% confidence
+                      </p>
+                    )}
+                  </div>
+                  <Tooltip content="AI analyzes your text to create a main task with subtasks, automatically detecting priority, due date, and assignee" position="bottom">
+                    <button
+                      type="button"
+                      className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                      aria-label="Help"
+                    >
+                      <HelpCircle className="w-4 h-4 text-white/70" />
+                    </button>
+                  </Tooltip>
+                </div>
               </div>
               <button
                 onClick={onClose}
@@ -178,20 +198,66 @@ export default function SmartParseModal({
             </div>
 
             {isLoading ? (
-              <div className="flex-1 flex items-center justify-center py-16">
-                <div className="text-center">
-                  <Loader2 className="w-10 h-10 text-[var(--brand-blue)] animate-spin mx-auto mb-3" />
-                  <p className="text-[var(--text-muted)]">Analyzing your input...</p>
+              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">
+                {/* Skeleton for Summary */}
+                <div className="bg-[var(--accent)]/10 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3">
+                  <div className="skeleton h-4 w-3/4 rounded"></div>
+                </div>
+
+                {/* Skeleton for Main Task */}
+                <div className="space-y-3">
+                  <div className="skeleton h-4 w-20 rounded"></div>
+                  <div className="skeleton h-12 w-full rounded-lg"></div>
+
+                  {/* Skeleton for Task options */}
+                  <div className="flex flex-wrap gap-2">
+                    <div className="skeleton h-9 w-24 rounded-full"></div>
+                    <div className="skeleton h-9 w-28 rounded-full"></div>
+                    <div className="skeleton h-9 w-32 rounded-full"></div>
+                  </div>
+                </div>
+
+                {/* Skeleton for Subtasks */}
+                <div className="space-y-3">
+                  <div className="skeleton h-4 w-32 rounded"></div>
+                  <div className="space-y-2 bg-[var(--surface-2)] rounded-lg p-2 sm:p-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-2.5">
+                        <div className="skeleton w-5 h-5 rounded"></div>
+                        <div className="skeleton h-4 flex-1 rounded"></div>
+                        <div className="skeleton h-3 w-12 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Animated loading indicator at bottom */}
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  <Loader2 className="w-4 h-4 text-[var(--brand-blue)] animate-spin" />
+                  <p className="text-sm text-[var(--text-muted)]">AI is analyzing your input...</p>
                 </div>
               </div>
             ) : (
               <>
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">
-                  {/* Summary */}
+                  {/* Summary with Confidence Badge */}
                   {parsedResult.summary && (
-                    <div className="bg-[var(--accent)]/10 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-[var(--accent)] dark:text-[#72B5E8]">
-                      {parsedResult.summary}
+                    <div className="bg-[var(--accent)]/10 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3">
+                      <div className="flex items-start gap-2 justify-between">
+                        <p className="text-sm text-[var(--accent)] dark:text-[#72B5E8] flex-1">{parsedResult.summary}</p>
+                        {parsedResult.confidence !== undefined && (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                            parsedResult.confidence >= 0.7
+                              ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                              : parsedResult.confidence >= 0.5
+                              ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400'
+                              : 'bg-orange-500/20 text-orange-600 dark:text-orange-400'
+                          }`}>
+                            {Math.round(parsedResult.confidence * 100)}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
 

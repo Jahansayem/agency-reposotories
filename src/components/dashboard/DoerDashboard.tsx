@@ -22,6 +22,9 @@ import {
 } from '@/lib/aiDashboardInsights';
 import MiniSparkline from './MiniSparkline';
 import CompletionPrediction from './CompletionPrediction';
+import SubtaskProgressWidget from './SubtaskProgressWidget';
+import MissingDueDatesWarning from './MissingDueDatesWarning';
+import FeatureAdoptionPrompts from './FeatureAdoptionPrompts';
 
 interface DoerDashboardProps {
   currentUser: AuthUser;
@@ -137,6 +140,23 @@ export default function DoerDashboard({
       weeklyRatio,
     };
   }, [myTodos]);
+
+  // Feature adoption props
+  const hasReminders = useMemo(() => {
+    // Check if any todos have reminders associated
+    // Since reminders are stored in a separate table, we'll default to false
+    // In a real implementation, this would check if user has created any reminders
+    return false;
+  }, []);
+
+  const hasRecurringTasks = useMemo(() => {
+    return myTodos.some(t => t.recurrence);
+  }, [myTodos]);
+
+  const hasStrategicGoals = useMemo(() => {
+    // Strategic goals are owner-only feature, so for doer dashboard, default to false
+    return false;
+  }, []);
 
   const formatDueDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -538,8 +558,29 @@ export default function DoerDashboard({
             activeTasks={stats.totalActive}
             weeklyCompleted={stats.weeklyCompleted}
           />
+
+          {/* Subtask Progress Widget */}
+          <SubtaskProgressWidget
+            todos={myTodos}
+            onViewSubtasks={handleNavigateToTasks}
+          />
+
+          {/* Missing Due Dates Warning */}
+          <MissingDueDatesWarning
+            todos={myTodos}
+            onSetDueDates={handleNavigateToTasks}
+            onTaskClick={handleTaskClick}
+          />
         </div>
       </div>
+
+      {/* Feature Adoption Prompts */}
+      <FeatureAdoptionPrompts
+        todos={myTodos}
+        hasReminders={hasReminders}
+        hasRecurringTasks={hasRecurringTasks}
+        hasStrategicGoals={hasStrategicGoals}
+      />
     </div>
   );
 }

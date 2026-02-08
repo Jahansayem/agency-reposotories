@@ -24,6 +24,10 @@ import {
   Settings,
   ChevronRight,
   ExternalLink,
+  Building,
+  UserPlus,
+  UserMinus,
+  Shield,
 } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
@@ -36,6 +40,32 @@ import { useTheme } from '@/contexts/ThemeContext';
 // NOTIFICATION MODAL - Facebook-style notification dropdown
 // Shows recent activity with clickable items to navigate to related tasks
 // ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Humanize status strings for display
+ * Converts internal values like 'in_progress' to 'In Progress'
+ */
+function humanizeStatus(status: string | undefined): string {
+  if (!status) return '';
+  const statusMap: Record<string, string> = {
+    'todo': 'To Do',
+    'in_progress': 'In Progress',
+    'done': 'Done',
+    'not_started': 'Not Started',
+    'on_hold': 'On Hold',
+    'completed': 'Completed',
+    'cancelled': 'Cancelled',
+  };
+  return statusMap[status] || status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+/**
+ * Humanize priority strings for display
+ */
+function humanizePriority(priority: string | undefined): string {
+  if (!priority) return '';
+  return priority.charAt(0).toUpperCase() + priority.slice(1);
+}
 
 interface NotificationModalProps {
   currentUserName: string;
@@ -78,6 +108,13 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)', verb: 'got response on' },
   follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)', verb: 'needs follow-up on' },
   task_reordered: { icon: RefreshCw, label: 'reordered task', color: 'var(--accent-vivid)', verb: 'reordered' },
+  agency_created: { icon: Building, label: 'created agency', color: 'var(--success-vivid)', verb: 'created' },
+  member_added: { icon: UserPlus, label: 'added member', color: 'var(--success-vivid)', verb: 'added' },
+  member_removed: { icon: UserMinus, label: 'removed member', color: 'var(--danger)', verb: 'removed' },
+  member_role_changed: { icon: Shield, label: 'changed member role', color: 'var(--warning)', verb: 'changed role for' },
+  member_permissions_changed: { icon: Settings, label: 'updated permissions', color: 'var(--state-info)', verb: 'updated permissions for' },
+  member_role_and_permissions_changed: { icon: Shield, label: 'updated role and permissions', color: 'var(--warning)', verb: 'updated' },
+  customer_import: { icon: User, label: 'imported customers', color: 'var(--success-vivid)', verb: 'imported' },
 };
 
 // Local storage key for last seen notification
@@ -484,7 +521,7 @@ function NotificationItem({ activity, isUnread, onClick }: NotificationItemProps
         return (
           <>
             <strong>{userName}</strong> moved {taskText} to{' '}
-            <span style={{ color: config.color }}>{details.to}</span>
+            <span style={{ color: config.color }}>{humanizeStatus(details.to as string)}</span>
           </>
         );
       case 'priority_changed':
@@ -492,7 +529,7 @@ function NotificationItem({ activity, isUnread, onClick }: NotificationItemProps
           <>
             <strong>{userName}</strong> changed priority of {taskText} to{' '}
             <span style={{ color: PRIORITY_CONFIG[details.to as keyof typeof PRIORITY_CONFIG]?.color }}>
-              {details.to}
+              {humanizePriority(details.to as string)}
             </span>
           </>
         );

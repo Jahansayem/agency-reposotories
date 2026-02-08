@@ -950,6 +950,14 @@ export default function ChatPanel({
         getInitials={getInitials}
         getConversationTitle={getConversationTitle}
         extractMentions={extractAndValidateMentions}
+        addReaction={addReaction}
+        editMessage={editMessage}
+        deleteMessage={deleteMessage}
+        togglePin={togglePin}
+        onCreateTask={onCreateTask}
+        onTaskLinkClick={onTaskLinkClick}
+        todosMap={todosMap}
+        markMessagesAsRead={markMessagesAsRead}
       />
     );
   }

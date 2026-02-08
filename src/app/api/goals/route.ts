@@ -3,9 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { withAgencyOwnerAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+}
 
 // API-008: Pagination constants
 const DEFAULT_LIMIT = 100;
@@ -14,6 +18,7 @@ const MAX_LIMIT = 500;
 // GET - Fetch all strategic goals with categories and milestones
 export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId');
 
@@ -56,6 +61,7 @@ export const GET = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
 // POST - Create a new strategic goal
 export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const {
       title,
@@ -117,6 +123,7 @@ export const POST = withAgencyOwnerAuth(async (request: NextRequest, ctx: Agency
 // PUT - Update a strategic goal
 export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const {
       id,
@@ -177,6 +184,7 @@ export const PUT = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyA
 // DELETE - Delete a strategic goal
 export const DELETE = withAgencyOwnerAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

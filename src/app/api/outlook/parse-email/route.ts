@@ -5,11 +5,13 @@ import { logger } from '@/lib/logger';
 import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
-// Create Supabase client for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 function getAnthropicClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -22,6 +24,7 @@ function getAnthropicClient(): Anthropic {
  * Get users from a specific agency via agency_members join
  */
 async function getUsersFromAgency(agencyId: string): Promise<string[]> {
+  const supabase = getSupabaseClient();
   const { data: members, error } = await supabase
     .from('agency_members')
     .select(`
@@ -53,6 +56,7 @@ async function getUsersFromAgency(agencyId: string): Promise<string[]> {
  * Get all registered users (fallback when no agency specified)
  */
 async function getAllUsers(): Promise<string[]> {
+  const supabase = getSupabaseClient();
   const { data: users, error } = await supabase
     .from('users')
     .select('name')

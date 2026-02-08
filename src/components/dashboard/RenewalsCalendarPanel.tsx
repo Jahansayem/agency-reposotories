@@ -31,26 +31,26 @@ const RENEWAL_STATUS_CONFIG: Record<
   confirmed: {
     label: 'Confirmed',
     icon: CheckCircle,
-    colorClass: 'text-emerald-600 dark:text-emerald-400',
-    bgClass: 'bg-emerald-50 dark:bg-emerald-900/20',
+    colorClass: 'text-emerald-500',
+    bgClass: 'bg-emerald-500/10 dark:bg-emerald-500/20',
   },
   contacted: {
     label: 'Contacted',
     icon: CheckCircle,
-    colorClass: 'text-blue-600 dark:text-blue-400',
-    bgClass: 'bg-blue-50 dark:bg-blue-900/20',
+    colorClass: 'text-blue-500',
+    bgClass: 'bg-blue-500/10 dark:bg-blue-500/20',
   },
   pending: {
     label: 'No contact',
     icon: AlertTriangle,
-    colorClass: 'text-amber-600 dark:text-amber-400',
-    bgClass: 'bg-amber-50 dark:bg-amber-900/20',
+    colorClass: 'text-amber-500',
+    bgClass: 'bg-amber-500/10 dark:bg-amber-500/20',
   },
   'at-risk': {
     label: 'At risk',
     icon: XCircle,
-    colorClass: 'text-red-600 dark:text-red-400',
-    bgClass: 'bg-red-50 dark:bg-red-900/20',
+    colorClass: 'text-red-500',
+    bgClass: 'bg-red-500/10 dark:bg-red-500/20',
   },
 };
 
@@ -126,14 +126,14 @@ export default function RenewalsCalendarPanel({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700"
+      className="bg-[var(--surface)] rounded-xl p-6 shadow-sm border border-[var(--border)]"
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
         <div className="p-2 rounded-lg bg-[var(--brand-blue)]/10 dark:bg-[var(--accent)]/20">
           <RefreshCw className="w-5 h-5 text-[var(--brand-blue)] dark:text-[var(--accent)]" />
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+        <h3 className="text-lg font-semibold text-[var(--foreground)]">
           Renewals - Next 30 Days
         </h3>
       </div>
@@ -141,7 +141,7 @@ export default function RenewalsCalendarPanel({
       {/* Renewals List */}
       <div className="space-y-2 mb-4">
         {upcomingRenewals.length === 0 ? (
-          <div className="text-center py-6 text-slate-500 dark:text-slate-400">
+          <div className="text-center py-6 text-[var(--text-muted)]">
             <RefreshCw className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No renewals in the next 30 days</p>
           </div>
@@ -163,18 +163,18 @@ export default function RenewalsCalendarPanel({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
                 onClick={() => onRenewalClick(renewal)}
-                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors text-left group"
+                className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-left group"
               >
                 {/* Date */}
                 <div className="w-14 flex-shrink-0 text-center">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">
                     {format(dueDate, 'MMM d')}
                   </div>
                 </div>
 
                 {/* Customer Name */}
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                  <div className="text-sm font-medium text-[var(--foreground)] truncate">
                     {customerName}
                   </div>
                 </div>
@@ -191,7 +191,7 @@ export default function RenewalsCalendarPanel({
 
                 {/* Premium */}
                 <div className="w-16 flex-shrink-0 text-right">
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                  <span className="text-sm font-semibold text-[var(--foreground)]">
                     {renewal.premium_amount
                       ? formatCurrency(renewal.premium_amount)
                       : '-'}
@@ -199,7 +199,7 @@ export default function RenewalsCalendarPanel({
                 </div>
 
                 {/* Hover indicator */}
-                <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-[var(--text-light)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
               </motion.button>
             );
           })
@@ -212,13 +212,13 @@ export default function RenewalsCalendarPanel({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.3 }}
-          className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-sm mb-4"
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 py-3 rounded-lg bg-[var(--surface-2)] text-sm mb-4"
         >
           <div className="flex items-center gap-1">
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <span className="font-semibold text-[var(--foreground)]">
               {stats.totalRenewals}
             </span>
-            <span className="text-slate-600 dark:text-slate-400">renewals</span>
+            <span className="text-[var(--text-muted)]">renewals</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="font-semibold text-[var(--brand-blue)] dark:text-[var(--accent)]">
@@ -227,20 +227,20 @@ export default function RenewalsCalendarPanel({
           </div>
           {stats.atRiskCount > 0 && (
             <div className="flex items-center gap-1">
-              <span className="text-slate-600 dark:text-slate-400">
+              <span className="text-[var(--text-muted)]">
                 At Risk:
               </span>
-              <span className="font-semibold text-red-600 dark:text-red-400">
+              <span className="font-semibold text-red-500">
                 {stats.atRiskCount}
               </span>
             </div>
           )}
           {stats.noContactCount > 0 && (
             <div className="flex items-center gap-1">
-              <span className="text-slate-600 dark:text-slate-400">
+              <span className="text-[var(--text-muted)]">
                 No Contact:
               </span>
-              <span className="font-semibold text-amber-600 dark:text-amber-400">
+              <span className="font-semibold text-amber-500">
                 {stats.noContactCount}
               </span>
             </div>

@@ -39,8 +39,8 @@ export function PresenceBadge({
       <div
         className={`flex items-center gap-1.5 ${
           isOnline
-            ? 'text-green-600 dark:text-green-400'
-            : 'text-gray-400 dark:text-gray-600'
+            ? 'text-[var(--success)]'
+            : 'text-[var(--text-muted)]'
         }`}
       >
         <Circle className={`${sizeClasses[size]} fill-current ${isOnline ? 'animate-pulse' : ''}`} />
@@ -53,8 +53,8 @@ export function PresenceBadge({
     <div
       className={`${sizeClasses[size]} rounded-full ${
         isOnline
-          ? 'bg-green-500 animate-pulse'
-          : 'bg-gray-400 dark:bg-gray-600'
+          ? 'bg-[var(--success)] animate-pulse'
+          : 'bg-[var(--text-muted)]'
       }`}
       title={isOnline ? 'Online' : 'Offline'}
     />

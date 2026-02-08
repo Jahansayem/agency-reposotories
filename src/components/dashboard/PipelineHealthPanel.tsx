@@ -108,14 +108,14 @@ export default function PipelineHealthPanel({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-200 dark:border-slate-700"
+      className="bg-[var(--surface)] rounded-xl p-6 shadow-sm border border-[var(--border)]"
     >
       {/* Header */}
       <div className="flex items-center gap-2 mb-5">
         <div className="p-2 rounded-lg bg-[#0033A0]/10 dark:bg-[#72B5E8]/20">
           <TrendingUp className="w-5 h-5 text-[#0033A0] dark:text-[#72B5E8]" />
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+        <h3 className="text-lg font-semibold text-[var(--foreground)]">
           Pipeline Health
         </h3>
       </div>
@@ -127,15 +127,15 @@ export default function PipelineHealthPanel({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="text-center p-4 rounded-lg bg-slate-50 dark:bg-slate-700/50"
+          className="text-center p-4 rounded-lg bg-[var(--surface-2)]"
         >
           <div className="flex items-center justify-center mb-2">
             <FileText className="w-4 h-4 text-[#0033A0] dark:text-[#72B5E8] mr-1" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">
+          <div className="text-2xl font-bold text-[var(--foreground)]">
             {stats.quotesCount}
           </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+          <div className="text-xs text-[var(--text-muted)] font-medium">
             Quotes
           </div>
           <div className="text-sm font-semibold text-[#0033A0] dark:text-[#72B5E8] mt-1">
@@ -150,31 +150,31 @@ export default function PipelineHealthPanel({
           transition={{ duration: 0.3, delay: 0.15 }}
           className={`text-center p-4 rounded-lg ${
             stats.overdueFollowUpsCount > 0
-              ? 'bg-amber-50 dark:bg-amber-900/20'
-              : 'bg-slate-50 dark:bg-slate-700/50'
+              ? 'bg-amber-500/10 dark:bg-amber-500/20'
+              : 'bg-[var(--surface-2)]'
           }`}
         >
           <div className="flex items-center justify-center mb-2">
             <Clock className={`w-4 h-4 mr-1 ${
               stats.overdueFollowUpsCount > 0
-                ? 'text-amber-600 dark:text-amber-400'
-                : 'text-slate-500 dark:text-slate-400'
+                ? 'text-amber-500'
+                : 'text-[var(--text-muted)]'
             }`} />
           </div>
           <div className={`text-2xl font-bold ${
             stats.overdueFollowUpsCount > 0
-              ? 'text-amber-600 dark:text-amber-400'
-              : 'text-slate-900 dark:text-white'
+              ? 'text-amber-500'
+              : 'text-[var(--foreground)]'
           }`}>
             {stats.overdueFollowUpsCount}
           </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+          <div className="text-xs text-[var(--text-muted)] font-medium">
             Follow Up
           </div>
           <div className={`text-xs mt-1 ${
             stats.overdueFollowUpsCount > 0
-              ? 'text-amber-600 dark:text-amber-400'
-              : 'text-slate-500 dark:text-slate-400'
+              ? 'text-amber-500'
+              : 'text-[var(--text-muted)]'
           }`}>
             overdue
           </div>
@@ -187,28 +187,28 @@ export default function PipelineHealthPanel({
           transition={{ duration: 0.3, delay: 0.2 }}
           className={`text-center p-4 rounded-lg ${
             stats.closingThisWeekCount > 0
-              ? 'bg-emerald-50 dark:bg-emerald-900/20'
-              : 'bg-slate-50 dark:bg-slate-700/50'
+              ? 'bg-emerald-500/10 dark:bg-emerald-500/20'
+              : 'bg-[var(--surface-2)]'
           }`}
         >
           <div className="flex items-center justify-center mb-2">
             <Calendar className={`w-4 h-4 mr-1 ${
               stats.closingThisWeekCount > 0
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-slate-500 dark:text-slate-400'
+                ? 'text-emerald-500'
+                : 'text-[var(--text-muted)]'
             }`} />
           </div>
           <div className={`text-2xl font-bold ${
             stats.closingThisWeekCount > 0
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : 'text-slate-900 dark:text-white'
+              ? 'text-emerald-500'
+              : 'text-[var(--foreground)]'
           }`}>
             {stats.closingThisWeekCount}
           </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+          <div className="text-xs text-[var(--text-muted)] font-medium">
             Closing
           </div>
-          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <div className="text-xs text-[var(--text-muted)] mt-1">
             this week
           </div>
         </motion.div>
@@ -222,10 +222,10 @@ export default function PipelineHealthPanel({
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.25 }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/20"
           >
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-            <span className="text-sm text-amber-700 dark:text-amber-300">
+            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            <span className="text-sm text-amber-500">
               {stats.staleQuotesCount} {stats.staleQuotesCount === 1 ? 'quote' : 'quotes'} over 7 days old
             </span>
           </motion.div>
@@ -237,10 +237,10 @@ export default function PipelineHealthPanel({
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 dark:bg-red-500/20 border border-red-500/20"
           >
-            <Flame className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-            <span className="text-sm text-red-700 dark:text-red-300">
+            <Flame className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <span className="text-sm text-red-500">
               {stats.hotLeadsCount} hot {stats.hotLeadsCount === 1 ? 'lead needs' : 'leads need'} callback today
             </span>
           </motion.div>

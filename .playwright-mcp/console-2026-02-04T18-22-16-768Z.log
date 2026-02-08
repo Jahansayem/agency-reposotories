@@ -1,0 +1,100 @@
+[   35145ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[   35152ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[   35294ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[   35320ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  111821ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  111824ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  111928ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  111931ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  151852ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  151853ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  151946ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  151947ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  158733ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  158736ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  158862ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  158885ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  199162ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  199163ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  199243ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  199245ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  204068ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  204069ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  204168ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  204169ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  373304ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  373305ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  373446ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  373449ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js:4824:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  621312ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  621348ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js?id=%255Bproject%255D%252Fsrc%252Fhooks%252FuseAgencyMetrics.ts+%255Bapp-client%255D+%2528ecmascript%2529:89:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  621602ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  621632ms] [ERROR] [ERROR] Failed to fetch agency metrics Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js?id=%255Bproject%255D%252Fsrc%252Fhooks%252FuseAgencyMetrics.ts+%255Bapp-client%255D+%2528ecmascript%2529:89:147) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  638048ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  638199ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  639079ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  639191ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  641213ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  641318ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  645336ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  645341ms] [ERROR] [ERROR] Failed to fetch agency metrics after retries Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics].attemptFetch (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js?id=%255Bproject%255D%252Fsrc%252Fhooks%252FuseAgencyMetrics.ts+%255Bapp-client%255D+%2528ecmascript%2529:130:159)
+    at async useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js?id=%255Bproject%255D%252Fsrc%252Fhooks%252FuseAgencyMetrics.ts+%255Bapp-client%255D+%2528ecmascript%2529:139:13) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e, attempts: 4} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  645446ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  654512ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  654617ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  655588ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  655687ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  657720ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  657840ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  661230ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  661843ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  661989ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  662354ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  664496ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  668645ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  668651ms] [ERROR] [ERROR] Failed to fetch agency metrics after retries Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/src_96aac8b2._.js:4785:59)
+    at useAgencyMetrics.useCallback[fetchMetrics].attemptFetch (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js?id=%255Bproject%255D%252Fsrc%252Fhooks%252FuseAgencyMetrics.ts+%255Bapp-client%255D+%2528ecmascript%2529:130:159)
+    at async useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/src_hooks_02ec7fde._.js?id=%255Bproject%255D%252Fsrc%252Fhooks%252FuseAgencyMetrics.ts+%255Bapp-client%255D+%2528ecmascript%2529:139:13) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e, attempts: 4} @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_7a8122d0._.js:3117
+[  671764ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  672853ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  674961ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  677159ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  678243ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  679121ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  680358ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  684518ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0

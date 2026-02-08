@@ -1,0 +1,20 @@
+Category,Metric,Best Practice,Average,Below Average,Unit,Segment
+Profitability,EBITDA Margin,26.1%,18-22%,<15%,Percentage,$1-5M premium agencies
+Productivity,Revenue Per Employee,$200000-$228000,$150000-$180000,<$120000,Dollars,All agencies
+Staffing,Service Staff Per Producer,2.8,2.0-2.5,>3.5,Ratio,All agencies
+Retention,Bundled Customer Retention,95%,85-90%,<80%,Percentage,Multi-product customers
+Retention,Single Product Retention,67%,60-65%,<55%,Percentage,Single product customers
+Retention,Overall Book Retention,85%,75-80%,<70%,Percentage,All customers
+Growth,Annual Premium Growth,8-12%,4-7%,<3%,Percentage,Healthy agencies
+Growth,Policy Count Growth,6-10%,3-5%,<2%,Percentage,Healthy agencies
+Efficiency,Policies Per Service Staff,450-550,300-400,<250,Count,Well-staffed agencies
+Efficiency,New Business Close Rate,25-35%,15-20%,<12%,Percentage,Quote to bind
+Customer Value,Average Customer Premium,$2500-3500,$1800-2400,<$1500,Dollars,Multi-product preferred
+Customer Value,Products Per Customer,2.5-3.0,1.8-2.2,<1.5,Count,Cross-sell success
+Commission,Base Rate (Allstate 2025),7%,7%,7%,Percentage,Post-reduction rate
+Commission,Elite Tier Bonus,Up to 5%,Varies,0%,Percentage,Top performers only
+Marketing,CAC - Direct,<$500,$500-700,>$900,Dollars,Most efficient channel
+Marketing,CAC - Captive,$750-850,$850-1000,>$1200,Dollars,Agency channel
+Marketing,LTV:CAC Ratio,>5:1,3:1 to 4:1,<2:1,Ratio,Sustainable growth
+Financial,Customer Lifetime Value,$8000-12000,$5000-7000,<$4000,Dollars,Multi-product customers
+Financial,Break-even Period,12-18 months,18-24 months,>30 months,Months,Customer acquisition payback

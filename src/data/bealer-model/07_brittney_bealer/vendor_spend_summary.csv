@@ -1,0 +1,13 @@
+vendor,period,lead_type,gross_leads,credits,net_leads,total_spend,cpl_avg,cpl_min,cpl_max,notes
+ALM,Aug-Nov 2025,Web Lead,291,0,291,5592,19.22,8,27,Variable pricing based on lead quality
+ALM,Aug-Nov 2025,Live Transfer,16,0,16,1304,81.50,66,104,Includes A&K and K&A variants
+QuoteWizard,Sept 2025,Custom Auto,946,47,899,6293,7.00,7,7,Standard rate
+QuoteWizard,Sept 2025,Custom Auto Search,13,3,10,100,10.00,10,10,Search leads higher cost
+QuoteWizard,Oct 2025,Custom Auto Ricochet,$4,1093,176,917,3668,4.00,4,4,New lower rate
+QuoteWizard,Oct 2025,Custom Auto Ricochet,$7,978,147,831,5817,7.00,7,7,Legacy rate
+EverQuote,Sept 2025,LCS Auto,459,0,459,3213,7.00,7,7,Live call service
+EverQuote,Oct 2025,LCS Auto,347,0,347,2429,7.00,7,7,Live call service
+Blue Wave,Historical,Live Transfer,0,0,0,0,55,55,55,DISCONTINUED
+Lead Clinic,Historical,Live Transfer,0,0,0,0,60,55,60,DISCONTINUED - $55 + $5 call center
+Lead Clinic,Historical,Internet,0,0,0,0,10,10,10,Auto data leads
+Imported,Historical,Re-engaged,6366,0,6366,0,0,0,0,Old leads run through DNC - original avg ~$7

@@ -56,8 +56,9 @@ function checkIsToday(dateStr?: string): boolean {
 }
 
 // Check if a date is overdue (past and not today)
-function checkIsOverdue(dateStr?: string, completed?: boolean): boolean {
-  if (!dateStr || completed) return false;
+// Also checks status to handle data inconsistencies where status='done' but completed=false
+function checkIsOverdue(dateStr?: string, completed?: boolean, status?: string): boolean {
+  if (!dateStr || completed || status === 'done') return false;
   const date = startOfDay(parseISO(dateStr));
   const today = startOfDay(new Date());
   return date < today;
@@ -97,7 +98,8 @@ export default function TaskSections({
 
     todos.forEach(todo => {
       // Skip completed tasks from section grouping (they're already filtered out by the parent)
-      if (checkIsOverdue(todo.due_date, todo.completed)) {
+      // Pass status to handle data inconsistencies where status='done' but completed=false
+      if (checkIsOverdue(todo.due_date, todo.completed, todo.status)) {
         overdue.push(todo);
       } else if (checkIsToday(todo.due_date)) {
         today.push(todo);

@@ -84,8 +84,8 @@ export function EditingIndicator({
           inline-flex items-center gap-2
           rounded-full
           ${hasConflict && showConflictWarning
-            ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-            : 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+            ? 'bg-[var(--warning)]/10 text-[var(--warning)]'
+            : 'bg-[var(--accent)]/10 text-[var(--accent)]'
           }
           ${sizeClasses[size]}
           ${className}
@@ -112,7 +112,7 @@ export function EditingIndicator({
               className={`
                 ${avatarSizeClasses[size]}
                 rounded-full
-                border border-white dark:border-gray-900
+                border border-[var(--surface)]
                 flex items-center justify-center
                 font-medium text-white
               `}
@@ -130,8 +130,8 @@ export function EditingIndicator({
               className={`
                 ${avatarSizeClasses[size]}
                 rounded-full
-                border border-white dark:border-gray-900
-                bg-gray-400 dark:bg-gray-600
+                border border-[var(--surface)]
+                bg-[var(--text-muted)]
                 flex items-center justify-center
                 font-medium text-white
               `}
@@ -181,8 +181,8 @@ export function FieldEditingIndicator({
           inline-flex items-center gap-1.5
           px-2 py-1
           rounded
-          bg-blue-50 dark:bg-blue-900/30
-          text-blue-700 dark:text-blue-300
+          bg-[var(--accent)]/10
+          text-[var(--accent)]
           text-xs
           ${className}
         `}
@@ -198,7 +198,7 @@ export function FieldEditingIndicator({
           </span>
         </div>
         <span className="font-medium">{user.user}</span>
-        <span className="text-blue-600 dark:text-blue-400">editing {fieldName}</span>
+        <span className="text-[var(--accent)]">editing {fieldName}</span>
       </motion.div>
     </AnimatePresence>
   );
@@ -231,20 +231,20 @@ export function EditingConflictWarning({
           flex items-start gap-3
           p-4
           rounded-lg
-          border-2 border-yellow-300 dark:border-yellow-700
-          bg-yellow-50 dark:bg-yellow-900/30
+          border-2 border-[var(--warning)]/50
+          bg-[var(--warning)]/10
           ${className}
         `}
         role="alert"
       >
-        <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+        <AlertTriangle className="w-5 h-5 text-[var(--warning)] flex-shrink-0 mt-0.5" />
 
         <div className="flex-1 space-y-2">
           <div>
-            <h4 className="font-semibold text-yellow-900 dark:text-yellow-100">
+            <h4 className="font-semibold text-[var(--foreground)]">
               Editing Conflict Detected
             </h4>
-            <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
+            <p className="text-sm text-[var(--text-muted)] mt-1">
               {editingUsers.length === 1
                 ? `${editingUsers[0].user} is`
                 : `${editingUsers.length} users are`}{' '}
@@ -257,7 +257,7 @@ export function EditingConflictWarning({
             {editingUsers.map((user) => (
               <div
                 key={user.userId}
-                className="flex items-center gap-1.5 px-2 py-1 rounded bg-yellow-100 dark:bg-yellow-900/50"
+                className="flex items-center gap-1.5 px-2 py-1 rounded bg-[var(--warning)]/20"
               >
                 <div
                   className="w-4 h-4 rounded-full flex items-center justify-center"
@@ -267,7 +267,7 @@ export function EditingConflictWarning({
                     {user.user.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="text-xs font-medium text-yellow-900 dark:text-yellow-100">
+                <span className="text-xs font-medium text-[var(--foreground)]">
                   {user.user}
                 </span>
               </div>
@@ -280,7 +280,7 @@ export function EditingConflictWarning({
               {onCancel && (
                 <button
                   onClick={onCancel}
-                  className="px-3 py-1.5 text-sm font-medium rounded bg-white dark:bg-gray-800 text-yellow-900 dark:text-yellow-100 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors"
+                  className="px-3 py-1.5 text-sm font-medium rounded bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--warning)]/20 transition-colors"
                 >
                   Cancel My Changes
                 </button>
@@ -288,7 +288,7 @@ export function EditingConflictWarning({
               {onForceSave && (
                 <button
                   onClick={onForceSave}
-                  className="px-3 py-1.5 text-sm font-medium rounded bg-yellow-600 dark:bg-yellow-700 text-white hover:bg-yellow-700 dark:hover:bg-yellow-800 transition-colors"
+                  className="px-3 py-1.5 text-sm font-medium rounded bg-[var(--warning)] text-white hover:opacity-90 transition-colors"
                 >
                   Save Anyway (Overwrite)
                 </button>

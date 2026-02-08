@@ -14,7 +14,6 @@ import {
   Paperclip,
   Music,
   Mic,
-  GripVertical,
 } from 'lucide-react';
 import { Todo, TodoPriority, PRIORITY_CONFIG } from '@/types/todo';
 import { formatDueDate, isOverdue, isDueToday, isDueSoon } from './kanbanUtils';
@@ -259,8 +258,9 @@ export const SortableCard = memo(function SortableCard({ todo, users, onDelete, 
 
 /**
  * Simplified card used in the DragOverlay to show a preview of the dragged item.
+ * Memoized to prevent unnecessary re-renders during drag operations.
  */
-export function KanbanCard({ todo }: { todo: Todo }) {
+function KanbanCardComponent({ todo }: { todo: Todo }) {
   const priority = todo.priority || 'medium';
   const priorityConfig = PRIORITY_CONFIG[priority];
   const overdue = todo.due_date && !todo.completed && isOverdue(todo.due_date);
@@ -293,3 +293,7 @@ export function KanbanCard({ todo }: { todo: Todo }) {
     </div>
   );
 }
+
+// Memoize to prevent re-renders when todo props haven't changed
+// This is critical for performance when dragging cards in Kanban view
+export const KanbanCard = memo(KanbanCardComponent);

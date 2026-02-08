@@ -58,8 +58,9 @@ const isDueToday = (dueDate?: string) => {
   return dueDateMidnight.getTime() === getTodayMidnight();
 };
 
-const isOverdue = (dueDate?: string, completed?: boolean) => {
-  if (!dueDate || completed) return false;
+const isOverdue = (dueDate?: string, completed?: boolean, status?: string) => {
+  // Also check status to handle data inconsistencies where status='done' but completed=false
+  if (!dueDate || completed || status === 'done') return false;
   const parsed = parseDateToLocal(dueDate);
   if (!parsed) return false;
 
@@ -611,7 +612,7 @@ export const selectFilteredTodos = (
       filtered = filtered.filter((t) => isDueToday(t.due_date));
       break;
     case 'overdue':
-      filtered = filtered.filter((t) => isOverdue(t.due_date, t.completed));
+      filtered = filtered.filter((t) => isOverdue(t.due_date, t.completed, t.status));
       break;
     case 'waiting':
       filtered = filtered.filter((t) => t.waiting_for_response === true);
@@ -678,8 +679,8 @@ export const selectFilteredTodos = (
     case 'urgency':
       filtered.sort((a, b) => {
         // Overdue first
-        const aOverdue = isOverdue(a.due_date, a.completed);
-        const bOverdue = isOverdue(b.due_date, b.completed);
+        const aOverdue = isOverdue(a.due_date, a.completed, a.status);
+        const bOverdue = isOverdue(b.due_date, b.completed, b.status);
         if (aOverdue && !bOverdue) return -1;
         if (!aOverdue && bOverdue) return 1;
 
@@ -717,9 +718,9 @@ export const selectFilteredTodos = (
 export const selectTodoStats = (todos: Todo[]) => {
   const total = todos.length;
   const completed = todos.filter((t) => t.completed).length;
-  const overdue = todos.filter((t) => isOverdue(t.due_date, t.completed)).length;
-  const dueToday = todos.filter((t) => isDueToday(t.due_date) && !t.completed).length;
-  const urgent = todos.filter((t) => (t.priority === 'urgent' || t.priority === 'high') && !t.completed).length;
+  const overdue = todos.filter((t) => isOverdue(t.due_date, t.completed, t.status)).length;
+  const dueToday = todos.filter((t) => isDueToday(t.due_date) && !t.completed && t.status !== 'done').length;
+  const urgent = todos.filter((t) => (t.priority === 'urgent' || t.priority === 'high') && !t.completed && t.status !== 'done').length;
 
   return { total, completed, overdue, dueToday, urgent };
 };

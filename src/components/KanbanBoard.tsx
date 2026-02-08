@@ -60,6 +60,7 @@ import {
 interface KanbanBoardProps {
   todos: Todo[];
   users: string[];
+  currentUserName?: string;
   onStatusChange: (id: string, status: TodoStatus) => void;
   onDelete: (id: string) => void;
   onAssign: (id: string, assignedTo: string | null) => void;
@@ -90,6 +91,7 @@ interface KanbanBoardProps {
 interface TaskDetailModalProps {
   todo: Todo;
   users: string[];
+  currentUserName?: string;
   onClose: () => void;
   onDelete: (id: string) => void;
   onAssign: (id: string, assignedTo: string | null) => void;
@@ -110,6 +112,7 @@ interface TaskDetailModalProps {
 function TaskDetailModal({
   todo,
   users,
+  currentUserName,
   onClose,
   onDelete,
   onAssign,
@@ -126,9 +129,21 @@ function TaskDetailModal({
   onSaveAsTemplate,
   onEmailCustomer,
 }: TaskDetailModalProps) {
-  const canDeleteTasks = usePermission('can_delete_tasks');
+  // Permission checks
+  const canDeleteTasksPerm = usePermission('can_delete_tasks');
+  const canDeleteOwnTasks = usePermission('can_delete_own_tasks');
   const canEditAnyTask = usePermission('can_edit_any_task');
+  const canEditOwnTasks = usePermission('can_edit_own_tasks');
   const canAssignTasks = usePermission('can_assign_tasks');
+
+  // Ownership check - includes tasks created by OR assigned to the user
+  const isOwnTask = currentUserName ? (todo.created_by === currentUserName || todo.assigned_to === currentUserName) : false;
+
+  // Derived permissions combining permission flags with ownership
+  // Can edit if: has can_edit_any_task, OR (has can_edit_own_tasks AND it's their task)
+  const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask);
+  // Can delete if: has can_delete_tasks, OR (has can_delete_own_tasks AND it's their task)
+  const canDeleteTasks = canDeleteTasksPerm || (canDeleteOwnTasks && isOwnTask);
 
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
@@ -364,7 +379,8 @@ function TaskDetailModal({
               <select
                 value={todo.status || 'todo'}
                 onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
-                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                disabled={!canEdit}
+                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 {columns.map((col) => (
                   <option key={col.id} value={col.id}>{col.title}</option>
@@ -379,7 +395,8 @@ function TaskDetailModal({
               <select
                 value={priority}
                 onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                disabled={!canEdit}
+                className={`w-full px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -397,7 +414,8 @@ function TaskDetailModal({
                   type="date"
                   value={todo.due_date ? todo.due_date.split('T')[0] : ''}
                   onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
-                  className={`flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30`}
+                  disabled={!canEdit}
+                  className={`flex-1 min-w-0 px-3 py-2 rounded-[var(--radius-lg)] border border-[var(--border)] text-sm bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
                 />
                 {!todo.completed && (
                   <div className="relative">
@@ -761,6 +779,7 @@ function TaskDetailModal({
 export default function KanbanBoard({
   todos,
   users,
+  currentUserName,
   onStatusChange,
   onDelete,
   onAssign,
@@ -1038,6 +1057,7 @@ export default function KanbanBoard({
           <TaskDetailModal
             todo={selectedTodo}
             users={users}
+            currentUserName={currentUserName}
             onClose={() => setSelectedTodoId(null)}
             onDelete={onDelete}
             onAssign={onAssign}

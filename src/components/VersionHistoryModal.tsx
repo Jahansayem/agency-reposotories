@@ -59,11 +59,11 @@ export function VersionHistoryModal({
   const getChangeTypeColor = (changeType: string) => {
     switch (changeType) {
       case 'created':
-        return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30';
+        return 'text-[var(--success)] bg-[var(--success)]/10';
       case 'restored':
         return 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30';
       default:
-        return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30';
+        return 'text-[var(--accent)] bg-[var(--accent)]/10';
     }
   };
 
@@ -81,19 +81,19 @@ export function VersionHistoryModal({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-[var(--surface)] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
             <div className="flex items-center gap-3">
-              <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <Clock className="w-6 h-6 text-[var(--accent)]" />
+              <h2 className="text-2xl font-bold text-[var(--foreground)]">
                 Version History
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--surface-2)] rounded-lg transition-colors"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -104,10 +104,10 @@ export function VersionHistoryModal({
           <div className="flex-1 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--accent)]" />
               </div>
             ) : versions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+              <div className="flex flex-col items-center justify-center h-64 text-[var(--text-muted)]">
                 <AlertCircle className="w-12 h-12 mb-3" />
                 <p>No version history available</p>
               </div>
@@ -128,8 +128,8 @@ export function VersionHistoryModal({
                         className={`
                           relative pl-8 pb-8 border-l-2
                           ${isLatest
-                            ? 'border-blue-500 dark:border-blue-400'
-                            : 'border-gray-300 dark:border-gray-600'
+                            ? 'border-[var(--accent)]'
+                            : 'border-[var(--border)]'
                           }
                           ${index === versions.length - 1 ? 'border-l-transparent pb-0' : ''}
                         `}
@@ -139,8 +139,8 @@ export function VersionHistoryModal({
                           className={`
                             absolute -left-2 top-0 w-4 h-4 rounded-full
                             ${isLatest
-                              ? 'bg-blue-500 dark:bg-blue-400 ring-4 ring-blue-100 dark:ring-blue-900/50'
-                              : 'bg-gray-300 dark:bg-gray-600'
+                              ? 'bg-[var(--accent)] ring-4 ring-[var(--accent)]/20'
+                              : 'bg-[var(--border)]'
                             }
                           `}
                         />
@@ -150,8 +150,8 @@ export function VersionHistoryModal({
                           className={`
                             ml-4 rounded-lg border-2 p-4 cursor-pointer transition-all
                             ${isSelected
-                              ? 'border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                              ? 'border-[var(--accent)] bg-[var(--accent)]/10'
+                              : 'border-[var(--border)] hover:border-[var(--text-muted)]'
                             }
                           `}
                           onClick={() => setSelectedVersion(isSelected ? null : version)}
@@ -160,11 +160,11 @@ export function VersionHistoryModal({
                           <div className="flex items-start justify-between gap-4 mb-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                <span className="text-sm font-semibold text-[var(--foreground)]">
                                   Version {version.version_number}
                                 </span>
                                 {isLatest && (
-                                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-[var(--accent)]/10 text-[var(--accent)]">
                                     Current
                                   </span>
                                 )}
@@ -177,7 +177,7 @@ export function VersionHistoryModal({
                                 </span>
                               </div>
 
-                              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                              <div className="flex items-center gap-4 text-sm text-[var(--text-muted)]">
                                 <div className="flex items-center gap-1">
                                   <User className="w-3 h-3" />
                                   <span>{version.changed_by}</span>
@@ -193,7 +193,7 @@ export function VersionHistoryModal({
                               </div>
 
                               {version.change_summary && (
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                <p className="text-sm text-[var(--text-muted)] mt-1">
                                   {version.change_summary}
                                 </p>
                               )}
@@ -221,50 +221,50 @@ export function VersionHistoryModal({
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 space-y-2"
+                                className="border-t border-[var(--border)] pt-3 mt-3 space-y-2"
                               >
                                 <div>
-                                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                  <span className="text-xs font-medium text-[var(--text-muted)]">
                                     Title:
                                   </span>
-                                  <p className="text-sm text-gray-900 dark:text-white mt-0.5">
+                                  <p className="text-sm text-[var(--foreground)] mt-0.5">
                                     {version.text}
                                   </p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-[var(--text-muted)]">
                                       Status:
                                     </span>
-                                    <p className="text-sm text-gray-900 dark:text-white mt-0.5 capitalize">
+                                    <p className="text-sm text-[var(--foreground)] mt-0.5 capitalize">
                                       {version.status}
                                     </p>
                                   </div>
 
                                   <div>
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-[var(--text-muted)]">
                                       Priority:
                                     </span>
-                                    <p className="text-sm text-gray-900 dark:text-white mt-0.5 capitalize">
+                                    <p className="text-sm text-[var(--foreground)] mt-0.5 capitalize">
                                       {version.priority}
                                     </p>
                                   </div>
 
                                   <div>
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-[var(--text-muted)]">
                                       Assigned To:
                                     </span>
-                                    <p className="text-sm text-gray-900 dark:text-white mt-0.5">
+                                    <p className="text-sm text-[var(--foreground)] mt-0.5">
                                       {version.assigned_to || 'Unassigned'}
                                     </p>
                                   </div>
 
                                   <div>
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-[var(--text-muted)]">
                                       Due Date:
                                     </span>
-                                    <p className="text-sm text-gray-900 dark:text-white mt-0.5">
+                                    <p className="text-sm text-[var(--foreground)] mt-0.5">
                                       {version.due_date
                                         ? format(new Date(version.due_date), 'MMM d, yyyy')
                                         : 'No due date'}
@@ -272,13 +272,13 @@ export function VersionHistoryModal({
                                   </div>
 
                                   <div>
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-[var(--text-muted)]">
                                       Completed:
                                     </span>
-                                    <p className="text-sm text-gray-900 dark:text-white mt-0.5 flex items-center gap-1">
+                                    <p className="text-sm text-[var(--foreground)] mt-0.5 flex items-center gap-1">
                                       {version.completed ? (
                                         <>
-                                          <Check className="w-4 h-4 text-green-600" />
+                                          <Check className="w-4 h-4 text-[var(--success)]" />
                                           Yes
                                         </>
                                       ) : (
@@ -289,10 +289,10 @@ export function VersionHistoryModal({
 
                                   {version.recurrence && (
                                     <div>
-                                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                      <span className="text-xs font-medium text-[var(--text-muted)]">
                                         Recurrence:
                                       </span>
-                                      <p className="text-sm text-gray-900 dark:text-white mt-0.5 capitalize">
+                                      <p className="text-sm text-[var(--foreground)] mt-0.5 capitalize">
                                         {version.recurrence}
                                       </p>
                                     </div>
@@ -301,10 +301,10 @@ export function VersionHistoryModal({
 
                                 {version.notes && (
                                   <div>
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-[var(--text-muted)]">
                                       Notes:
                                     </span>
-                                    <p className="text-sm text-gray-900 dark:text-white mt-0.5 whitespace-pre-wrap">
+                                    <p className="text-sm text-[var(--foreground)] mt-0.5 whitespace-pre-wrap">
                                       {version.notes}
                                     </p>
                                   </div>
@@ -312,19 +312,19 @@ export function VersionHistoryModal({
 
                                 {version.subtasks && version.subtasks.length > 0 && (
                                   <div>
-                                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-[var(--text-muted)]">
                                       Subtasks ({version.subtasks.length}):
                                     </span>
                                     <ul className="mt-1 space-y-1">
                                       {version.subtasks.map((subtask: any, i: number) => (
                                         <li
                                           key={i}
-                                          className="text-sm text-gray-900 dark:text-white flex items-center gap-2"
+                                          className="text-sm text-[var(--foreground)] flex items-center gap-2"
                                         >
                                           <span
                                             className={
                                               subtask.completed
-                                                ? 'line-through text-gray-500'
+                                                ? 'line-through text-[var(--text-muted)]'
                                                 : ''
                                             }
                                           >

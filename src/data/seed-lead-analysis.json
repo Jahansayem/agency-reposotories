@@ -1,0 +1,1727 @@
+{
+  "summary": {
+    "total_records": 54332,
+    "date_range": {
+      "start": "2025-09-22",
+      "end": "2025-11-16"
+    },
+    "overall_sale_rate": 0.93,
+    "overall_contact_rate": 31.22,
+    "overall_quote_rate": 2.84,
+    "generated_at": "2025-11-25T06:19:27.465013"
+  },
+  "vendors": [
+    {
+      "vendor": "Lead-Clinic-Live-Transfers",
+      "total_leads": 35,
+      "sales": 10,
+      "sale_rate": 28.57,
+      "hot_prospects": 12,
+      "hot_rate": 34.29,
+      "quoted": 12,
+      "quote_rate": 34.29,
+      "contacted": 20,
+      "contact_rate": 57.14,
+      "avg_call_duration": 79.5
+    },
+    {
+      "vendor": "Blue-Wave-Live-Call-Transfer",
+      "total_leads": 171,
+      "sales": 12,
+      "sale_rate": 7.02,
+      "hot_prospects": 18,
+      "hot_rate": 10.53,
+      "quoted": 30,
+      "quote_rate": 17.54,
+      "contacted": 105,
+      "contact_rate": 61.4,
+      "avg_call_duration": 48.4
+    },
+    {
+      "vendor": "Manually-Added-Leads",
+      "total_leads": 18,
+      "sales": 1,
+      "sale_rate": 5.56,
+      "hot_prospects": 1,
+      "hot_rate": 5.56,
+      "quoted": 1,
+      "quote_rate": 5.56,
+      "contacted": 15,
+      "contact_rate": 83.33,
+      "avg_call_duration": 2.6
+    },
+    {
+      "vendor": "ALM-Internet",
+      "total_leads": 869,
+      "sales": 27,
+      "sale_rate": 3.11,
+      "hot_prospects": 35,
+      "hot_rate": 4.03,
+      "quoted": 49,
+      "quote_rate": 5.64,
+      "contacted": 245,
+      "contact_rate": 28.19,
+      "avg_call_duration": 25.2
+    },
+    {
+      "vendor": "Lead-Clinic-Internet",
+      "total_leads": 4333,
+      "sales": 73,
+      "sale_rate": 1.68,
+      "hot_prospects": 120,
+      "hot_rate": 2.77,
+      "quoted": 157,
+      "quote_rate": 3.62,
+      "contacted": 1404,
+      "contact_rate": 32.4,
+      "avg_call_duration": 20.9
+    },
+    {
+      "vendor": "Imported-for-list-uploads",
+      "total_leads": 6366,
+      "sales": 73,
+      "sale_rate": 1.15,
+      "hot_prospects": 96,
+      "hot_rate": 1.51,
+      "quoted": 147,
+      "quote_rate": 2.31,
+      "contacted": 2300,
+      "contact_rate": 36.13,
+      "avg_call_duration": 15.9
+    },
+    {
+      "vendor": "EverQuote-LCS",
+      "total_leads": 6303,
+      "sales": 49,
+      "sale_rate": 0.78,
+      "hot_prospects": 136,
+      "hot_rate": 2.16,
+      "quoted": 204,
+      "quote_rate": 3.24,
+      "contacted": 1670,
+      "contact_rate": 26.5,
+      "avg_call_duration": 21.3
+    },
+    {
+      "vendor": "QuoteWizard-Auto",
+      "total_leads": 35785,
+      "sales": 259,
+      "sale_rate": 0.72,
+      "hot_prospects": 503,
+      "hot_rate": 1.41,
+      "quoted": 921,
+      "quote_rate": 2.57,
+      "contacted": 10751,
+      "contact_rate": 30.04,
+      "avg_call_duration": 18.9
+    },
+    {
+      "vendor": "Referrals",
+      "total_leads": 12,
+      "sales": 0,
+      "sale_rate": 0.0,
+      "hot_prospects": 0,
+      "hot_rate": 0.0,
+      "quoted": 0,
+      "quote_rate": 0.0,
+      "contacted": 12,
+      "contact_rate": 100.0,
+      "avg_call_duration": 1.4
+    }
+  ],
+  "agents": [
+    {
+      "agent": "Brittany Bealer",
+      "total_calls": 56,
+      "sales": 5,
+      "sale_rate": 5.49,
+      "hot_prospects": 6,
+      "hot_rate": 6.59,
+      "quoted": 9,
+      "quote_rate": 9.89,
+      "contacted": 82,
+      "contact_rate": 90.11,
+      "avg_call_duration": 349.9,
+      "total_talk_hours": 8.8
+    },
+    {
+      "agent": "Karina Vitela",
+      "total_calls": 6115,
+      "sales": 154,
+      "sale_rate": 2.5,
+      "hot_prospects": 207,
+      "hot_rate": 3.36,
+      "quoted": 356,
+      "quote_rate": 5.77,
+      "contacted": 2408,
+      "contact_rate": 39.06,
+      "avg_call_duration": 39.7,
+      "total_talk_hours": 68.1
+    },
+    {
+      "agent": "Amanda Leech",
+      "total_calls": 4799,
+      "sales": 67,
+      "sale_rate": 1.38,
+      "hot_prospects": 124,
+      "hot_rate": 2.55,
+      "quoted": 138,
+      "quote_rate": 2.84,
+      "contacted": 1453,
+      "contact_rate": 29.89,
+      "avg_call_duration": 31.1,
+      "total_talk_hours": 42.0
+    },
+    {
+      "agent": "Brandon Epperson",
+      "total_calls": 6986,
+      "sales": 79,
+      "sale_rate": 1.12,
+      "hot_prospects": 177,
+      "hot_rate": 2.51,
+      "quoted": 449,
+      "quote_rate": 6.37,
+      "contacted": 2793,
+      "contact_rate": 39.65,
+      "avg_call_duration": 25.3,
+      "total_talk_hours": 49.4
+    },
+    {
+      "agent": "Samantha Patterson",
+      "total_calls": 3658,
+      "sales": 40,
+      "sale_rate": 1.09,
+      "hot_prospects": 68,
+      "hot_rate": 1.85,
+      "quoted": 89,
+      "quote_rate": 2.42,
+      "contacted": 927,
+      "contact_rate": 25.2,
+      "avg_call_duration": 33.7,
+      "total_talk_hours": 34.4
+    },
+    {
+      "agent": "Layne Staley",
+      "total_calls": 23855,
+      "sales": 112,
+      "sale_rate": 0.47,
+      "hot_prospects": 231,
+      "hot_rate": 0.97,
+      "quoted": 320,
+      "quote_rate": 1.34,
+      "contacted": 7049,
+      "contact_rate": 29.54,
+      "avg_call_duration": 4.6,
+      "total_talk_hours": 30.5
+    },
+    {
+      "agent": "Maicah Pelaez",
+      "total_calls": 6863,
+      "sales": 18,
+      "sale_rate": 0.26,
+      "hot_prospects": 51,
+      "hot_rate": 0.74,
+      "quoted": 101,
+      "quote_rate": 1.47,
+      "contacted": 1382,
+      "contact_rate": 20.13,
+      "avg_call_duration": 23.5,
+      "total_talk_hours": 44.9
+    },
+    {
+      "agent": "MYLENE HERNANI",
+      "total_calls": 264,
+      "sales": 0,
+      "sale_rate": 0.0,
+      "hot_prospects": 0,
+      "hot_rate": 0.0,
+      "quoted": 0,
+      "quote_rate": 0.0,
+      "contacted": 18,
+      "contact_rate": 6.79,
+      "avg_call_duration": 29.8,
+      "total_talk_hours": 2.2
+    }
+  ],
+  "timing": {
+    "hourly": [
+      {
+        "hour": 0,
+        "total_calls": 7,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 0.0,
+        "contact_rate": 0.0
+      },
+      {
+        "hour": 1,
+        "total_calls": 0,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 0.0,
+        "contact_rate": 100.0
+      },
+      {
+        "hour": 2,
+        "total_calls": 4,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 0.0,
+        "contact_rate": 50.0
+      },
+      {
+        "hour": 3,
+        "total_calls": 3,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 0.0,
+        "contact_rate": 0.0
+      },
+      {
+        "hour": 6,
+        "total_calls": 10,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 0.0,
+        "contact_rate": 66.67
+      },
+      {
+        "hour": 7,
+        "total_calls": 16,
+        "sales": 2,
+        "sale_rate": 8.7,
+        "hot_rate": 17.39,
+        "contact_rate": 69.57
+      },
+      {
+        "hour": 8,
+        "total_calls": 2161,
+        "sales": 29,
+        "sale_rate": 1.34,
+        "hot_rate": 2.62,
+        "contact_rate": 38.31
+      },
+      {
+        "hour": 9,
+        "total_calls": 6627,
+        "sales": 83,
+        "sale_rate": 1.24,
+        "hot_rate": 2.17,
+        "contact_rate": 38.15
+      },
+      {
+        "hour": 10,
+        "total_calls": 6978,
+        "sales": 65,
+        "sale_rate": 0.92,
+        "hot_rate": 1.58,
+        "contact_rate": 33.16
+      },
+      {
+        "hour": 11,
+        "total_calls": 7148,
+        "sales": 59,
+        "sale_rate": 0.82,
+        "hot_rate": 1.57,
+        "contact_rate": 32.75
+      },
+      {
+        "hour": 12,
+        "total_calls": 6890,
+        "sales": 44,
+        "sale_rate": 0.63,
+        "hot_rate": 1.6,
+        "contact_rate": 30.3
+      },
+      {
+        "hour": 13,
+        "total_calls": 6052,
+        "sales": 47,
+        "sale_rate": 0.77,
+        "hot_rate": 1.48,
+        "contact_rate": 29.17
+      },
+      {
+        "hour": 14,
+        "total_calls": 6055,
+        "sales": 54,
+        "sale_rate": 0.88,
+        "hot_rate": 1.74,
+        "contact_rate": 28.74
+      },
+      {
+        "hour": 15,
+        "total_calls": 6604,
+        "sales": 60,
+        "sale_rate": 0.91,
+        "hot_rate": 1.43,
+        "contact_rate": 27.04
+      },
+      {
+        "hour": 16,
+        "total_calls": 5116,
+        "sales": 47,
+        "sale_rate": 0.91,
+        "hot_rate": 1.36,
+        "contact_rate": 24.93
+      },
+      {
+        "hour": 17,
+        "total_calls": 108,
+        "sales": 11,
+        "sale_rate": 8.8,
+        "hot_rate": 10.4,
+        "contact_rate": 54.4
+      },
+      {
+        "hour": 18,
+        "total_calls": 48,
+        "sales": 2,
+        "sale_rate": 3.45,
+        "hot_rate": 3.45,
+        "contact_rate": 50.0
+      },
+      {
+        "hour": 19,
+        "total_calls": 28,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 3.03,
+        "contact_rate": 66.67
+      },
+      {
+        "hour": 20,
+        "total_calls": 27,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 6.45,
+        "contact_rate": 54.84
+      },
+      {
+        "hour": 21,
+        "total_calls": 18,
+        "sales": 1,
+        "sale_rate": 5.26,
+        "hot_rate": 5.26,
+        "contact_rate": 47.37
+      },
+      {
+        "hour": 22,
+        "total_calls": 9,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 0.0,
+        "contact_rate": 33.33
+      },
+      {
+        "hour": 23,
+        "total_calls": 4,
+        "sales": 0,
+        "sale_rate": 0.0,
+        "hot_rate": 0.0,
+        "contact_rate": 50.0
+      }
+    ],
+    "daily": [
+      {
+        "day": "Monday",
+        "total_calls": 9333,
+        "sales": 91,
+        "sale_rate": 0.97,
+        "hot_rate": 1.8,
+        "contact_rate": 35.34
+      },
+      {
+        "day": "Tuesday",
+        "total_calls": 9423,
+        "sales": 88,
+        "sale_rate": 0.93,
+        "hot_rate": 1.75,
+        "contact_rate": 30.94
+      },
+      {
+        "day": "Wednesday",
+        "total_calls": 11285,
+        "sales": 107,
+        "sale_rate": 0.94,
+        "hot_rate": 1.79,
+        "contact_rate": 31.38
+      },
+      {
+        "day": "Thursday",
+        "total_calls": 11297,
+        "sales": 110,
+        "sale_rate": 0.97,
+        "hot_rate": 1.66,
+        "contact_rate": 30.11
+      },
+      {
+        "day": "Friday",
+        "total_calls": 12471,
+        "sales": 105,
+        "sale_rate": 0.84,
+        "hot_rate": 1.47,
+        "contact_rate": 28.92
+      },
+      {
+        "day": "Saturday",
+        "total_calls": 66,
+        "sales": 2,
+        "sale_rate": 2.53,
+        "hot_rate": 2.53,
+        "contact_rate": 65.82
+      },
+      {
+        "day": "Sunday",
+        "total_calls": 38,
+        "sales": 1,
+        "sale_rate": 2.33,
+        "hot_rate": 13.95,
+        "contact_rate": 46.51
+      }
+    ]
+  },
+  "call_types": [
+    {
+      "call_type": "Manual Dial",
+      "total_calls": 769,
+      "sales": 99,
+      "sale_rate": 12.16,
+      "hot_prospects": 124,
+      "hot_rate": 15.23,
+      "quoted": 216,
+      "quote_rate": 26.54,
+      "contacted": 735,
+      "contact_rate": 90.29,
+      "avg_call_duration": 97.7
+    },
+    {
+      "call_type": "Inbound",
+      "total_calls": 2298,
+      "sales": 75,
+      "sale_rate": 2.81,
+      "hot_prospects": 124,
+      "hot_rate": 4.64,
+      "quoted": 176,
+      "quote_rate": 6.59,
+      "contacted": 1804,
+      "contact_rate": 67.51,
+      "avg_call_duration": 87.7
+    },
+    {
+      "call_type": "Assigned Follow-up",
+      "total_calls": 3941,
+      "sales": 57,
+      "sale_rate": 1.45,
+      "hot_prospects": 119,
+      "hot_rate": 3.02,
+      "quoted": 394,
+      "quote_rate": 10.0,
+      "contacted": 3754,
+      "contact_rate": 95.26,
+      "avg_call_duration": 11.0
+    },
+    {
+      "call_type": "Live Transfer",
+      "total_calls": 3870,
+      "sales": 45,
+      "sale_rate": 1.16,
+      "hot_prospects": 79,
+      "hot_rate": 2.04,
+      "quoted": 111,
+      "quote_rate": 2.87,
+      "contacted": 1421,
+      "contact_rate": 36.72,
+      "avg_call_duration": 36.4
+    },
+    {
+      "call_type": "Shark Tank",
+      "total_calls": 23183,
+      "sales": 166,
+      "sale_rate": 0.72,
+      "hot_prospects": 295,
+      "hot_rate": 1.27,
+      "quoted": 354,
+      "quote_rate": 1.53,
+      "contacted": 5478,
+      "contact_rate": 23.63,
+      "avg_call_duration": 12.1
+    },
+    {
+      "call_type": "Telemarketing",
+      "total_calls": 19852,
+      "sales": 62,
+      "sale_rate": 0.31,
+      "hot_prospects": 180,
+      "hot_rate": 0.91,
+      "quoted": 290,
+      "quote_rate": 1.46,
+      "contacted": 3770,
+      "contact_rate": 18.99,
+      "avg_call_duration": 15.5
+    }
+  ],
+  "funnel": {
+    "total_leads": 54332,
+    "contacted": 16962,
+    "contacted_rate": 31.22,
+    "quoted": 1541,
+    "quoted_rate": 2.84,
+    "quoted_of_contacted": 9.09,
+    "hot_prospects": 921,
+    "hot_rate": 1.7,
+    "hot_of_quoted": 59.77,
+    "sold": 504,
+    "sold_rate": 0.93,
+    "sold_of_hot": 54.72
+  },
+  "outcomes": [
+    {
+      "outcome": "NO_CONTACT",
+      "count": 31612,
+      "percentage": 58.18
+    },
+    {
+      "outcome": "FOLLOW_UP",
+      "count": 5902,
+      "percentage": 10.86
+    },
+    {
+      "outcome": "NOT_INTERESTED",
+      "count": 3195,
+      "percentage": 5.88
+    },
+    {
+      "outcome": "BAD_PHONE",
+      "count": 2331,
+      "percentage": 4.29
+    },
+    {
+      "outcome": "REQUOTE",
+      "count": 1746,
+      "percentage": 3.21
+    },
+    {
+      "outcome": "DNC",
+      "count": 1474,
+      "percentage": 2.71
+    },
+    {
+      "outcome": "LEFT_MESSAGE",
+      "count": 1124,
+      "percentage": 2.07
+    },
+    {
+      "outcome": "NEVER_REQUESTED",
+      "count": 957,
+      "percentage": 1.76
+    },
+    {
+      "outcome": "RECYCLED",
+      "count": 821,
+      "percentage": 1.51
+    },
+    {
+      "outcome": "NOT_ELIGIBLE",
+      "count": 727,
+      "percentage": 1.34
+    },
+    {
+      "outcome": "HUNG_UP",
+      "count": 629,
+      "percentage": 1.16
+    },
+    {
+      "outcome": "QUOTED",
+      "count": 620,
+      "percentage": 1.14
+    },
+    {
+      "outcome": "BAD_LEAD",
+      "count": 532,
+      "percentage": 0.98
+    },
+    {
+      "outcome": "TRANSFERRED",
+      "count": 504,
+      "percentage": 0.93
+    },
+    {
+      "outcome": "QUOTED_NOT_INTERESTED",
+      "count": 453,
+      "percentage": 0.83
+    },
+    {
+      "outcome": "SOLD",
+      "count": 429,
+      "percentage": 0.79
+    },
+    {
+      "outcome": "Unknown",
+      "count": 419,
+      "percentage": 0.77
+    },
+    {
+      "outcome": "ALREADY_PURCHASED",
+      "count": 290,
+      "percentage": 0.53
+    },
+    {
+      "outcome": "XDATE_SET",
+      "count": 226,
+      "percentage": 0.42
+    },
+    {
+      "outcome": "HOT_PROSPECT",
+      "count": 191,
+      "percentage": 0.35
+    },
+    {
+      "outcome": "ONBOARDING",
+      "count": 75,
+      "percentage": 0.14
+    },
+    {
+      "outcome": "TRANSFER_FAILED",
+      "count": 43,
+      "percentage": 0.08
+    },
+    {
+      "outcome": "BUSINESS",
+      "count": 24,
+      "percentage": 0.04
+    },
+    {
+      "outcome": "OTHER",
+      "count": 8,
+      "percentage": 0.01
+    }
+  ],
+  "recommendations": [
+    {
+      "category": "Lead Sources",
+      "priority": "high",
+      "action": "Increase budget for Lead-Clinic-Live-Transfers",
+      "reason": "Highest sale rate at 28.57%",
+      "impact": "Improve conversion rate"
+    },
+    {
+      "category": "Lead Sources",
+      "priority": "high",
+      "action": "Reduce/eliminate budget for Referrals",
+      "reason": "Lowest sale rate at 0.0%",
+      "impact": "Reduce wasted spend"
+    },
+    {
+      "category": "Lead Quality",
+      "priority": "high",
+      "action": "Investigate data quality from ALM-Internet",
+      "reason": "Only 28.19% contact rate (< 30%)",
+      "impact": "Identify and fix lead quality issues"
+    },
+    {
+      "category": "Lead Quality",
+      "priority": "high",
+      "action": "Investigate data quality from EverQuote-LCS",
+      "reason": "Only 26.5% contact rate (< 30%)",
+      "impact": "Identify and fix lead quality issues"
+    },
+    {
+      "category": "Agent Performance",
+      "priority": "medium",
+      "action": "Have Karina Vitela train other agents",
+      "reason": "Top performer with 2.5% sale rate",
+      "impact": "Improve team performance"
+    },
+    {
+      "category": "Agent Performance",
+      "priority": "medium",
+      "action": "Coaching focus on MYLENE HERNANI",
+      "reason": "Below average at 0.0% sale rate",
+      "impact": "Close performance gap"
+    },
+    {
+      "category": "Agent Performance",
+      "priority": "high",
+      "action": "Priority training for Layne Staley",
+      "reason": "High volume (23855 calls) but below avg rate (0.47%)",
+      "impact": "Biggest improvement opportunity"
+    },
+    {
+      "category": "Agent Performance",
+      "priority": "high",
+      "action": "Priority training for Maicah Pelaez",
+      "reason": "High volume (6863 calls) but below avg rate (0.26%)",
+      "impact": "Biggest improvement opportunity"
+    },
+    {
+      "category": "Timing",
+      "priority": "medium",
+      "action": "Schedule more calls during 17:00, 7:00, 21:00",
+      "reason": "Peak conversion hours (best: 8.8%)",
+      "impact": "Optimize call timing"
+    },
+    {
+      "category": "Timing",
+      "priority": "medium",
+      "action": "Prioritize calling on Saturday, Sunday",
+      "reason": "Best conversion days (top: 2.53%)",
+      "impact": "Optimize weekly schedule"
+    },
+    {
+      "category": "Call Strategy",
+      "priority": "medium",
+      "action": "Prioritize 'Manual Dial' calls",
+      "reason": "Highest conversion at 12.16%",
+      "impact": "Optimize call type mix"
+    }
+  ],
+  "diagnostics": {
+    "lead_quality": {
+      "overall": {
+        "total_leads": 54332,
+        "unreachable_rate": 64.54,
+        "bad_phone_rate": 4.29,
+        "never_requested_rate": 1.76,
+        "not_interested_rate": 5.88,
+        "bad_lead_rate": 0.98
+      },
+      "by_vendor": [
+        {
+          "vendor": "QuoteWizard-Auto",
+          "total_leads": 35785,
+          "bad_phone_rate": 5.48,
+          "no_contact_rate": 57.9,
+          "never_requested_rate": 1.57,
+          "bad_lead_rate": 1.29,
+          "not_interested_rate": 5.56,
+          "total_issue_rate": 8.34
+        },
+        {
+          "vendor": "Imported-for-list-uploads",
+          "total_leads": 6366,
+          "bad_phone_rate": 0.93,
+          "no_contact_rate": 60.89,
+          "never_requested_rate": 4.95,
+          "bad_lead_rate": 0.57,
+          "not_interested_rate": 9.13,
+          "total_issue_rate": 6.45
+        },
+        {
+          "vendor": "Manually-Added-Leads",
+          "total_leads": 18,
+          "bad_phone_rate": 5.56,
+          "no_contact_rate": 0.0,
+          "never_requested_rate": 0.0,
+          "bad_lead_rate": 0.0,
+          "not_interested_rate": 0.0,
+          "total_issue_rate": 5.56
+        },
+        {
+          "vendor": "EverQuote-LCS",
+          "total_leads": 6303,
+          "bad_phone_rate": 3.17,
+          "no_contact_rate": 64.4,
+          "never_requested_rate": 0.68,
+          "bad_lead_rate": 0.33,
+          "not_interested_rate": 5.95,
+          "total_issue_rate": 4.18
+        },
+        {
+          "vendor": "ALM-Internet",
+          "total_leads": 869,
+          "bad_phone_rate": 3.91,
+          "no_contact_rate": 49.83,
+          "never_requested_rate": 0.0,
+          "bad_lead_rate": 0.0,
+          "not_interested_rate": 1.04,
+          "total_issue_rate": 3.91
+        },
+        {
+          "vendor": "Lead-Clinic-Internet",
+          "total_leads": 4333,
+          "bad_phone_rate": 1.71,
+          "no_contact_rate": 56.96,
+          "never_requested_rate": 0.83,
+          "bad_lead_rate": 0.3,
+          "not_interested_rate": 4.85,
+          "total_issue_rate": 2.84
+        },
+        {
+          "vendor": "Blue-Wave-Live-Call-Transfer",
+          "total_leads": 171,
+          "bad_phone_rate": 0.58,
+          "no_contact_rate": 25.15,
+          "never_requested_rate": 0.0,
+          "bad_lead_rate": 0.0,
+          "not_interested_rate": 9.94,
+          "total_issue_rate": 0.58
+        },
+        {
+          "vendor": "Lead-Clinic-Live-Transfers",
+          "total_leads": 35,
+          "bad_phone_rate": 0.0,
+          "no_contact_rate": 42.86,
+          "never_requested_rate": 0.0,
+          "bad_lead_rate": 0.0,
+          "not_interested_rate": 2.86,
+          "total_issue_rate": 0.0
+        },
+        {
+          "vendor": "Referrals",
+          "total_leads": 12,
+          "bad_phone_rate": 0.0,
+          "no_contact_rate": 0.0,
+          "never_requested_rate": 0.0,
+          "bad_lead_rate": 0.0,
+          "not_interested_rate": 100.0,
+          "total_issue_rate": 0.0
+        }
+      ]
+    },
+    "roi_metrics": {
+      "vendor_costs": {
+        "QuoteWizard-Auto": 6,
+        "EverQuote-LCS": 7,
+        "ALM-Internet": 19,
+        "Blue-Wave-Live-Call-Transfer": 55,
+        "Lead-Clinic-Live-Transfers": 60,
+        "Lead-Clinic-Internet": 10,
+        "Imported-for-list-uploads": 0,
+        "Manually-Added-Leads": 0,
+        "Referrals": 0,
+        "QuoteWizard": 6,
+        "EverQuote": 7,
+        "ALM": 19,
+        "Blue Wave": 55,
+        "Lead Clinic": 10,
+        "Imported": 0
+      },
+      "avg_cpl": 6.13,
+      "total_spend": 330177,
+      "assumed_avg_premium": 1000,
+      "by_vendor": [
+        {
+          "vendor": "Imported-for-list-uploads",
+          "total_leads": 6366,
+          "total_spend": 0,
+          "sales": 73,
+          "cpl": 0,
+          "cpq": null,
+          "cpb": null,
+          "leads_per_sale": 87.2,
+          "estimated_revenue": 6570.0,
+          "roi_percent": 0
+        },
+        {
+          "vendor": "Manually-Added-Leads",
+          "total_leads": 18,
+          "total_spend": 0,
+          "sales": 1,
+          "cpl": 0,
+          "cpq": null,
+          "cpb": null,
+          "leads_per_sale": 18.0,
+          "estimated_revenue": 90.0,
+          "roi_percent": 0
+        },
+        {
+          "vendor": "Referrals",
+          "total_leads": 12,
+          "total_spend": 0,
+          "sales": 0,
+          "cpl": 0,
+          "cpq": null,
+          "cpb": null,
+          "leads_per_sale": null,
+          "estimated_revenue": 0.0,
+          "roi_percent": 0
+        },
+        {
+          "vendor": "Lead-Clinic-Live-Transfers",
+          "total_leads": 35,
+          "total_spend": 2100,
+          "sales": 10,
+          "cpl": 60,
+          "cpq": 175.0,
+          "cpb": 210.0,
+          "leads_per_sale": 3.5,
+          "estimated_revenue": 900.0,
+          "roi_percent": -57.1
+        },
+        {
+          "vendor": "Lead-Clinic-Internet",
+          "total_leads": 4333,
+          "total_spend": 43330,
+          "sales": 73,
+          "cpl": 10,
+          "cpq": 275.99,
+          "cpb": 593.56,
+          "leads_per_sale": 59.4,
+          "estimated_revenue": 6570.0,
+          "roi_percent": -84.8
+        },
+        {
+          "vendor": "ALM-Internet",
+          "total_leads": 869,
+          "total_spend": 16511,
+          "sales": 27,
+          "cpl": 19,
+          "cpq": 336.96,
+          "cpb": 611.52,
+          "leads_per_sale": 32.2,
+          "estimated_revenue": 2430.0,
+          "roi_percent": -85.3
+        },
+        {
+          "vendor": "Blue-Wave-Live-Call-Transfer",
+          "total_leads": 171,
+          "total_spend": 9405,
+          "sales": 12,
+          "cpl": 55,
+          "cpq": 313.5,
+          "cpb": 783.75,
+          "leads_per_sale": 14.2,
+          "estimated_revenue": 1080.0,
+          "roi_percent": -88.5
+        },
+        {
+          "vendor": "QuoteWizard-Auto",
+          "total_leads": 35785,
+          "total_spend": 214710,
+          "sales": 259,
+          "cpl": 6,
+          "cpq": 233.13,
+          "cpb": 829.0,
+          "leads_per_sale": 138.2,
+          "estimated_revenue": 23310.0,
+          "roi_percent": -89.1
+        },
+        {
+          "vendor": "EverQuote-LCS",
+          "total_leads": 6303,
+          "total_spend": 44121,
+          "sales": 49,
+          "cpl": 7,
+          "cpq": 216.28,
+          "cpb": 900.43,
+          "leads_per_sale": 128.6,
+          "estimated_revenue": 4410.0,
+          "roi_percent": -90.0
+        }
+      ]
+    },
+    "funnel_bottlenecks": {
+      "loss_reasons": {
+        "before_contact": {
+          "total_lost": 37370,
+          "percentage": 68.78,
+          "breakdown": {
+            "no_contact": 31612,
+            "bad_phone": 2331,
+            "left_message": 1124,
+            "dnc": 1474
+          }
+        },
+        "after_contact": {
+          "total_lost": 15421,
+          "percentage": 28.38,
+          "breakdown": {
+            "not_interested": 3195,
+            "not_eligible": 727,
+            "never_requested": 957,
+            "hung_up": 629,
+            "already_purchased": 290
+          }
+        },
+        "after_quote": {
+          "total_lost": 620,
+          "percentage": 1.14,
+          "breakdown": {
+            "quoted_not_interested": 453
+          }
+        }
+      },
+      "conversion_rates": {
+        "lead_to_contact": 31.22,
+        "contact_to_quote": 9.09,
+        "quote_to_hot": 59.77,
+        "hot_to_sale": 54.72,
+        "overall_conversion": 0.93
+      }
+    },
+    "call_attempts": {
+      "average_attempts": 39.06,
+      "max_attempts": 2161,
+      "single_attempt_leads": 255,
+      "multiple_attempt_leads": 1134,
+      "persistence_rate": 81.64,
+      "by_attempt_count": [
+        {
+          "attempts": 1,
+          "lead_count": 255,
+          "sale_rate": 1.57,
+          "contact_rate": 67.45
+        },
+        {
+          "attempts": 2,
+          "lead_count": 591,
+          "sale_rate": 1.35,
+          "contact_rate": 60.24
+        },
+        {
+          "attempts": 3,
+          "lead_count": 59,
+          "sale_rate": 6.78,
+          "contact_rate": 77.97
+        },
+        {
+          "attempts": 4,
+          "lead_count": 106,
+          "sale_rate": 2.83,
+          "contact_rate": 76.42
+        },
+        {
+          "attempts": 5,
+          "lead_count": 15,
+          "sale_rate": 0.0,
+          "contact_rate": 80.0
+        },
+        {
+          "attempts": 6,
+          "lead_count": 24,
+          "sale_rate": 20.83,
+          "contact_rate": 54.17
+        },
+        {
+          "attempts": 7,
+          "lead_count": 5,
+          "sale_rate": 0.0,
+          "contact_rate": 60.0
+        },
+        {
+          "attempts": 8,
+          "lead_count": 18,
+          "sale_rate": 0.0,
+          "contact_rate": 61.11
+        },
+        {
+          "attempts": 9,
+          "lead_count": 6,
+          "sale_rate": 0.0,
+          "contact_rate": 83.33
+        },
+        {
+          "attempts": 10,
+          "lead_count": 4,
+          "sale_rate": 0.0,
+          "contact_rate": 50.0
+        }
+      ]
+    },
+    "agent_vendor_match": {
+      "top_combinations": [
+        {
+          "agent": "Brittany Bealer",
+          "vendor": "QuoteWizard-Auto",
+          "total_calls": 37,
+          "sales": 5,
+          "sale_rate": 13.51,
+          "contact_rate": 86.49,
+          "quote_rate": 16.22
+        },
+        {
+          "agent": "Karina Vitela",
+          "vendor": "Blue-Wave-Live-Call-Transfer",
+          "total_calls": 63,
+          "sales": 8,
+          "sale_rate": 12.7,
+          "contact_rate": 87.3,
+          "quote_rate": 30.16
+        },
+        {
+          "agent": "Karina Vitela",
+          "vendor": "ALM-Internet",
+          "total_calls": 202,
+          "sales": 23,
+          "sale_rate": 11.39,
+          "contact_rate": 49.01,
+          "quote_rate": 19.31
+        },
+        {
+          "agent": "Amanda Leech",
+          "vendor": "Lead-Clinic-Internet",
+          "total_calls": 451,
+          "sales": 20,
+          "sale_rate": 4.43,
+          "contact_rate": 28.82,
+          "quote_rate": 5.32
+        },
+        {
+          "agent": "Karina Vitela",
+          "vendor": "Lead-Clinic-Internet",
+          "total_calls": 688,
+          "sales": 25,
+          "sale_rate": 3.63,
+          "contact_rate": 45.64,
+          "quote_rate": 6.83
+        },
+        {
+          "agent": "Brandon Epperson",
+          "vendor": "Lead-Clinic-Internet",
+          "total_calls": 457,
+          "sales": 16,
+          "sale_rate": 3.5,
+          "contact_rate": 45.73,
+          "quote_rate": 8.97
+        },
+        {
+          "agent": "Samantha Patterson",
+          "vendor": "EverQuote-LCS",
+          "total_calls": 506,
+          "sales": 15,
+          "sale_rate": 2.96,
+          "contact_rate": 25.69,
+          "quote_rate": 5.53
+        },
+        {
+          "agent": "Layne Staley",
+          "vendor": "Blue-Wave-Live-Call-Transfer",
+          "total_calls": 70,
+          "sales": 2,
+          "sale_rate": 2.86,
+          "contact_rate": 44.29,
+          "quote_rate": 2.86
+        },
+        {
+          "agent": "Karina Vitela",
+          "vendor": "Imported-for-list-uploads",
+          "total_calls": 1171,
+          "sales": 31,
+          "sale_rate": 2.65,
+          "contact_rate": 29.97,
+          "quote_rate": 3.5
+        },
+        {
+          "agent": "Karina Vitela",
+          "vendor": "EverQuote-LCS",
+          "total_calls": 587,
+          "sales": 14,
+          "sale_rate": 2.39,
+          "contact_rate": 37.31,
+          "quote_rate": 7.5
+        }
+      ],
+      "worst_combinations": [
+        {
+          "agent": "Maicah Pelaez",
+          "vendor": "QuoteWizard-Auto",
+          "total_calls": 5161,
+          "sales": 15,
+          "sale_rate": 0.29,
+          "contact_rate": 20.54,
+          "quote_rate": 1.4
+        },
+        {
+          "agent": "Amanda Leech",
+          "vendor": "EverQuote-LCS",
+          "total_calls": 431,
+          "sales": 1,
+          "sale_rate": 0.23,
+          "contact_rate": 29.93,
+          "quote_rate": 3.94
+        },
+        {
+          "agent": "Maicah Pelaez",
+          "vendor": "EverQuote-LCS",
+          "total_calls": 1313,
+          "sales": 3,
+          "sale_rate": 0.23,
+          "contact_rate": 19.19,
+          "quote_rate": 1.9
+        },
+        {
+          "agent": "Layne Staley",
+          "vendor": "EverQuote-LCS",
+          "total_calls": 2863,
+          "sales": 6,
+          "sale_rate": 0.21,
+          "contact_rate": 25.04,
+          "quote_rate": 1.68
+        },
+        {
+          "agent": "Brandon Epperson",
+          "vendor": "ALM-Internet",
+          "total_calls": 74,
+          "sales": 0,
+          "sale_rate": 0.0,
+          "contact_rate": 18.92,
+          "quote_rate": 1.35
+        },
+        {
+          "agent": "MYLENE HERNANI",
+          "vendor": "EverQuote-LCS",
+          "total_calls": 62,
+          "sales": 0,
+          "sale_rate": 0.0,
+          "contact_rate": 8.06,
+          "quote_rate": 0.0
+        },
+        {
+          "agent": "MYLENE HERNANI",
+          "vendor": "QuoteWizard-Auto",
+          "total_calls": 196,
+          "sales": 0,
+          "sale_rate": 0.0,
+          "contact_rate": 6.12,
+          "quote_rate": 0.0
+        },
+        {
+          "agent": "Maicah Pelaez",
+          "vendor": "ALM-Internet",
+          "total_calls": 51,
+          "sales": 0,
+          "sale_rate": 0.0,
+          "contact_rate": 9.8,
+          "quote_rate": 3.92
+        },
+        {
+          "agent": "Maicah Pelaez",
+          "vendor": "Lead-Clinic-Internet",
+          "total_calls": 312,
+          "sales": 0,
+          "sale_rate": 0.0,
+          "contact_rate": 14.1,
+          "quote_rate": 0.64
+        },
+        {
+          "agent": "Samantha Patterson",
+          "vendor": "Lead-Clinic-Internet",
+          "total_calls": 95,
+          "sales": 0,
+          "sale_rate": 0.0,
+          "contact_rate": 15.79,
+          "quote_rate": 0.0
+        }
+      ],
+      "total_combinations": 33
+    },
+    "call_duration_outcomes": {
+      "duration_brackets": [
+        {
+          "bracket": "0-30s",
+          "total_calls": 30419,
+          "sales": 176,
+          "sale_rate": 0.58,
+          "quote_rate": 2.22,
+          "contact_rate": 28.41
+        },
+        {
+          "bracket": "30-60s",
+          "total_calls": 4325,
+          "sales": 47,
+          "sale_rate": 1.09,
+          "quote_rate": 2.91,
+          "contact_rate": 35.45
+        },
+        {
+          "bracket": "1-2min",
+          "total_calls": 649,
+          "sales": 9,
+          "sale_rate": 1.39,
+          "quote_rate": 5.24,
+          "contact_rate": 60.86
+        },
+        {
+          "bracket": "2-5min",
+          "total_calls": 371,
+          "sales": 21,
+          "sale_rate": 5.66,
+          "quote_rate": 9.97,
+          "contact_rate": 89.22
+        },
+        {
+          "bracket": "5-10min",
+          "total_calls": 369,
+          "sales": 28,
+          "sale_rate": 7.59,
+          "quote_rate": 17.89,
+          "contact_rate": 97.02
+        },
+        {
+          "bracket": "10min+",
+          "total_calls": 348,
+          "sales": 81,
+          "sale_rate": 23.28,
+          "quote_rate": 40.23,
+          "contact_rate": 95.98
+        }
+      ],
+      "optimal_duration": "10min+",
+      "optimal_sale_rate": 23.28,
+      "avg_duration_by_outcome": {
+        "SOLD": 360.4,
+        "QUOTED": 105.8,
+        "NOT_INTERESTED": 20.7,
+        "NO_CONTACT": 12.1
+      }
+    },
+    "weekly_trends": {
+      "weekly_data": [
+        {
+          "week": 39,
+          "total_leads": 822,
+          "sales": 20,
+          "sale_rate": 2.25,
+          "contact_rate": 38.11,
+          "quote_rate": 3.72,
+          "avg_duration": 46.8,
+          "sale_rate_change": 0
+        },
+        {
+          "week": 40,
+          "total_leads": 2656,
+          "sales": 72,
+          "sale_rate": 2.68,
+          "contact_rate": 29.48,
+          "quote_rate": 3.72,
+          "avg_duration": 23.5,
+          "sale_rate_change": 0.43
+        },
+        {
+          "week": 41,
+          "total_leads": 4986,
+          "sales": 72,
+          "sale_rate": 1.43,
+          "contact_rate": 32.1,
+          "quote_rate": 1.91,
+          "avg_duration": 20.0,
+          "sale_rate_change": -1.25
+        },
+        {
+          "week": 42,
+          "total_leads": 6105,
+          "sales": 87,
+          "sale_rate": 1.42,
+          "contact_rate": 41.28,
+          "quote_rate": 3.06,
+          "avg_duration": 22.3,
+          "sale_rate_change": -0.01
+        },
+        {
+          "week": 43,
+          "total_leads": 7477,
+          "sales": 74,
+          "sale_rate": 0.98,
+          "contact_rate": 36.31,
+          "quote_rate": 2.83,
+          "avg_duration": 17.5,
+          "sale_rate_change": -0.44
+        },
+        {
+          "week": 44,
+          "total_leads": 9631,
+          "sales": 45,
+          "sale_rate": 0.46,
+          "contact_rate": 28.12,
+          "quote_rate": 2.14,
+          "avg_duration": 18.2,
+          "sale_rate_change": -0.52
+        },
+        {
+          "week": 45,
+          "total_leads": 11072,
+          "sales": 96,
+          "sale_rate": 0.86,
+          "contact_rate": 28.33,
+          "quote_rate": 3.22,
+          "avg_duration": 20.2,
+          "sale_rate_change": 0.4
+        },
+        {
+          "week": 46,
+          "total_leads": 11164,
+          "sales": 38,
+          "sale_rate": 0.34,
+          "contact_rate": 27.33,
+          "quote_rate": 3.06,
+          "avg_duration": 18.8,
+          "sale_rate_change": -0.52
+        }
+      ],
+      "trend": "declining",
+      "trend_change_pct": -1.29,
+      "total_weeks": 8
+    }
+  },
+  "action_plan": {
+    "current_state": {
+      "total_leads": 54332,
+      "total_sales": 504,
+      "overall_sale_rate": 0.93
+    },
+    "immediate_actions": [
+      "Review agent performance and identify coaching needs",
+      "Reallocate worst vendor budget to best vendor",
+      "Schedule calls during peak hours: 17:00, 7:00, 21:00"
+    ],
+    "short_term_actions": [
+      "Implement lead scoring based on vendor source",
+      "Create agent-vendor matching optimization",
+      "Set up quality feedback loop with vendors"
+    ],
+    "ongoing_actions": [
+      "Weekly performance reviews by agent and vendor",
+      "A/B test new vendors with small budgets first",
+      "Track and improve contact rates"
+    ],
+    "improvement_potential": 156.6,
+    "best_hours": [
+      17,
+      7,
+      21
+    ],
+    "best_days": [
+      "Saturday",
+      "Sunday"
+    ]
+  },
+  "data_overview": {
+    "columns": {
+      "Date": {
+        "description": "Timestamp when the call was made",
+        "sample_values": [
+          "2025-11-10 12:40:03",
+          "2025-11-10 12:39:41",
+          "2025-11-10 12:38:29"
+        ],
+        "interpretation": "Used to analyze timing patterns (hour, day of week) for optimal call scheduling",
+        "data_type": "datetime"
+      },
+      "Full name": {
+        "description": "Name of the lead (potential customer)",
+        "sample_values": [
+          "[REDACTED]",
+          "[REDACTED]",
+          "[REDACTED]"
+        ],
+        "interpretation": "Used for record identification only, not in analysis",
+        "data_type": "string"
+      },
+      "User": {
+        "description": "Sales agent who made the call",
+        "sample_values": [
+          "Maicah Pelaez",
+          "Maicah Pelaez",
+          "Maicah Pelaez"
+        ],
+        "interpretation": "Grouped to calculate agent-level performance metrics (sale rate, contact rate)",
+        "data_type": "string"
+      },
+      "Call Duration In Seconds": {
+        "description": "Length of the call in seconds",
+        "sample_values": [
+          35,
+          0,
+          28,
+          17,
+          2128
+        ],
+        "interpretation": "Aggregated per agent to calculate total talk time (hours on phone)",
+        "data_type": "integer"
+      },
+      "Current Status": {
+        "description": "Final outcome status of the lead",
+        "sample_values": [
+          "1.0 CALLED - No Contact",
+          "2.0 CONTACTED - Follow Up",
+          "1.3 CALLED - No Contact (List)",
+          "2.1 CONTACTED - Not Interested",
+          "1.2 CALLED - Bad Phone #"
+        ],
+        "interpretation": "Classified into outcome categories (SOLD, QUOTED, CONTACTED, NO_CONTACT, etc.) to track funnel progression",
+        "data_type": "string"
+      },
+      "Call Type": {
+        "description": "Type/source of the call",
+        "sample_values": [
+          "T.2 Telemarketing - Day 2 - 7 - Cam-Q",
+          "T.1 Telemarketing - Day 1-2 - Cam-Q",
+          "9.0 Shark Tank: List Upload - New / Not Contacted - Cam-Q",
+          "2.3 Shark Tank: Non-Contacted Leads - Day 6-13 - Cam-Q",
+          "2.2 Shark Tank: Non-Contacted Leads - Day 3-5 - Cam-Q"
+        ],
+        "interpretation": "Categorized into Live Transfer, Inbound, Telemarketing, etc. to compare lead source quality",
+        "data_type": "string"
+      },
+      "Vendor Name": {
+        "description": "Lead vendor/source that provided the lead",
+        "sample_values": [
+          "QuoteWizard-Auto",
+          "Imported-for-list-uploads",
+          "EverQuote-LCS",
+          "Lead-Clinic-Internet",
+          "ALM-Internet"
+        ],
+        "interpretation": "Used to calculate ROI, CPL, and conversion rates per vendor to optimize budget allocation",
+        "data_type": "string"
+      }
+    },
+    "status_classification": {
+      "SOLD / Customer": {
+        "example_statuses": [
+          "4.2 SOLD - AF Customer",
+          "4.0 SOLD",
+          "4.1 SOLD - New Customer"
+        ],
+        "meaning": "Lead purchased a policy - counted as a sale",
+        "funnel_stage": "Sale"
+      },
+      "HOT_PROSPECT": {
+        "example_statuses": [
+          "3.5 HOT - Following up",
+          "3.5 HOT"
+        ],
+        "meaning": "Highly interested, likely to buy soon",
+        "funnel_stage": "Hot"
+      },
+      "QUOTED": {
+        "example_statuses": [
+          "3.0 QUOTED",
+          "3.1 QUOTED - Thinking About It"
+        ],
+        "meaning": "Received a quote but has not decided",
+        "funnel_stage": "Quoted"
+      },
+      "CONTACTED - Not Interested": {
+        "example_statuses": [
+          "2.1 CONTACTED - Not Interested"
+        ],
+        "meaning": "Spoke with lead but they declined",
+        "funnel_stage": "Contacted (Lost)"
+      },
+      "NO_CONTACT": {
+        "example_statuses": [
+          "1.0 NO CONTACT",
+          "1.1 CALLED - No Answer"
+        ],
+        "meaning": "Could not reach the lead",
+        "funnel_stage": "Lost Before Contact"
+      },
+      "BAD_PHONE": {
+        "example_statuses": [
+          "1.2 CALLED - Bad Phone #"
+        ],
+        "meaning": "Phone number invalid or disconnected",
+        "funnel_stage": "Lost Before Contact"
+      }
+    },
+    "calculated_metrics": [
+      {
+        "metric": "Is_Contacted",
+        "formula": "Status contains \"CONTACTED\", \"QUOTED\", \"HOT\", \"SOLD\", or \"TRANSFERRED\"",
+        "purpose": "Determines if we successfully reached the lead"
+      },
+      {
+        "metric": "Is_Quoted",
+        "formula": "Status contains \"QUOTED\", \"HOT\", or \"SOLD\"",
+        "purpose": "Determines if lead received a price quote"
+      },
+      {
+        "metric": "Is_Sale",
+        "formula": "Status contains \"SOLD\" or \"CUSTOMER\"",
+        "purpose": "Determines if lead purchased a policy"
+      },
+      {
+        "metric": "Sale Rate",
+        "formula": "(Number of Sales / Total Leads) \u00d7 100",
+        "purpose": "Primary performance metric - what % of leads become customers"
+      },
+      {
+        "metric": "Contact Rate",
+        "formula": "(Number Contacted / Total Leads) \u00d7 100",
+        "purpose": "Measures lead quality - can we reach them?"
+      },
+      {
+        "metric": "CPL (Cost Per Lead)",
+        "formula": "Actual cost paid to vendor per lead",
+        "purpose": "Input cost for ROI calculation"
+      },
+      {
+        "metric": "CPB (Cost Per Bind)",
+        "formula": "Total Spend / Number of Sales",
+        "purpose": "True customer acquisition cost"
+      },
+      {
+        "metric": "ROI %",
+        "formula": "((Estimated Revenue - Total Spend) / Total Spend) \u00d7 100",
+        "purpose": "Is this vendor profitable? Above 0% = making money"
+      }
+    ],
+    "data_notes": [
+      "Total records loaded: 54,332",
+      "Date range: 2025-09-22 to 2025-11-16",
+      "Unique agents: 8",
+      "Unique vendors: 9",
+      "Records with valid status: 53,913 (99.2%)"
+    ],
+    "methodology_summary": "This analysis interprets call center lead data to measure sales performance. Each row represents one call to a potential customer. The 'Current Status' field is classified into outcome categories (SOLD, QUOTED, NO_CONTACT, etc.) to build a sales funnel. Metrics are calculated by grouping data by agent, vendor, and time to identify what drives conversions. Vendor costs are applied to calculate true ROI."
+  },
+  "industry_benchmarks": {
+    "sale_rate": {
+      "poor": 0.5,
+      "average": 1.0,
+      "good": 1.5,
+      "excellent": 2.0,
+      "description": "Percentage of leads that become customers"
+    },
+    "contact_rate": {
+      "poor": 30,
+      "average": 50,
+      "good": 65,
+      "excellent": 80,
+      "description": "Percentage of leads successfully reached"
+    },
+    "quote_rate": {
+      "poor": 10,
+      "average": 20,
+      "good": 30,
+      "excellent": 40,
+      "description": "Percentage of leads that receive a quote"
+    },
+    "cost_per_bind": {
+      "excellent": 300,
+      "good": 500,
+      "average": 800,
+      "poor": 1200,
+      "description": "Total cost to acquire one customer"
+    },
+    "ltv_cac_ratio": {
+      "poor": 1.5,
+      "average": 3.0,
+      "good": 4.0,
+      "excellent": 5.0,
+      "description": "Customer lifetime value vs acquisition cost"
+    },
+    "avg_call_duration_sale": {
+      "min": 180,
+      "optimal": 420,
+      "max": 900,
+      "description": "Typical call duration for successful sales (seconds)"
+    },
+    "speed_to_lead": {
+      "excellent": 5,
+      "good": 15,
+      "average": 60,
+      "poor": 1440,
+      "description": "Minutes from lead submission to first call"
+    },
+    "call_attempts": {
+      "poor": 1,
+      "average": 3,
+      "good": 6,
+      "excellent": 8,
+      "description": "Number of call attempts before giving up"
+    }
+  }
+}

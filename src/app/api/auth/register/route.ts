@@ -6,6 +6,7 @@ import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { generateAgencySlug, DEFAULT_PERMISSIONS, SUBSCRIPTION_LIMITS } from '@/types/agency';
 import { logger } from '@/lib/logger';
 import { apiErrorResponse } from '@/lib/apiResponse';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 /**
  * Hash PIN using SHA-256 (server-side, matching existing client-side hash format)
@@ -255,20 +256,16 @@ export async function POST(request: NextRequest) {
       agencyRole = 'owner';
       agencyId = newAgency.id;
 
-      // Log activity
-      try {
-        await supabase.from('activity_log').insert({
-          action: 'agency_created',
-          user_name: newUser.name,
-          details: {
-            agency_id: newAgency.id,
-            agency_name: newAgency.name,
-            agency_slug: newAgency.slug,
-          },
-        });
-      } catch {
-        // Non-critical
-      }
+      // Log activity (safe - will not break operation if it fails)
+      await safeLogActivity(supabase, {
+        action: 'agency_created',
+        user_name: newUser.name,
+        agency_id: newAgency.id,
+        details: {
+          agency_name: newAgency.name,
+          agency_slug: newAgency.slug,
+        },
+      });
     }
 
     // ---- Create session ----

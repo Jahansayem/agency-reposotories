@@ -1,0 +1,9 @@
+[   43024ms] [ERROR] Failed to load resource: the server responded with a status of 406 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/users?select=id&name=ilike.Test+User:0
+[  223310ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://localhost:3000/api/auth/signin/google:0
+[  254105ms] [ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://localhost:3000/api/invitations/validate:0
+[  268806ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0
+[  282610ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0
+[  295359ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0
+[  309061ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0
+[  317540ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0
+[  329988ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0

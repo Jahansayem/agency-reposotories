@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+}
 
 // GET - Fetch all templates (user's own + shared) within agency
 export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -52,6 +58,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 // POST - Create a new template
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -81,12 +88,12 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 
     if (error) throw error;
 
-    // Log activity with agency_id
-    await supabase.from('activity_log').insert({
+    // Log activity with agency_id (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'template_created',
       user_name: created_by,
+      agency_id: ctx.agencyId,
       details: { template_name: name, is_shared },
-      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
     });
 
     return NextResponse.json(data);
@@ -99,6 +106,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 // DELETE - Delete a template
 export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 

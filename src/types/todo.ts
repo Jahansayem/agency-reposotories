@@ -119,6 +119,9 @@ export interface Todo {
   customer_name?: string;
   policy_type?: PolicyType;
   renewal_status?: RenewalStatus;
+  // Customer/Book of Business linking
+  customer_id?: string;
+  customer_segment?: 'elite' | 'premium' | 'standard' | 'entry';
 }
 
 // ============================================
@@ -468,7 +471,14 @@ export type ActivityAction =
   | 'marked_waiting'
   | 'customer_responded'
   | 'follow_up_overdue'
-  | 'task_reordered';
+  | 'task_reordered'
+  | 'agency_created'
+  | 'member_added'
+  | 'member_removed'
+  | 'member_role_changed'
+  | 'member_permissions_changed'
+  | 'member_role_and_permissions_changed'
+  | 'customer_import';
 
 /**
  * Action-specific detail types for type-safe activity logging.
@@ -500,6 +510,13 @@ export interface ActivityDetailsMap {
   customer_responded: { waiting_hours?: number };
   follow_up_overdue: { hours_overdue: number };
   task_reordered: { from_position: number; to_position: number };
+  agency_created: { agency_name: string; agency_id: string };
+  member_added: { member_name: string; role: string };
+  member_removed: { member_name: string };
+  member_role_changed: { member_name: string; from_role: string; to_role: string };
+  member_permissions_changed: { member_name: string; permissions_changed: string[] };
+  member_role_and_permissions_changed: { member_name: string; from_role: string; to_role: string; permissions_changed: string[] };
+  customer_import: { imported: number; duplicates: number; errors: number; timestamp: string };
 }
 
 /**

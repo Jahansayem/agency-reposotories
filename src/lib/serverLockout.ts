@@ -52,19 +52,38 @@ function getAttemptsKey(identifier: string): string {
  */
 export async function checkLockout(identifier: string): Promise<LockoutStatus> {
   if (!redis) {
-    // Redis not configured - this is expected only in development.
-    // In production, Redis MUST be configured for lockout to function.
-    logger.warn('SECURITY: Redis not configured for lockout - lockout protection is DISABLED. ' +
-      'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables to enable.', {
-      component: 'ServerLockout',
-      identifier,
-    });
-    return {
-      isLocked: false,
-      remainingSeconds: 0,
-      attempts: 0,
-      maxAttempts: MAX_ATTEMPTS,
-    };
+    // SECURITY FIX: Fail closed when Redis is unavailable.
+    // In production, this prevents brute-force attacks when Redis is down.
+    // In development (NODE_ENV !== 'production'), allow bypassing with a warning.
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction) {
+      // CRITICAL: In production, refuse all logins if Redis is unavailable
+      logger.error('SECURITY CRITICAL: Redis not configured in production - ALL LOGINS BLOCKED. ' +
+        'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables immediately.', {
+        component: 'ServerLockout',
+        identifier,
+      });
+      return {
+        isLocked: true,
+        remainingSeconds: 300, // 5 minutes
+        attempts: MAX_ATTEMPTS,
+        maxAttempts: MAX_ATTEMPTS,
+      };
+    } else {
+      // Development: Allow bypass with warning
+      logger.warn('SECURITY: Redis not configured for lockout - lockout protection is DISABLED (development only). ' +
+        'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables to enable.', {
+        component: 'ServerLockout',
+        identifier,
+      });
+      return {
+        isLocked: false,
+        remainingSeconds: 0,
+        attempts: 0,
+        maxAttempts: MAX_ATTEMPTS,
+      };
+    }
   }
 
   try {
@@ -116,17 +135,36 @@ export async function recordFailedAttempt(
   metadata?: { ip?: string; userAgent?: string; userName?: string }
 ): Promise<LockoutStatus> {
   if (!redis) {
-    logger.warn('SECURITY: Redis not configured for lockout tracking - lockout protection is DISABLED. ' +
-      'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables to enable.', {
-      component: 'ServerLockout',
-      identifier,
-    });
-    return {
-      isLocked: false,
-      remainingSeconds: 0,
-      attempts: 1,
-      maxAttempts: MAX_ATTEMPTS,
-    };
+    // SECURITY FIX: Fail closed when Redis is unavailable
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    if (isProduction) {
+      // CRITICAL: In production, assume max attempts reached if Redis is unavailable
+      logger.error('SECURITY CRITICAL: Failed login attempt cannot be tracked - Redis unavailable. ' +
+        'Assuming lockout to prevent brute force.', {
+        component: 'ServerLockout',
+        identifier,
+        ...metadata,
+      });
+      return {
+        isLocked: true,
+        remainingSeconds: 300, // 5 minutes
+        attempts: MAX_ATTEMPTS,
+        maxAttempts: MAX_ATTEMPTS,
+      };
+    } else {
+      // Development: Allow bypass with warning
+      logger.warn('SECURITY: Redis not configured for lockout tracking - lockout protection is DISABLED (development only).', {
+        component: 'ServerLockout',
+        identifier,
+      });
+      return {
+        isLocked: false,
+        remainingSeconds: 0,
+        attempts: 1,
+        maxAttempts: MAX_ATTEMPTS,
+      };
+    }
   }
 
   try {

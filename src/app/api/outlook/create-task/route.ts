@@ -6,17 +6,20 @@ import { TodoPriority } from '@/types/todo';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
-// Create Supabase client for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 /**
  * Get the default agency ID (Bealer Agency) for backward compatibility
  * when no agency_id is provided in the request.
  */
 async function getDefaultAgencyId(): Promise<string | null> {
+  const supabase = getSupabaseClient();
   const { data: agency, error } = await supabase
     .from('agencies')
     .select('id')
@@ -39,6 +42,7 @@ async function getDefaultAgencyId(): Promise<string | null> {
  * Validate that the specified agency exists and is active
  */
 async function validateAgency(agencyId: string): Promise<boolean> {
+  const supabase = getSupabaseClient();
   const { data: agency, error } = await supabase
     .from('agencies')
     .select('id')
@@ -55,6 +59,7 @@ async function validateCreator(createdBy: string): Promise<{ valid: boolean; use
     return { valid: false };
   }
 
+  const supabase = getSupabaseClient();
   const { data: user, error } = await supabase
     .from('users')
     .select('id, name')
@@ -82,6 +87,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const supabase = getSupabaseClient();
     const { text, assignedTo, priority, dueDate, createdBy, agency_id } = await request.json();
 
     // SECURITY: Validate that createdBy is a real user in the system

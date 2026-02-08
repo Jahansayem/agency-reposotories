@@ -26,8 +26,26 @@ function getSupabaseClient(): SupabaseClient {
   if (!_supabase) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl) {
+    // During Next.js build, env vars may not be available
+    // Return a placeholder that will fail gracefully at runtime if actually called
+    if (!supabaseUrl || (!supabaseServiceKey && !supabaseAnonKey)) {
+      // Check if we're in build phase
+      const isBuildTime = typeof window === 'undefined' && !supabaseServiceKey;
+      if (isBuildTime) {
+        // Create a dummy client that will throw meaningful errors at runtime
+        // This allows the build to complete without env vars
+        _supabase = {
+          from: () => {
+            throw new Error('Supabase not configured - missing environment variables');
+          },
+          rpc: () => {
+            throw new Error('Supabase not configured - missing environment variables');
+          },
+        } as unknown as SupabaseClient;
+        return _supabase;
+      }
       throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
     }
 
@@ -40,7 +58,7 @@ function getSupabaseClient(): SupabaseClient {
 
     _supabase = createClient(
       supabaseUrl,
-      supabaseServiceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      supabaseServiceKey || supabaseAnonKey!
     );
   }
   return _supabase;

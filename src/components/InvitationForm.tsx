@@ -113,14 +113,14 @@ export function InvitationForm({
   if (inviteUrl) {
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+        <div className="p-4 bg-[var(--success)]/10 border border-[var(--success)]/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <p className="font-medium text-green-800 dark:text-green-200 text-sm">
+            <Check className="w-5 h-5 text-[var(--success)]" />
+            <p className="font-medium text-[var(--success)] text-sm">
               Invitation sent successfully!
             </p>
           </div>
-          <p className="text-xs text-green-700 dark:text-green-300 mb-3">
+          <p className="text-xs text-[var(--success)] mb-3">
             Share this link with the invitee:
           </p>
           <div className="flex items-center gap-2">
@@ -130,9 +130,9 @@ export function InvitationForm({
               value={inviteUrl}
               className="
                 flex-1 px-3 py-2 rounded-lg text-xs
-                bg-white dark:bg-gray-700
-                border border-green-300 dark:border-green-700
-                text-gray-900 dark:text-white
+                bg-[var(--surface-2)]
+                border border-[var(--success)]/30
+                text-[var(--foreground)]
                 truncate
               "
             />
@@ -162,15 +162,15 @@ export function InvitationForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Error message */}
       {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+        <div className="p-3 bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-[var(--danger)] flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-[var(--danger)]">{error}</p>
         </div>
       )}
 
       {/* Email input */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">
           Email Address
         </label>
         <Input
@@ -189,7 +189,7 @@ export function InvitationForm({
 
       {/* Role selector */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">
           Role
         </label>
         <div className="grid grid-cols-2 gap-2">
@@ -200,8 +200,8 @@ export function InvitationForm({
             className={`
               px-4 py-2.5 rounded-lg border-2 transition-all text-sm
               ${role === 'staff'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500'
+                ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
+                : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-muted)]'
               }
               disabled:opacity-50 disabled:cursor-not-allowed
             `}
@@ -217,8 +217,8 @@ export function InvitationForm({
             className={`
               px-4 py-2.5 rounded-lg border-2 transition-all text-sm
               ${role === 'manager'
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-                : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500'
+                ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]'
+                : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--text-muted)]'
               }
               disabled:opacity-50 disabled:cursor-not-allowed
             `}
@@ -227,7 +227,7 @@ export function InvitationForm({
           </button>
         </div>
         {!canInviteManager && (
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
             Only owners can invite managers
           </p>
         )}

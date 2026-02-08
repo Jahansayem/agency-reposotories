@@ -67,7 +67,7 @@ export function PresenceIndicator({
               style={{ zIndex: displayUsers.length - index }}
             >
               <div
-                className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center text-white text-xs font-semibold shadow-md"
+                className="w-8 h-8 rounded-full border-2 border-[var(--surface)] flex items-center justify-center text-white text-xs font-semibold shadow-md"
                 style={{ backgroundColor: user.color }}
                 title={user.user}
               >
@@ -75,15 +75,15 @@ export function PresenceIndicator({
               </div>
 
               {/* Online indicator dot */}
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full">
-                <div className="w-full h-full bg-green-500 rounded-full animate-pulse" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[var(--success)] border-2 border-[var(--surface)] rounded-full">
+                <div className="w-full h-full bg-[var(--success)] rounded-full animate-pulse" />
               </div>
             </div>
           ))}
 
           {/* +N more indicator */}
           {remainingCount > 0 && (
-            <div className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-800 bg-gray-500 flex items-center justify-center text-white text-xs font-semibold shadow-md">
+            <div className="w-8 h-8 rounded-full border-2 border-[var(--surface)] bg-[var(--text-muted)] flex items-center justify-center text-white text-xs font-semibold shadow-md">
               +{remainingCount}
             </div>
           )}
@@ -92,7 +92,7 @@ export function PresenceIndicator({
 
       {/* Compact indicator (no avatars) */}
       {!showAvatars && (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--success)]/10 text-[var(--success)]">
           <Circle className="w-2 h-2 fill-current animate-pulse" />
           <span className="text-sm font-medium">{otherUsers.length} online</span>
         </div>
@@ -105,11 +105,11 @@ export function PresenceIndicator({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="absolute top-full left-0 mt-2 w-64 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50"
+            className="absolute top-full left-0 mt-2 w-64 p-3 bg-[var(--surface)] rounded-lg shadow-xl border border-[var(--border)] z-50"
           >
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
-              <Users className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--border)]">
+              <Users className="w-4 h-4 text-[var(--text-muted)]" />
+              <span className="text-sm font-semibold text-[var(--foreground)]">
                 {otherUsers.length} {otherUsers.length === 1 ? 'person' : 'people'} online
               </span>
             </div>
@@ -118,7 +118,7 @@ export function PresenceIndicator({
               {otherUsers.map((user) => (
                 <div
                   key={user.userId}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors"
                 >
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">
@@ -128,15 +128,15 @@ export function PresenceIndicator({
                     >
                       {user.user.charAt(0).toUpperCase()}
                     </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-[var(--success)] border-2 border-[var(--surface)] rounded-full" />
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    <p className="text-sm font-medium text-[var(--foreground)] truncate">
                       {user.user}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                       <span>{getLocationLabel(user.location)}</span>
                       <span>•</span>
                       <span>{formatDistance(user.onlineAt, new Date(), { addSuffix: true })}</span>

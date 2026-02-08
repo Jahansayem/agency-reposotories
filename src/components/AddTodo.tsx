@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell } from 'lucide-react';
+import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell, HelpCircle } from 'lucide-react';
+import { Tooltip } from '@/components/ui/Tooltip';
 import SmartParseModal from './SmartParseModal';
 import ReminderPicker from './ReminderPicker';
 import VoiceRecordingIndicator from './VoiceRecordingIndicator';
@@ -10,6 +11,8 @@ import FileImporter from './FileImporter';
 import { QuickTaskButtons, useTaskPatterns } from './QuickTaskButtons';
 import { CategoryConfidenceIndicator } from './CategoryConfidenceIndicator';
 import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate } from '@/types/todo';
+import type { LinkedCustomer } from '@/types/customer';
+import { CustomerSearchInput } from './customer/CustomerSearchInput';
 import { getUserPreferences, updateLastTaskDefaults } from '@/lib/userPreferences';
 import { analyzeTaskPattern } from '@/lib/insurancePatterns';
 import { logger } from '@/lib/logger';
@@ -22,10 +25,11 @@ import TemplatePicker from './TemplatePicker';
 import { usePermission } from '@/hooks/usePermission';
 
 interface AddTodoProps {
-  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null) => void;
+  onAdd: (text: string, priority: TodoPriority, dueDate?: string, assignedTo?: string, subtasks?: Subtask[], transcription?: string, sourceFile?: File, reminderAt?: string, notes?: string, recurrence?: 'daily' | 'weekly' | 'monthly' | null, customer?: LinkedCustomer) => void;
   users: string[];
   currentUserId?: string;
   autoFocus?: boolean;
+  agencyId?: string;
 }
 
 interface SmartParseResult {
@@ -94,9 +98,12 @@ declare global {
   }
 }
 
-export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddTodoProps) {
+export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agencyId }: AddTodoProps) {
   const toast = useToast();
   const canUseAiFeatures = usePermission('can_use_ai_features');
+
+  // Customer linking state
+  const [linkedCustomer, setLinkedCustomer] = useState<LinkedCustomer | null>(null);
 
   // Fetch smart defaults based on user patterns
   const { suggestions, isLoading: suggestionsLoading } = useSuggestedDefaults(currentUserId);
@@ -338,7 +345,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
         }))
       : undefined as unknown as Subtask[];
 
-    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, notes || undefined, recurrence || null);
+    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -391,7 +398,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     taskAssignedTo?: string,
     subtasks?: Subtask[]
   ) => {
-    onAdd(taskText, taskPriority, taskDueDate, taskAssignedTo, subtasks, undefined, undefined, undefined, notes || undefined, recurrence || null);
+    onAdd(taskText, taskPriority, taskDueDate, taskAssignedTo, subtasks, undefined, undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, taskPriority, taskAssignedTo);
@@ -417,6 +424,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     setSuggestedSubtasks([]);
     setTemplateSubtasks([]); // Clear template subtasks (Phase 2.2)
     setPatternDismissed(false); // Reset so new pattern can be detected on next input
+    setLinkedCustomer(null); // Clear linked customer
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -433,7 +441,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
     if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       if (text.trim() && !isProcessing) {
-        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, undefined, undefined, notes || undefined, recurrence || null);
+        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
         // Save preferences for next time
         if (currentUserId) {
           updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -711,9 +719,9 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
             {/* Smart Defaults Indicator */}
             {suggestions && suggestions.confidence >= 0.5 && (usingSuggestedPriority || usingSuggestedAssignee || usingSuggestedDueDate) && (
               <div className="flex items-center gap-2 text-xs text-[var(--accent)] mb-3 px-1">
-                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                <Sparkles className="w-3.5 h-3.5 flex-shrink-0 animate-pulse" aria-hidden="true" />
                 <span className="font-medium">
-                  Smart defaults applied ({Math.round(suggestions.confidence * 100)}% confidence)
+                  AI suggested defaults ({Math.round(suggestions.confidence * 100)}% confidence)
                 </span>
                 <span className="text-[var(--text-muted)]">
                   • Based on {suggestions.metadata.basedOnTasks} recent tasks
@@ -723,7 +731,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
             <div className="flex flex-wrap items-center gap-4">
               {/* Priority - improved pill proportions */}
               <div
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm relative"
                 style={{
                   borderColor: priorityConfig.color + '40',
                   backgroundColor: priorityConfig.color + '08'
@@ -746,10 +754,15 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                   <option value="high" className="text-[var(--foreground)] bg-[var(--surface)]">High</option>
                   <option value="urgent" className="text-[var(--foreground)] bg-[var(--surface)]">Urgent</option>
                 </select>
+                {usingSuggestedPriority && suggestions && suggestions.confidence >= 0.5 && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full flex items-center justify-center" title={`AI suggested (${Math.round(suggestions.confidence * 100)}% confidence)`}>
+                    <Sparkles className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
               </div>
 
               {/* Due date - improved pill with quick date chips */}
-              <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm ${
+              <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm relative ${
                 dueDate
                   ? 'border-[var(--accent)]/40 bg-[var(--accent-light)]'
                   : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
@@ -767,10 +780,15 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                     dueDate ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
                   }`}
                 />
+                {usingSuggestedDueDate && suggestions && suggestions.confidence >= 0.5 && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full flex items-center justify-center" title={`AI suggested (${Math.round(suggestions.confidence * 100)}% confidence)`}>
+                    <Sparkles className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
               </div>
 
               {/* Assignee - improved pill proportions */}
-              <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm ${
+              <div className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-full border-2 transition-all cursor-pointer hover:shadow-sm relative ${
                 assignedTo
                   ? 'border-[var(--success)]/40 bg-[var(--success)]/08'
                   : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-hover)]'
@@ -793,6 +811,11 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                     <option key={user} value={user} className="text-[var(--foreground)] bg-[var(--surface)]">{user}</option>
                   ))}
                 </select>
+                {usingSuggestedAssignee && suggestions && suggestions.confidence >= 0.5 && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full flex items-center justify-center" title={`AI suggested (${Math.round(suggestions.confidence * 100)}% confidence)`}>
+                    <Sparkles className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
               </div>
 
               {/* Reminder - pill style */}
@@ -801,6 +824,20 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
                 dueDate={dueDate || undefined}
                 onChange={(time) => setReminderAt(time)}
                 compact
+              />
+            </div>
+
+            {/* Customer Link - Link task to customer from book of business */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">
+                Link to Customer (optional)
+              </label>
+              <CustomerSearchInput
+                value={linkedCustomer}
+                onChange={setLinkedCustomer}
+                placeholder="Search customers by name..."
+                agencyId={agencyId}
+                className="max-w-md"
               />
             </div>
 
@@ -943,7 +980,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus }: AddT
             setDraggedFile(null);
           }}
           onCreateTask={(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile) => {
-            onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, undefined, notes || undefined, recurrence || null);
+            onAdd(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
             setShowFileImporter(false);
             setDraggedFile(null);
           }}

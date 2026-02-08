@@ -260,7 +260,7 @@ export const ChatInputBar = memo(function ChatInputBar({
           <button
             onClick={onCancelEdit}
             aria-label="Cancel editing"
-            className="p-1.5 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
           >
             <X className="w-4 h-4 text-[var(--chat-text-secondary)]" />
           </button>
@@ -308,7 +308,7 @@ export const ChatInputBar = memo(function ChatInputBar({
               <button
                 onClick={onCancelReply}
                 aria-label="Cancel reply"
-                className="p-1.5 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
+                className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-lg)] transition-colors"
               >
                 <X className="w-4 h-4 text-[var(--chat-text-secondary)]" />
               </button>
@@ -375,9 +375,10 @@ export const ChatInputBar = memo(function ChatInputBar({
                     <motion.button
                       key={`${emoji}-${i}`}
                       onClick={() => addEmoji(emoji)}
-                      className="w-10 h-10 flex items-center justify-center rounded-[var(--radius-xl)] hover:bg-[var(--chat-surface-hover)] transition-all text-xl"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] hover:bg-[var(--chat-surface-hover)] transition-all text-xl"
                       whileHover={{ scale: 1.2 }}
                       whileTap={{ scale: 0.9 }}
+                      aria-label={`Insert emoji ${emoji}`}
                     >
                       {emoji}
                     </motion.button>
@@ -407,11 +408,12 @@ export const ChatInputBar = memo(function ChatInputBar({
           <motion.button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             disabled={disabled}
-            className={`p-3 rounded-[var(--radius-xl)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
               showEmojiPicker ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white/70'
             }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            aria-label="Toggle emoji picker"
           >
             <Smile className="w-5 h-5" />
           </motion.button>
@@ -431,8 +433,9 @@ export const ChatInputBar = memo(function ChatInputBar({
               inputRef.current?.focus();
             }}
             disabled={disabled}
-            className="p-3 rounded-[var(--radius-xl)] transition-all duration-200 hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white/70 disabled:opacity-50"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] transition-all duration-200 hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white/70 disabled:opacity-50"
             title="Mention someone"
+            aria-label="Mention someone"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -480,9 +483,10 @@ export const ChatInputBar = memo(function ChatInputBar({
           <motion.button
             onClick={handleSend}
             disabled={!newMessage.trim() || disabled}
-            className="p-3 rounded-[var(--radius-xl)] bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            aria-label="Send message"
           >
             <Send className="w-5 h-5" />
           </motion.button>

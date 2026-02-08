@@ -60,22 +60,22 @@ export function PerformanceDashboard({ className = '' }: PerformanceDashboardPro
   }, [startMonitoring, stopMonitoring]);
 
   const getStatusColor = (value: number, thresholds: { good: number; warning: number }) => {
-    if (value >= thresholds.good) return 'text-green-600 dark:text-green-400';
-    if (value >= thresholds.warning) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (value >= thresholds.good) return 'text-[var(--success)]';
+    if (value >= thresholds.warning) return 'text-[var(--warning)]';
+    return 'text-[var(--danger)]';
   };
 
   const getLatencyStatusColor = (value: number) => {
-    if (value < 100) return 'text-green-600 dark:text-green-400';
-    if (value < 300) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (value < 100) return 'text-[var(--success)]';
+    if (value < 300) return 'text-[var(--warning)]';
+    return 'text-[var(--danger)]';
   };
 
   const getMemoryStatusColor = (percent?: number) => {
-    if (!percent) return 'text-gray-600 dark:text-gray-400';
-    if (percent < 50) return 'text-green-600 dark:text-green-400';
-    if (percent < 80) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (!percent) return 'text-[var(--text-muted)]';
+    if (percent < 50) return 'text-[var(--success)]';
+    if (percent < 80) return 'text-[var(--warning)]';
+    return 'text-[var(--danger)]';
   };
 
   const getTrend = (current: number, avg: number) => {
@@ -91,18 +91,18 @@ export function PerformanceDashboard({ className = '' }: PerformanceDashboardPro
   };
 
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${className}`}>
+    <div className={`bg-[var(--surface)] rounded-lg border border-[var(--border)] ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-            <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="p-2 rounded-lg bg-[var(--accent)]/10">
+            <Activity className="w-5 h-5 text-[var(--accent)]" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">
+            <h3 className="font-semibold text-[var(--foreground)]">
               Performance Monitor
             </h3>
-            <p className="text-xs text-gray-600 dark:text-gray-400">
+            <p className="text-xs text-[var(--text-muted)]">
               Real-time application metrics
             </p>
           </div>
@@ -110,13 +110,13 @@ export function PerformanceDashboard({ className = '' }: PerformanceDashboardPro
 
         <div className="flex items-center gap-2">
           {/* View selector */}
-          <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+          <div className="flex rounded-lg bg-[var(--surface-2)] p-1">
             <button
               onClick={() => setSelectedView('overview')}
               className={`px-3 py-1 text-sm rounded transition-colors ${
                 selectedView === 'overview'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white'
-                  : 'text-gray-600 dark:text-gray-400'
+                  ? 'bg-[var(--surface)] text-[var(--foreground)]'
+                  : 'text-[var(--text-muted)]'
               }`}
             >
               Overview
@@ -125,8 +125,8 @@ export function PerformanceDashboard({ className = '' }: PerformanceDashboardPro
               onClick={() => setSelectedView('charts')}
               className={`px-3 py-1 text-sm rounded transition-colors ${
                 selectedView === 'charts'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white'
-                  : 'text-gray-600 dark:text-gray-400'
+                  ? 'bg-[var(--surface)] text-[var(--foreground)]'
+                  : 'text-[var(--text-muted)]'
               }`}
             >
               Charts
@@ -136,32 +136,32 @@ export function PerformanceDashboard({ className = '' }: PerformanceDashboardPro
           {/* Controls */}
           <button
             onClick={isMonitoring ? stopMonitoring : startMonitoring}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors"
             title={isMonitoring ? 'Pause monitoring' : 'Start monitoring'}
           >
             {isMonitoring ? (
-              <Pause className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <Pause className="w-4 h-4 text-[var(--text-muted)]" />
             ) : (
-              <Play className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <Play className="w-4 h-4 text-[var(--text-muted)]" />
             )}
           </button>
 
           <button
             onClick={resetMetrics}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors"
             title="Reset metrics"
           >
-            <RotateCcw className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            <RotateCcw className="w-4 h-4 text-[var(--text-muted)]" />
           </button>
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors"
           >
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" />
             )}
           </button>
         </div>
@@ -246,10 +246,10 @@ export function PerformanceDashboard({ className = '' }: PerformanceDashboardPro
                   unit="ms"
                   statusColor={
                     metrics.connectionStatus === 'connected'
-                      ? 'text-green-600 dark:text-green-400'
+                      ? 'text-[var(--success)]'
                       : metrics.connectionStatus === 'connecting'
-                      ? 'text-yellow-600 dark:text-yellow-400'
-                      : 'text-red-600 dark:text-red-400'
+                      ? 'text-[var(--warning)]'
+                      : 'text-[var(--danger)]'
                   }
                   details={[
                     { label: 'Status', value: metrics.connectionStatus },
@@ -333,7 +333,7 @@ function MetricCard({ icon, label, value, unit, trend, statusColor, details }: M
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
-      className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 cursor-pointer"
+      className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] cursor-pointer"
       onClick={() => setShowDetails(!showDetails)}
     >
       <div className="flex items-start justify-between mb-2">
@@ -343,15 +343,15 @@ function MetricCard({ icon, label, value, unit, trend, statusColor, details }: M
 
         {trend && (
           <div>
-            {trend === 'up' && <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />}
-            {trend === 'down' && <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />}
-            {trend === 'stable' && <Minus className="w-4 h-4 text-gray-600 dark:text-gray-400" />}
+            {trend === 'up' && <TrendingUp className="w-4 h-4 text-[var(--success)]" />}
+            {trend === 'down' && <TrendingDown className="w-4 h-4 text-[var(--danger)]" />}
+            {trend === 'stable' && <Minus className="w-4 h-4 text-[var(--text-muted)]" />}
           </div>
         )}
       </div>
 
       <div>
-        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{label}</p>
+        <p className="text-xs text-[var(--text-muted)] mb-1">{label}</p>
         <p className={`text-2xl font-bold ${statusColor}`}>
           {value}
           <span className="text-sm ml-1">{unit}</span>
@@ -365,12 +365,12 @@ function MetricCard({ icon, label, value, unit, trend, statusColor, details }: M
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-1"
+            className="mt-3 pt-3 border-t border-[var(--border)] space-y-1"
           >
             {details.map((detail, i) => (
               <div key={i} className="flex justify-between text-xs">
-                <span className="text-gray-600 dark:text-gray-400">{detail.label}:</span>
-                <span className="text-gray-900 dark:text-white font-medium">{detail.value}</span>
+                <span className="text-[var(--text-muted)]">{detail.label}:</span>
+                <span className="text-[var(--foreground)] font-medium">{detail.value}</span>
               </div>
             ))}
           </motion.div>
@@ -394,9 +394,9 @@ interface ChartCardProps {
 function ChartCard({ title, data, color, threshold, unit }: ChartCardProps) {
   if (data.length === 0) {
     return (
-      <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{title}</h4>
-        <p className="text-sm text-gray-600 dark:text-gray-400">No data yet...</p>
+      <div className="p-4 rounded-lg border border-[var(--border)]">
+        <h4 className="text-sm font-semibold text-[var(--foreground)] mb-2">{title}</h4>
+        <p className="text-sm text-[var(--text-muted)]">No data yet...</p>
       </div>
     );
   }
@@ -414,17 +414,17 @@ function ChartCard({ title, data, color, threshold, unit }: ChartCardProps) {
     .join(' ');
 
   return (
-    <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="p-4 rounded-lg border border-[var(--border)]">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h4>
-        <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
+        <h4 className="text-sm font-semibold text-[var(--foreground)]">{title}</h4>
+        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
           <span>Min: {minValue.toFixed(0)}{unit}</span>
           <span>Max: {maxValue.toFixed(0)}{unit}</span>
           <span>Current: {data[data.length - 1]?.y.toFixed(0)}{unit}</span>
         </div>
       </div>
 
-      <div className="relative w-full h-32 bg-gray-100 dark:bg-gray-900 rounded">
+      <div className="relative w-full h-32 bg-[var(--surface-2)] rounded">
         <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
           {/* Threshold line */}
           {threshold && (
@@ -463,10 +463,10 @@ export function PerformanceBadge({ className = '' }: { className?: string }) {
 
   const statusColor =
     metrics.fps >= 55
-      ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+      ? 'bg-[var(--success)]/10 text-[var(--success)]'
       : metrics.fps >= 30
-      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
-      : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400';
+      ? 'bg-[var(--warning)]/10 text-[var(--warning)]'
+      : 'bg-[var(--danger)]/10 text-[var(--danger)]';
 
   return (
     <div className={`flex items-center gap-2 px-2 py-1 rounded-lg ${statusColor} ${className}`}>

@@ -54,11 +54,11 @@ const getRoleLabel = (role: AgencyRole) => {
 const getRoleColor = (role: AgencyRole) => {
   switch (role) {
     case 'owner':
-      return 'text-yellow-600 dark:text-yellow-500';
+      return 'text-[var(--warning)]';
     case 'manager':
-      return 'text-blue-600 dark:text-blue-500';
+      return 'text-[var(--accent)]';
     default:
-      return 'text-gray-600 dark:text-gray-400';
+      return 'text-[var(--text-muted)]';
   }
 };
 
@@ -217,7 +217,7 @@ export function AgencySwitcher({
           )}
 
           {/* Agency Name */}
-          <span className="font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
+          <span className="font-medium text-[var(--foreground)] truncate max-w-[150px]">
             {isSwitchingAgency ? 'Switching...' : (isLoading ? 'Loading...' : (currentAgency?.name || 'Select Agency'))}
           </span>
 
@@ -230,7 +230,7 @@ export function AgencySwitcher({
 
           {/* Dropdown Arrow */}
           <ChevronDown
-            className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </button>
 
@@ -252,8 +252,8 @@ export function AgencySwitcher({
               role="listbox"
             >
               {/* Header */}
-              <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <div className="px-3 py-2 border-b border-[var(--border)]">
+                <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                   Your Agencies
                 </p>
               </div>
@@ -261,7 +261,7 @@ export function AgencySwitcher({
               {/* Agency List */}
               <div className="max-h-64 overflow-y-auto py-1">
                 {agencies.length === 0 ? (
-                  <div className="px-3 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <div className="px-3 py-4 text-center text-[var(--text-muted)]">
                     <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">No agencies yet</p>
                   </div>
@@ -272,9 +272,9 @@ export function AgencySwitcher({
                       onClick={() => handleSelectAgency(agency.agency_id)}
                       className={`
                         w-full flex items-center gap-3 px-3 py-2
-                        hover:bg-gray-50 dark:hover:bg-gray-700
+                        hover:bg-[var(--surface-2)]
                         transition-colors text-left
-                        ${agency.agency_id === currentAgency?.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                        ${agency.agency_id === currentAgency?.id ? 'bg-[var(--accent)]/10' : ''}
                       `}
                       role="option"
                       aria-selected={agency.agency_id === currentAgency?.id}
@@ -289,14 +289,14 @@ export function AgencySwitcher({
 
                       {/* Agency Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">
+                        <p className="font-medium text-[var(--foreground)] truncate">
                           {agency.agency_name}
                         </p>
                         <p className={`text-xs flex items-center gap-1 ${getRoleColor(agency.role)}`}>
                           {getRoleIcon(agency.role)}
                           {getRoleLabel(agency.role)}
                           {agency.is_default && (
-                            <span className="text-gray-400 dark:text-gray-500 ml-1">
+                            <span className="text-[var(--text-muted)] ml-1">
                               (Default)
                             </span>
                           )}
@@ -305,7 +305,7 @@ export function AgencySwitcher({
 
                       {/* Selected Checkmark */}
                       {agency.agency_id === currentAgency?.id && (
-                        <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                        <Check className="w-5 h-5 text-[var(--accent)] flex-shrink-0" />
                       )}
                     </button>
                   ))
@@ -315,7 +315,7 @@ export function AgencySwitcher({
               {/* Action Buttons */}
               {(onManageMembers || onCreateAgency) && (
                 <>
-                  <div className="border-t border-gray-200 dark:border-gray-700" />
+                  <div className="border-t border-[var(--border)]" />
 
                   {/* Manage Members Button (owner/manager only) */}
                   {onManageMembers && (currentRole === 'owner' || currentRole === 'manager') && (
@@ -326,8 +326,8 @@ export function AgencySwitcher({
                       }}
                       className="
                         w-full flex items-center gap-2 px-3 py-2
-                        text-purple-600 dark:text-purple-400
-                        hover:bg-purple-50 dark:hover:bg-purple-900/20
+                        text-[var(--accent)]
+                        hover:bg-[var(--accent)]/10
                         transition-colors
                       "
                     >
@@ -345,8 +345,8 @@ export function AgencySwitcher({
                       }}
                       className="
                         w-full flex items-center gap-2 px-3 py-2
-                        text-blue-600 dark:text-blue-400
-                        hover:bg-blue-50 dark:hover:bg-blue-900/20
+                        text-[var(--accent)]
+                        hover:bg-[var(--accent)]/10
                         transition-colors
                       "
                     >
@@ -372,15 +372,15 @@ export function AgencySwitcher({
         <ModalHeader>
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0">
-              <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-500" />
+              <div className="w-12 h-12 rounded-full bg-[var(--warning)]/10 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-[var(--warning)]" />
               </div>
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">
                 Unsaved Changes
               </h2>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
                 You have unsaved changes that will be lost if you switch agencies.
               </p>
             </div>
@@ -389,19 +389,19 @@ export function AgencySwitcher({
 
         <ModalBody>
           <div className="space-y-3">
-            <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+            <p className="text-sm text-[var(--foreground)] font-medium">
               The following will be lost:
             </p>
             <ul className="space-y-2">
               {changeDetails.map((detail, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="text-yellow-600 dark:text-yellow-500 mt-0.5">•</span>
+                <li key={index} className="flex items-start gap-2 text-sm text-[var(--text-muted)]">
+                  <span className="text-[var(--warning)] mt-0.5">•</span>
                   <span>{detail}</span>
                 </li>
               ))}
             </ul>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
-              Are you sure you want to switch to <span className="font-semibold text-gray-900 dark:text-white">{pendingAgency?.agency_name}</span>?
+            <p className="text-sm text-[var(--text-muted)] mt-4">
+              Are you sure you want to switch to <span className="font-semibold text-[var(--foreground)]">{pendingAgency?.agency_name}</span>?
             </p>
           </div>
         </ModalBody>
@@ -412,9 +412,9 @@ export function AgencySwitcher({
             className="
               flex-1 sm:flex-initial
               px-4 py-2 rounded-[var(--radius-lg)]
-              bg-gray-100 dark:bg-gray-700
-              text-gray-700 dark:text-gray-300
-              hover:bg-gray-200 dark:hover:bg-gray-600
+              bg-[var(--surface-2)]
+              text-[var(--foreground)]
+              hover:bg-[var(--surface)]
               transition-colors
               font-medium
               min-h-[44px]
@@ -428,7 +428,7 @@ export function AgencySwitcher({
             className="
               flex-1 sm:flex-initial
               px-4 py-2 rounded-[var(--radius-lg)]
-              bg-blue-600 hover:bg-blue-700
+              bg-[var(--accent)] hover:bg-[var(--accent)]/90
               text-white
               transition-colors
               font-medium
@@ -462,8 +462,8 @@ export function AgencySwitcherMini({ className = '' }: AgencySwitcherMiniProps) 
     <div
       className={`
         flex items-center gap-1.5 px-2 py-1 rounded
-        bg-gray-100 dark:bg-gray-700/50
-        text-xs text-gray-600 dark:text-gray-300
+        bg-[var(--surface-2)]
+        text-xs text-[var(--text-muted)]
         ${className}
       `}
     >

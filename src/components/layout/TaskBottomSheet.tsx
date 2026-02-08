@@ -30,6 +30,20 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Todo, TodoPriority, TodoStatus, Subtask, User as UserType, PRIORITY_CONFIG, STATUS_CONFIG } from '@/types/todo';
 import { sanitizeTranscription } from '@/lib/sanitize';
 
+/**
+ * Filter out internal/system user names from display
+ * Replaces system-generated names with user-friendly alternatives
+ */
+function filterSystemUserName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  // List of internal/system names to filter out
+  const systemNames = ['System Recovery Script', 'System', 'Migration Script', 'Auto Recovery'];
+  if (systemNames.some(sn => name.toLowerCase().includes(sn.toLowerCase()))) {
+    return null; // Hide system names entirely
+  }
+  return name;
+}
+
 // ===============================================================================
 // TASK BOTTOM SHEET
 // A mobile-optimized bottom sheet for viewing and editing task details
@@ -342,7 +356,7 @@ export default function TaskBottomSheet({
               <div
                 className={`
                   w-10 h-1.5 rounded-full
-                  ${'bg-gray-300'}
+                  ${'bg-[var(--border)]'}
                 `}
               />
             </div>
@@ -351,7 +365,7 @@ export default function TaskBottomSheet({
             <header
               className={`
                 flex items-center justify-between px-5 pb-3 border-b flex-shrink-0
-                ${'border-gray-200'}
+                ${'border-[var(--border)]'}
               `}
             >
               <div className="flex items-center gap-3">
@@ -364,7 +378,7 @@ export default function TaskBottomSheet({
                     ${
                       task.completed
                         ? 'bg-[var(--success)] border-[var(--success)]'
-                        : 'border-gray-300 dark:border-white/30 active:border-[var(--accent)]'
+                        : 'border-[var(--border)] active:border-[var(--accent)]'
                     }
                   `}
                   aria-label={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
@@ -374,7 +388,7 @@ export default function TaskBottomSheet({
 
                 <h2
                   id="task-sheet-title"
-                  className={`font-semibold ${'text-gray-900'}`}
+                  className={`font-semibold ${'text-[var(--foreground)]'}`}
                 >
                   Task Details
                 </h2>
@@ -387,7 +401,7 @@ export default function TaskBottomSheet({
                   className={`
                     p-2.5 rounded-[var(--radius-xl)] transition-colors touch-manipulation
                     ${
-                      'text-gray-500 active:bg-gray-100'}
+                      'text-[var(--text-muted)] active:bg-[var(--surface-2)]'}
                   `}
                   aria-label="More actions"
                   aria-expanded={showMoreActions}
@@ -401,7 +415,7 @@ export default function TaskBottomSheet({
                   className={`
                     p-2.5 rounded-[var(--radius-xl)] transition-colors touch-manipulation
                     ${
-                      'text-gray-500 active:bg-gray-100'}
+                      'text-[var(--text-muted)] active:bg-[var(--surface-2)]'}
                   `}
                   aria-label="Close task details"
                 >
@@ -420,7 +434,7 @@ export default function TaskBottomSheet({
                   transition={{ duration: 0.2 }}
                   className={`
                     overflow-hidden border-b flex-shrink-0
-                    ${'border-gray-200 bg-gray-50'}
+                    ${'border-[var(--border)] bg-[var(--surface-2)]'}
                   `}
                 >
                   <div className="flex items-center justify-around px-4 py-3">
@@ -432,14 +446,14 @@ export default function TaskBottomSheet({
                         }}
                         className={`
                           flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
-                          ${'active:bg-gray-200'}
+                          ${'active:bg-[var(--surface)]'}
                         `}
                       >
                         <Mail
-                          className={`w-5 h-5 ${'text-gray-600'}`}
+                          className={`w-5 h-5 ${'text-[var(--text-muted)]'}`}
                         />
                         <span
-                          className={`text-xs ${'text-gray-500'}`}
+                          className={`text-xs ${'text-[var(--text-muted)]'}`}
                         >
                           Email
                         </span>
@@ -453,14 +467,14 @@ export default function TaskBottomSheet({
                         }}
                         className={`
                           flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
-                          ${'active:bg-gray-200'}
+                          ${'active:bg-[var(--surface)]'}
                         `}
                       >
                         <Archive
-                          className={`w-5 h-5 ${'text-gray-600'}`}
+                          className={`w-5 h-5 ${'text-[var(--text-muted)]'}`}
                         />
                         <span
-                          className={`text-xs ${'text-gray-500'}`}
+                          className={`text-xs ${'text-[var(--text-muted)]'}`}
                         >
                           Archive
                         </span>
@@ -469,14 +483,14 @@ export default function TaskBottomSheet({
                     <button
                       className={`
                         flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
-                        ${'active:bg-gray-200'}
+                        ${'active:bg-[var(--surface)]'}
                       `}
                     >
                       <Copy
-                        className={`w-5 h-5 ${'text-gray-600'}`}
+                        className={`w-5 h-5 ${'text-[var(--text-muted)]'}`}
                       />
                       <span
-                        className={`text-xs ${'text-gray-500'}`}
+                        className={`text-xs ${'text-[var(--text-muted)]'}`}
                       >
                         Copy
                       </span>
@@ -484,14 +498,14 @@ export default function TaskBottomSheet({
                     <button
                       className={`
                         flex flex-col items-center gap-1 p-2 rounded-[var(--radius-xl)] touch-manipulation
-                        ${'active:bg-gray-200'}
+                        ${'active:bg-[var(--surface)]'}
                       `}
                     >
                       <Share2
-                        className={`w-5 h-5 ${'text-gray-600'}`}
+                        className={`w-5 h-5 ${'text-[var(--text-muted)]'}`}
                       />
                       <span
-                        className={`text-xs ${'text-gray-500'}`}
+                        className={`text-xs ${'text-[var(--text-muted)]'}`}
                       >
                         Share
                       </span>
@@ -526,7 +540,7 @@ export default function TaskBottomSheet({
                           w-full px-4 py-3 rounded-[var(--radius-xl)] border text-base font-medium
                           resize-none
                           ${
-                            'bg-gray-50 border-gray-200 text-gray-900 focus:border-[var(--accent)]'}
+                            'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] focus:border-[var(--accent)]'}
                         `}
                         rows={3}
                       />
@@ -546,7 +560,7 @@ export default function TaskBottomSheet({
                           className={`
                             px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-semibold
                             ${
-                              'bg-gray-100 text-gray-600'}
+                              'bg-[var(--surface-2)] text-[var(--text-muted)]'}
                           `}
                         >
                           Cancel
@@ -561,14 +575,14 @@ export default function TaskBottomSheet({
                         transition-colors group touch-manipulation
                         ${task.completed ? 'line-through opacity-60' : ''}
                         ${
-                          'text-gray-900 active:bg-gray-50'}
+                          'text-[var(--foreground)] active:bg-[var(--surface-2)]'}
                       `}
                     >
                       {task.text}
                       <Edit3
                         className={`
                         inline-block w-4 h-4 ml-2 opacity-0 group-hover:opacity-50
-                        ${'text-gray-900'}
+                        ${'text-[var(--foreground)]'}
                       `}
                       />
                     </button>
@@ -589,7 +603,7 @@ export default function TaskBottomSheet({
                         w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                         cursor-pointer appearance-none
                         ${
-                          'bg-gray-50 border-gray-200 text-gray-900'}
+                          'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)]'}
                       `}
                     >
                       {Object.entries(STATUS_CONFIG).map(([value, config]) => (
@@ -612,7 +626,7 @@ export default function TaskBottomSheet({
                         w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                         cursor-pointer appearance-none
                         ${
-                          'bg-gray-50 border-gray-200 text-gray-900'}
+                          'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)]'}
                       `}
                       style={{ color: priorityConfig.color }}
                     >
@@ -636,7 +650,7 @@ export default function TaskBottomSheet({
                         w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                         cursor-pointer appearance-none
                         ${
-                          'bg-gray-50 border-gray-200 text-gray-900'}
+                          'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)]'}
                       `}
                     >
                       <option value="">Unassigned</option>
@@ -668,7 +682,7 @@ export default function TaskBottomSheet({
                           w-full px-3 py-2.5 rounded-[var(--radius-xl)] border text-sm font-medium
                           cursor-pointer
                           ${
-                            'bg-gray-50 border-gray-200 text-gray-900'}
+                            'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)]'}
                           ${dueDateInfo?.isOverdue ? 'text-red-500' : ''}
                         `}
                       />
@@ -694,7 +708,7 @@ export default function TaskBottomSheet({
                         key={subtask.id}
                         className={`
                           flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)] group
-                          ${'active:bg-gray-50'}
+                          ${'active:bg-[var(--surface-2)]'}
                         `}
                       >
                         <button
@@ -705,7 +719,7 @@ export default function TaskBottomSheet({
                             ${
                               subtask.completed
                                 ? 'bg-[var(--success)] border-[var(--success)]'
-                                : 'border-gray-300 dark:border-white/30 active:border-[var(--accent)]'
+                                : 'border-[var(--border)] active:border-[var(--accent)]'
                             }
                           `}
                         >
@@ -718,7 +732,7 @@ export default function TaskBottomSheet({
                           className={`
                             flex-1 text-sm
                             ${subtask.completed ? 'line-through opacity-50' : ''}
-                            ${'text-gray-700'}
+                            ${'text-[var(--foreground)]'}
                           `}
                         >
                           {subtask.text}
@@ -729,7 +743,7 @@ export default function TaskBottomSheet({
                           className={`
                             p-1.5 rounded-[var(--radius-lg)] touch-manipulation
                             ${
-                              'text-gray-400 active:text-red-500 active:bg-red-50'}
+                              'text-[var(--text-muted)] active:text-red-500 active:bg-red-50'}
                           `}
                           aria-label="Delete subtask"
                         >
@@ -742,7 +756,7 @@ export default function TaskBottomSheet({
                     <div className="flex items-center gap-2 pt-2">
                       <Plus
                         className={`w-4 h-4 flex-shrink-0 ${
-                          'text-gray-400'}`}
+                          'text-[var(--text-muted)]'}`}
                       />
                       <input
                         type="text"
@@ -758,7 +772,7 @@ export default function TaskBottomSheet({
                         className={`
                           flex-1 px-2 py-2 text-sm bg-transparent border-none outline-none
                           ${
-                            'text-gray-900 placeholder-gray-400'}
+                            'text-[var(--foreground)] placeholder-[var(--text-muted)]'}
                         `}
                       />
                       {newSubtask.trim() && (
@@ -791,7 +805,7 @@ export default function TaskBottomSheet({
                           w-full px-4 py-3 rounded-[var(--radius-xl)] border text-sm
                           resize-none min-h-[120px]
                           ${
-                            'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-[var(--accent)]'}
+                            'bg-[var(--surface-2)] border-[var(--border)] text-[var(--foreground)] placeholder-[var(--text-muted)] focus:border-[var(--accent)]'}
                         `}
                         rows={5}
                       />
@@ -811,7 +825,7 @@ export default function TaskBottomSheet({
                           className={`
                             px-4 py-2.5 rounded-[var(--radius-xl)] text-sm font-semibold
                             ${
-                              'bg-gray-100 text-gray-600'}
+                              'bg-[var(--surface-2)] text-[var(--text-muted)]'}
                           `}
                         >
                           Cancel
@@ -826,7 +840,7 @@ export default function TaskBottomSheet({
                         transition-colors touch-manipulation
                         ${
                           task.notes
-                            ? 'text-gray-700 active:bg-gray-50': 'text-gray-400 active:bg-gray-50 italic'}
+                            ? 'text-[var(--foreground)] active:bg-[var(--surface-2)]': 'text-[var(--text-muted)] active:bg-[var(--surface-2)] italic'}
                       `}
                     >
                       {task.notes || 'Tap to add notes...'}
@@ -845,7 +859,7 @@ export default function TaskBottomSheet({
                     <div
                       className={`
                         p-4 rounded-[var(--radius-xl)] text-sm italic
-                        ${'bg-gray-50 text-gray-600'}
+                        ${'bg-[var(--surface-2)] text-[var(--text-muted)]'}
                       `}
                     >
                       &ldquo;{sanitizeTranscription(task.transcription)}&rdquo;
@@ -868,30 +882,30 @@ export default function TaskBottomSheet({
                           key={attachment.id}
                           className={`
                             flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)]
-                            ${'bg-gray-50'}
+                            ${'bg-[var(--surface-2)]'}
                           `}
                         >
                           <div
                             className={`
                               w-10 h-10 rounded-[var(--radius-xl)] flex items-center justify-center
-                              ${'bg-gray-200'}
+                              ${'bg-[var(--surface)]'}
                             `}
                           >
                             <Paperclip
                               className={`w-5 h-5 ${
-                                'text-gray-500'}`}
+                                'text-[var(--text-muted)]'}`}
                             />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p
                               className={`text-sm font-medium truncate ${
-                                'text-gray-900'}`}
+                                'text-[var(--foreground)]'}`}
                             >
                               {attachment.file_name}
                             </p>
                             <p
                               className={`text-xs ${
-                                'text-gray-500'}`}
+                                'text-[var(--text-muted)]'}`}
                             >
                               {(attachment.file_size / 1024).toFixed(1)} KB
                             </p>
@@ -907,16 +921,16 @@ export default function TaskBottomSheet({
                   className={`
                     pt-4 border-t text-xs space-y-1
                     ${
-                      'border-gray-200 text-gray-400'}
+                      'border-[var(--border)] text-[var(--text-muted)]'}
                   `}
                 >
                   <p>
                     Created by {task.created_by}{' '}
                     {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
                   </p>
-                  {task.updated_at && task.updated_by && (
+                  {task.updated_at && filterSystemUserName(task.updated_by) && (
                     <p>
-                      Updated by {task.updated_by}{' '}
+                      Updated by {filterSystemUserName(task.updated_by)}{' '}
                       {formatDistanceToNow(new Date(task.updated_at), { addSuffix: true })}
                     </p>
                   )}
@@ -928,7 +942,7 @@ export default function TaskBottomSheet({
             <footer
               className={`
                 flex items-center justify-between px-5 py-4 border-t flex-shrink-0
-                ${'border-gray-200'}
+                ${'border-[var(--border)]'}
               `}
             >
               <button
@@ -951,7 +965,7 @@ export default function TaskBottomSheet({
                   transition-colors touch-manipulation
                   ${
                     task.completed
-                      ? 'bg-gray-100 text-gray-700': 'bg-[var(--success)] text-white'
+                      ? 'bg-[var(--surface-2)] text-[var(--foreground)]': 'bg-[var(--success)] text-white'
                   }
                 `}
               >
@@ -984,7 +998,7 @@ function PropertyRow({
       <div
         className={`
           flex items-center gap-2 text-sm font-medium w-28 flex-shrink-0
-          ${'text-gray-500'}
+          ${'text-[var(--text-muted)]'}
         `}
       >
         {icon}
@@ -1014,7 +1028,7 @@ function CollapsibleSection({
     <section
       className={`
         rounded-[var(--radius-xl)] overflow-hidden
-        ${'bg-gray-50'}
+        ${'bg-[var(--surface-2)]'}
       `}
     >
       <button
@@ -1022,7 +1036,7 @@ function CollapsibleSection({
         className={`
           w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold
           transition-colors touch-manipulation
-          ${'text-gray-700 active:bg-gray-100'}
+          ${'text-[var(--foreground)] active:bg-[var(--surface)]'}
         `}
         aria-expanded={isOpen}
       >
@@ -1032,7 +1046,7 @@ function CollapsibleSection({
           <span
             className={`
               px-2 py-0.5 rounded-full text-xs font-medium
-              ${'bg-gray-200 text-gray-600'}
+              ${'bg-[var(--surface)] text-[var(--text-muted)]'}
             `}
           >
             {count}

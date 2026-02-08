@@ -5,6 +5,7 @@ import type { Agency } from '@/types/agency';
 import { extractAndValidateUserName } from '@/lib/apiAuth';
 import { apiErrorResponse } from '@/lib/apiResponse';
 import { logger } from '@/lib/logger';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 /**
  * POST /api/agencies
@@ -117,21 +118,16 @@ export async function POST(request: NextRequest) {
       return apiErrorResponse('INSERT_FAILED', 'Failed to assign owner to agency', 500);
     }
 
-    // Log activity
-    try {
-      await supabase.from('activity_log').insert({
-        action: 'agency_created',
-        user_name: creator.name,
-        details: {
-          agency_id: newAgency.id,
-          agency_name: newAgency.name,
-          agency_slug: newAgency.slug,
-        },
-      });
-    } catch (logError) {
-      logger.error('Failed to log activity', logError, { component: 'api/agencies', action: 'POST' });
-      // Don't fail the request if logging fails
-    }
+    // Log activity (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
+      action: 'agency_created',
+      user_name: creator.name,
+      agency_id: newAgency.id,
+      details: {
+        agency_name: newAgency.name,
+        agency_slug: newAgency.slug,
+      },
+    });
 
     return NextResponse.json({
       success: true,

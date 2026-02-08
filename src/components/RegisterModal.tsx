@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { hashPin, getRandomUserColor, getUserInitials, isValidPin } from '@/lib/auth';
 import type { AuthUser } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ type Step = 'name' | 'pin' | 'confirm';
 export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterModalProps) {
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [pin, setPin] = useState(['', '', '', '']);
   const [confirmPin, setConfirmPin] = useState(['', '', '', '']);
   const [error, setError] = useState('');
@@ -45,6 +47,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
     if (!isOpen) {
       setStep('name');
       setName('');
+      setInviteCode('');
       setPin(['', '', '', '']);
       setConfirmPin(['', '', '', '']);
       setError('');
@@ -180,6 +183,44 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
         return;
       }
 
+      // If invite code was provided, try to accept invitation
+      if (inviteCode.trim()) {
+        try {
+          const response = await fetchWithCsrf('/api/invitations/accept', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: inviteCode.trim(),
+              is_new_user: true,
+              name: newUser.name,
+            }),
+          });
+
+          if (response.ok) {
+            logger.info('User auto-joined agency via invite code', {
+              component: 'RegisterModal',
+              action: 'handlePinSubmit',
+              userName: newUser.name,
+            });
+          } else {
+            // Log but don't fail registration
+            logger.warn('Invalid invite code during registration', {
+              component: 'RegisterModal',
+              action: 'handlePinSubmit',
+              userName: newUser.name,
+            });
+          }
+        } catch (inviteError) {
+          // Log but don't fail registration
+          logger.warn('Failed to process invite code', {
+            component: 'RegisterModal',
+            action: 'handlePinSubmit',
+            userName: newUser.name,
+            error: inviteError instanceof Error ? inviteError.message : String(inviteError),
+          });
+        }
+      }
+
       // Auto-login the newly created user
       onSuccess(newUser as AuthUser);
       onClose();
@@ -290,6 +331,25 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
                 />
                 <p className="mt-2 text-xs text-[var(--text-muted)]">
                   This name will be visible to your team members
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="invite-code" className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                  Agency Invite Code <span className="text-[var(--text-muted)]">(Optional)</span>
+                </label>
+                <input
+                  id="invite-code"
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="Enter invite code if you have one"
+                  aria-describedby="invite-code-help"
+                  className="w-full px-4 py-3 rounded-[var(--radius-lg)] border-2 border-[var(--border)] bg-[var(--surface-2)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--primary)] transition-colors"
+                  disabled={isSubmitting}
+                />
+                <p id="invite-code-help" className="mt-2 text-xs text-[var(--text-muted)]">
+                  If you have an agency invitation, paste the code here to auto-join
                 </p>
               </div>
 

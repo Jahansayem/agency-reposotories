@@ -53,8 +53,8 @@ export function AttachmentUploadButton({
         className={`
           p-2 rounded-lg transition-all
           ${disabled
-            ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            ? 'text-[var(--text-muted)] opacity-50 cursor-not-allowed'
+            : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
           }
         `}
         title="Attach image"
@@ -112,7 +112,7 @@ export function AttachmentPreview({
       className="relative inline-block"
     >
       {/* Preview image */}
-      <div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-blue-500 dark:border-blue-400">
+      <div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-[var(--accent)]">
         {previewUrl ? (
           <img
             src={previewUrl}
@@ -120,8 +120,8 @@ export function AttachmentPreview({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-            <ImageIcon className="w-8 h-8 text-gray-400" />
+          <div className="w-full h-full flex items-center justify-center bg-[var(--surface-2)]">
+            <ImageIcon className="w-8 h-8 text-[var(--text-muted)]" />
           </div>
         )}
 
@@ -135,7 +135,7 @@ export function AttachmentPreview({
 
         {/* Error overlay */}
         {error && (
-          <div className="absolute inset-0 bg-red-500/90 flex items-center justify-center p-2">
+          <div className="absolute inset-0 bg-[var(--danger)]/90 flex items-center justify-center p-2">
             <span className="text-xs text-white text-center">{error}</span>
           </div>
         )}
@@ -145,7 +145,7 @@ export function AttachmentPreview({
       {!uploading && (
         <button
           onClick={onRemove}
-          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center shadow-lg transition-colors"
+          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--danger)] text-white hover:opacity-90 flex items-center justify-center shadow-lg transition-colors"
           aria-label="Remove attachment"
         >
           <X className="w-4 h-4" />
@@ -154,10 +154,10 @@ export function AttachmentPreview({
 
       {/* File name */}
       <div className="mt-1 max-w-24">
-        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+        <p className="text-xs text-[var(--foreground)] truncate">
           {file.name}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-500">
+        <p className="text-xs text-[var(--text-muted)]">
           {(file.size / 1024).toFixed(1)} KB
         </p>
       </div>

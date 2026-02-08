@@ -1,0 +1,14 @@
+Bonus Type,Tier Level,Goal Threshold,Bonus Percentage,Notes
+Policy Bundle Rate,Tier 1,<45%,0%,Below minimum threshold
+Policy Bundle Rate,Tier 2,45-50%,2%,Entry level performance
+Policy Bundle Rate,Tier 3,50-55%,4%,Good performance
+Policy Bundle Rate,Tier 4,55-60%,6%,Strong performance
+Policy Bundle Rate,Tier 5,60-65%,8%,Excellent performance
+Policy Bundle Rate,Tier 6,65%+,10%,Top tier performance
+Portfolio Growth,Tier 1,<0.5%,0%,Below minimum threshold
+Portfolio Growth,Tier 2,0.5-1.0%,2%,Entry level growth
+Portfolio Growth,Tier 3,1.0-1.5%,4%,Good growth
+Portfolio Growth,Tier 4,1.5-2.0%,6%,Strong growth
+Portfolio Growth,Tier 5,2.0-2.5%,8%,Excellent growth
+Portfolio Growth,Tier 6,2.5%+,10%,Top tier growth
+Overall Performance,Combined,Varies,Weighted Average,Combines both metrics for total bonus

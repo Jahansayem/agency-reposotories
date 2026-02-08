@@ -121,16 +121,16 @@ export function PendingInvitationsList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-[var(--text-muted)]" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
-        <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+      <div className="p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-lg flex items-start gap-2">
+        <AlertCircle className="w-4 h-4 text-[var(--danger)] flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-[var(--danger)]">{error}</p>
       </div>
     );
   }
@@ -138,8 +138,8 @@ export function PendingInvitationsList({
   if (invitations.length === 0) {
     return (
       <div className="text-center py-8">
-        <Users className="w-10 h-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
-        <p className="text-sm text-gray-500 dark:text-gray-400">No pending invitations</p>
+        <Users className="w-10 h-10 text-[var(--text-muted)] mx-auto mb-2" />
+        <p className="text-sm text-[var(--text-muted)]">No pending invitations</p>
       </div>
     );
   }
@@ -153,21 +153,21 @@ export function PendingInvitationsList({
             key={invitation.id}
             className={`
               flex items-center gap-3 p-3 rounded-lg
-              bg-gray-50 dark:bg-gray-700/50
+              bg-[var(--surface)]
               ${isExpired ? 'opacity-60' : ''}
             `}
           >
             {/* Email icon */}
-            <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-              <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="w-9 h-9 rounded-full bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0">
+              <Mail className="w-4 h-4 text-[var(--accent)]" />
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-medium text-[var(--foreground)] truncate">
                 {invitation.email}
               </p>
-              <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
                 <span className="capitalize">{invitation.role}</span>
                 <span className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
@@ -183,8 +183,8 @@ export function PendingInvitationsList({
                 disabled={revokingId === invitation.id}
                 className="
                   p-2 rounded-lg
-                  text-red-600 dark:text-red-400
-                  hover:bg-red-50 dark:hover:bg-red-900/20
+                  text-[var(--danger)]
+                  hover:bg-[var(--danger)]/10
                   transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed
                 "

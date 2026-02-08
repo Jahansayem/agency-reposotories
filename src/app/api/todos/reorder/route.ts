@@ -4,6 +4,7 @@ import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { withAgencyAuth, AgencyAuthContext } from '@/lib/agencyAuth';
 import { logger } from '@/lib/logger';
 import type { Todo } from '@/types/todo';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
 /**
  * Type guard to check if Supabase response has data
@@ -44,11 +45,11 @@ async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
     if (orderedIds && Array.isArray(orderedIds)) {
       updatedTasks = await setExplicitOrder(supabase, orderedIds, ctx.agencyId);
 
-      // Log activity
-      await supabase.from('activity_log').insert({
+      // Log activity (safe - will not break operation if it fails)
+      await safeLogActivity(supabase, {
         action: 'task_reordered',
         user_name: ctx.userName,
-        ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+        agency_id: ctx.agencyId,
         details: { mode: 'explicit_order', count: orderedIds.length },
       });
 
@@ -98,13 +99,13 @@ async function handleReorder(request: NextRequest, ctx: AgencyAuthContext) {
       );
     }
 
-    // Log activity
-    await supabase.from('activity_log').insert({
+    // Log activity (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'task_reordered',
       todo_id: todoId,
       todo_text: currentTask.text,
       user_name: ctx.userName,
-      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+      agency_id: ctx.agencyId,
       details: {
         from: currentTask.display_order,
         to: updatedTasks.find(t => t.id === todoId)?.display_order,

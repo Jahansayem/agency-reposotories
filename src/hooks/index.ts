@@ -68,3 +68,16 @@ export { useAgencyMetrics } from './useAgencyMetrics';
 // Auth & Permissions
 export { usePermission, usePermissions } from './usePermission';
 export { useRoleCheck } from './useRoleCheck';
+
+// CSV Import
+export { useCsvUpload, CUSTOMER_INSIGHT_FIELDS } from './useCsvUpload';
+export type {
+  CustomerInsightRow,
+  CsvColumnMapping,
+  ParsedCsvData,
+  CsvValidationError,
+  CsvUploadResult,
+  CsvUploadState,
+  RetentionRisk,
+  UseCsvUploadOptions,
+} from './useCsvUpload';

@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import TodoList from './TodoList';
 import { shouldShowDailyDashboard, markDailyDashboardShown } from '@/lib/dashboardUtils';
 import { ChatPanelSkeleton, AIInboxSkeleton, WeeklyProgressChartSkeleton, DashboardModalSkeleton } from './LoadingSkeletons';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -19,6 +18,15 @@ import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import SkipLink from './SkipLink';
+import { OnboardingModal } from './AIOnboarding';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { AIPreferencesModal } from './AIPreferences';
+
+// Lazy load TodoList - large component with subtasks, kanban, etc.
+const TodoList = dynamic(() => import('./TodoList'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full"><div className="animate-spin w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full" /></div>,
+});
 
 // Lazy load ChatView for the dedicated messages view
 const ChatView = dynamic(() => import('./views/ChatView'), {
@@ -34,6 +42,18 @@ const AIInbox = dynamic(() => import('./views/AIInbox'), {
 
 // Lazy load DashboardPage for the full dashboard view
 const DashboardPage = dynamic(() => import('./views/DashboardPage'), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
+
+// Lazy load AnalyticsPage for the book of business analytics view
+const AnalyticsPage = dynamic(() => import('./views/AnalyticsPage'), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
+
+// Lazy load CustomerLookupView for the customer book of business browser
+const CustomerLookupView = dynamic(() => import('./views/CustomerLookupView'), {
   ssr: false,
   loading: () => <DashboardModalSkeleton />,
 });
@@ -110,6 +130,22 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const [hasCheckedDailyDashboard, setHasCheckedDailyDashboard] = useState(false);
   // Track which task to auto-expand when navigating from dashboard/notifications
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  // Track customer segment filter when navigating from CustomerSegmentationDashboard
+  const [customerSegmentFilter, setCustomerSegmentFilter] = useState<'elite' | 'premium' | 'standard' | 'entry' | 'all'>('all');
+  // Track initial sort option when navigating to customer lookup
+  const [customerInitialSort, setCustomerInitialSort] = useState<'priority' | 'renewal_date'>('priority');
+
+  // AI Onboarding state
+  const {
+    shouldShowOnboarding,
+    startOnboarding,
+    dismissOnboarding,
+    skipOnboarding,
+  } = useOnboarding();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // AI Preferences state
+  const [showAIPreferences, setShowAIPreferences] = useState(false);
 
   // Navigate to dashboard on first login of the day
   // Only check ONCE after initial data load - prevents flash on hard refresh
@@ -122,6 +158,18 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       }
     }
   }, [loading, hasCheckedDailyDashboard, setActiveView]);
+
+  // Show AI onboarding on first visit
+  useEffect(() => {
+    if (!loading && shouldShowOnboarding()) {
+      // Delay showing onboarding slightly to let the app load
+      const timer = setTimeout(() => {
+        startOnboarding();
+        setShowOnboarding(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, shouldShowOnboarding, startOnboarding]);
 
   const handleNavigateToTasks = useCallback((filter?: QuickFilter) => {
     if (filter) {
@@ -188,6 +236,20 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const handleSelectedTaskHandled = useCallback(() => {
     setSelectedTaskId(null);
   }, []);
+
+  // Handle navigation from CustomerSegmentationDashboard to CustomerLookupView with segment filter
+  const handleNavigateToCustomerSegment = useCallback((segment: 'elite' | 'premium' | 'standard' | 'entry') => {
+    setCustomerSegmentFilter(segment);
+    setCustomerInitialSort('priority');
+    setActiveView('customers');
+  }, [setActiveView]);
+
+  // Handle navigation from TodayOpportunitiesPanel to CustomerLookupView with renewal date sort
+  const handleNavigateToAllOpportunities = useCallback(() => {
+    setCustomerSegmentFilter('all');
+    setCustomerInitialSort('renewal_date');
+    setActiveView('customers');
+  }, [setActiveView]);
 
   // Handle restoring an archived task
   const handleRestoreTask = useCallback(async (taskId: string) => {
@@ -303,46 +365,52 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     switch (activeView) {
       case 'dashboard':
         return (
-          <DashboardPage
-            key={agencyKey}
-            currentUser={currentUser}
-            todos={todos}
-            users={users}
-            onNavigateToTasks={handleNavigateToTasks}
-            onAddTask={handleAddTask}
-            onTaskClick={handleTaskLinkClick}
-            onFilterOverdue={() => handleNavigateToTasks('overdue')}
-            onFilterDueToday={() => handleNavigateToTasks('due_today')}
-          />
+          <ErrorBoundary>
+            <DashboardPage
+              key={agencyKey}
+              currentUser={currentUser}
+              todos={todos}
+              users={users}
+              onNavigateToTasks={handleNavigateToTasks}
+              onAddTask={handleAddTask}
+              onTaskClick={handleTaskLinkClick}
+              onFilterOverdue={() => handleNavigateToTasks('overdue')}
+              onFilterDueToday={() => handleNavigateToTasks('due_today')}
+            />
+          </ErrorBoundary>
         );
 
       case 'chat':
         return (
-          <ChatView
-            key={agencyKey}
-            currentUser={currentUser}
-            users={usersWithColors}
-            onBack={handleChatBack}
-            onTaskLinkClick={handleTaskLinkClick}
-          />
+          <ErrorBoundary>
+            <ChatView
+              key={agencyKey}
+              currentUser={currentUser}
+              users={usersWithColors}
+              onBack={handleChatBack}
+              onTaskLinkClick={handleTaskLinkClick}
+            />
+          </ErrorBoundary>
         );
 
       case 'activity':
         // Activity feed is handled by TodoList internally
         // Just switch to tasks view for now
         return (
-          <TodoList
-            key={agencyKey}
-            currentUser={currentUser}
-            onUserChange={onUserChange}
-            initialFilter={initialFilter}
-            autoFocusAddTask={showAddTask}
-            onAddTaskModalOpened={handleAddTaskModalOpened}
-            onInitialFilterApplied={handleInitialFilterApplied}
+          <ErrorBoundary>
+            <TodoList
+              key={agencyKey}
+              currentUser={currentUser}
+              onUserChange={onUserChange}
+              initialFilter={initialFilter}
+              autoFocusAddTask={showAddTask}
+              onAddTaskModalOpened={handleAddTaskModalOpened}
+              onInitialFilterApplied={handleInitialFilterApplied}
 
-            selectedTaskId={selectedTaskId}
-            onSelectedTaskHandled={handleSelectedTaskHandled}
-          />
+              selectedTaskId={selectedTaskId}
+              onSelectedTaskHandled={handleSelectedTaskHandled}
+            />
+          </ErrorBoundary>
         );
 
       case 'goals':
@@ -353,18 +421,20 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         }
         // Strategic goals is handled by TodoList internally
         return (
-          <TodoList
-            key={agencyKey}
-            currentUser={currentUser}
-            onUserChange={onUserChange}
-            initialFilter={initialFilter}
-            autoFocusAddTask={showAddTask}
-            onAddTaskModalOpened={handleAddTaskModalOpened}
-            onInitialFilterApplied={handleInitialFilterApplied}
+          <ErrorBoundary>
+            <TodoList
+              key={agencyKey}
+              currentUser={currentUser}
+              onUserChange={onUserChange}
+              initialFilter={initialFilter}
+              autoFocusAddTask={showAddTask}
+              onAddTaskModalOpened={handleAddTaskModalOpened}
+              onInitialFilterApplied={handleInitialFilterApplied}
 
-            selectedTaskId={selectedTaskId}
-            onSelectedTaskHandled={handleSelectedTaskHandled}
-          />
+              selectedTaskId={selectedTaskId}
+              onSelectedTaskHandled={handleSelectedTaskHandled}
+            />
+          </ErrorBoundary>
         );
 
       case 'archive':
@@ -375,44 +445,77 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         }
         // Full-featured archive browser
         return (
-          <ArchiveView
-            key={agencyKey}
-            currentUser={currentUser}
-            users={users}
-            onRestore={handleRestoreTask}
-            onDelete={handleDeleteTask}
-            onClose={handleArchiveClose}
-          />
+          <ErrorBoundary>
+            <ArchiveView
+              key={agencyKey}
+              currentUser={currentUser}
+              users={users}
+              onRestore={handleRestoreTask}
+              onDelete={handleDeleteTask}
+              onClose={handleArchiveClose}
+            />
+          </ErrorBoundary>
         );
 
       case 'ai_inbox':
         // AI Inbox view for reviewing AI-derived tasks
         return (
-          <AIInbox
-            key={agencyKey}
-            items={[]} // TODO: Connect to actual AI inbox state from store
-            users={usersWithColors.map(u => u.name)}
-            onAccept={handleAIAccept}
-            onDismiss={handleAIDismiss}
-            onRefresh={handleAIRefresh}
-          />
+          <ErrorBoundary>
+            <AIInbox
+              key={agencyKey}
+              items={[]} // TODO: Connect to actual AI inbox state from store
+              users={usersWithColors.map(u => u.name)}
+              onAccept={handleAIAccept}
+              onDismiss={handleAIDismiss}
+              onRefresh={handleAIRefresh}
+            />
+          </ErrorBoundary>
+        );
+
+      case 'analytics':
+        // Analytics dashboard with book of business insights
+        return (
+          <ErrorBoundary>
+            <AnalyticsPage
+              key={agencyKey}
+              onNavigateToSegment={handleNavigateToCustomerSegment}
+              onNavigateToAllOpportunities={handleNavigateToAllOpportunities}
+            />
+          </ErrorBoundary>
+        );
+
+      case 'customers':
+        // Customer lookup from book of business
+        return (
+          <ErrorBoundary>
+            <CustomerLookupView
+              key={agencyKey}
+              agencyId={currentAgencyId || undefined}
+              currentUser={currentUser.name}
+              onClose={() => setActiveView('tasks')}
+              initialSegment={customerSegmentFilter}
+              initialSort={customerInitialSort}
+            />
+          </ErrorBoundary>
         );
 
       case 'tasks':
       default:
         return (
-          <TodoList
-            key={agencyKey}
-            currentUser={currentUser}
-            onUserChange={onUserChange}
-            initialFilter={initialFilter}
-            autoFocusAddTask={showAddTask}
-            onAddTaskModalOpened={handleAddTaskModalOpened}
-            onInitialFilterApplied={handleInitialFilterApplied}
+          <ErrorBoundary>
+            <TodoList
+              key={agencyKey}
+              currentUser={currentUser}
+              onUserChange={onUserChange}
+              initialFilter={initialFilter}
+              autoFocusAddTask={showAddTask}
+              onAddTaskModalOpened={handleAddTaskModalOpened}
+              onInitialFilterApplied={handleInitialFilterApplied}
 
-            selectedTaskId={selectedTaskId}
-            onSelectedTaskHandled={handleSelectedTaskHandled}
-          />
+              selectedTaskId={selectedTaskId}
+              onSelectedTaskHandled={handleSelectedTaskHandled}
+            />
+          </ErrorBoundary>
         );
     }
   }, [
@@ -427,6 +530,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     selectedTaskId,
     canViewStrategicGoals,
     canViewArchive,
+    customerSegmentFilter,
+    customerInitialSort,
     handleNavigateToTasks,
     handleTaskLinkClick,
     handleSelectedTaskHandled,
@@ -439,7 +544,10 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleAIAccept,
     handleAIDismiss,
     handleAIRefresh,
+    handleNavigateToCustomerSegment,
+    handleNavigateToAllOpportunities,
     onUserChange,
+    currentAgencyId,
   ]);
 
   // Loading state - rendered conditionally in JSX to avoid early return before hooks
@@ -535,6 +643,18 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <div className="fixed bottom-4 right-4 z-40">
         <SyncStatusIndicator showLabel />
       </div>
+
+      {/* AI Onboarding Tutorial */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
+
+      {/* AI Preferences Settings */}
+      <AIPreferencesModal
+        isOpen={showAIPreferences}
+        onClose={() => setShowAIPreferences(false)}
+      />
     </>
   );
 }

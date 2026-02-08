@@ -199,7 +199,7 @@ export function CreateAgencyModal({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
               className="
-                bg-white dark:bg-gray-800
+                bg-[var(--surface-2)]
                 rounded-xl shadow-2xl
                 w-full max-w-2xl
                 max-h-[90vh] overflow-y-auto
@@ -207,16 +207,16 @@ export function CreateAgencyModal({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+              <div className="sticky top-0 bg-[var(--surface-2)] border-b border-[var(--border)] px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                     <Building2 className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-xl font-bold text-[var(--foreground)]">
                       Create New Agency
                     </h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-[var(--text-muted)]">
                       Set up a new Allstate agency workspace
                     </p>
                   </div>
@@ -224,10 +224,10 @@ export function CreateAgencyModal({
                 <button
                   onClick={handleClose}
                   disabled={isSubmitting}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  className="p-2 rounded-lg hover:bg-[var(--surface)] transition-colors disabled:opacity-50"
                   aria-label="Close modal"
                 >
-                  <X className="w-5 h-5 text-gray-500" />
+                  <X className="w-5 h-5 text-[var(--text-muted)]" />
                 </button>
               </div>
 
@@ -235,10 +235,10 @@ export function CreateAgencyModal({
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
                 {/* General Error */}
                 {errors.general && (
-                  <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded-lg flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-[var(--danger)] flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                      <p className="text-sm font-medium text-[var(--danger)]">
                         {errors.general}
                       </p>
                     </div>
@@ -247,8 +247,8 @@ export function CreateAgencyModal({
 
                 {/* Agency Name */}
                 <div>
-                  <label htmlFor="agency-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Agency Name <span className="text-red-500">*</span>
+                  <label htmlFor="agency-name" className="block text-sm font-medium text-[var(--text-muted)] mb-2">
+                    Agency Name <span className="text-[var(--danger)]">*</span>
                   </label>
                   <input
                     id="agency-name"
@@ -259,29 +259,29 @@ export function CreateAgencyModal({
                     placeholder="e.g., Bealer Agency Chicago"
                     className={`
                       w-full px-4 py-3 rounded-lg
-                      bg-white dark:bg-gray-700
-                      border ${errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}
-                      text-gray-900 dark:text-white
-                      placeholder:text-gray-400
-                      focus:outline-none focus:ring-2 focus:ring-blue-500
+                      bg-[var(--surface-2)]
+                      border ${errors.name ? 'border-[var(--danger)]' : 'border-[var(--border)]'}
+                      text-[var(--foreground)]
+                      placeholder:text-[var(--text-muted)]
+                      focus:outline-none focus:ring-2 focus:ring-[var(--accent)]
                       disabled:opacity-50 disabled:cursor-not-allowed
                     `}
                   />
                   {errors.name && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
+                    <p className="mt-1 text-sm text-[var(--danger)]">{errors.name}</p>
                   )}
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
                     This will be displayed to users when switching agencies
                   </p>
                 </div>
 
                 {/* Slug */}
                 <div>
-                  <label htmlFor="agency-slug" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    URL Slug <span className="text-red-500">*</span>
+                  <label htmlFor="agency-slug" className="block text-sm font-medium text-[var(--text-muted)] mb-2">
+                    URL Slug <span className="text-[var(--danger)]">*</span>
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-sm text-[var(--text-muted)]">
                       /agencies/
                     </span>
                     <input
@@ -293,21 +293,21 @@ export function CreateAgencyModal({
                       placeholder="bealer-agency-chicago"
                       className={`
                         flex-1 px-4 py-3 rounded-lg
-                        bg-white dark:bg-gray-700
-                        border ${errors.slug ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}
-                        text-gray-900 dark:text-white
-                        placeholder:text-gray-400
-                        focus:outline-none focus:ring-2 focus:ring-blue-500
+                        bg-[var(--surface-2)]
+                        border ${errors.slug ? 'border-[var(--danger)]' : 'border-[var(--border)]'}
+                        text-[var(--foreground)]
+                        placeholder:text-[var(--text-muted)]
+                        focus:outline-none focus:ring-2 focus:ring-[var(--accent)]
                         disabled:opacity-50 disabled:cursor-not-allowed
                         font-mono text-sm
                       `}
                     />
                   </div>
                   {errors.slug && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.slug}</p>
+                    <p className="mt-1 text-sm text-[var(--danger)]">{errors.slug}</p>
                   )}
                   {autoGenerateSlug && (
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
                       Auto-generated from agency name (edit to customize)
                     </p>
                   )}
@@ -315,7 +315,7 @@ export function CreateAgencyModal({
 
                 {/* Primary Color */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  <label className="block text-sm font-medium text-[var(--text-muted)] mb-3">
                     Primary Color
                   </label>
                   <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
@@ -331,7 +331,7 @@ export function CreateAgencyModal({
                         <div
                           className={`
                             w-12 h-12 rounded-lg
-                            border-2 ${formData.primaryColor === color.hex ? 'border-gray-900 dark:border-white scale-110' : 'border-transparent'}
+                            border-2 ${formData.primaryColor === color.hex ? 'border-[var(--foreground)] scale-110' : 'border-transparent'}
                             transition-all duration-200
                             hover:scale-105
                             disabled:opacity-50
@@ -346,14 +346,14 @@ export function CreateAgencyModal({
                       </button>
                     ))}
                   </div>
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
                     Used for agency icon and branding
                   </p>
                 </div>
 
                 {/* Preview */}
-                <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                <div className="p-4 bg-[var(--surface)] rounded-lg border border-[var(--border)]">
+                  <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">
                     Preview
                   </p>
                   <div className="flex items-center gap-3">
@@ -364,10 +364,10 @@ export function CreateAgencyModal({
                       {formData.name.charAt(0) || 'A'}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">
+                      <p className="font-medium text-[var(--foreground)]">
                         {formData.name || 'Agency Name'}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
+                      <p className="text-sm text-[var(--text-muted)] font-mono">
                         /{formData.slug || 'agency-slug'}
                       </p>
                     </div>
@@ -375,8 +375,8 @@ export function CreateAgencyModal({
                 </div>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center justify-between pt-4 border-t border-[var(--border)]">
+                  <p className="text-sm text-[var(--text-muted)]">
                     You will be the agency owner
                   </p>
                   <div className="flex gap-3">
@@ -386,8 +386,8 @@ export function CreateAgencyModal({
                       disabled={isSubmitting}
                       className="
                         px-4 py-2 rounded-lg
-                        text-gray-700 dark:text-gray-300
-                        hover:bg-gray-100 dark:hover:bg-gray-700
+                        text-[var(--text-muted)]
+                        hover:bg-[var(--surface)]
                         transition-colors
                         disabled:opacity-50 disabled:cursor-not-allowed
                       "
@@ -399,7 +399,7 @@ export function CreateAgencyModal({
                       disabled={isSubmitting}
                       className="
                         px-6 py-2 rounded-lg
-                        bg-blue-600 hover:bg-blue-700
+                        bg-[var(--accent)] hover:opacity-90
                         text-white font-medium
                         transition-colors
                         disabled:opacity-50 disabled:cursor-not-allowed

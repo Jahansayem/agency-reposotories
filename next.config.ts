@@ -53,6 +53,10 @@ const baseConfig: NextConfig = {
   turbopack: {
     root: ".",
   },
+  // Bundle optimization
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion', '@dnd-kit/core', '@dnd-kit/sortable'],
+  },
   // Issue #30: Image optimization configuration
   images: {
     remotePatterns: [
@@ -65,6 +69,71 @@ const baseConfig: NextConfig = {
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+  // Webpack configuration for better code splitting
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            // Framework bundle (React, Next.js)
+            framework: {
+              name: 'framework',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler|next)[\\/]/,
+              priority: 40,
+              enforce: true,
+            },
+            // Animation libraries
+            animations: {
+              name: 'animations',
+              test: /[\\/]node_modules[\\/](framer-motion)[\\/]/,
+              priority: 35,
+              reuseExistingChunk: true,
+            },
+            // DnD Kit
+            dndkit: {
+              name: 'dndkit',
+              test: /[\\/]node_modules[\\/](@dnd-kit)[\\/]/,
+              priority: 35,
+              reuseExistingChunk: true,
+            },
+            // Lucide icons
+            icons: {
+              name: 'icons',
+              test: /[\\/]node_modules[\\/](lucide-react)[\\/]/,
+              priority: 30,
+              reuseExistingChunk: true,
+            },
+            // Other vendor libraries
+            lib: {
+              test: /[\\/]node_modules[\\/]/,
+              name(module: any) {
+                const packageName = module.context.match(
+                  /[\\/]node_modules[\\/](.*?)([\\/]|$)/
+                )?.[1];
+                return packageName ? `npm.${packageName.replace('@', '')}` : 'npm';
+              },
+              priority: 20,
+              minChunks: 1,
+              reuseExistingChunk: true,
+            },
+            // Common components used across multiple pages
+            commons: {
+              name: 'commons',
+              minChunks: 2,
+              priority: 10,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      };
+    }
+    return config;
   },
   async headers() {
     return [

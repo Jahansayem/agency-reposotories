@@ -19,18 +19,22 @@ import { encryptTodoPII, decryptTodoPII } from '@/lib/fieldEncryption';
 import { verifyTodoAccess } from '@/lib/apiAuth';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 import { sanitizeForPostgrestFilter } from '@/lib/sanitize';
+import { safeLogActivity } from '@/lib/safeActivityLog';
 
-// Use service role key for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time env var access
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 /**
  * GET /api/todos - Fetch todos with decrypted PII fields
  */
 export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -94,6 +98,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
  */
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -153,14 +158,14 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       throw error;
     }
 
-    // Log activity with agency_id
-    await supabase.from('activity_log').insert({
+    // Log activity with agency_id (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'task_created',
       todo_id: taskId,
-      todo_text: text.trim().substring(0, 100),
+      todo_text: text.trim(),
       user_name: ctx.userName,
+      agency_id: ctx.agencyId,
       details: { priority, has_transcription: !!transcription },
-      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
     });
 
     logger.info('Todo created with encryption', {
@@ -193,6 +198,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
  */
 export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -257,14 +263,14 @@ export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       throw error;
     }
 
-    // Log activity for significant changes
+    // Log activity for significant changes (safe - will not break operation if it fails)
     if (updates.completed !== undefined) {
-      await supabase.from('activity_log').insert({
+      await safeLogActivity(supabase, {
         action: updates.completed ? 'task_completed' : 'task_reopened',
         todo_id: id,
-        todo_text: data.text?.substring(0, 100),
+        todo_text: data.text,
         user_name: ctx.userName,
-        ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+        agency_id: ctx.agencyId,
       });
     }
 
@@ -297,6 +303,7 @@ export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
  */
 export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -331,13 +338,13 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
       throw error;
     }
 
-    // Log activity with agency_id
-    await supabase.from('activity_log').insert({
+    // Log activity with agency_id (safe - will not break operation if it fails)
+    await safeLogActivity(supabase, {
       action: 'task_deleted',
       todo_id: id,
-      todo_text: todo.text?.substring(0, 100),
+      todo_text: todo.text,
       user_name: ctx.userName,
-      ...(ctx.agencyId ? { agency_id: ctx.agencyId } : {}),
+      agency_id: ctx.agencyId,
     });
 
     logger.info('Todo deleted', {

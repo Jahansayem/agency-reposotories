@@ -1,0 +1,16 @@
+Product Line,Average Annual Premium,First Year Commission %,Renewal Commission %,Customer Retention Rate,Estimated 5-Year LTV,CLV Premium vs Auto,Cross-Sell Potential,Notes
+Auto,$$1400,7%,7%,67-75%,$4900-5250,Baseline,High,Core product - single line lower retention
+Home,$1200-1800,7%,7%,70-80%,$4200-6300,Similar to Auto,Very High,Essential for bundling
+Umbrella,$150-300,7%,7%,85-92%,$638-1380,Higher retention,High,Indicates affluent customer
+Life,$800-2000,60-80%,2-5%,80-88%,$6400-17600,+34% CLV,Medium,"High first-year commission, nurture required"
+Renters,$180-250,7%,7%,60-68%,$630-850,Lower,Very High,Gateway to homeownership
+Motorcycle,$400-800,7%,7%,68-75%,$1400-3000,Similar to Auto,Medium,Recreational - seasonal considerations
+Boat,$300-1200,7%,7%,72-80%,$1080-4800,Higher retention,Medium,Affluent indicator
+RV,$800-1500,7%,7%,75-82%,$3000-6150,Higher retention,Medium,Affluent indicator
+Business,$2000-5000,7%,7%,78-85%,$7800-21250,Premium retention,Medium,Commercial opportunity
+Flood,$400-1200,7%,7%,82-88%,$1640-5280,Very high retention,Medium,Required in flood zones
+Condo,$600-1000,7%,7%,72-80%,$2160-4000,Good retention,High,Similar to renters pathway
+Landlord,$800-1500,7%,7%,75-82%,$3000-6150,Good retention,Medium,Investment property indicator
+Auto+Home Bundle,$2600-3200,7%,7%,95%,$12350-15200,+150% vs single,N/A - is bundle,Best retention - protect at all costs
+Auto+Home+Umbrella Bundle,$2750-3500,7%,7%,97%,$13363-16975,+173% vs single,N/A - is bundle,Premium bundle - highest value
+Full House Bundle (4+ products),$4000-6000,Mixed,Mixed,98%,$19600-29400,+300% vs single,N/A - is bundle,Lifetime customer - elite tier

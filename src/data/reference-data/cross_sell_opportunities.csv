@@ -1,0 +1,13 @@
+Customer Segment,Current Coverage,Cross-Sell Product,Conversion Rate,Average Premium,Annual Commission,Implementation Priority,Data Query Required
+Auto Only,Auto,Home,15-25%,$1200,7% = $84,High,SELECT customers WHERE product_count = 1 AND has_auto = TRUE
+Auto Only,Auto,Umbrella,10-15%,$250,7% = $17.50,Medium,Same as above
+Home Only,Home,Auto,20-30%,$1400,7% = $98,High,SELECT customers WHERE product_count = 1 AND has_home = TRUE
+Auto + Home,Auto + Home,Umbrella,25-40%,$250,7% = $17.50,Very High,SELECT customers WHERE has_auto = TRUE AND has_home = TRUE AND has_umbrella = FALSE
+Auto + Home,Auto + Home,Life,8-12%,$800-2000,60-80% = $480-1600,High,Same as above
+Single Product (Any),Any Single,Second Line,15-20%,Varies,Varies,High,SELECT customers WHERE product_count = 1
+Zero Claims (5yr),Any,Premium Products,30-40%,Higher tier,Premium commission,Very High,SELECT customers WHERE claims_count_5yr = 0
+Homeowners,Home,Flood,5-10%,$400-800,7% = $28-56,Medium,SELECT customers WHERE has_home = TRUE AND has_flood = FALSE AND flood_zone IN (A X)
+High Value Home,Home,Excess Liability,15-25%,$500-1000,7% = $35-70,Medium-High,SELECT customers WHERE home_value > $750000
+Young Families,Auto,Life,12-18%,$1200,60% = $720,High,SELECT customers WHERE age BETWEEN 25 AND 45 AND has_children = TRUE
+Renters,Renters,Auto,25-35%,$1400,7% = $98,High,SELECT customers WHERE has_renters = TRUE AND has_auto = FALSE
+Multi-Car,Auto (2+ cars),Umbrella,20-30%,$250,7% = $17.50,Medium-High,SELECT customers WHERE auto_vehicle_count >= 2 AND has_umbrella = FALSE

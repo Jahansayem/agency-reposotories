@@ -16,6 +16,12 @@ export interface SuggestedDefaults {
     };
   };
   cached?: boolean;
+  // Track which fields were AI-suggested for UI sparkle badges
+  suggestedFields?: {
+    assignedTo: boolean;
+    priority: boolean;
+    dueDate: boolean;
+  };
 }
 
 // Helper to get CSRF token from the /api/csrf endpoint

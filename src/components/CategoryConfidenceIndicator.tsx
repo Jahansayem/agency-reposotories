@@ -36,23 +36,23 @@ function getConfidenceLevel(confidence: number): {
   if (confidence >= 0.7) {
     return {
       level: 'High',
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
-      borderColor: 'border-emerald-200 dark:border-emerald-800',
+      color: 'text-[var(--success)]',
+      bgColor: 'bg-[var(--success)]/10',
+      borderColor: 'border-[var(--success)]/30',
     };
   } else if (confidence >= 0.4) {
     return {
       level: 'Medium',
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-50 dark:bg-amber-900/20',
-      borderColor: 'border-amber-200 dark:border-amber-800',
+      color: 'text-[var(--warning)]',
+      bgColor: 'bg-[var(--warning)]/10',
+      borderColor: 'border-[var(--warning)]/30',
     };
   }
   return {
     level: 'Low',
-    color: 'text-gray-600 dark:text-gray-400',
-    bgColor: 'bg-gray-50 dark:bg-gray-800/50',
-    borderColor: 'border-gray-200 dark:border-gray-700',
+    color: 'text-[var(--text-muted)]',
+    bgColor: 'bg-[var(--surface-2)]',
+    borderColor: 'border-[var(--border)]',
   };
 }
 
@@ -102,7 +102,7 @@ export function CategoryConfidenceIndicator({
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className={`w-4 h-4 ${confidenceLevel.color}`} />
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="text-sm font-medium text-[var(--foreground)]">
                 Detected: <span className={confidenceLevel.color}>{formatCategoryName(patternMatch.category)}</span>
               </span>
               <span className={`text-xs px-1.5 py-0.5 rounded ${confidenceLevel.bgColor} ${confidenceLevel.color} border ${confidenceLevel.borderColor}`}>
@@ -111,7 +111,7 @@ export function CategoryConfidenceIndicator({
             </div>
             <button
               onClick={onDismiss}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
               aria-label="Dismiss suggestion"
             >
               <X className="w-4 h-4" />
@@ -120,7 +120,7 @@ export function CategoryConfidenceIndicator({
 
           {/* Completion rate warning for low-performing categories */}
           {hasLowCompletion && (
-            <div className="mt-2 flex items-center gap-2 text-amber-700 dark:text-amber-300">
+            <div className="mt-2 flex items-center gap-2 text-[var(--warning)]">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span className="text-xs">
                 This task type has a {completionRate}% completion rate. Subtasks can help!
@@ -130,7 +130,7 @@ export function CategoryConfidenceIndicator({
 
           {/* Tips if available */}
           {patternMatch.tips && (
-            <div className="mt-2 flex items-start gap-2 text-gray-600 dark:text-gray-300">
+            <div className="mt-2 flex items-start gap-2 text-[var(--text-muted)]">
               <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span className="text-xs">{patternMatch.tips}</span>
             </div>
@@ -139,8 +139,8 @@ export function CategoryConfidenceIndicator({
           {/* Suggestions section */}
           <div className="mt-3 space-y-2">
             {/* Priority suggestion */}
-            <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <TrendingUp className="w-4 h-4 text-gray-400" />
+            <div className="flex items-center gap-2 text-sm text-[var(--foreground)]">
+              <TrendingUp className="w-4 h-4 text-[var(--text-muted)]" />
               <span>
                 Suggested priority:{' '}
                 <span className="font-medium capitalize">{patternMatch.suggestedPriority}</span>
@@ -150,7 +150,7 @@ export function CategoryConfidenceIndicator({
             {/* Subtasks preview */}
             {hasSubtasks && (
               <div className="mt-2">
-                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] mb-1">
                   <ChevronRight className="w-3 h-3" />
                   <span>Suggested subtasks ({patternMatch.suggestedSubtasks.length})</span>
                 </div>
@@ -158,19 +158,19 @@ export function CategoryConfidenceIndicator({
                   {patternMatch.suggestedSubtasks.slice(0, 3).map((subtask, index) => (
                     <li
                       key={index}
-                      className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1"
+                      className="text-xs text-[var(--text-muted)] flex items-center gap-1"
                     >
-                      <span className="w-1 h-1 rounded-full bg-gray-400" />
+                      <span className="w-1 h-1 rounded-full bg-[var(--text-muted)]" />
                       <span className="truncate">{subtask}</span>
                       {patternMatch.estimatedMinutes[index] && (
-                        <span className="text-gray-400 ml-auto flex-shrink-0">
+                        <span className="text-[var(--text-muted)] ml-auto flex-shrink-0">
                           ~{patternMatch.estimatedMinutes[index]}m
                         </span>
                       )}
                     </li>
                   ))}
                   {patternMatch.suggestedSubtasks.length > 3 && (
-                    <li className="text-xs text-gray-400 italic">
+                    <li className="text-xs text-[var(--text-muted)] italic">
                       +{patternMatch.suggestedSubtasks.length - 3} more...
                     </li>
                   )}
@@ -183,14 +183,14 @@ export function CategoryConfidenceIndicator({
           <div className="mt-3 flex gap-2">
             <button
               onClick={onAcceptSuggestions}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-[var(--radius-lg)] hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-[var(--accent)] text-white rounded-[var(--radius-lg)] hover:opacity-90 transition-colors"
             >
               <Check className="w-3 h-3" />
               Apply Suggestions
             </button>
             <button
               onClick={onDismiss}
-              className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
+              className="px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
             >
               Ignore
             </button>

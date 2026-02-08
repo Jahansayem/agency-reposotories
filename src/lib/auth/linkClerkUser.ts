@@ -16,7 +16,24 @@ function getSupabaseClient(): SupabaseClient {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+    // During Next.js build, env vars may not be available
+    // Return a placeholder that will fail gracefully at runtime if actually called
     if (!supabaseUrl || !supabaseServiceKey) {
+      // Check if we're in build phase by looking for known build-time indicators
+      const isBuildTime = !supabaseServiceKey && typeof window === 'undefined';
+      if (isBuildTime) {
+        // Create a dummy client that will throw meaningful errors at runtime
+        // This allows the build to complete without env vars
+        _supabase = {
+          from: () => {
+            throw new Error('Supabase not configured - SUPABASE_SERVICE_ROLE_KEY is required');
+          },
+          rpc: () => {
+            throw new Error('Supabase not configured - SUPABASE_SERVICE_ROLE_KEY is required');
+          },
+        } as unknown as SupabaseClient;
+        return _supabase;
+      }
       throw new Error(
         'Supabase configuration missing. Ensure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.'
       );

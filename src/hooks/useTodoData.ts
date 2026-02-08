@@ -9,6 +9,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { useTodoStore } from '@/store/todoStore';
 import { Todo, TodoPriority, Subtask } from '@/types/todo';
+import type { LinkedCustomer } from '@/types/customer';
 import { AuthUser } from '@/types/todo';
 import { v4 as uuidv4 } from 'uuid';
 import { logActivity } from '@/lib/activityLogger';
@@ -255,7 +256,8 @@ export function useTodoData(currentUser: AuthUser) {
     assignedTo?: string,
     subtasks?: Subtask[],
     transcription?: string,
-    sourceFile?: File
+    sourceFile?: File,
+    customer?: LinkedCustomer
   ) => {
     const newTodo: Todo = {
       id: uuidv4(),
@@ -269,6 +271,10 @@ export function useTodoData(currentUser: AuthUser) {
       assigned_to: assignedTo,
       subtasks: subtasks,
       transcription: transcription,
+      // Customer linking
+      customer_id: customer?.id,
+      customer_name: customer?.name,
+      customer_segment: customer?.segment,
     };
 
     // Optimistic update
@@ -293,6 +299,10 @@ export function useTodoData(currentUser: AuthUser) {
     if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
     if (newTodo.subtasks && newTodo.subtasks.length > 0) insertData.subtasks = newTodo.subtasks;
     if (newTodo.transcription) insertData.transcription = newTodo.transcription;
+    // Customer linking
+    if (newTodo.customer_id) insertData.customer_id = newTodo.customer_id;
+    if (newTodo.customer_name) insertData.customer_name = newTodo.customer_name;
+    if (newTodo.customer_segment) insertData.customer_segment = newTodo.customer_segment;
 
     const { error: insertError } = await supabase.from('todos').insert([insertData]);
 

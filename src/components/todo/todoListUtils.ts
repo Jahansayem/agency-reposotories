@@ -265,14 +265,14 @@ export interface TodoStats {
 export const calculateStats = (
   todos: Todo[],
   isDueToday: (date: string | undefined) => boolean,
-  isOverdue: (date: string | undefined, completed: boolean) => boolean
+  isOverdue: (date: string | undefined, completed: boolean, status?: string) => boolean
 ): TodoStats => {
   return {
     total: todos.length,
     completed: todos.filter((t) => t.completed).length,
     active: todos.filter((t) => !t.completed).length,
-    dueToday: todos.filter((t) => isDueToday(t.due_date) && !t.completed).length,
-    overdue: todos.filter((t) => isOverdue(t.due_date, t.completed)).length,
+    dueToday: todos.filter((t) => isDueToday(t.due_date) && !t.completed && t.status !== 'done').length,
+    overdue: todos.filter((t) => isOverdue(t.due_date, t.completed, t.status)).length,
   };
 };
 
