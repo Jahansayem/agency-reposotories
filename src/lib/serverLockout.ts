@@ -9,11 +9,14 @@ import { Redis } from '@upstash/redis';
 import { logger } from './logger';
 import { securityMonitor } from './securityMonitor';
 
+// Track whether Redis credentials were provided (vs. just not configured)
+const redisConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
 // Initialize Redis client (only if configured)
-const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+const redis = redisConfigured
   ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      url: process.env.UPSTASH_REDIS_REST_URL!,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
     })
   : null;
 
@@ -52,28 +55,11 @@ function getAttemptsKey(identifier: string): string {
  */
 export async function checkLockout(identifier: string): Promise<LockoutStatus> {
   if (!redis) {
-    // SECURITY FIX: Fail closed when Redis is unavailable.
-    // In production, this prevents brute-force attacks when Redis is down.
-    // In development (NODE_ENV !== 'production'), allow bypassing with a warning.
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    if (isProduction) {
-      // CRITICAL: In production, refuse all logins if Redis is unavailable
-      logger.error('SECURITY CRITICAL: Redis not configured in production - ALL LOGINS BLOCKED. ' +
-        'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables immediately.', {
-        component: 'ServerLockout',
-        identifier,
-      });
-      return {
-        isLocked: true,
-        remainingSeconds: 300, // 5 minutes
-        attempts: MAX_ATTEMPTS,
-        maxAttempts: MAX_ATTEMPTS,
-      };
-    } else {
-      // Development: Allow bypass with warning
-      logger.warn('SECURITY: Redis not configured for lockout - lockout protection is DISABLED (development only). ' +
-        'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN environment variables to enable.', {
+    // Redis not available — distinguish "never configured" from "configured but down"
+    if (!redisConfigured) {
+      // Credentials were never set — skip lockout with warning (don't block all logins)
+      logger.warn('Redis not configured for lockout - lockout protection is DISABLED. ' +
+        'Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable.', {
         component: 'ServerLockout',
         identifier,
       });
@@ -84,6 +70,17 @@ export async function checkLockout(identifier: string): Promise<LockoutStatus> {
         maxAttempts: MAX_ATTEMPTS,
       };
     }
+    // Redis was configured but client failed to initialize — fail closed
+    logger.error('SECURITY: Redis configured but unavailable - failing closed', {
+      component: 'ServerLockout',
+      identifier,
+    });
+    return {
+      isLocked: true,
+      remainingSeconds: 300,
+      attempts: MAX_ATTEMPTS,
+      maxAttempts: MAX_ATTEMPTS,
+    };
   }
 
   try {
@@ -135,26 +132,9 @@ export async function recordFailedAttempt(
   metadata?: { ip?: string; userAgent?: string; userName?: string }
 ): Promise<LockoutStatus> {
   if (!redis) {
-    // SECURITY FIX: Fail closed when Redis is unavailable
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    if (isProduction) {
-      // CRITICAL: In production, assume max attempts reached if Redis is unavailable
-      logger.error('SECURITY CRITICAL: Failed login attempt cannot be tracked - Redis unavailable. ' +
-        'Assuming lockout to prevent brute force.', {
-        component: 'ServerLockout',
-        identifier,
-        ...metadata,
-      });
-      return {
-        isLocked: true,
-        remainingSeconds: 300, // 5 minutes
-        attempts: MAX_ATTEMPTS,
-        maxAttempts: MAX_ATTEMPTS,
-      };
-    } else {
-      // Development: Allow bypass with warning
-      logger.warn('SECURITY: Redis not configured for lockout tracking - lockout protection is DISABLED (development only).', {
+    if (!redisConfigured) {
+      // Credentials never set — skip lockout tracking with warning
+      logger.warn('Redis not configured - failed attempt not tracked.', {
         component: 'ServerLockout',
         identifier,
       });
@@ -165,6 +145,18 @@ export async function recordFailedAttempt(
         maxAttempts: MAX_ATTEMPTS,
       };
     }
+    // Redis configured but unavailable — fail closed
+    logger.error('SECURITY: Redis configured but unavailable - failing closed on failed attempt', {
+      component: 'ServerLockout',
+      identifier,
+      ...metadata,
+    });
+    return {
+      isLocked: true,
+      remainingSeconds: 300,
+      attempts: MAX_ATTEMPTS,
+      maxAttempts: MAX_ATTEMPTS,
+    };
   }
 
   try {
