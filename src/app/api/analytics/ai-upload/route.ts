@@ -39,6 +39,8 @@ interface ColumnMapping {
   renewal_date: string | null;
   products: string | null;
   premium: string | null;
+  premium_new: string | null;
+  premium_old: string | null;
   tenure: string | null;
   policy_count: string | null;
   ezpay: string | null;
@@ -176,10 +178,13 @@ Common column name patterns:
 - City: "City"
 - Zip: "Zip_Code", "Zip"
 - Renewal date: "Renewal Date", "X-Date"
-- Premium: "Premium", "Total Premium"
-- Tenure: "Tenure", "Years"
+- Premium: "Premium", "Total Premium", "Annual Premium", "Written Premium"
+  IMPORTANT: Some reports split premium into TWO columns like "Premium New($)" and "Premium Old($)".
+  If you see separate new/old premium columns, map them to premium_new and premium_old (set premium to null).
+  If there is a single combined premium column, map it to premium (set premium_new and premium_old to null).
+- Tenure: "Tenure", "Years", "Original Year" (if Original Year, it's a year like 2015 meaning tenure = currentYear - value)
 - EZPay: "EZPay", "EZ_Pay"
-- Balance: "Balance", "Balance_Due"
+- Balance: "Balance", "Balance_Due", "Amount Due($)"
 - Product presence flags: "Presence_of_Auto", "Presence_of_Property", "Presence_of_Life"
 - Monoline indicator: "Monoline_or_Multiline_Household"
 
@@ -196,7 +201,9 @@ Respond with ONLY a JSON object (no markdown):
     "zip_code": "exact column name or null",
     "renewal_date": "exact column name or null",
     "products": "exact column name or null",
-    "premium": "exact column name or null",
+    "premium": "exact column name for single combined premium column, or null if split",
+    "premium_new": "exact column name for new/renewal premium column, or null",
+    "premium_old": "exact column name for old/expiring premium column, or null",
     "tenure": "exact column name or null",
     "policy_count": "exact column name or null",
     "ezpay": "exact column name or null",
@@ -282,7 +289,17 @@ function transformRow(
   }
 
   // Get numeric fields
-  const currentPremium = mapping.premium ? parseFloat(String(row[mapping.premium] || '0').replace(/[$,]/g, '')) || 0 : 0;
+  // Handle both single premium column and split new/old columns
+  let currentPremium = 0;
+  if (mapping.premium && row[mapping.premium] !== undefined) {
+    currentPremium = parseFloat(String(row[mapping.premium] || '0').replace(/[$,]/g, '')) || 0;
+  } else {
+    // Try split premium columns — use the higher of new/old, or sum if both present
+    const premNew = mapping.premium_new ? parseFloat(String(row[mapping.premium_new] || '0').replace(/[$,]/g, '')) || 0 : 0;
+    const premOld = mapping.premium_old ? parseFloat(String(row[mapping.premium_old] || '0').replace(/[$,]/g, '')) || 0 : 0;
+    // Use new premium if available (represents current/renewal value), fall back to old
+    currentPremium = premNew || premOld;
+  }
   const tenureYears = mapping.tenure ? parseFloat(String(row[mapping.tenure] || '0')) || 0 : 0;
   const policyCount = mapping.policy_count ? parseInt(String(row[mapping.policy_count] || '1')) || 1 : 1;
   const balanceDue = mapping.balance ? parseFloat(String(row[mapping.balance] || '0').replace(/[$,]/g, '')) || 0 : 0;
