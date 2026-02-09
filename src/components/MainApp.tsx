@@ -52,6 +52,12 @@ const AnalyticsPage = dynamic(() => import('./views/AnalyticsPage'), {
   loading: () => <DashboardModalSkeleton />,
 });
 
+// Lazy load CalendarView for the standalone calendar page
+const CalendarView = dynamic(() => import('./calendar/CalendarView'), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
+
 // Lazy load CustomerLookupView for the customer book of business browser
 const CustomerLookupView = dynamic(() => import('./views/CustomerLookupView'), {
   ssr: false,
@@ -493,6 +499,27 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               onDismiss={handleAIDismiss}
               onRefresh={handleAIRefresh}
             />
+          </ErrorBoundary>
+        );
+
+      case 'calendar':
+        // Standalone calendar view for task scheduling
+        return (
+          <ErrorBoundary>
+            <div className="flex flex-col h-full bg-[var(--background)]">
+              <div className="flex-shrink-0 px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
+                <h1 className="text-xl font-semibold text-[var(--foreground)]">Calendar</h1>
+                <p className="text-sm text-[var(--text-muted)]">View tasks by due date</p>
+              </div>
+              <div className="flex-1 min-h-0">
+                <CalendarView
+                  key={agencyKey}
+                  todos={todos}
+                  onTaskClick={(todo) => handleTaskLinkClick(todo.id)}
+                  onDateClick={() => {}}
+                />
+              </div>
+            </div>
           </ErrorBoundary>
         );
 

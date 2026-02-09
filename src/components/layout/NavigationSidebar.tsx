@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import {
   LayoutDashboard,
   CheckSquare,
+  Calendar,
   Target,
   Archive,
   ChevronLeft,
@@ -50,6 +51,7 @@ interface NavItem {
 
 const primaryNavItems: NavItem[] = [
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'ai_inbox', label: 'AI Inbox', icon: Inbox },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'analytics', label: 'Analytics', icon: BarChart2 },

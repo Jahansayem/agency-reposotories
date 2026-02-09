@@ -19,6 +19,7 @@ import FloatingChatButton from '../FloatingChatButton';
 
 export type ActiveView =
   | 'tasks'
+  | 'calendar'
   | 'dashboard'
   | 'activity'
   | 'chat'
@@ -449,6 +450,7 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 
   const menuItems = [
     { id: 'tasks', label: 'Tasks', icon: '📋' },
+    { id: 'calendar', label: 'Calendar', icon: '📅' },
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'chat', label: 'Messages', icon: '💬' },
   ];
