@@ -27,7 +27,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     await chatToggle.click();
 
     // Wait for chat to load
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Send a message
     const chatInput = page.locator('textarea[placeholder*="Message"]');
@@ -53,7 +53,7 @@ test.describe('Chat - Reaction Discoverability', () => {
   test('should open reaction picker when reaction button is clicked', async ({ page }) => {
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Test message');
@@ -79,7 +79,7 @@ test.describe('Chat - Reaction Discoverability', () => {
 
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Long press test');
@@ -97,8 +97,7 @@ test.describe('Chat - Reaction Discoverability', () => {
     });
 
     // Wait for long-press threshold (500ms)
-    await page.waitForTimeout(600);
-
+  
     // Touch end
     await messageBubble.dispatchEvent('touchend');
 
@@ -111,7 +110,7 @@ test.describe('Chat - Reaction Discoverability', () => {
 
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Visual hint test');
@@ -146,7 +145,7 @@ test.describe('Chat - Reaction Discoverability', () => {
 
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Cancel test');
@@ -163,13 +162,11 @@ test.describe('Chat - Reaction Discoverability', () => {
     });
 
     // Wait LESS than threshold (300ms instead of 500ms)
-    await page.waitForTimeout(300);
 
     // Touch end
     await messageBubble.dispatchEvent('touchend');
 
     // Reaction picker should NOT appear
-    await page.waitForTimeout(200);
     const heartButton = page.locator('button[title="Heart"]').first();
     await expect(heartButton).not.toBeVisible();
   });
@@ -177,7 +174,7 @@ test.describe('Chat - Reaction Discoverability', () => {
   test('should add reaction from hover button', async ({ page }) => {
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Reaction test');
@@ -202,7 +199,7 @@ test.describe('Chat - Reaction Discoverability', () => {
   test('should have accessible hover button (44x44px touch target)', async ({ page }) => {
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Accessibility test');
@@ -229,13 +226,12 @@ test.describe('Chat - Reaction Discoverability', () => {
   test('should work in direct messages', async ({ page }) => {
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to DM mode
     const dmToggle = page.locator('button:has-text("Direct Messages")');
     if (await dmToggle.isVisible()) {
       await dmToggle.click();
-      await page.waitForTimeout(300);
 
       // Select a user (e.g., Sefra)
       const userButton = page.locator('button:has-text("Sefra")').first();
@@ -280,7 +276,7 @@ test.describe('Chat Reactions - Accessibility', () => {
   test('should have proper ARIA labels on reaction button', async ({ page }) => {
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('ARIA test');
@@ -300,7 +296,7 @@ test.describe('Chat Reactions - Accessibility', () => {
   test('should have proper color contrast on hover', async ({ page }) => {
     const chatToggle = page.locator('button:has-text("Chat")');
     await chatToggle.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill('Contrast test');

@@ -20,7 +20,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(header).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card to select them
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -28,7 +28,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN
   const pinInputs = page.locator('input[type="password"]');
@@ -36,17 +36,16 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
 
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for automatic login
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
   if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for main app to load
@@ -66,7 +65,7 @@ test.describe('Archive Feature Tests', () => {
     await archiveBtn.click();
 
     // Wait for archive view to load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify we're on the archive view - check for the Archive header
     const archiveHeader = page.getByRole('heading', { name: 'Archive' });
@@ -83,7 +82,7 @@ test.describe('Archive Feature Tests', () => {
       await sidebar.getByText('Archive').click();
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check for stats bar elements
     const statsBar = page.locator('[class*="stats"], [class*="border-t"]').filter({ hasText: /this week|this month/i });
@@ -100,7 +99,7 @@ test.describe('Archive Feature Tests', () => {
       await sidebar.getByText('Archive').click();
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Find search input in archive
     const searchInput = page.locator('input[placeholder*="Search archived"]');
@@ -108,7 +107,7 @@ test.describe('Archive Feature Tests', () => {
 
     // Type a search query
     await searchInput.fill('test');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Results should filter (or show "no results" message)
     const resultsOrEmpty = page.locator('[class*="task"], [class*="rounded-lg"]').first()
@@ -123,14 +122,13 @@ test.describe('Archive Feature Tests', () => {
     // Navigate to archive
     await page.locator('aside button').filter({ hasText: 'Archive' }).first().click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Find and click the Filters button
     const filtersBtn = page.getByRole('button', { name: /filters/i });
     await expect(filtersBtn).toBeVisible({ timeout: 5000 });
     await filtersBtn.click();
-
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Filter panel should be visible with date range label
     const dateRangeLabel = page.getByText('Date Range');
@@ -146,7 +144,7 @@ test.describe('Archive Feature Tests', () => {
       await sidebar.getByText('Archive').click();
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Find sort dropdown
     const sortDropdown = page.locator('select').filter({ hasText: /newest|oldest|name|priority/i });
@@ -154,7 +152,7 @@ test.describe('Archive Feature Tests', () => {
 
     // Change sort option
     await sortDropdown.selectOption('name_asc');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Verify sort option changed
     await expect(sortDropdown).toHaveValue('name_asc');
@@ -169,7 +167,7 @@ test.describe('Archive Feature Tests', () => {
       await sidebar.getByText('Archive').click();
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Find Export button
     const exportBtn = page.getByRole('button', { name: /export/i });
@@ -201,7 +199,7 @@ test.describe('Archive Feature Tests', () => {
       await sidebar.getByText('Archive').click();
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Find first task item with checkbox
     const firstTaskCheckbox = page.locator('[class*="checkbox"], button[class*="rounded"]')
@@ -212,7 +210,7 @@ test.describe('Archive Feature Tests', () => {
     // Only test if there are archived tasks with checkboxes
     if (await firstTaskCheckbox.isVisible({ timeout: 2000 }).catch(() => false)) {
       await firstTaskCheckbox.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should see bulk actions bar after selection
       const bulkActionsBar = page.locator('text=/\\d+ selected/i')
@@ -229,7 +227,7 @@ test.describe('Archive Feature Tests', () => {
     // Navigate to archive
     await page.locator('aside button').filter({ hasText: 'Archive' }).first().click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify we're on the archive view
     const archiveHeader = page.getByRole('heading', { name: 'Archive' });
@@ -246,7 +244,7 @@ test.describe('Archive Feature Tests', () => {
       await page.locator('aside button').filter({ hasText: 'Tasks' }).first().click();
     }
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Should be back on tasks view - verify the archive header is gone
     await expect(archiveHeader).not.toBeVisible({ timeout: 5000 });
@@ -258,13 +256,13 @@ test.describe('Archive Feature Tests', () => {
     // Navigate to archive
     await page.locator('aside button').filter({ hasText: 'Archive' }).first().click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Open filters panel
     const filtersBtn = page.getByRole('button', { name: /filters/i });
     await expect(filtersBtn).toBeVisible({ timeout: 5000 });
     await filtersBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Find the Date Range dropdown specifically (second select after sort)
     const dateRangeLabel = page.getByText('Date Range');
@@ -276,7 +274,7 @@ test.describe('Archive Feature Tests', () => {
     if (await dateDropdown.isVisible({ timeout: 2000 }).catch(() => false)) {
       // Select "Last 7 Days"
       await dateDropdown.selectOption('last_7_days');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify selection
       await expect(dateDropdown).toHaveValue('last_7_days');
@@ -290,7 +288,7 @@ test.describe('Archive Feature Tests', () => {
     // Navigate to archive
     await page.locator('aside button').filter({ hasText: 'Archive' }).first().click();
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Wait for the archive view to be fully loaded
     const archiveHeader = page.getByRole('heading', { name: 'Archive' });
@@ -304,7 +302,7 @@ test.describe('Archive Feature Tests', () => {
     if (await firstTaskCard.isVisible({ timeout: 3000 }).catch(() => false)) {
       // Click on a task card - use force click in case there's an overlay
       await firstTaskCard.click({ position: { x: 100, y: 20 } });
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // The detail view should show - look for detailed task info
       // Since we clicked on a task, we should see expanded details or a detail panel
@@ -321,13 +319,13 @@ test.describe('Archive Feature Tests', () => {
       await sidebar.getByText('Archive').click();
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Search for something that won't exist
     const searchInput = page.locator('input[placeholder*="Search archived"]');
     if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
       await searchInput.fill('xyznonexistent123456789');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should show empty state message
       const emptyMessage = page.locator('text=/no tasks match|no archived tasks/i');

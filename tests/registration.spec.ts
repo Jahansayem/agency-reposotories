@@ -127,7 +127,6 @@ test.describe('User Registration Flow', () => {
 
     // Enter complete PIN
     await page.keyboard.type('1234');
-    await page.waitForTimeout(300);
 
     // Should automatically advance to confirm step
     await expect(page.locator('text=Confirm your PIN')).toBeVisible();
@@ -161,11 +160,10 @@ test.describe('User Registration Flow', () => {
 
     // Enter PIN
     await page.keyboard.type('1234');
-    await page.waitForTimeout(300);
 
     // Enter different confirmation PIN
     await page.keyboard.type('5678');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should show error
     await expect(page.locator('text=PINs do not match')).toBeVisible();
@@ -185,7 +183,6 @@ test.describe('User Registration Flow', () => {
     await page.fill('input[id="name"]', 'Test User');
     await page.click('button:has-text("Continue")');
     await page.keyboard.type('1234');
-    await page.waitForTimeout(300);
 
     // Should be on confirm step
     await expect(page.locator('text=Confirm your PIN')).toBeVisible();
@@ -222,11 +219,10 @@ test.describe('User Registration Flow', () => {
 
     // Step 2: Enter PIN
     await page.keyboard.type('1234');
-    await page.waitForTimeout(300);
 
     // Step 3: Confirm PIN
     await page.keyboard.type('1234');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Should auto-login and redirect to dashboard
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
@@ -327,7 +323,6 @@ test.describe('User Registration Flow', () => {
     await expect(page.locator('text=PIN').first()).toBeVisible();
 
     await page.keyboard.type('1234');
-    await page.waitForTimeout(300);
 
     // Step 3: Confirm should be highlighted
     await expect(page.locator('text=Confirm').first()).toBeVisible();
@@ -342,12 +337,11 @@ test.describe('User Registration Flow', () => {
     await page.fill('input[id="name"]', uniqueName);
     await page.click('button:has-text("Continue")');
     await page.keyboard.type('1234');
-    await page.waitForTimeout(300);
     await page.keyboard.type('1234');
 
     // Check if "Creating your account..." message appears
     // (May be too fast to catch, but validates the flow)
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should auto-login and go to dashboard
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
@@ -399,7 +393,6 @@ test.describe('Registration - Accessibility', () => {
     await page.click('button:has-text("Create Account")');
 
     // Wait for modal animation
-    await page.waitForTimeout(200);
 
     // Name input should be focused
     const nameInput = page.locator('input[id="name"]');
@@ -415,7 +408,6 @@ test.describe('Registration - Accessibility', () => {
     await page.click('button:has-text("Continue")');
 
     // Wait for step transition
-    await page.waitForTimeout(200);
 
     // First PIN input should be focused
     const pinInputs = page.locator('input[type="password"]');

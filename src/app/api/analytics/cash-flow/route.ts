@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import {
   CashFlowModel,
   DEFAULT_CASH_FLOW_CONFIG,
@@ -27,7 +28,7 @@ export interface CashFlowRequest {
   config?: Partial<CashFlowModelConfig>;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body: CashFlowRequest = await request.json();
     const { parameters, config: customConfig } = body;
@@ -120,13 +121,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/analytics/cash-flow
  * Get default configuration and analysis options
  */
-export async function GET() {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   return NextResponse.json({
     defaultConfig: DEFAULT_CASH_FLOW_CONFIG,
     description: 'Cash flow projection and working capital analysis',
@@ -147,4 +148,4 @@ export async function GET() {
       chargebackReserve: '3-5% of new business',
     },
   });
-}
+});

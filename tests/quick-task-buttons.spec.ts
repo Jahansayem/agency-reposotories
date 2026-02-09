@@ -19,7 +19,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(welcomeText).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card to select them
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -27,7 +27,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN - look for 4 password inputs
   const pinInputs = page.locator('input[type="password"]');
@@ -36,11 +36,10 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Enter each digit of the PIN
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100); // Small delay between digits
   }
 
   // Wait for automatic login after PIN entry
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present (click outside, X button, or View Tasks button)
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
@@ -49,12 +48,12 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Try clicking View Tasks first (most reliable)
   if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
   // Or try clicking the close button
   else if (await closeModalBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
     await closeModalBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for main app to load
@@ -112,7 +111,7 @@ test.describe('QuickTaskButtons', () => {
     const showMoreButton = page.locator('button:has-text("Show")').filter({ hasText: 'more' });
     if (await showMoreButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await showMoreButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Find and click the Quote template button (look for the truncated text)
@@ -139,7 +138,7 @@ test.describe('QuickTaskButtons', () => {
     const showMoreButton = page.locator('button:has-text("Show")').filter({ hasText: 'more' });
     if (await showMoreButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await showMoreButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     const quoteButton = page.locator('.grid button').filter({ hasText: /Quote|quote/i }).first();
@@ -168,7 +167,7 @@ test.describe('QuickTaskButtons', () => {
     await templateButton.click();
 
     // Wait for the template to populate
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Task input should be populated with the template text
     const taskInput = page.locator('textarea').first();
@@ -186,7 +185,7 @@ test.describe('QuickTaskButtons', () => {
     await templateButton.click();
 
     // Wait a bit for template to apply
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Wait for subtasks section to appear
     const subtasksSection = page.locator('text=Suggested Subtasks').first();
@@ -205,7 +204,7 @@ test.describe('QuickTaskButtons Responsive Grid', () => {
     await page.waitForSelector('text=Quick Add', { timeout: 10000 });
 
     // Wait for grid to render
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Count visible template buttons by counting specific known templates
     // These are the quick task template buttons (not other buttons on the page)
@@ -236,7 +235,7 @@ test.describe('QuickTaskButtons Responsive Grid', () => {
     await page.waitForSelector('text=Quick Add', { timeout: 10000 });
 
     // Wait for grid to render
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // On mobile with 4 templates shown, count the visible template buttons
     // Look for policy review, follow up, vehicle, and payment templates

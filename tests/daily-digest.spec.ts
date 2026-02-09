@@ -15,7 +15,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(header).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -23,7 +23,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN
   const pinInputs = page.locator('input[type="password"]');
@@ -31,17 +31,16 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
 
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for login
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
   if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for main app to load
@@ -71,7 +70,7 @@ test.describe('Daily Digest Tests', () => {
     const dashboardLink = page.locator('button, a').filter({ hasText: 'Dashboard' }).first();
     await expect(dashboardLink).toBeVisible({ timeout: 10000 });
     await dashboardLink.click();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Look for Daily Digest panel
     const digestPanel = page.locator('text=Daily Digest').first();
@@ -105,7 +104,7 @@ test.describe('Daily Digest Tests', () => {
       await generateBtn.click();
 
       // Wait for response
-      await page.waitForTimeout(5000);
+      await page.waitForLoadState('networkidle');
 
       // Take screenshot of result
       await page.screenshot({ path: 'test-results/digest-after-generate.png', fullPage: true });

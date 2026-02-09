@@ -28,7 +28,7 @@ test.describe('Edge Compatibility', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
 
     // Wait for app to render
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Check for major UI elements
     const loginHeader = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
@@ -82,7 +82,7 @@ test.describe('Edge Compatibility', () => {
     await page.goto('/');
 
     // Wait for theme to apply
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check that document has theme class
     const hasThemeClass = await page.evaluate(() => {

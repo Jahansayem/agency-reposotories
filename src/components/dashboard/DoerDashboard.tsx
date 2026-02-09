@@ -13,6 +13,8 @@ import {
   TrendingUp,
   Calendar,
   Zap,
+  BarChart3,
+  Users,
 } from 'lucide-react';
 import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
 import { useAppShell } from '../layout';
@@ -34,6 +36,8 @@ interface DoerDashboardProps {
   onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;
+  onNavigateToAnalytics?: () => void;
+  onNavigateToCustomers?: () => void;
 }
 
 export default function DoerDashboard({
@@ -44,6 +48,8 @@ export default function DoerDashboard({
   onTaskClick,
   onFilterOverdue,
   onFilterDueToday,
+  onNavigateToAnalytics,
+  onNavigateToCustomers,
 }: DoerDashboardProps) {
   const { setActiveView } = useAppShell();
   const prefersReducedMotion = useReducedMotion();
@@ -307,6 +313,30 @@ export default function DoerDashboard({
             <ArrowRight className="w-5 h-5 text-red-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
           </button>
         </motion.div>
+      )}
+
+      {/* Book of Business Quick Actions */}
+      {(onNavigateToAnalytics || onNavigateToCustomers) && (
+        <div className="flex items-center gap-3">
+          {onNavigateToAnalytics && (
+            <button
+              onClick={onNavigateToAnalytics}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/20 transition-colors text-sm font-medium"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Book of Business
+            </button>
+          )}
+          {onNavigateToCustomers && (
+            <button
+              onClick={onNavigateToCustomers}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 transition-colors text-sm font-medium"
+            >
+              <Users className="w-4 h-4" />
+              Customers
+            </button>
+          )}
+        </div>
       )}
 
       {/* Main Grid */}

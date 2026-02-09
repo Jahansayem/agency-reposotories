@@ -181,8 +181,8 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           opportunityId: opp.id,
-          assignedTo: 'Derrick', // Default assignee - could be made configurable
-          createdBy: 'System',
+          assignedTo: currentUser.name,
+          createdBy: currentUser.name,
           priority: mapTierToPriority(opp.priorityTier),
           customText: `Cross-sell: ${opp.customerName} - ${opp.recommendedProduct}`,
         }),

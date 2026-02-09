@@ -29,8 +29,19 @@ function getSupabaseClient() {
   );
 }
 
+/** Default number of todos per page */
+const DEFAULT_PAGE_SIZE = 50;
+/** Maximum allowed page size */
+const MAX_PAGE_SIZE = 200;
+
 /**
  * GET /api/todos - Fetch todos with decrypted PII fields
+ *
+ * Supports pagination via query params:
+ *   ?page=1&pageSize=50
+ *
+ * When fetching a list (no `id` param), the response includes pagination metadata.
+ * If no pagination params are provided, defaults are used (page 1, pageSize 50).
  */
 export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
@@ -42,11 +53,47 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const id = searchParams.get('id');
     const includeCompleted = searchParams.get('includeCompleted') === 'true';
 
-    let query = supabase.from('todos').select('*');
+    // Parse pagination params
+    const pageParam = searchParams.get('page');
+    const pageSizeParam = searchParams.get('pageSize');
+    const page = Math.max(1, pageParam ? parseInt(pageParam, 10) || 1 : 1);
+    const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, pageSizeParam ? parseInt(pageSizeParam, 10) || DEFAULT_PAGE_SIZE : DEFAULT_PAGE_SIZE));
+
+    if (id) {
+      // Fetch single todo - no pagination needed
+      let query = supabase.from('todos').select('*').eq('id', id);
+
+      if (ctx.agencyId) {
+        query = query.eq('agency_id', ctx.agencyId);
+      }
+
+      if (!ctx.permissions?.can_view_all_tasks) {
+        const safeUserName = sanitizeForPostgrestFilter(ctx.userName);
+        query = query.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const decryptedData = (data || []).map(todo => decryptTodoPII(todo));
+
+      return NextResponse.json({
+        success: true,
+        data: decryptedData[0] ?? null,
+      });
+    }
+
+    // Fetch paginated list of todos
+    // Build count query
+    let countQuery = supabase.from('todos').select('*', { count: 'exact', head: true });
+    // Build data query
+    let dataQuery = supabase.from('todos').select('*');
 
     // Always scope to agency
     if (ctx.agencyId) {
-      query = query.eq('agency_id', ctx.agencyId);
+      countQuery = countQuery.eq('agency_id', ctx.agencyId);
+      dataQuery = dataQuery.eq('agency_id', ctx.agencyId);
     }
 
     // Staff data scoping: if user lacks can_view_all_tasks permission,
@@ -54,32 +101,45 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     // SECURITY: Sanitize userName to prevent PostgREST filter injection
     if (!ctx.permissions?.can_view_all_tasks) {
       const safeUserName = sanitizeForPostgrestFilter(ctx.userName);
-      query = query.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
+      countQuery = countQuery.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
+      dataQuery = dataQuery.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
     }
 
-    if (id) {
-      // Fetch single todo
-      query = query.eq('id', id);
-    } else {
-      // Fetch all todos (optionally filter completed)
-      if (!includeCompleted) {
-        query = query.eq('completed', false);
-      }
-      query = query.order('created_at', { ascending: false });
+    // Optionally filter completed
+    if (!includeCompleted) {
+      countQuery = countQuery.eq('completed', false);
+      dataQuery = dataQuery.eq('completed', false);
     }
 
-    const { data, error } = await query;
+    // Apply ordering and pagination range
+    const offset = (page - 1) * pageSize;
+    dataQuery = dataQuery
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
-    if (error) {
-      throw error;
-    }
+    // Execute both queries in parallel
+    const [countResult, dataResult] = await Promise.all([countQuery, dataQuery]);
+
+    if (countResult.error) throw countResult.error;
+    if (dataResult.error) throw dataResult.error;
+
+    const totalCount = countResult.count ?? 0;
+    const totalPages = Math.ceil(totalCount / pageSize);
 
     // Decrypt PII fields
-    const decryptedData = (data || []).map(todo => decryptTodoPII(todo));
+    const decryptedData = (dataResult.data || []).map(todo => decryptTodoPII(todo));
 
     return NextResponse.json({
       success: true,
-      data: id ? decryptedData[0] : decryptedData,
+      data: decryptedData,
+      pagination: {
+        page,
+        pageSize,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (error) {
     logger.error('Error fetching todos', error as Error, {

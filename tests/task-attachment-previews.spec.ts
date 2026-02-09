@@ -13,12 +13,10 @@ test.describe('Task Attachment Previews (Issue #26)', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for app to load

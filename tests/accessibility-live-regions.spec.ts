@@ -39,14 +39,13 @@ test.describe('Accessibility - ARIA Live Regions', () => {
   test('should announce task creation to screen readers', async ({ page }) => {
     // Add a task
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Test task for announcement');
 
     await page.keyboard.press('Enter');
 
     // Wait a moment for announcement
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check if live region has announcement
     const liveRegion = page.locator('[role="status"][aria-live]').first();
@@ -59,19 +58,18 @@ test.describe('Accessibility - ARIA Live Regions', () => {
   test('should announce task completion to screen readers', async ({ page }) => {
     // Create a task first
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Task to complete');
 
     await page.keyboard.press('Enter');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Complete the task
     const checkbox = page.locator('input[type="checkbox"]').last();
     await checkbox.check();
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check live region for completion announcement
     const liveRegion = page.locator('[role="status"][aria-live]').first();
@@ -112,14 +110,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
   test('should clear announcements after timeout', async ({ page }) => {
     // Create a task
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Temporary announcement test');
 
     await page.keyboard.press('Enter');
 
     // Check announcement appears
-    await page.waitForTimeout(200);
     let liveRegion = page.locator('[role="status"][aria-live]').first();
     let text = await liveRegion.textContent();
     expect(text).toBeTruthy();
@@ -136,13 +132,12 @@ test.describe('Accessibility - ARIA Live Regions', () => {
   test('should announce task deletion', async ({ page }) => {
     // Create a task
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Task to delete');
 
     await page.keyboard.press('Enter');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Find and delete the task
     const taskItem = page.locator('text=Task to delete').first();
@@ -159,7 +154,7 @@ test.describe('Accessibility - ARIA Live Regions', () => {
         await confirmButton.click();
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check live region for deletion announcement
       const liveRegion = page.locator('[role="status"][aria-live]').first();
@@ -172,19 +167,16 @@ test.describe('Accessibility - ARIA Live Regions', () => {
   test('should announce status changes', async ({ page }) => {
     // Create a task
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     await taskInput.fill('Task for status change');
 
     await page.keyboard.press('Enter');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Change task status (if status badges are visible)
     const taskItem = page.locator('text=Task for status change').first();
     await taskItem.click();
-
-    await page.waitForTimeout(300);
 
     // Look for status change button/dropdown
     const statusButton = page.locator('button:has-text("Status"), [aria-label*="status"]').first();
@@ -195,8 +187,7 @@ test.describe('Accessibility - ARIA Live Regions', () => {
       const inProgressOption = page.locator('text=In Progress, text=Done').first();
       if (await inProgressOption.isVisible()) {
         await inProgressOption.click();
-
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Check for status change announcement
         const liveRegion = page.locator('[role="status"][aria-live]').first();
@@ -210,16 +201,14 @@ test.describe('Accessibility - ARIA Live Regions', () => {
   test('should not spam announcements for multiple rapid actions', async ({ page }) => {
     // Rapidly create multiple tasks
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
     for (let i = 0; i < 3; i++) {
       await taskInput.fill(`Rapid task ${i}`);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(100);
     }
 
     // Wait for announcements to settle
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Should only have the last announcement (previous ones cleared)
     const liveRegion = page.locator('[role="status"][aria-live]').first();
@@ -253,7 +242,6 @@ test.describe('Accessibility - Live Regions in Chat', () => {
     const chatButton = page.locator('button:has-text("Chat"), button:has-text("Messages")').first();
     if (await chatButton.isVisible()) {
       await chatButton.click();
-      await page.waitForTimeout(300);
 
       // Check if chat has live region support
       const liveRegions = await page.locator('[role="status"][aria-live]').count();
@@ -301,7 +289,6 @@ test.describe('Accessibility - AnnouncementProvider Context', () => {
     const tasksButton = page.locator('button:has-text("Tasks")').first();
     if (await tasksButton.isVisible()) {
       await tasksButton.click();
-      await page.waitForTimeout(200);
 
       let liveRegions = await page.locator('[role="status"][aria-live]').count();
       expect(liveRegions).toBeGreaterThanOrEqual(1);
@@ -311,7 +298,6 @@ test.describe('Accessibility - AnnouncementProvider Context', () => {
     const dashboardButton = page.locator('button:has-text("Dashboard")').first();
     if (await dashboardButton.isVisible()) {
       await dashboardButton.click();
-      await page.waitForTimeout(200);
 
       let liveRegions = await page.locator('[role="status"][aria-live]').count();
       expect(liveRegions).toBeGreaterThanOrEqual(1);

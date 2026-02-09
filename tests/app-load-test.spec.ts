@@ -9,7 +9,7 @@ test('app should load without JavaScript errors', async ({ page }) => {
   });
   
   await page.goto('http://localhost:3000');
-  await page.waitForTimeout(3000);
+  await page.waitForLoadState('networkidle');
   
   if (errors.length > 0) {
     console.log('Errors found:', errors);

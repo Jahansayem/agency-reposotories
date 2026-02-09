@@ -53,7 +53,7 @@ test.describe('Improved Layout Tests', () => {
 
     test('responsive navigation works on mobile', async ({ page }) => {
       await setViewport(page, 'mobile');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Mobile should show bottom nav or hamburger menu
       const bottomNav = await elementExists(page, 'nav[aria-label*="ottom"]');
@@ -126,7 +126,7 @@ test.describe('Improved Layout Tests', () => {
 
       if (await task.isVisible({ timeout: 5000 }).catch(() => false)) {
         await task.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Check if modal or detail panel opened
         const modalOpened = await retryAction(async () => {
@@ -151,11 +151,9 @@ test.describe('Improved Layout Tests', () => {
 
       if (await task.isVisible({ timeout: 3000 }).catch(() => false)) {
         await task.click();
-        await page.waitForTimeout(300);
 
         // Press Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         // Modal should be gone
         const modalGone = await page
@@ -216,7 +214,6 @@ test.describe('Improved Layout Tests', () => {
 
       // Press Tab to navigate
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       // Check if something got focus
       const focusedElement = await page.evaluate(() => {

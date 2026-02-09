@@ -56,7 +56,7 @@ async function _legacyLoginAsUser(page: Page, userName: string, pin: string = '8
   await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded' });
 
   // Wait for page to stabilize
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Hide the Next.js dev overlay to prevent pointer event interception
   await hideDevOverlay(page);
@@ -87,7 +87,7 @@ async function _legacyLoginAsUser(page: Page, userName: string, pin: string = '8
     console.log('Failed to load login screen - retrying...');
     // Retry once
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     await hideDevOverlay(page);
 
     // Check again if already logged in after reload
@@ -131,7 +131,7 @@ async function _legacyLoginAsUser(page: Page, userName: string, pin: string = '8
   // Wait for PIN screen
   try {
     await page.waitForSelector('input[type="password"]', { timeout: 10000 });
-    await page.waitForTimeout(500); // Wait for animation
+    // Wait for PIN input animation to complete
   } catch {
     console.log('Failed to show PIN screen');
     return false;
@@ -144,7 +144,7 @@ async function _legacyLoginAsUser(page: Page, userName: string, pin: string = '8
   }
 
   // Wait for PIN validation
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Check for error message
   const errorMessage = page.locator('text=Incorrect PIN');
@@ -197,7 +197,7 @@ async function navigateToTasks(page: Page): Promise<void> {
   if (await tasksButton.isVisible({ timeout: 3000 }).catch(() => false)) {
     await tasksButton.click();
     // Wait for the tasks view to load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     // Wait for the New Task button to be visible
     await newTaskButton.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   }
@@ -215,7 +215,7 @@ async function createTask(page: Page, taskText: string): Promise<string> {
   const newTaskButton = page.locator('button:has-text("New Task")').first();
   if (await newTaskButton.isVisible({ timeout: 3000 }).catch(() => false)) {
     await newTaskButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Find and fill the task input - try multiple selectors for the modal
@@ -237,7 +237,7 @@ async function createTask(page: Page, taskText: string): Promise<string> {
   await page.keyboard.press('Enter');
 
   // Wait for modal to close or task to appear
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Wait for task to appear in the list
   await expect(page.getByText(fullTaskText).first()).toBeVisible({ timeout: 10000 });
@@ -283,7 +283,6 @@ async function switchAgency(page: Page, agencyName: string): Promise<boolean> {
     await agencySwitcher.click();
 
     // Wait for dropdown to appear
-    await page.waitForTimeout(300);
 
     // Try to click on the agency
     const agencyOption = page.locator(`text=${agencyName}`);
@@ -296,7 +295,7 @@ async function switchAgency(page: Page, agencyName: string): Promise<boolean> {
     await agencyOption.click();
 
     // Wait for content to refresh
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     return true;
   } catch (error) {
     console.log('Failed to switch agency:', error);
@@ -324,7 +323,6 @@ async function cleanupTestTasks(page: Page): Promise<void> {
         const confirmButton = page.locator('button:has-text("Delete"), button:has-text("Confirm")').first();
         if (await confirmButton.isVisible({ timeout: 1000 }).catch(() => false)) {
           await confirmButton.click();
-          await page.waitForTimeout(300);
         }
       }
     }
@@ -408,7 +406,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     }
 
     // Step 5: Verify task from Agency A is NOT visible in Agency B
-    await page2.waitForTimeout(1000);
+    await page2.waitForLoadState('networkidle');
     const isTaskAVisibleInB = await verifyTaskVisible(page2, taskAId);
     expect(isTaskAVisibleInB).toBe(false);
 
@@ -545,7 +543,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     }
 
     await strategicGoalsButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Verify we're in strategic goals view
     const goalsViewIndicator = page.getByText(/Goals|Strategic|Objectives/i).first();
@@ -591,7 +589,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     }
 
     await activityButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Verify activity appears in Agency A
     const activityItemsA = page.locator('[data-testid="activity-item"], div:has-text("created")').first();
@@ -619,7 +617,7 @@ test.describe('Multi-Agency Data Isolation', () => {
 
     if (await activityButtonB.isVisible({ timeout: 3000 }).catch(() => false)) {
       await activityButtonB.click();
-      await page2.waitForTimeout(500);
+      await page2.waitForLoadState('networkidle');
 
       // Get activity count in Agency B
       const activityCountB = await page2.locator('[data-testid="activity-item"]').count();
@@ -648,7 +646,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     // Click on task to open details
     const taskElement = page.getByText(new RegExp(taskId)).first();
     await taskElement.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Look for assignment dropdown
     const assignmentDropdown = page.locator('[data-testid="assign-dropdown"], button:has-text("Assign")').first();
@@ -660,7 +658,6 @@ test.describe('Multi-Agency Data Isolation', () => {
     }
 
     await assignmentDropdown.click();
-    await page.waitForTimeout(300);
 
     // Get list of available users
     const userOptionsByTestId = page.locator('[data-testid="user-option"]');
@@ -773,7 +770,6 @@ test.describe('Multi-Agency Data Isolation', () => {
 
     if (await completeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await completeButton.click();
-      await page.waitForTimeout(300);
 
       // Verify task is marked complete
       const completedIndicator = taskElement.locator('[data-testid*="completed"], .line-through').first();
@@ -823,7 +819,7 @@ test.describe('Multi-Agency Isolation - Edge Cases', () => {
 
     if (await createAgencyButton.isVisible({ timeout: 3000 }).catch(() => false)) {
       await createAgencyButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // If modal opens, we're in a multi-agency system
       const modalTitle = page.locator('[role="dialog"], h2, h3').first();

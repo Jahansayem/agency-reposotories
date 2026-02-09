@@ -45,7 +45,7 @@ async function loginAsExistingUser(page: Page): Promise<boolean> {
   }
 
   // Wait a moment for PIN validation
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Check if we got an error (wrong PIN)
   const errorMessage = page.locator('text=Incorrect PIN');

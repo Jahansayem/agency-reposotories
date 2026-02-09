@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { logger } from '@/lib/logger';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -365,7 +366,7 @@ export default function NavigationSidebar({
         onClose={() => setShowCreateAgencyModal(false)}
         onSuccess={(agency) => {
           // Successfully created agency - the AgencyContext will auto-refresh
-          console.log('Agency created:', agency);
+          logger.info('Agency created successfully', { component: 'NavigationSidebar', action: 'onCreateAgency' });
           setShowCreateAgencyModal(false);
           // Optional: Show success toast notification here
         }}

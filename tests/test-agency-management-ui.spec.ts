@@ -8,7 +8,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
 
     // Login
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -16,7 +16,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
     await page.screenshot({ path: '/tmp/test-1-logged-in.png' });
 
     console.log('\n========== TEST 1.1: Access Control - Owner Can Create Agencies ==========');
@@ -36,7 +36,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
 
     await agencySwitcher.click();
     console.log('Clicked AgencySwitcher');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     await page.screenshot({ path: '/tmp/test-1-dropdown-open.png' });
 
@@ -63,7 +63,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
 
     // Click Create New Agency
     await createButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     await page.screenshot({ path: '/tmp/test-2-create-modal.png' });
 
@@ -77,7 +77,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
     await nameInput.fill('Test Insurance Agency');
     console.log('Filled agency name: "Test Insurance Agency"');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check slug auto-generated
     const slugInput = page.locator('input[name="slug"], input[value*="test-insurance"]').first();
@@ -100,7 +100,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
     console.log('Clicked Create Agency button');
 
     // Wait for modal to close (indicates success)
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const modalStillVisible = await modal.isVisible().catch(() => false);
     console.log(`Modal still visible: ${modalStillVisible}`);
@@ -119,7 +119,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
 
     // Reopen AgencySwitcher
     await agencySwitcher.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Look for "Manage Members" button
     const manageButton = page.locator('button:has-text("Manage Members"), button:has-text("Manage")');
@@ -131,7 +131,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
 
     // Click Manage Members
     await manageButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     await page.screenshot({ path: '/tmp/test-5-manage-members.png' });
 

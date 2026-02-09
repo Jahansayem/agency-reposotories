@@ -65,7 +65,7 @@ export class TaskListPage {
       const button = this.page.locator(buttonMap[view]).first();
       await button.waitFor({ state: 'visible', timeout: 5000 });
       await button.click();
-      await this.page.waitForTimeout(500); // Let view transition complete
+      await this.page.waitForLoadState('networkidle');
     });
   }
 
@@ -101,7 +101,7 @@ export class TaskListPage {
 
       if (await addButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await addButton.click();
-        await this.page.waitForTimeout(300);
+        await this.page.waitForLoadState('networkidle');
       }
 
       // Find input
@@ -111,7 +111,7 @@ export class TaskListPage {
       await input.press('Enter');
 
       // Wait for task to appear
-      await this.page.waitForTimeout(500);
+      await this.page.waitForLoadState('networkidle');
     });
   }
 
@@ -121,7 +121,7 @@ export class TaskListPage {
       const checkbox = task.locator('input[type="checkbox"], button[role="checkbox"]').first();
       await checkbox.waitFor({ state: 'visible', timeout: 5000 });
       await checkbox.click();
-      await this.page.waitForTimeout(300);
+      await this.page.waitForLoadState('networkidle');
     });
   }
 
@@ -131,7 +131,7 @@ export class TaskListPage {
       const checkbox = task.locator('input[type="checkbox"], button[role="checkbox"]').first();
       await checkbox.waitFor({ state: 'visible', timeout: 5000 });
       await checkbox.click();
-      await this.page.waitForTimeout(300);
+      await this.page.waitForLoadState('networkidle');
     });
   }
 
@@ -142,13 +142,11 @@ export class TaskListPage {
 
       if (await deleteButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await deleteButton.click();
-        await this.page.waitForTimeout(300);
       } else {
         // Try opening context menu or overflow menu
         const moreButton = task.locator('button[aria-label*="More" i], button:has-text("⋮")').first();
         if (await moreButton.isVisible({ timeout: 2000 }).catch(() => false)) {
           await moreButton.click();
-          await this.page.waitForTimeout(200);
 
           const deleteOption = this.page.locator('button:has-text("Delete")').first();
           await deleteOption.waitFor({ state: 'visible', timeout: 3000 });
@@ -162,7 +160,7 @@ export class TaskListPage {
     await retryAction(async () => {
       const task = await this.getTaskByIndex(index);
       await task.click();
-      await this.page.waitForTimeout(500);
+      await this.page.waitForLoadState('networkidle');
 
       // Verify modal/detail panel opened
       const modal = this.page.locator('[role="dialog"], .detail-panel, .task-detail').first();
@@ -177,12 +175,14 @@ export class TaskListPage {
     const searchInput = this.page.locator(this.selectors.searchInput).first();
     await searchInput.waitFor({ state: 'visible', timeout: 5000 });
     await searchInput.fill(query);
-    await this.page.waitForTimeout(500); // Let search debounce
+    // Wait for search debounce (500ms) to complete
+    await this.page.waitForTimeout(500);
   }
 
   async clearSearch(): Promise<void> {
     const searchInput = this.page.locator(this.selectors.searchInput).first();
     await searchInput.fill('');
+    // Wait for search debounce to clear
     await this.page.waitForTimeout(500);
   }
 
@@ -196,7 +196,6 @@ export class TaskListPage {
 
       if (await selectionCheckbox.isVisible({ timeout: 2000 }).catch(() => false)) {
         await selectionCheckbox.check();
-        await this.page.waitForTimeout(100);
       }
     }
   }
@@ -205,14 +204,14 @@ export class TaskListPage {
     const bulkCompleteButton = this.page.locator('button:has-text("Complete Selected"), button:has-text("Mark Complete")').first();
     await bulkCompleteButton.waitFor({ state: 'visible', timeout: 5000 });
     await bulkCompleteButton.click();
-    await this.page.waitForTimeout(500);
+    await this.page.waitForLoadState('networkidle');
   }
 
   async bulkDelete(): Promise<void> {
     const bulkDeleteButton = this.page.locator('button:has-text("Delete Selected")').first();
     await bulkDeleteButton.waitFor({ state: 'visible', timeout: 5000 });
     await bulkDeleteButton.click();
-    await this.page.waitForTimeout(500);
+    await this.page.waitForLoadState('networkidle');
 
     // Confirm if dialog appears
     const confirmButton = this.page.locator('button:has-text("Confirm"), button:has-text("Delete")').first();

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
-import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 // Create Supabase client lazily to avoid build-time env var access
@@ -70,15 +71,7 @@ async function getAllUsers(): Promise<string[]> {
   return (users || []).map((u: { name: string }) => u.name).filter(Boolean);
 }
 
-export async function POST(request: NextRequest) {
-  // Verify API key (constant-time comparison)
-  if (!verifyOutlookApiKey(request)) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   // SECURITY: Rate limit AI operations to prevent abuse
   // Uses the 'ai' limiter: 10 requests per minute per IP
   const rateLimitResult = await withRateLimit(request, rateLimiters.ai);
@@ -90,7 +83,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { subject, body, sender, receivedDate, agency_id } = await request.json();
+    const { subject, body, sender, receivedDate } = await request.json();
+    const agencyId = ctx.agencyId;
 
     if (!subject && !body) {
       return NextResponse.json(
@@ -100,20 +94,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Get available users to suggest as assignees
-    // If agency_id is provided, only suggest users from that agency
+    // Use agency from auth context to scope user suggestions
     let availableUsers: string[];
-    if (agency_id) {
-      availableUsers = await getUsersFromAgency(agency_id);
+    if (agencyId) {
+      availableUsers = await getUsersFromAgency(agencyId);
       if (availableUsers.length === 0) {
         logger.warn('No users found in specified agency for parse-email', {
           component: 'OutlookParseEmailAPI',
-          agencyId: agency_id,
+          agencyId,
         });
         // Fall back to all users if agency has no members
         availableUsers = await getAllUsers();
       }
     } else {
-      // Backward compatible: get all users when no agency specified
+      // Backward compatible: get all users when no agency context
       availableUsers = await getAllUsers();
     }
 
@@ -182,13 +176,13 @@ Respond with ONLY the JSON object, no other text.`;
     };
 
     // Validate suggestedAssignee is in the available users list (if agency scoped)
-    if (agency_id && validatedDraft.suggestedAssignee && availableUsers.length > 0) {
+    if (agencyId && validatedDraft.suggestedAssignee && availableUsers.length > 0) {
       if (!availableUsers.includes(validatedDraft.suggestedAssignee)) {
         logger.warn('AI suggested assignee not in agency', {
           component: 'OutlookParseEmailAPI',
           suggestedAssignee: validatedDraft.suggestedAssignee,
           availableUsers,
-          agencyId: agency_id,
+          agencyId,
         });
         // Clear invalid assignee
         validatedDraft.suggestedAssignee = '';
@@ -198,7 +192,7 @@ Respond with ONLY the JSON object, no other text.`;
     return NextResponse.json({
       success: true,
       draft: validatedDraft,
-      agencyId: agency_id || undefined,
+      agencyId: agencyId || undefined,
       availableAssignees: availableUsers,
     });
   } catch (error) {
@@ -208,7 +202,7 @@ Respond with ONLY the JSON object, no other text.`;
       { status: 500 }
     );
   }
-}
+});
 
 // Handle CORS preflight - only allow specific Outlook origins
 export async function OPTIONS(request: NextRequest) {

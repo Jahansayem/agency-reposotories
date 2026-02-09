@@ -16,7 +16,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(welcomeText).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card to select them
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -24,7 +24,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN - look for 4 password inputs
   const pinInputs = page.locator('input[type="password"]');
@@ -33,11 +33,10 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Enter each digit of the PIN
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100); // Small delay between digits
   }
 
   // Wait for automatic login after PIN entry
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present (click outside, X button, or View Tasks button)
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
@@ -46,12 +45,12 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Try clicking View Tasks first (most reliable)
   if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
   // Or try clicking the close button
   else if (await closeModalBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
     await closeModalBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for main app to load
@@ -69,7 +68,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
 
     // Type text with policy review keywords
     await taskInput.fill('Review policy coverage for customer renewal');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should detect and show indicator
     const indicator = page.locator('text=Detected:');
@@ -85,7 +84,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
     await taskInput.focus();
 
     await taskInput.fill('Call back John about his voicemail');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const indicator = page.locator('text=Detected:');
     await expect(indicator).toBeVisible({ timeout: 5000 });
@@ -100,7 +99,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
     await taskInput.focus();
 
     await taskInput.fill('Add new car to policy VIN verification');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const indicator = page.locator('text=Detected:');
     await expect(indicator).toBeVisible({ timeout: 5000 });
@@ -115,7 +114,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
     await taskInput.focus();
 
     await taskInput.fill('Process payment for overdue billing');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const indicator = page.locator('text=Detected:');
     await expect(indicator).toBeVisible({ timeout: 5000 });
@@ -130,7 +129,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
     await taskInput.focus();
 
     await taskInput.fill('File accident claim for customer collision');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const indicator = page.locator('text=Detected:');
     await expect(indicator).toBeVisible({ timeout: 5000 });
@@ -149,7 +148,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
     await taskInput.focus();
 
     await taskInput.fill('Prepare quote proposal for new customer');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const indicator = page.locator('text=Detected:');
     await expect(indicator).toBeVisible({ timeout: 5000 });
@@ -165,7 +164,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
 
     // Short text (under 10 chars) should not trigger detection
     await taskInput.fill('random');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const indicator = page.locator('text=Detected:');
     await expect(indicator).not.toBeVisible({ timeout: 2000 });
@@ -176,7 +175,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
     await taskInput.focus();
 
     await taskInput.fill('Process policy renewal for coverage review');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const subtasksSection = page.locator('text=Suggested subtasks');
     await expect(subtasksSection).toBeVisible({ timeout: 5000 });
@@ -187,7 +186,7 @@ test.describe('Insurance Patterns - Pattern Detection via UI', () => {
     await taskInput.focus();
 
     await taskInput.fill('New client onboarding for customer');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for indicator
     await page.waitForSelector('text=Detected:', { timeout: 5000 });
@@ -218,7 +217,7 @@ test.describe('Completion Rate Badges Logic', () => {
     const showMore = page.locator('button:has-text("more")');
     if (await showMore.isVisible({ timeout: 2000 }).catch(() => false)) {
       await showMore.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Look for Payment template with badge
@@ -234,7 +233,7 @@ test.describe('Completion Rate Badges Logic', () => {
     const showMore = page.locator('button:has-text("more")');
     if (await showMore.isVisible({ timeout: 2000 }).catch(() => false)) {
       await showMore.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Look for Quote template with warning badge

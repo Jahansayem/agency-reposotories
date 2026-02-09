@@ -7,7 +7,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -15,11 +15,11 @@ test.describe('Agency Management - Complete Test Suite', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Close any welcome dialogs by pressing Escape
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('Test 1.1: Owner can access Create New Agency button', async ({ page }) => {
@@ -31,7 +31,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     await expect(agencySwitcher).toBeVisible({ timeout: 15000 });
 
     await agencySwitcher.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check for "Create New Agency" button
     const createButton = page.locator('button:has-text("Create New Agency"), button:has-text("Create Agency")');
@@ -47,12 +47,12 @@ test.describe('Agency Management - Complete Test Suite', () => {
     // Open AgencySwitcher
     const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
     await agencySwitcher.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Click "Create New Agency"
     const createButton = page.locator('button:has-text("Create New Agency"), button:has-text("Create Agency")');
     await createButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check modal opened - look for the modal by its heading text "Create New Agency"
     // The modal uses Framer Motion and doesn't have role="dialog"
@@ -69,7 +69,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     await nameInput.fill(uniqueAgencyName);
     console.log(`✅ Filled agency name: ${uniqueAgencyName}`);
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check slug auto-generated - the slug input is the font-mono one after "/agencies/"
     const slugInput = page.locator('input.font-mono');
@@ -93,7 +93,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     await submitButton.click();
 
     // Wait for result - either modal closes (success) or error message appears
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Check if there's an error message (duplicate slug or other error)
     const errorMessage = page.locator('.bg-red-50, [class*="text-red-"]').first();
@@ -129,7 +129,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     // Open AgencySwitcher
     const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
     await agencySwitcher.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check for "Manage Members" button
     const manageButton = page.locator('button:has-text("Manage Members")');
@@ -139,7 +139,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
 
     // Click it
     await manageButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check members modal opened - look for the "Agency Members" heading
     // The modal uses Framer Motion and doesn't have role="dialog"
@@ -156,11 +156,11 @@ test.describe('Agency Management - Complete Test Suite', () => {
     // Open Manage Members
     const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
     await agencySwitcher.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     const manageButton = page.locator('button:has-text("Manage Members")');
     await manageButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Wait for modal to appear
     const membersModalHeading = page.locator('h2:has-text("Agency Members")');
@@ -171,7 +171,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
 
     if (await addButton.isVisible()) {
       await addButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Fill username - the input has placeholder mentioning "user name" or "Sefra"
       const usernameInput = page.locator('input[placeholder*="user name"], input[placeholder*="Sefra"]');
@@ -192,7 +192,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
       const submitButton = page.locator('button:has-text("Add Member")').last();
       await submitButton.click();
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check for success message - success messages have green styling
       const successMessage = page.locator('.bg-green-50, .text-green-800, [class*="green"]');

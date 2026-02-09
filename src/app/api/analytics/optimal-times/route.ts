@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import {
   getTimingMultiplier,
   isInOptimalTimingWindow,
@@ -55,7 +56,7 @@ interface CustomerAnalysisResult {
   };
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body: OptimalTimingRequest = await request.json();
     const { customer, customers } = body;
@@ -101,13 +102,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/analytics/optimal-times
  * Get timing windows and conversion rates for reference
  */
-export async function GET() {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   return NextResponse.json({
     timingConversionRates: TIMING_CONVERSION_RATES,
     productConversionRates: PRODUCT_CONVERSION_RATES,
@@ -127,7 +128,7 @@ export async function GET() {
       'Renewal time is second-best window for cross-sell',
     ],
   });
-}
+});
 
 // Helper function to analyze a single customer
 function analyzeCustomer(customer: {

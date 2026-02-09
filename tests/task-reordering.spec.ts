@@ -30,12 +30,10 @@ async function login(page: any) {
   await page.click('[data-testid="user-card-Derrick"]');
 
   // Enter PIN
-  await page.waitForTimeout(600);
   const pinInputs = page.locator('input[type="password"]');
   await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(TEST_USER.pin[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for main app to load
@@ -112,7 +110,6 @@ test.describe('Task Reordering - Visual Elements', () => {
     await taskElement.hover();
 
     // Wait a bit for opacity transition
-    await page.waitForTimeout(300);
 
     // Drag handle should now be visible (opacity > 0)
     const isVisible = await dragHandle.evaluate((el) => {
@@ -164,7 +161,7 @@ test.describe('Task Reordering - Drag and Drop', () => {
     });
 
     // Wait for reorder to complete
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Get new order
     const newOrder = await getTaskOrder(page);
@@ -211,7 +208,6 @@ test.describe('Task Reordering - Drag and Drop', () => {
     await taskY.press('Escape');
 
     // Wait a bit
-    await page.waitForTimeout(300);
 
     // Order should remain unchanged
     const finalOrder = await getTaskOrder(page);
@@ -237,7 +233,7 @@ test.describe('Task Reordering - Persistence', () => {
     });
 
     // Wait for API call to complete
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Get order before reload
     const orderBeforeReload = await getTaskOrder(page);
@@ -282,7 +278,7 @@ test.describe('Task Reordering - Persistence', () => {
     });
 
     // Wait for API call
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify API was called
     expect(apiCalled).toBe(true);
@@ -322,7 +318,7 @@ test.describe('Task Reordering - Real-time Sync', () => {
     });
 
     // Wait for real-time sync (Supabase broadcast)
-    await page2.waitForTimeout(2000);
+    await page2.waitForLoadState('networkidle');
 
     // Get new order in tab 2
     const syncedOrder = await getTaskOrder(page2);
@@ -370,7 +366,7 @@ test.describe('Task Reordering - Accessibility', () => {
     });
 
     // Wait for announcement
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check if announcement was made
     const announcement = await liveRegion.textContent();
@@ -423,7 +419,7 @@ test.describe('Task Reordering - Error Handling', () => {
     });
 
     // Wait for error handling
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Order should be rolled back
     const finalOrder = await getTaskOrder(page);
@@ -462,7 +458,7 @@ test.describe('Task Reordering - Error Handling', () => {
     });
 
     // Wait for error
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Should have logged error
     const hasError = errors.some(e => e.includes('Failed to persist task order'));
@@ -487,7 +483,7 @@ test.describe('Task Reordering - Activity Logging', () => {
     });
 
     // Wait for activity log
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Open activity feed (if there's a button/link)
     // This assumes there's a way to navigate to activity feed
@@ -538,7 +534,7 @@ test.describe('Task Reordering - Edge Cases', () => {
     await checkbox1.click();
 
     // Wait for completion
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Try to reorder (should still work)
     const task2 = page.locator('text=Complete 2').first();
@@ -549,7 +545,7 @@ test.describe('Task Reordering - Edge Cases', () => {
     });
 
     // Should complete without error
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should handle reordering with filtered tasks', async ({ page }) => {

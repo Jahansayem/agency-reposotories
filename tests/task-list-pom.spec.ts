@@ -102,7 +102,7 @@ test.describe('Task List (Page Object Model)', () => {
       await taskList.deleteTask(index);
 
       // Wait a moment for deletion
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify task is gone
       const hasTaskAfter = await taskList.hasTask(taskText);
@@ -233,7 +233,7 @@ test.describe('Task List (Page Object Model)', () => {
       await taskList.bulkDelete();
 
       // Wait for deletion
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify tasks are gone
       const hasTask1 = await taskList.hasTask(task1);

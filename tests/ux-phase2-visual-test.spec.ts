@@ -7,7 +7,7 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -15,12 +15,12 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
 
     // Close any dialogs
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== VISUAL INSPECTION: TodoFiltersBar ===');
 
@@ -87,7 +87,7 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
     // Click Advanced Filters button
     if (advancedExists) {
       await advancedBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check drawer is visible
       const drawer = page.locator('div:has-text("Advanced Filters")').first();
@@ -134,17 +134,17 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
 
         // Set a quick filter
         await quickFilter.selectOption('my_tasks');
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Click high priority
         await highPriorityBtn.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Close drawer
         const closeBtn = page.locator('button[aria-label="Close advanced filters"]');
         if (await closeBtn.count() > 0) {
           await closeBtn.click();
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('networkidle');
         }
 
         // Check for active filter chips
@@ -181,7 +181,7 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
     console.log(`✅ Active filter chips with individual clear buttons`);
 
     // Keep browser open for manual inspection
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should have proper touch targets on mobile', async ({ page }) => {
@@ -194,7 +194,7 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -202,10 +202,10 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== MOBILE TOUCH TARGET SIZES ===');
 
@@ -245,6 +245,6 @@ test.describe('UX Phase 2: TodoFiltersBar Visual Inspection', () => {
     await page.screenshot({ path: '/tmp/phase2-mobile.png', fullPage: true });
     console.log('\nMobile screenshot: /tmp/phase2-mobile.png');
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
   });
 });

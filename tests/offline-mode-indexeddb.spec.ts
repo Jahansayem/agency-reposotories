@@ -31,7 +31,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     });
 
     test('should create IndexedDB database', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if database was created
       const dbExists = await page.evaluate(async () => {
@@ -51,7 +51,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     });
 
     test('should have todos object store', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const hasStore = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
@@ -69,7 +69,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     });
 
     test('should have messages object store', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const hasStore = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
@@ -87,7 +87,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     });
 
     test('should have syncQueue object store', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const hasStore = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
@@ -109,15 +109,13 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should show offline indicator component', async ({ page, context }) => {
       // Login first
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if OfflineIndicator component is present in DOM
       // (It may not be visible if online with no pending syncs)
@@ -138,21 +136,19 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should cache todos in IndexedDB', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       await page.fill('[data-testid="add-task-input"]', 'Test caching in IndexedDB');
       await page.press('[data-testid="add-task-input"]', 'Enter');
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if task is in IndexedDB
       const cachedTodo = await page.evaluate(async () => {
@@ -182,36 +178,32 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should load cached todos on page reload', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
       const pinInputs = page.locator('input[type="password"]');
       await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
       for (let i = 0; i < 4; i++) {
         await pinInputs.nth(i).fill('8008'[i]);
-        await page.waitForTimeout(100);
       }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Create a task
       await page.fill('[data-testid="add-task-input"]', 'Reload test task');
       await page.press('[data-testid="add-task-input"]', 'Enter');
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Reload page
       await page.reload();
 
       // Login again
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
       const pinInputs2 = page.locator('input[type="password"]');
       await expect(pinInputs2.first()).toBeVisible({ timeout: 5000 });
       for (let i = 0; i < 4; i++) {
         await pinInputs2.nth(i).fill('8008'[i]);
-        await page.waitForTimeout(100);
       }
 
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Task should be visible (loaded from IndexedDB cache)
       await expect(page.locator('text=Reload test task')).toBeVisible({ timeout: 5000 });
@@ -220,7 +212,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
   test.describe('Sync Queue', () => {
     test('should have empty sync queue initially', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const queueLength = await page.evaluate(async () => {
         return new Promise<number>((resolve) => {
@@ -248,22 +240,20 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should persist todos across page reloads', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Create unique task
       const uniqueTask = `Persistence test ${Date.now()}`;
       await page.fill('[data-testid="add-task-input"]', uniqueTask);
       await page.press('[data-testid="add-task-input"]', 'Enter');
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Verify task appears
       await expect(page.locator(`text=${uniqueTask}`)).toBeVisible();
@@ -271,15 +261,13 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
       // Reload
       await page.reload();
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
       const pinInputs3 = page.locator('input[type="password"]');
       await expect(pinInputs3.first()).toBeVisible({ timeout: 5000 });
       for (let i = 0; i < 4; i++) {
         await pinInputs3.nth(i).fill('8008'[i]);
-        await page.waitForTimeout(100);
       }
 
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Task should still be visible
       await expect(page.locator(`text=${uniqueTask}`)).toBeVisible({ timeout: 5000 });
@@ -292,12 +280,10 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
       // Wait for add task input to appear (indicates data loaded)
@@ -312,7 +298,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     });
 
     test('should handle large datasets efficiently', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test IndexedDB performance with bulk operations
       const performanceTest = await page.evaluate(async () => {
@@ -347,7 +333,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
   test.describe('Error Handling', () => {
     test('should handle IndexedDB initialization errors gracefully', async ({ page }) => {
       // Even if IndexedDB fails, app should still load
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const bodyVisible = await page.locator('body').isVisible();
       expect(bodyVisible).toBe(true);
@@ -356,12 +342,10 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should not crash if IndexedDB is unavailable', async ({ page }) => {
       // App should work even without IndexedDB (online mode)
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
       // Should load successfully
@@ -373,20 +357,18 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should maintain data structure in IndexedDB', async ({ page }) => {
       // Login and create task
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       await page.fill('[data-testid="add-task-input"]', 'Data integrity test');
       await page.press('[data-testid="add-task-input"]', 'Enter');
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Verify data structure in IndexedDB
       const todoStructure = await page.evaluate(async () => {

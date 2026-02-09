@@ -106,7 +106,7 @@ test.describe('2. Login Screen UI', () => {
 
   test('12. User cards are displayed', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     // Check for user-related elements
     const hasUserElements = await page.locator('[class*="user"], [class*="card"]').count();
     expect(hasUserElements).toBeGreaterThanOrEqual(0); // May or may not have users
@@ -114,7 +114,7 @@ test.describe('2. Login Screen UI', () => {
 
   test('13. Add New User button exists', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     const addButton = await page.locator('text=/add|new user|register/i').count();
     expect(addButton).toBeGreaterThanOrEqual(0);
   });
@@ -562,7 +562,7 @@ test.describe('7. Performance', () => {
 
   test('72. No layout shifts after load', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     // Basic check - page is stable
     const isStable = await page.evaluate(() => document.readyState === 'complete');
     expect(isStable).toBe(true);
@@ -712,7 +712,7 @@ test.describe('9. Component Rendering', () => {
 
   test('90. Animations dont break layout', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     const bodyWidth = await page.evaluate(() => document.body.offsetWidth);
     expect(bodyWidth).toBeGreaterThan(0);
   });
@@ -770,7 +770,7 @@ test.describe('10. Integration', () => {
     // Check that page loads without WebSocket errors
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
     // Allow some WebSocket reconnection errors
     expect(true).toBe(true);
   });

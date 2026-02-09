@@ -7,17 +7,15 @@ test.describe('Session Validation', () => {
     
     // Login as Derrick
     await page.locator('[data-testid="user-card-Derrick"]').click();
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     
     // Wait for login to complete
     await page.waitForURL('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     // Verify session cookie exists
     const cookies = await page.context().cookies();
@@ -38,7 +36,7 @@ test.describe('Session Validation', () => {
     const addTaskButton = page.locator('button:has-text("Add Task")');
     if (await addTaskButton.isVisible()) {
       await addTaskButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       console.log('✓ Opened Add Task modal');
     }
   });

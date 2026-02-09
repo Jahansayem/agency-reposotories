@@ -25,15 +25,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
     test('should initialize typing channel on login', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if Supabase typing channel is created
       const hasTypingChannel = await page.evaluate(() => {
@@ -46,15 +44,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should broadcast typing status', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Find chat input
       const chatInput = page.locator('textarea, input[type="text"]').filter({
@@ -68,7 +64,9 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
         await chatInput.focus();
         await chatInput.type('Hello');
 
-        await page.waitForTimeout(500);
+        // Wait for typing broadcast debounce
+        // Wait for typing broadcast debounce
+        await page.waitForLoadState('networkidle');
 
         // Typing status should be tracked
         // (In real implementation, would check Supabase broadcast)
@@ -81,15 +79,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should debounce typing broadcasts', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const chatInput = page.locator('[placeholder*="message" i]').first();
 
@@ -98,7 +94,9 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
         await chatInput.focus();
         await chatInput.type('Quick message', { delay: 50 });
 
-        await page.waitForTimeout(500);
+        // Wait for debounce period (300ms) to complete
+        // Wait for debounce period (300ms) to complete
+        await page.waitForLoadState('networkidle');
 
         // Debouncing should prevent spam broadcasts
         // Each keystroke within 300ms should not trigger new broadcast
@@ -109,15 +107,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should auto-clear typing after timeout', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const chatInput = page.locator('[placeholder*="message" i]').first();
 
@@ -140,15 +136,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
   test.describe('Typing Indicator Component', () => {
     test('should display typing indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Look for typing indicator elements
       const hasTypingUI = await page.evaluate(() => {
@@ -163,15 +157,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should show animated dots', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check for animated dots (CSS or framer-motion)
       const hasAnimatedDots = await page.evaluate(() => {
@@ -185,15 +177,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should format single user typing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // In a multi-user test, would verify "User is typing" text
       // For now, verify page is functional
@@ -203,15 +193,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should format multiple users typing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Would show "User1 and User2 are typing"
       // Or "User1, User2, and 3 others are typing"
@@ -221,15 +209,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should show user avatars in indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Typing indicator should show user avatars
       const hasAvatars = await page.evaluate(() => {
@@ -245,15 +231,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
     test('should update when user starts typing', async ({ page, context }) => {
       // Login first user
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // In a real multi-user test, would open second browser/tab
       // and verify typing indicator appears
@@ -263,15 +247,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should update when user stops typing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const chatInput = page.locator('[placeholder*="message" i]').first();
 
@@ -280,13 +262,14 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
         await chatInput.focus();
         await chatInput.type('Message');
 
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Clear input (stop typing)
         await chatInput.clear();
         await chatInput.blur();
 
-        await page.waitForTimeout(500);
+        // Wait for typing stop broadcast
+        await page.waitForLoadState('networkidle');
 
         // Typing indicator should disappear
         const bodyVisible = await page.locator('body').isVisible();
@@ -297,15 +280,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
     test('should sync across tabs', async ({ page, context }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Open second tab
       const page2 = await context.newPage();
@@ -321,15 +302,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should handle rapid typing and stopping', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const chatInput = page.locator('[placeholder*="message" i]').first();
 
@@ -338,9 +317,7 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
         for (let i = 0; i < 3; i++) {
           await chatInput.focus();
           await chatInput.type('Quick');
-          await page.waitForTimeout(200);
           await chatInput.clear();
-          await page.waitForTimeout(200);
         }
 
         // Should handle without errors or memory leaks
@@ -353,15 +330,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
   test.describe('Channel-Specific Indicators', () => {
     test('should track typing in main chat', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Main chat typing should be tracked separately
       const chatButton = page.locator('button:has-text("Chat")').or(
@@ -370,7 +345,7 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
       if (await chatButton.isVisible({ timeout: 2000 })) {
         await chatButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Typing in main chat
         const chatInput = page.locator('[placeholder*="message" i]').first();
@@ -378,22 +353,20 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
           await chatInput.focus();
           await chatInput.type('Hello team');
 
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('networkidle');
         }
       }
     });
 
     test('should track typing in task discussions', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Task-specific typing indicators
       // (Would use channel: 'task:123')
@@ -403,15 +376,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should track typing in DMs', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // DM typing indicators
       // (Would use channel: 'dm:userId')
@@ -423,15 +394,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
   test.describe('Performance', () => {
     test('should not lag on rapid typing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const chatInput = page.locator('[placeholder*="message" i]').first();
 
@@ -451,15 +420,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should debounce broadcasts efficiently', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const chatInput = page.locator('[placeholder*="message" i]').first();
 
@@ -469,7 +436,9 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
         await chatInput.focus();
         await chatInput.type('Hello world', { delay: 50 });
 
-        await page.waitForTimeout(500);
+        // Wait for debounce to settle
+        // Wait for debounce to settle
+        await page.waitForLoadState('networkidle');
 
         // Verify no performance impact
         const bodyVisible = await page.locator('body').isVisible();
@@ -479,15 +448,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should cleanup on unmount', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Navigate away to trigger cleanup
       const dashboardButton = page.locator('button:has-text("Dashboard")').or(
@@ -496,7 +463,7 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
       if (await dashboardButton.isVisible({ timeout: 2000 })) {
         await dashboardButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Should cleanup typing channel and timers
         const bodyVisible = await page.locator('body').isVisible();
@@ -508,15 +475,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
   test.describe('Edge Cases', () => {
     test('should handle network disconnection', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Typing indicators should handle offline gracefully
       // (Supabase automatically cleans up on disconnect)
@@ -526,15 +491,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should handle empty typing state', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // When no one is typing, indicator should not display
       // (Component returns null)
@@ -544,20 +507,18 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should handle stale typing states', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Cleanup interval should remove stale typing states
       // (Users who didn't explicitly stop typing but timed out)
       // Auto-cleanup runs every 1 second
-      await page.waitForTimeout(5000);
+      await page.waitForLoadState('networkidle');
 
       const bodyVisible = await page.locator('body').isVisible();
       expect(bodyVisible).toBe(true);
@@ -565,15 +526,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should handle same user in multiple channels', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // User could be typing in both main chat and DM simultaneously
       // Each channel should track independently
@@ -585,15 +544,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
   test.describe('UI/UX', () => {
     test('should animate indicator entrance', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Framer Motion AnimatePresence for smooth transitions
       const hasAnimations = await page.evaluate(() => {
@@ -607,15 +564,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should show user colors in indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Typing indicator should use user's assigned color
       const hasColoredElements = await page.evaluate(() => {
@@ -628,15 +583,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should support different sizes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Component supports sm, md, lg sizes
       // Different sizes for different contexts
@@ -648,15 +601,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
   test.describe('Accessibility', () => {
     test('should have ARIA live region', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Typing indicator should have role="status" aria-live="polite"
       const hasAriaLive = await page.evaluate(() => {
@@ -669,15 +620,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should have descriptive aria-label', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // aria-label should describe typing users
       // e.g., "John and Jane are typing"
@@ -691,15 +640,13 @@ test.describe('Enhanced Typing Indicators (Issue #38)', () => {
 
     test('should announce typing status to screen readers', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Screen readers should announce "User is typing"
       // Using role="status" ensures announcements

@@ -17,6 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import type {
   CrossSellOpportunity,
   CrossSellPriorityTier,
@@ -48,13 +49,13 @@ interface TodayOpportunitiesResponse {
  * GET /api/opportunities/today
  * Fetch today's prioritized work queue of cross-sell opportunities
  */
-export async function GET(request: NextRequest) {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
 
-    // Parse query parameters
-    const agencyId = searchParams.get('agency_id');
+    // Parse query parameters - use ctx.agencyId from auth context instead of query param
+    const agencyId = ctx.agencyId || searchParams.get('agency_id');
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20', 10), 1), 100);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
       .from('cross_sell_opportunities')
       .select('*', { count: 'exact' });
 
-    // Apply agency filter if provided
+    // Apply agency filter from auth context
     if (agencyId) {
       query = query.eq('agency_id', agencyId);
     }
@@ -120,4 +121,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

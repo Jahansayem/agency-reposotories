@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
 
 /**
  * usePresence Hook
@@ -81,11 +82,11 @@ export function usePresence(currentUser?: { name: string; id: string; color: str
 
         setOnlineUsers(users);
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('User joined:', key, newPresences);
+      .on('presence', { event: 'join' }, ({ key }) => {
+        logger.debug('User joined presence channel', { component: 'usePresence', action: 'join', metadata: { key } });
       })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('User left:', key, leftPresences);
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        logger.debug('User left presence channel', { component: 'usePresence', action: 'leave', metadata: { key } });
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {

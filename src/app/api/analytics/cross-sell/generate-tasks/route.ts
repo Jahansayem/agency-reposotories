@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   CrossSellOpportunity,
@@ -55,7 +56,7 @@ interface GenerateTasksRequest {
  * POST /api/analytics/cross-sell/generate-tasks
  * Generate todo tasks from cross-sell opportunities
  */
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const body: GenerateTasksRequest = await request.json();
@@ -84,8 +85,8 @@ export async function POST(request: NextRequest) {
       .eq('dismissed', false)
       .is('task_id', null); // Only opportunities without tasks
 
-    if (body.agency_id) {
-      query = query.eq('agency_id', body.agency_id);
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
     }
 
     if (body.opportunity_ids && body.opportunity_ids.length > 0) {
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
           due_date: dueDate,
           notes,
           subtasks,
-          agency_id: body.agency_id,
+          agency_id: ctx.agencyId,
           // Cross-sell specific metadata
           category: 'prospecting',
           customer_name: opp.customer_name,
@@ -253,7 +254,7 @@ export async function POST(request: NextRequest) {
         todo_id: taskId,
         todo_text: taskData.taskText,
         user_name: body.created_by,
-        agency_id: body.agency_id,
+        agency_id: ctx.agencyId,
         details: {
           source: 'cross_sell_opportunity',
           opportunity_id: taskData.opportunityId,
@@ -306,4 +307,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

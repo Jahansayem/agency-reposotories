@@ -20,13 +20,12 @@ import { hideDevOverlay } from './helpers/test-base';
 async function loginAsDerrick(page: any) {
   await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 15000 });
   await hideDevOverlay(page);
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Find and click Derrick's user card
   const userCard = page.locator('[data-testid="user-card-Derrick"]');
   await expect(userCard).toBeVisible({ timeout: 10000 });
   await userCard.click();
-  await page.waitForTimeout(800);
 
   // Enter PIN
   const pinInputs = page.locator('input[type="password"]');
@@ -34,7 +33,6 @@ async function loginAsDerrick(page: any) {
   const pin = '8008';
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for main app
@@ -45,7 +43,7 @@ async function loginAsDerrick(page: any) {
     await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
   }
 
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 }
 
 // Helper to navigate to Tasks view
@@ -57,20 +55,20 @@ async function navigateToTasks(page: any) {
     const tasksButton = page.locator('nav[aria-label="Main navigation"] button:has-text("Tasks")');
     if (await tasksButton.isVisible()) {
       await tasksButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
   } else {
     // On desktop, click Tasks in sidebar within Primary navigation
     const tasksLink = page.locator('nav[aria-label="Primary"] button:has-text("Tasks")');
     if (await tasksLink.isVisible()) {
       await tasksLink.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
   }
 
   // Wait for the page transition and verify we're on Tasks view
   // Look for AddTodo or task list indicators
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe('Customer Linking - API Tests', () => {
@@ -136,7 +134,7 @@ test.describe('Customer Linking - AddTodo Integration', () => {
 
     if (await createNewTaskButton.isVisible().catch(() => false)) {
       await createNewTaskButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Look for the AddTodo form textarea with specific aria-label
@@ -146,7 +144,7 @@ test.describe('Customer Linking - AddTodo Integration', () => {
     if (await addTaskInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       // Click to expand options
       await addTaskInput.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Look for the customer link section label
       const customerLabel = page.locator('text=Link to Customer');
@@ -171,7 +169,7 @@ test.describe('Customer Linking - AddTodo Integration', () => {
 
     if (await createNewTaskButton.isVisible().catch(() => false)) {
       await createNewTaskButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Find the add task input
@@ -180,7 +178,7 @@ test.describe('Customer Linking - AddTodo Integration', () => {
     // Check if the add task input is visible
     if (await addTaskInput.isVisible({ timeout: 5000 }).catch(() => false)) {
       await addTaskInput.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find customer search input by placeholder
       const customerInput = page.locator('input[placeholder*="Search customers"]');
@@ -188,6 +186,7 @@ test.describe('Customer Linking - AddTodo Integration', () => {
       if (await customerInput.isVisible().catch(() => false)) {
         // Type a search query
         await customerInput.fill('John');
+        // Genuine timing wait: hold past 500ms long-press threshold
         await page.waitForTimeout(600); // Wait for debounced search (300ms) + API
 
         // Check for dropdown results
@@ -211,7 +210,7 @@ test.describe('Customer Linking - Task Card Display', () => {
 
   test('should display customer badge on task cards with linked customers', async ({ page }) => {
     // Wait for task list to load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Look for customer badges (Crown, Star, Shield, Users icons indicate segment)
     const customerBadges = page.locator('[class*="customer"], [class*="Customer"], [data-customer-segment]');
@@ -234,14 +233,14 @@ test.describe('Customer Linking - Task Detail Modal', () => {
 
   test('should show CustomerDetailPanel for tasks with linked customer', async ({ page }) => {
     // Wait for tasks to load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Click on a task to open detail modal
     const taskItem = page.locator('[data-testid="task-item"], [class*="task-card"], article').first();
 
     if (await taskItem.isVisible()) {
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check if modal opened
       const modal = page.locator('[role="dialog"], [data-testid="task-detail-modal"], [class*="modal"]');
@@ -290,7 +289,7 @@ test.describe('Customer Linking - CustomerLookupView', () => {
       const navItem = page.locator(selector).first();
       if (await navItem.isVisible().catch(() => false)) {
         await navItem.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
         found = true;
         break;
       }
@@ -312,7 +311,7 @@ test.describe('Customer Linking - CustomerLookupView', () => {
 
     if (await customersLink.isVisible().catch(() => false)) {
       await customersLink.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Look for segment filter buttons
       const segmentFilters = ['Elite', 'Premium', 'Standard', 'Entry', 'All'];

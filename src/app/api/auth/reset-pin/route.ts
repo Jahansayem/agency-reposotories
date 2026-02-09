@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { hashPin } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { isWeakPin } from '@/lib/constants';
 import crypto from 'crypto';
 
 /**
@@ -32,6 +33,14 @@ export async function POST(request: NextRequest) {
     if (!pin || typeof pin !== 'string' || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
       return NextResponse.json(
         { error: 'Invalid PIN format. Must be 4 digits.' },
+        { status: 400 }
+      );
+    }
+
+    // Reject common weak PINs
+    if (isWeakPin(pin)) {
+      return NextResponse.json(
+        { error: 'PIN is too common. Please choose a less predictable PIN.' },
         { status: 400 }
       );
     }

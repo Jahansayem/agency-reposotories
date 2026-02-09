@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import {
   classifyCustomer,
   calculateCustomerLtv,
@@ -74,7 +75,7 @@ export interface SegmentationResponse {
   }>>;
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<SegmentationResponse | { error: string }>> {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext): Promise<NextResponse<SegmentationResponse | { error: string }>> => {
   try {
     const body: SegmentationRequest = await request.json();
     const {
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Segmentat
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/analytics/segmentation

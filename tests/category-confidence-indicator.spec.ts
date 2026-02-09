@@ -19,7 +19,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(welcomeText).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card to select them
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -27,7 +27,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN - look for 4 password inputs
   const pinInputs = page.locator('input[type="password"]');
@@ -36,11 +36,10 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Enter each digit of the PIN
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100); // Small delay between digits
   }
 
   // Wait for automatic login after PIN entry
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present (click outside, X button, or View Tasks button)
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
@@ -49,12 +48,12 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Try clicking View Tasks first (most reliable)
   if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
   // Or try clicking the close button
   else if (await closeModalBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
     await closeModalBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for main app to load
@@ -76,7 +75,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     await taskInput.fill('Review policy coverage for John Smith renewal');
 
     // Wait for pattern detection (debounced)
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should show the confidence indicator
     const indicator = page.locator('text=Detected:');
@@ -94,7 +93,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type text that should match "follow_up" pattern
     await taskInput.fill('Call back customer about their policy questions');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should detect follow-up pattern
     const indicator = page.locator('text=Detected:');
@@ -112,7 +111,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type text that should match "quote" pattern
     await taskInput.fill('Get new quote proposal for business insurance client');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should detect quote pattern
     const indicator = page.locator('text=Detected:');
@@ -130,7 +129,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type text that matches a pattern with subtasks
     await taskInput.fill('Process claim for auto accident customer');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should show suggested subtasks section
     const subtasksSection = page.locator('text=Suggested subtasks');
@@ -148,7 +147,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type pattern-matching text
     await taskInput.fill('Review customer policy for upcoming renewal');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for indicator to appear
     await page.waitForSelector('text=Detected:', { timeout: 5000 });
@@ -173,7 +172,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type pattern-matching text
     await taskInput.fill('Call customer back about policy changes');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for indicator
     await page.waitForSelector('text=Detected:', { timeout: 5000 });
@@ -194,7 +193,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type pattern-matching text
     await taskInput.fill('Process payment for customer billing issue');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for indicator
     await page.waitForSelector('text=Detected:', { timeout: 5000 });
@@ -215,7 +214,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type very short text (less than 10 chars)
     await taskInput.fill('Call John');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Indicator should NOT appear for short text
     const indicator = page.locator('text=Detected:');
@@ -229,7 +228,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Type text with strong pattern match (multiple keywords)
     await taskInput.fill('Policy renewal review and coverage check for customer John Smith');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should show confidence badge
     const confidenceBadge = page.locator('text=confidence');
@@ -243,7 +242,7 @@ test.describe('CategoryConfidenceIndicator', () => {
     // Follow-up tasks have tips
     await taskInput.fill('Follow up with customer about their voicemail regarding policy');
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for indicator
     await page.waitForSelector('text=Detected:', { timeout: 5000 });

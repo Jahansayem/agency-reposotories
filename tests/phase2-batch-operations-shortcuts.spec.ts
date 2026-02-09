@@ -14,23 +14,21 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     // Login as Derrick
     await page.goto('/');
     await page.getByTestId('user-card-Derrick').click();
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await page.waitForURL('/');
 
     // Close any welcome dialogs or modals
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
 
     // Navigate to tasks view by clicking "All" tab
     await page.click('button:has-text("All")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for add task input to be visible
     await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible({ timeout: 10000 });
@@ -46,10 +44,9 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     for (const task of tasks) {
       await page.fill('[data-testid="add-task-input"]', task);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
     }
 
-    await page.waitForTimeout(1000); // Wait for tasks to render
+    await page.waitForLoadState('networkidle'); // Wait for tasks to render
   });
 
   test('should select all visible todos with Cmd+A', async ({ page, browserName }) => {
@@ -98,7 +95,7 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
   test('should select only filtered todos with Cmd+A', async ({ page, browserName }) => {
     // Apply a filter (e.g., "My Tasks")
     await page.selectOption('[data-testid="quick-filter"]', 'my_tasks');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Count visible todos after filtering
     const visibleTodos = page.locator('[data-testid="todo-item"]:visible');
@@ -136,7 +133,6 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
   test('should prioritize ESC for clearing selection over search clear', async ({ page, browserName }) => {
     // Enter search query
     await page.fill('[data-testid="search-input"]', 'test query');
-    await page.waitForTimeout(300);
 
     // Select all filtered results
     const modifierKey = browserName === 'webkit' || process.platform === 'darwin' ? 'Meta' : 'Control';
@@ -208,7 +204,7 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await page.click('[data-testid="bulk-complete-button"]');
 
     // Wait for operation
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // All selected todos should be marked as completed
     const completedCheckboxes = page.locator('[data-testid="todo-checkbox"]:checked');
@@ -233,7 +229,7 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await page.click('[data-testid="assignee-option-Sefra"]');
 
     // Wait for operation
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify assignment (check first todo's assignee badge)
     await expect(page.locator('[data-testid="todo-item"]').first()).toContainText('Sefra');
@@ -254,7 +250,7 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await page.click('[data-testid="reschedule-tomorrow"]');
 
     // Wait for operation
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify due dates are updated (check for tomorrow's date in UI)
     const tomorrow = new Date();
@@ -284,7 +280,7 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await page.click('[data-testid="confirm-delete-button"]');
 
     // Wait for deletion
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Todos should be deleted
     const finalCount = await page.locator('[data-testid="todo-item"]').count();
@@ -298,7 +294,7 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await todoCheckboxes.nth(1).check();
 
     // Wait for bulk action bar
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Merge button should be visible
     await expect(page.locator('[data-testid="bulk-merge-button"]')).toBeVisible();
@@ -310,7 +306,7 @@ test.describe('Phase 2.3: Batch Operations Keyboard Shortcuts', () => {
     await todoCheckboxes.nth(0).check();
 
     // Wait for bulk action bar
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Merge button should NOT be visible
     await expect(page.locator('[data-testid="bulk-merge-button"]')).not.toBeVisible();

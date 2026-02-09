@@ -6,20 +6,17 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
     // Open chat panel
     await page.click('button[aria-label="Toggle chat panel"]');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should show confirmation dialog when delete button is clicked', async ({ page }) => {
@@ -28,7 +25,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for message to appear
     await expect(page.locator(`text=${testMessage}`)).toBeVisible();
@@ -52,7 +49,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -74,7 +71,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -84,7 +81,6 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
     // Click Cancel
     await page.locator('button:has-text("Cancel")').first().click();
-    await page.waitForTimeout(300);
 
     // Dialog should close
     await expect(page.locator('text=Delete Message?')).not.toBeVisible();
@@ -98,7 +94,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -109,7 +105,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     // Confirm deletion
     const deleteButton = page.locator('button:has-text("Delete")').last();
     await deleteButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Dialog should close
     await expect(page.locator('text=Delete Message?')).not.toBeVisible();
@@ -123,7 +119,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -133,7 +129,6 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
     // Click X button
     await page.click('button[aria-label="Close dialog"]');
-    await page.waitForTimeout(300);
 
     // Dialog should close
     await expect(page.locator('text=Delete Message?')).not.toBeVisible();
@@ -147,7 +142,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -157,7 +152,6 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
     // Click on backdrop (outside dialog)
     await page.click('[role="dialog"]', { position: { x: 10, y: 10 } });
-    await page.waitForTimeout(300);
 
     // Dialog should close
     await expect(page.locator('text=Delete Message?')).not.toBeVisible();
@@ -171,7 +165,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -181,7 +175,6 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
     // Press Escape
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
 
     // Dialog should close
     await expect(page.locator('text=Delete Message?')).not.toBeVisible();
@@ -195,7 +188,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -204,7 +197,6 @@ test.describe('Chat - Delete Message Confirmation', () => {
     await page.click('button:has-text("Delete")');
 
     // Wait for dialog animation
-    await page.waitForTimeout(200);
 
     // Cancel button should be focused (safer default for destructive action)
     const cancelButton = page.locator('button:has-text("Cancel")').first();
@@ -216,15 +208,13 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
     await messageRow.hover();
     await page.click('button[aria-label*="Message options"]');
     await page.click('button:has-text("Delete")');
-
-    await page.waitForTimeout(200);
 
     // Cancel should be focused
     const cancelButton = page.locator('button:has-text("Cancel")').first();
@@ -246,15 +236,13 @@ test.describe('Chat - Delete Message Confirmation', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open menu and click delete
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
     await messageRow.hover();
     await page.click('button[aria-label*="Message options"]');
     await page.click('button:has-text("Delete")');
-
-    await page.waitForTimeout(200);
 
     // Tab through all elements
     await page.keyboard.press('Tab'); // Delete button
@@ -272,14 +260,13 @@ test.describe('Chat - Delete Message Confirmation', () => {
 
     if (hasOtherUsers) {
       await page.click('text=Direct Messages');
-      await page.waitForTimeout(300);
 
       // Send DM
       const testMessage = `DM test ${Date.now()}`;
       const chatInput = page.locator('textarea[placeholder*="Message"]');
       await chatInput.fill(testMessage);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Open menu and click delete
       const messageRow = page.locator(`text=${testMessage}`).locator('..');
@@ -293,7 +280,7 @@ test.describe('Chat - Delete Message Confirmation', () => {
       // Confirm deletion
       const deleteButton = page.locator('button:has-text("Delete")').last();
       await deleteButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Message should be deleted
       await expect(page.locator(`text=${testMessage}`)).not.toBeVisible();
@@ -306,36 +293,33 @@ test.describe('Chat - Delete Message Confirmation', () => {
     let chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage1);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(300);
 
     // Send second message
     const testMessage2 = `Test message 2 ${Date.now()}`;
     chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage2);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Delete first message
     let messageRow = page.locator(`text=${testMessage1}`).locator('..');
     await messageRow.hover();
     await page.locator('button[aria-label*="Message options"]').first().click();
     await page.locator('button:has-text("Delete")').first().click();
-    await page.waitForTimeout(200);
 
     // Confirm
     await page.locator('button:has-text("Delete")').last().click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Delete second message
     messageRow = page.locator(`text=${testMessage2}`).locator('..');
     await messageRow.hover();
     await page.click('button[aria-label*="Message options"]');
     await page.click('button:has-text("Delete")');
-    await page.waitForTimeout(200);
 
     // Confirm
     await page.locator('button:has-text("Delete")').last().click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Both messages should be deleted
     await expect(page.locator(`text=${testMessage1}`)).not.toBeVisible();
@@ -347,17 +331,14 @@ test.describe('Chat Delete - Accessibility', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     await page.click('button[aria-label="Toggle chat panel"]');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should have proper ARIA attributes', async ({ page }) => {
@@ -365,7 +346,7 @@ test.describe('Chat Delete - Accessibility', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
     await messageRow.hover();
@@ -385,7 +366,7 @@ test.describe('Chat Delete - Accessibility', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
     await messageRow.hover();
@@ -411,7 +392,7 @@ test.describe('Chat Delete - Accessibility', () => {
     const chatInput = page.locator('textarea[placeholder*="Message"]');
     await chatInput.fill(testMessage);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const messageRow = page.locator(`text=${testMessage}`).locator('..');
     await messageRow.hover();
@@ -424,7 +405,6 @@ test.describe('Chat Delete - Accessibility', () => {
 
     // Close dialog
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
 
     // Overflow should be restored
     const bodyOverflowAfter = await page.evaluate(() => document.body.style.overflow);

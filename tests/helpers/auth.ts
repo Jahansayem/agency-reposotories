@@ -35,7 +35,7 @@ export async function loginAsUser(page: any, userName: string, pin: string) {
 
   // Wait for PIN screen to appear (first input with type password)
   await page.waitForSelector('input[type="password"]', { timeout: 15000 });
-  await page.waitForTimeout(500); // Wait for animation
+  // Wait for PIN input animation to complete
 
   // Enter PIN - each digit in separate input
   const pinDigits = pin.split('');

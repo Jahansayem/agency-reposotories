@@ -20,12 +20,10 @@ test.describe('Code Splitting and Lazy Loading (Issue #29)', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
@@ -106,7 +104,7 @@ test.describe('Code Splitting and Lazy Loading (Issue #29)', () => {
         page.press('[data-testid="add-todo-input"]', 'Enter');
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find the task and open its actions menu
       const taskItem = page.locator('text=Test task for email').locator('..');
@@ -150,7 +148,7 @@ test.describe('Code Splitting and Lazy Loading (Issue #29)', () => {
         await archiveButton.click();
 
         // Archive view should load
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         // If there are archived tasks, clicking one should show the modal
         const archivedTask = page.locator('[data-testid^="archived-task-"]').first();
@@ -170,7 +168,7 @@ test.describe('Code Splitting and Lazy Loading (Issue #29)', () => {
         page.press('[data-testid="add-todo-input"]', 'Enter');
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Try to create a very similar task (should trigger duplicate detection)
       await page.fill('[data-testid="add-todo-input"]', 'Call client about policy renewal');
@@ -269,7 +267,7 @@ test.describe('Code Splitting and Lazy Loading (Issue #29)', () => {
 
       // Reload page to capture all initial chunks
       await page.reload();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Verify that heavy components are in separate chunks
       // (i.e., not all code is loaded upfront)
@@ -287,7 +285,7 @@ test.describe('Code Splitting and Lazy Loading (Issue #29)', () => {
       });
 
       // Initially on list view - note chunk count
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
       const initialChunkCount = loadedChunks.length;
 
       // Switch to Kanban view
@@ -297,7 +295,7 @@ test.describe('Code Splitting and Lazy Loading (Issue #29)', () => {
 
       if (await viewToggle.isVisible({ timeout: 2000 })) {
         await viewToggle.click();
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         // New chunks should have been loaded
         const finalChunkCount = loadedChunks.length;

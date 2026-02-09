@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import * as XLSX from 'xlsx';
 import {
   parseCSV,
@@ -146,15 +147,15 @@ function parseExcelFile(buffer: ArrayBuffer): AllstateBookOfBusinessRow[] {
   return rows;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const dataSource = (formData.get('data_source') as AllstateDataSource) || 'book_of_business';
-    const uploadedBy = formData.get('uploaded_by') as string;
-    const agencyId = formData.get('agency_id') as string | null;
+    const uploadedBy = formData.get('uploaded_by') as string || ctx.userName;
+    const agencyId = ctx.agencyId || formData.get('agency_id') as string | null;
     const skipDuplicates = formData.get('skip_duplicates') === 'true';
     const updateExisting = formData.get('update_existing') === 'true';
     const dryRun = formData.get('dry_run') === 'true';
@@ -444,17 +445,17 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/analytics/upload
  * List recent upload batches
  */
-export async function GET(request: NextRequest) {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
-    const agencyId = searchParams.get('agency_id');
+    const agencyId = ctx.agencyId || searchParams.get('agency_id');
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
     let query = supabase
@@ -488,7 +489,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // Helper functions for conversion and retention rates
 function getExpectedConversion(segment: string): number {

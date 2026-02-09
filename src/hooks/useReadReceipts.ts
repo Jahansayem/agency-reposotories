@@ -321,7 +321,7 @@ export function useReadReceipts(currentUser?: User) {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('📬 Subscribed to read receipts');
+          logger.debug('Subscribed to read receipts', { component: 'useReadReceipts', action: 'subscribe' });
         }
       });
 

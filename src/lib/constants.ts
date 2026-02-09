@@ -103,10 +103,27 @@ export function getUserInitials(name: string): string {
 }
 
 /**
+ * Common weak PINs that are too easily guessed.
+ * Includes repeated digits, simple sequences, and commonly used PINs.
+ */
+export const WEAK_PINS = new Set([
+  '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999',
+  '1234', '4321', '1122', '2233', '0123', '3210', '9876', '6789',
+]);
+
+/**
  * Validate PIN format (4 digits)
  */
 export function isValidPin(pin: string): boolean {
   return /^\d{4}$/.test(pin);
+}
+
+/**
+ * Check if a PIN is in the weak/common PINs list.
+ * Should be called after isValidPin() passes.
+ */
+export function isWeakPin(pin: string): boolean {
+  return WEAK_PINS.has(pin);
 }
 
 // ============================================================================
@@ -193,6 +210,8 @@ export const VALIDATION_LIMITS = {
   PHONE_MIN_DIGITS: 10,
   /** Maximum phone digits */
   PHONE_MAX_DIGITS: 15,
+  /** Maximum search/filter query length to prevent DoS via long strings */
+  MAX_SEARCH_QUERY_LENGTH: 200,
 } as const;
 
 // ============================================================================

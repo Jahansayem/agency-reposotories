@@ -14,12 +14,10 @@ test.describe('Chat Image Attachments', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for app to load - main navigation sidebar appears after successful login
@@ -68,7 +66,7 @@ test.describe('Chat Image Attachments', () => {
 
     // Verify upload progress/completion
     // Should show either uploading state or completed state
-    await page.waitForTimeout(2000); // Wait for upload
+    await page.waitForLoadState('networkidle'); // Wait for upload
 
     // Verify remove button appears
     const removeButton = page.locator('button[aria-label="Remove attachment"]');
@@ -93,7 +91,7 @@ test.describe('Chat Image Attachments', () => {
     });
 
     // Wait for upload to complete
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Add message text (optional)
     const messageInput = page.locator('textarea[placeholder*="Message"]').first();
@@ -129,7 +127,7 @@ test.describe('Chat Image Attachments', () => {
     });
 
     // Wait for upload
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Send without text
     const sendButton = page.locator('button:has-text("Send"), button[aria-label*="Send"]').first();
@@ -137,7 +135,7 @@ test.describe('Chat Image Attachments', () => {
 
     // Message should be sent and visible
     // Look for the message container (may not have text)
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify at least one message exists (the image message)
     const messages = page.locator('[data-testid="chat-message"]');
@@ -162,7 +160,7 @@ test.describe('Chat Image Attachments', () => {
     });
 
     // Wait for preview
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Click remove button
     const removeButton = page.locator('button[aria-label="Remove attachment"]');
@@ -191,7 +189,7 @@ test.describe('Chat Image Attachments', () => {
       buffer: buffer,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const messageInput = page.locator('textarea[placeholder*="Message"]').first();
     await messageInput.fill('Image test');
@@ -199,7 +197,7 @@ test.describe('Chat Image Attachments', () => {
     const sendButton = page.locator('button:has-text("Send"), button[aria-label*="Send"]').first();
     await sendButton.click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Look for image in message
     const messageImages = page.locator('[data-testid="chat-message"] img');
@@ -224,12 +222,12 @@ test.describe('Chat Image Attachments', () => {
       buffer: buffer,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const sendButton = page.locator('button:has-text("Send"), button[aria-label*="Send"]').first();
     await sendButton.click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Click on the image
     const messageImage = page.locator('button:has(img[loading="lazy"])').first();
@@ -238,7 +236,7 @@ test.describe('Chat Image Attachments', () => {
 
       // Lightbox should appear
       // Look for lightbox elements (fixed position, black background)
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify lightbox opened (check for close button or large image)
       const closeButton = page.locator('button[aria-label="Close lightbox"]');
@@ -262,18 +260,18 @@ test.describe('Chat Image Attachments', () => {
       buffer: buffer,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const sendButton = page.locator('button:has-text("Send"), button[aria-label*="Send"]').first();
     await sendButton.click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Click image to open lightbox
     const messageImage = page.locator('button:has(img[loading="lazy"])').first();
     if (await messageImage.isVisible()) {
       await messageImage.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Click close button
       const closeButton = page.locator('button[aria-label="Close lightbox"]');
@@ -304,7 +302,7 @@ test.describe('Chat Image Attachments', () => {
         buffer: textBuffer,
       });
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Look for error message
       const errorText = page.locator('text=/unsupported file type|only images/i');
@@ -335,10 +333,10 @@ test.describe('Chat Image Attachments', () => {
     });
 
     // During upload, button should be disabled
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // After upload completes, button should be disabled (can't add multiple)
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
     await expect(attachButton).toBeDisabled();
   });
 
@@ -357,7 +355,7 @@ test.describe('Chat Image Attachments', () => {
       buffer: buffer,
     });
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Look for file size display (in KB)
     const sizeText = page.locator('text=/\\d+(\\.\\d+)?\\s*KB/');
@@ -389,18 +387,18 @@ test.describe('Chat Image Attachments', () => {
       buffer: buffer,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const sendButton = page.locator('button:has-text("Send"), button[aria-label*="Send"]').first();
     await sendButton.click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Open lightbox
     const messageImage = page.locator('button:has(img[loading="lazy"])').first();
     if (await messageImage.isVisible()) {
       await messageImage.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify download button exists
       const downloadButton = page.locator('button[aria-label="Download image"]');
@@ -424,18 +422,18 @@ test.describe('Chat Image Attachments', () => {
       buffer: buffer,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const sendButton = page.locator('button:has-text("Send"), button[aria-label*="Send"]').first();
     await sendButton.click();
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Open lightbox
     const messageImage = page.locator('button:has(img[loading="lazy"])').first();
     if (await messageImage.isVisible()) {
       await messageImage.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Check for file name in lightbox
       await expect(page.locator('text=metadata-test.png')).toBeVisible();

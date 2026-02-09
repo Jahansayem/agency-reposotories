@@ -8,6 +8,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    environmentMatchGlobs: [
+      // API route tests run in Node, not jsdom
+      ['src/app/api/**/*.test.ts', 'node'],
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -17,7 +21,6 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
-        'src/app/**',
       ],
       include: ['src/**/*.{ts,tsx}'],
       // Note: Coverage thresholds not supported in v8 provider (use istanbul for thresholds)

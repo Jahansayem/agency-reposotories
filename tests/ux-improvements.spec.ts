@@ -222,7 +222,7 @@ test.describe('UX/UI Transformation Tests', () => {
       await page.reload();
 
       // Wait a moment for autofocus
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // The input should be focused (React handles autofocus programmatically)
       const input = page.locator('input[type="text"]');

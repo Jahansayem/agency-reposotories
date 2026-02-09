@@ -11,21 +11,20 @@ test.describe('Permission Management', () => {
     // Navigate to the app
     await page.goto('http://localhost:3000');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Screenshot 1: Initial login page
     await page.screenshot({ path: 'tests/permission-screenshots/01-login-page.png', fullPage: true });
 
     // Click on Derrick (the owner)
     await page.click('text=Derrick');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Screenshot 2: PIN entry screen
     await page.screenshot({ path: 'tests/permission-screenshots/02-pin-screen.png', fullPage: true });
 
     // Enter PIN using keyboard (the PIN inputs capture keystrokes)
     await page.keyboard.type('8008');
-    await page.waitForTimeout(3000); // Wait for full load
+    await page.waitForLoadState('networkidle'); // Wait for full load
 
     // Screenshot 3: After login
     await page.screenshot({ path: 'tests/permission-screenshots/03-after-login.png', fullPage: true });
@@ -35,7 +34,7 @@ test.describe('Permission Management', () => {
     if (await agencySwitcher.isVisible().catch(() => false)) {
       console.log('Found agency switcher, clicking...');
       await agencySwitcher.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Screenshot 4: After clicking agency switcher
@@ -46,7 +45,7 @@ test.describe('Permission Management', () => {
     if (await bealerAgency.isVisible().catch(() => false)) {
       console.log('Found Bealer Agency, clicking to select...');
       await bealerAgency.click();
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Screenshot 5: After selecting agency
@@ -57,7 +56,7 @@ test.describe('Permission Management', () => {
     if (await agencyButton.isVisible().catch(() => false)) {
       console.log('Found agency button, clicking to open menu...');
       await agencyButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Screenshot 6: Agency menu open
@@ -68,7 +67,7 @@ test.describe('Permission Management', () => {
     if (await manageMembers.isVisible().catch(() => false)) {
       console.log('Found Manage Members, clicking...');
       await manageMembers.click();
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
     } else {
       console.log('Manage Members not visible');
     }
@@ -83,7 +82,7 @@ test.describe('Permission Management', () => {
     expect(modalVisible).toBeTruthy();
 
     // Wait for members to load (spinner to disappear)
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Screenshot 8: After modal loads
     await page.screenshot({ path: 'tests/permission-screenshots/08-modal-loaded.png', fullPage: true });
@@ -107,7 +106,7 @@ test.describe('Permission Management', () => {
     const btn = settingsVisible ? settingsButton : settingsByTitle;
     console.log('Clicking settings/customize button...');
     await btn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Screenshot 10: Permissions panel expanded
     await page.screenshot({ path: 'tests/permission-screenshots/10-permissions-panel.png', fullPage: true });

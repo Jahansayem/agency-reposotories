@@ -7,7 +7,7 @@ test.describe('UX Phase 1: TodoHeader Visual Inspection', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -15,12 +15,12 @@ test.describe('UX Phase 1: TodoHeader Visual Inspection', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
 
     // Close any dialogs
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== VISUAL INSPECTION: TodoHeader ===');
 
@@ -100,7 +100,7 @@ test.describe('UX Phase 1: TodoHeader Visual Inspection', () => {
     // Click user menu to open dropdown
     if (userMenuExists) {
       await userMenuBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check dropdown content
       const dropdownContent = page.locator('[role="menu"]');
@@ -136,7 +136,7 @@ test.describe('UX Phase 1: TodoHeader Visual Inspection', () => {
     console.log(`✅ Touch targets improved (40px+)`);
 
     // Keep browser open for manual inspection
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should have proper touch targets on mobile', async ({ page }) => {
@@ -149,7 +149,7 @@ test.describe('UX Phase 1: TodoHeader Visual Inspection', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -157,10 +157,10 @@ test.describe('UX Phase 1: TodoHeader Visual Inspection', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== MOBILE TOUCH TARGET SIZES ===');
 
@@ -186,6 +186,6 @@ test.describe('UX Phase 1: TodoHeader Visual Inspection', () => {
     await page.screenshot({ path: '/tmp/phase1-mobile.png', fullPage: true });
     console.log('\nMobile screenshot: /tmp/phase1-mobile.png');
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
   });
 });

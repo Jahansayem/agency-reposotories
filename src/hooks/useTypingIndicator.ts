@@ -154,7 +154,7 @@ export function useTypingIndicator(
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('📝 Subscribed to typing indicators:', channel);
+          logger.debug('Subscribed to typing indicators', { component: 'useTypingIndicator', action: 'subscribe', metadata: { channel } });
         }
       });
 

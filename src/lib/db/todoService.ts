@@ -1,8 +1,18 @@
 /**
- * Todo Service with Dual-Write Support
+ * Todo Service with Atomic Dual-Write Support
  *
  * Writes to both old (JSONB) and new (normalized) schemas
- * for zero-downtime migration
+ * for zero-downtime migration. All write operations use
+ * PostgreSQL functions (via supabase.rpc()) to ensure atomicity
+ * and prevent race conditions between dual-write steps.
+ *
+ * Race condition fix (2026-02-08):
+ * Previously, createTodo/updateTodo/deleteTodo performed sequential
+ * client-side writes to the old schema and then the normalized schema.
+ * If the second write failed (network error, timeout, etc.), data would
+ * be inconsistent: the old schema would have the change but the normalized
+ * schema would not (or vice versa for deletes). Now all dual-writes are
+ * wrapped in PostgreSQL functions that execute within a single transaction.
  */
 
 import { supabase } from '@/lib/supabaseClient';
@@ -10,42 +20,85 @@ import { isFeatureEnabled } from '@/lib/featureFlags';
 import { logger } from '@/lib/logger';
 import { Todo, TodoStatus, TodoPriority } from '@/types/todo';
 
+/** Default number of todos per page when pagination is used */
+const DEFAULT_PAGE_SIZE = 50;
+
+/** Maximum allowed page size to prevent abuse */
+const MAX_PAGE_SIZE = 200;
+
+/** Pagination parameters for getTodos */
+export interface TodoPaginationParams {
+  /** Page number (1-based). Defaults to 1. */
+  page?: number;
+  /** Number of items per page. Defaults to 50, max 200. */
+  pageSize?: number;
+}
+
+/** Pagination metadata returned alongside results */
+export interface TodoPaginationMeta {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+/** Paginated result from getTodos */
+export interface PaginatedTodosResult {
+  data: Todo[];
+  pagination: TodoPaginationMeta;
+}
+
+/**
+ * Shape returned by the PostgreSQL RPC functions.
+ * On success the JSONB contains the todo row fields.
+ * On failure it contains { error: true, message: string }.
+ */
+interface RpcTodoResult {
+  error?: boolean;
+  message?: string;
+  [key: string]: unknown;
+}
+
 export class TodoService {
   /**
-   * Create a new todo with dual-write support
+   * Create a new todo with atomic dual-write support.
+   *
+   * Uses the `todo_create_with_sync` PostgreSQL function to insert into
+   * the old (JSONB) schema and, when the normalized_schema feature flag
+   * is enabled, atomically sync subtasks, attachments, and user assignments
+   * to the normalized tables -- all within a single database transaction.
    */
   async createTodo(todo: Partial<Todo>): Promise<Todo> {
     const useNormalizedSchema = isFeatureEnabled('normalized_schema');
 
     try {
-      // Always write to old schema (backward compatibility)
-      const { data: newTodo, error } = await supabase
-        .from('todos')
-        .insert({
-          text: todo.text,
-          completed: todo.completed || false,
-          status: todo.status || 'todo',
-          priority: todo.priority || 'medium',
-          created_by: todo.created_by,
-          assigned_to: todo.assigned_to,
-          due_date: todo.due_date,
-          notes: todo.notes,
-          recurrence: todo.recurrence,
-          subtasks: todo.subtasks || [],
-          attachments: todo.attachments || [],
-          transcription: todo.transcription,
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('todo_create_with_sync', {
+        p_text: todo.text ?? '',
+        p_completed: todo.completed ?? false,
+        p_status: todo.status ?? 'todo',
+        p_priority: todo.priority ?? 'medium',
+        p_created_by: todo.created_by ?? null,
+        p_assigned_to: todo.assigned_to ?? null,
+        p_due_date: todo.due_date ?? null,
+        p_notes: todo.notes ?? null,
+        p_recurrence: todo.recurrence ?? null,
+        p_subtasks: JSON.stringify(todo.subtasks ?? []),
+        p_attachments: JSON.stringify(todo.attachments ?? []),
+        p_transcription: todo.transcription ?? null,
+        p_agency_id: todo.agency_id ?? null,
+        p_sync_normalized: useNormalizedSchema,
+      });
 
       if (error) throw error;
 
-      // Also write to new schema if enabled
-      if (useNormalizedSchema && newTodo) {
-        await this.syncToNormalizedSchema(newTodo);
+      const result = data as RpcTodoResult;
+      if (result?.error) {
+        throw new Error(result.message ?? 'Unknown error from todo_create_with_sync');
       }
 
-      return newTodo;
+      return result as unknown as Todo;
     } catch (error) {
       logger.error('Failed to create todo', error as Error, {
         component: 'TodoService',
@@ -56,31 +109,39 @@ export class TodoService {
   }
 
   /**
-   * Update a todo with dual-write support
+   * Update a todo with atomic dual-write support.
+   *
+   * Uses the `todo_update_with_sync` PostgreSQL function to update the
+   * old (JSONB) schema and re-sync normalized tables atomically.
+   * The function uses row-level locking (SELECT FOR UPDATE) to prevent
+   * concurrent modifications from creating inconsistent state.
    */
   async updateTodo(id: string, updates: Partial<Todo>): Promise<Todo> {
     const useNormalizedSchema = isFeatureEnabled('normalized_schema');
 
     try {
-      // Update old schema
-      const { data: updated, error } = await supabase
-        .from('todos')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      // Convert the updates to a plain JSONB object for the RPC call.
+      // We set updated_at on the client side for consistency with the old
+      // behavior, but the PostgreSQL function also sets it via NOW().
+      const updatesPayload = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase.rpc('todo_update_with_sync', {
+        p_todo_id: id,
+        p_updates: updatesPayload,
+        p_sync_normalized: useNormalizedSchema,
+      });
 
       if (error) throw error;
 
-      // Sync to new schema if enabled
-      if (useNormalizedSchema && updated) {
-        await this.syncToNormalizedSchema(updated);
+      const result = data as RpcTodoResult;
+      if (result?.error) {
+        throw new Error(result.message ?? 'Unknown error from todo_update_with_sync');
       }
 
-      return updated;
+      return result as unknown as Todo;
     } catch (error) {
       logger.error('Failed to update todo', error as Error, {
         component: 'TodoService',
@@ -125,71 +186,125 @@ export class TodoService {
   }
 
   /**
-   * Get all todos with optional filters
+   * Get todos with optional filters and pagination.
+   *
+   * Supports offset-based pagination via `page` and `pageSize` params.
+   * When no pagination params are provided, defaults are applied
+   * (page 1, pageSize 50) to prevent unbounded queries.
+   *
+   * Returns a PaginatedTodosResult containing the data array and
+   * pagination metadata (totalCount, totalPages, hasNextPage, etc.).
    */
   async getTodos(filters?: {
     assignedTo?: string;
     createdBy?: string;
     status?: TodoStatus;
     completed?: boolean;
-  }): Promise<Todo[]> {
+  }, pagination?: TodoPaginationParams): Promise<PaginatedTodosResult> {
     const useNormalizedSchema = isFeatureEnabled('normalized_schema');
 
+    // Normalize pagination params
+    const page = Math.max(1, pagination?.page ?? 1);
+    const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, pagination?.pageSize ?? DEFAULT_PAGE_SIZE));
+    const offset = (page - 1) * pageSize;
+
     try {
+      // Build a count query to get the total number of matching rows
+      let countQuery = supabase.from('todos').select('*', { count: 'exact', head: true });
+
+      // Build the data query with ordering and range
       let query = supabase.from('todos').select('*').order('created_at', { ascending: false });
 
+      // Apply filters to both queries
       if (filters?.assignedTo) {
+        countQuery = countQuery.eq('assigned_to', filters.assignedTo);
         query = query.eq('assigned_to', filters.assignedTo);
       }
       if (filters?.createdBy) {
+        countQuery = countQuery.eq('created_by', filters.createdBy);
         query = query.eq('created_by', filters.createdBy);
       }
       if (filters?.status) {
+        countQuery = countQuery.eq('status', filters.status);
         query = query.eq('status', filters.status);
       }
       if (filters?.completed !== undefined) {
+        countQuery = countQuery.eq('completed', filters.completed);
         query = query.eq('completed', filters.completed);
       }
 
-      const { data: todos, error } = await query;
+      // Apply pagination range
+      query = query.range(offset, offset + pageSize - 1);
 
-      if (error) throw error;
-      if (!todos) return [];
+      // Execute both queries in parallel
+      const [countResult, dataResult] = await Promise.all([countQuery, query]);
+
+      if (countResult.error) throw countResult.error;
+      if (dataResult.error) throw dataResult.error;
+
+      const totalCount = countResult.count ?? 0;
+      const todos = dataResult.data ?? [];
 
       // Enrich from normalized schema if enabled
-      if (useNormalizedSchema) {
-        return await Promise.all(
-          todos.map(todo => this.enrichTodoFromNormalizedSchema(todo))
-        );
-      }
+      const enrichedTodos = useNormalizedSchema
+        ? await Promise.all(todos.map(todo => this.enrichTodoFromNormalizedSchema(todo)))
+        : todos;
 
-      return todos;
+      const totalPages = Math.ceil(totalCount / pageSize);
+
+      return {
+        data: enrichedTodos,
+        pagination: {
+          page,
+          pageSize,
+          totalCount,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
+      };
     } catch (error) {
       logger.error('Failed to get todos', error as Error, {
         component: 'TodoService',
         action: 'getTodos',
       });
-      return [];
+      return {
+        data: [],
+        pagination: {
+          page,
+          pageSize,
+          totalCount: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      };
     }
   }
 
   /**
-   * Delete a todo (deletes from both schemas)
+   * Delete a todo atomically from both schemas.
+   *
+   * Uses the `todo_delete_with_sync` PostgreSQL function to delete
+   * from the normalized schema tables and the old schema within a
+   * single transaction. Row-level locking prevents concurrent
+   * modifications during deletion.
    */
   async deleteTodo(id: string): Promise<void> {
     const useNormalizedSchema = isFeatureEnabled('normalized_schema');
 
     try {
-      // Delete from new schema first (if enabled)
-      if (useNormalizedSchema) {
-        // Cascade delete will handle subtasks and attachments
-        await supabase.from('user_assignments').delete().eq('todo_id', id);
-      }
-
-      // Delete from old schema
-      const { error } = await supabase.from('todos').delete().eq('id', id);
+      const { data, error } = await supabase.rpc('todo_delete_with_sync', {
+        p_todo_id: id,
+        p_sync_normalized: useNormalizedSchema,
+      });
 
       if (error) throw error;
+
+      const result = data as RpcTodoResult | null;
+      if (result?.error) {
+        throw new Error(result.message ?? 'Unknown error from todo_delete_with_sync');
+      }
     } catch (error) {
       logger.error('Failed to delete todo', error as Error, {
         component: 'TodoService',
@@ -197,81 +312,6 @@ export class TodoService {
         todoId: id,
       });
       throw error;
-    }
-  }
-
-  /**
-   * Sync todo data to normalized schema
-   * @private
-   */
-  private async syncToNormalizedSchema(todo: Todo): Promise<void> {
-    try {
-      // Sync subtasks
-      if (todo.subtasks && todo.subtasks.length > 0) {
-        // Delete existing
-        await supabase.from('subtasks_v2').delete().eq('todo_id', todo.id);
-
-        // Insert new
-        const subtasksToInsert = todo.subtasks.map((st, index) => ({
-          id: st.id,
-          todo_id: todo.id,
-          text: st.text,
-          completed: st.completed,
-          priority: st.priority,
-          estimated_minutes: st.estimatedMinutes,
-          display_order: index,
-        }));
-
-        await supabase.from('subtasks_v2').insert(subtasksToInsert);
-      }
-
-      // Sync attachments
-      if (todo.attachments && todo.attachments.length > 0) {
-        // Delete existing
-        await supabase.from('attachments_v2').delete().eq('todo_id', todo.id);
-
-        // Insert new
-        const attachmentsToInsert = todo.attachments.map(att => ({
-          id: att.id,
-          todo_id: todo.id,
-          file_name: att.file_name,
-          file_type: att.file_type,
-          file_size: att.file_size,
-          storage_path: att.storage_path,
-          mime_type: att.mime_type,
-          uploaded_by_name: att.uploaded_by,
-          uploaded_at: att.uploaded_at,
-        }));
-
-        await supabase.from('attachments_v2').insert(attachmentsToInsert);
-      }
-
-      // Sync user assignment
-      if (todo.assigned_to) {
-        // Get user ID from name
-        const { data: user } = await supabase
-          .from('users')
-          .select('id')
-          .eq('name', todo.assigned_to)
-          .single();
-
-        if (user) {
-          await supabase
-            .from('user_assignments')
-            .upsert({
-              todo_id: todo.id,
-              user_id: user.id,
-              assigned_at: todo.created_at,
-            }, { onConflict: 'todo_id,user_id' });
-        }
-      }
-    } catch (error) {
-      logger.error('Failed to sync to normalized schema', error as Error, {
-        component: 'TodoService',
-        action: 'syncToNormalizedSchema',
-        todoId: todo.id,
-      });
-      // Don't throw - this is a background sync
     }
   }
 

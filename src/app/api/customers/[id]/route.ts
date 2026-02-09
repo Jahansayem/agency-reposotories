@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
+import { verifyAgencyAccess } from '@/lib/agencyAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -21,21 +22,36 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await verifyAgencyAccess(request);
+    if (!auth.success || !auth.context) {
+      return auth.response || NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const agencyId = auth.context.agencyId;
+
     const supabase = getSupabaseClient();
     const { id } = await params;
 
     // First try to get from customer_insights
-    const { data: insight, error: insightError } = await supabase
+    let insightQuery = supabase
       .from('customer_insights')
       .select('*')
-      .eq('id', id)
-      .maybeSingle();
+      .eq('id', id);
+
+    if (agencyId) {
+      insightQuery = insightQuery.eq('agency_id', agencyId);
+    }
+
+    const { data: insight, error: insightError } = await insightQuery.maybeSingle();
 
     // Get all opportunities for this customer (by name if we have insight, or by id)
     let opportunitiesQuery = supabase
       .from('cross_sell_opportunities')
       .select('*')
       .order('priority_rank', { ascending: true });
+
+    if (agencyId) {
+      opportunitiesQuery = opportunitiesQuery.eq('agency_id', agencyId);
+    }
 
     if (insight) {
       opportunitiesQuery = opportunitiesQuery.eq('customer_name', insight.customer_name);
@@ -139,19 +155,29 @@ export async function GET(
       .map(o => o.taskId);
 
     // Also get tasks that have this customer_id (once we add that column)
-    const { data: linkedTasks, error: tasksError } = taskIds.length > 0
-      ? await supabase
-          .from('todos')
-          .select('id, text, completed, status, priority, due_date, assigned_to, created_at')
-          .in('id', taskIds)
-          .order('created_at', { ascending: false })
-      : { data: [], error: null };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let linkedTasksResult: { data: any[] | null; error: any } = { data: [], error: null };
+    if (taskIds.length > 0) {
+      let linkedQuery = supabase
+        .from('todos')
+        .select('id, text, completed, status, priority, due_date, assigned_to, created_at')
+        .in('id', taskIds);
+      if (agencyId) {
+        linkedQuery = linkedQuery.eq('agency_id', agencyId);
+      }
+      linkedTasksResult = await linkedQuery.order('created_at', { ascending: false });
+    }
+    const { data: linkedTasks } = linkedTasksResult;
 
     // Get tasks that mention this customer's name in the text (fuzzy link)
-    const { data: mentionedTasks } = await supabase
+    let mentionedQuery = supabase
       .from('todos')
       .select('id, text, completed, status, priority, due_date, assigned_to, created_at')
-      .ilike('text', `%${customer.name}%`)
+      .ilike('text', `%${customer.name}%`);
+    if (agencyId) {
+      mentionedQuery = mentionedQuery.eq('agency_id', agencyId);
+    }
+    const { data: mentionedTasks } = await mentionedQuery
       .order('created_at', { ascending: false })
       .limit(10);
 

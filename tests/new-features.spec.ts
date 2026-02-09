@@ -61,7 +61,7 @@ async function isAppLoaded(page: Page): Promise<boolean> {
   const configError = page.locator('text=Configuration Required');
 
   try {
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
     if (await configError.isVisible()) {
       return false;
     }
@@ -118,7 +118,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 10000 });
 
     // Wait for any animations to complete
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Complete the task by clicking the checkbox
     const checkbox = page.locator(`text=${taskName}`).locator('xpath=ancestor::div[contains(@class, "rounded-")]//button[1]');
@@ -146,7 +146,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Complete the task
     const checkbox = page.locator(`text=${taskName}`).locator('xpath=ancestor::div[contains(@class, "rounded-")]//button[1]');
@@ -378,7 +378,7 @@ test.describe('Stats Dashboard', () => {
     await expect(page.locator('text=Stats test task')).toBeVisible({ timeout: 5000 });
 
     // Check count increased
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     const newCount = parseInt(await totalStat.textContent() || '0');
     expect(newCount).toBe(initialCount + 1);
   });
@@ -454,6 +454,7 @@ test.describe('Task Filters', () => {
     // Complete one
     const taskItem = page.locator(`text=${taskToComplete}`).locator('..').locator('..');
     await taskItem.locator('button').first().click();
+    // Genuine timing wait: tooltip auto-hides after 2s
     await page.waitForTimeout(2500); // Wait for celebration
 
     // Click Active filter
@@ -482,6 +483,7 @@ test.describe('Task Filters', () => {
 
     const taskItem = page.locator(`text=${taskName}`).locator('..').locator('..');
     await taskItem.locator('button').first().click();
+    // Genuine timing wait: tooltip auto-hides after 2s
     await page.waitForTimeout(2500);
 
     // Click Completed filter

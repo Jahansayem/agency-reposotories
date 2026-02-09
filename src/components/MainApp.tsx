@@ -9,7 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser, QuickFilter, Todo } from '@/types/todo';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
-import { AppShell, useAppShell } from './layout';
+import { AppShell, useAppShell, type ActiveView } from './layout';
 import { useTodoStore } from '@/store/todoStore';
 import { useTodoData } from '@/hooks';
 import { usePermission } from '@/hooks/usePermission';
@@ -134,6 +134,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const [customerSegmentFilter, setCustomerSegmentFilter] = useState<'elite' | 'premium' | 'standard' | 'entry' | 'all'>('all');
   // Track initial sort option when navigating to customer lookup
   const [customerInitialSort, setCustomerInitialSort] = useState<'priority' | 'renewal_date'>('priority');
+  // Track previous view for back-navigation (e.g., customers → analytics)
+  const previousViewRef = useRef<ActiveView | null>(null);
 
   // AI Onboarding state
   const {
@@ -237,19 +239,44 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     setSelectedTaskId(null);
   }, []);
 
+  // Navigate with back-tracking (remembers where user came from)
+  const navigateWithHistory = useCallback((target: ActiveView) => {
+    previousViewRef.current = activeView;
+    setActiveView(target);
+  }, [activeView, setActiveView]);
+
+  // Handle back-navigation (e.g., customers → analytics)
+  const handleNavigateBack = useCallback(() => {
+    const prev = previousViewRef.current;
+    previousViewRef.current = null;
+    setActiveView(prev || 'tasks');
+  }, [setActiveView]);
+
   // Handle navigation from CustomerSegmentationDashboard to CustomerLookupView with segment filter
   const handleNavigateToCustomerSegment = useCallback((segment: 'elite' | 'premium' | 'standard' | 'entry') => {
     setCustomerSegmentFilter(segment);
     setCustomerInitialSort('priority');
-    setActiveView('customers');
-  }, [setActiveView]);
+    navigateWithHistory('customers');
+  }, [navigateWithHistory]);
 
   // Handle navigation from TodayOpportunitiesPanel to CustomerLookupView with renewal date sort
   const handleNavigateToAllOpportunities = useCallback(() => {
     setCustomerSegmentFilter('all');
     setCustomerInitialSort('renewal_date');
-    setActiveView('customers');
-  }, [setActiveView]);
+    navigateWithHistory('customers');
+  }, [navigateWithHistory]);
+
+  // Handle navigation from Dashboard to Analytics
+  const handleNavigateToAnalytics = useCallback(() => {
+    navigateWithHistory('analytics');
+  }, [navigateWithHistory]);
+
+  // Handle navigation from Dashboard to Customers
+  const handleNavigateToCustomers = useCallback(() => {
+    setCustomerSegmentFilter('all');
+    setCustomerInitialSort('priority');
+    navigateWithHistory('customers');
+  }, [navigateWithHistory]);
 
   // Handle restoring an archived task
   const handleRestoreTask = useCallback(async (taskId: string) => {
@@ -336,17 +363,17 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   // NOTE: These must be defined BEFORE any conditional returns to follow Rules of Hooks
   const handleAIAccept = useCallback(async (item: unknown, editedTask: unknown) => {
     // TODO: Implement accept logic - create task from AI suggestion
-    console.log('Accept AI item:', item, editedTask);
+    logger.debug('Accept AI item', { component: 'MainApp', action: 'handleAIAccept', metadata: { item, editedTask } });
   }, []);
 
   const handleAIDismiss = useCallback(async (itemId: string) => {
     // TODO: Implement dismiss logic
-    console.log('Dismiss AI item:', itemId);
+    logger.debug('Dismiss AI item', { component: 'MainApp', action: 'handleAIDismiss', metadata: { itemId } });
   }, []);
 
   const handleAIRefresh = useCallback(async () => {
     // TODO: Implement refresh logic - fetch new AI items
-    console.log('Refresh AI inbox');
+    logger.debug('Refresh AI inbox', { component: 'MainApp', action: 'handleAIRefresh' });
   }, []);
 
   const handleArchiveClose = useCallback(() => setActiveView('tasks'), [setActiveView]);
@@ -376,6 +403,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               onTaskClick={handleTaskLinkClick}
               onFilterOverdue={() => handleNavigateToTasks('overdue')}
               onFilterDueToday={() => handleNavigateToTasks('due_today')}
+              onNavigateToAnalytics={handleNavigateToAnalytics}
+              onNavigateToCustomers={handleNavigateToCustomers}
             />
           </ErrorBoundary>
         );
@@ -493,6 +522,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               agencyId={currentAgencyId || undefined}
               currentUser={currentUser.name}
               onClose={() => setActiveView('tasks')}
+              onNavigateBack={handleNavigateBack}
+              onTaskClick={handleTaskLinkClick}
               initialSegment={customerSegmentFilter}
               initialSort={customerInitialSort}
             />
@@ -546,6 +577,9 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleAIRefresh,
     handleNavigateToCustomerSegment,
     handleNavigateToAllOpportunities,
+    handleNavigateToAnalytics,
+    handleNavigateToCustomers,
+    handleNavigateBack,
     onUserChange,
     currentAgencyId,
   ]);

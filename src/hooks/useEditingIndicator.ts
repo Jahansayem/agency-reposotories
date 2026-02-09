@@ -245,7 +245,7 @@ export function useEditingIndicator(
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('✏️ Subscribed to collaborative editing indicators');
+          logger.debug('Subscribed to collaborative editing indicators', { component: 'useEditingIndicator', action: 'subscribe' });
         }
       });
 

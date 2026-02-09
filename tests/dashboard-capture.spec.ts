@@ -18,7 +18,7 @@ test.describe('Dashboard Screenshot Capture', () => {
 
     // Wait for dashboard
     await page.waitForSelector('text=Good', { timeout: 15000 });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Capture full dashboard - desktop view
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -38,7 +38,6 @@ test.describe('Dashboard Screenshot Capture', () => {
     const scoreRing = page.locator('text=Score').first();
     if (await scoreRing.isVisible()) {
       await scoreRing.hover();
-      await page.waitForTimeout(300);
       await page.screenshot({ path: 'tests/dashboard-review/03-score-ring-hover.png' });
     }
 
@@ -46,7 +45,6 @@ test.describe('Dashboard Screenshot Capture', () => {
     const addTaskBtn = page.locator('text=Add Task').first();
     if (await addTaskBtn.isVisible()) {
       await addTaskBtn.hover();
-      await page.waitForTimeout(300);
       await page.screenshot({ path: 'tests/dashboard-review/04-add-task-hover.png' });
     }
 
@@ -54,13 +52,12 @@ test.describe('Dashboard Screenshot Capture', () => {
     const overdueSection = page.locator('text=overdue').first();
     if (await overdueSection.isVisible()) {
       await overdueSection.hover();
-      await page.waitForTimeout(300);
       await page.screenshot({ path: 'tests/dashboard-review/05-overdue-hover.png' });
     }
 
     // Mobile view
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     await page.screenshot({
       path: 'tests/dashboard-review/06-dashboard-mobile.png',
       fullPage: false
@@ -74,7 +71,7 @@ test.describe('Dashboard Screenshot Capture', () => {
 
     // Tablet view
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     await page.screenshot({
       path: 'tests/dashboard-review/08-dashboard-tablet.png',
       fullPage: false
@@ -82,12 +79,12 @@ test.describe('Dashboard Screenshot Capture', () => {
 
     // Back to desktop - expand Daily Digest if available
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const digestExpand = page.locator('text=Daily Digest').first();
     if (await digestExpand.isVisible()) {
       await digestExpand.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       await page.screenshot({ path: 'tests/dashboard-review/09-daily-digest-expanded.png' });
     }
 
@@ -96,14 +93,14 @@ test.describe('Dashboard Screenshot Capture', () => {
     const aiTab = page.locator('button:has-text("AI")').first();
     if (await aiTab.isVisible({ timeout: 2000 }).catch(() => false)) {
       await aiTab.click({ timeout: 5000 });
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       await page.screenshot({ path: 'tests/dashboard-review/10-ai-tab.png' });
     }
 
     const teamTab = page.locator('button:has-text("Team")').first();
     if (await teamTab.isVisible({ timeout: 2000 }).catch(() => false)) {
       await teamTab.click({ timeout: 5000 });
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       await page.screenshot({ path: 'tests/dashboard-review/11-team-tab.png' });
     }
 
@@ -111,7 +108,7 @@ test.describe('Dashboard Screenshot Capture', () => {
     const overviewTab = page.locator('button:has-text("Overview")').first();
     if (await overviewTab.isVisible({ timeout: 2000 }).catch(() => false)) {
       await overviewTab.click({ timeout: 5000 });
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Capture the sidebar navigation area

@@ -14,17 +14,15 @@ test.describe('File Upload Features', () => {
     // Login as Derrick
     await page.goto('/');
     await page.locator('[data-testid="user-card-Derrick"]').click();
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for login to complete and session cookie to be set
     await page.waitForURL('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify session cookie exists
     const cookies = await page.context().cookies();
@@ -33,11 +31,11 @@ test.describe('File Upload Features', () => {
 
     // Close any modals
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Navigate to tasks view
     await page.click('button:has-text("All")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should detect missing session cookie and prompt login', async ({ page }) => {
@@ -78,7 +76,7 @@ test.describe('File Upload Features', () => {
       const fileInput = page.locator('input[type="file"]').first();
       if (await fileInput.isVisible()) {
         await fileInput.setInputFiles(testAudioPath);
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         // Alert should have been shown
         expect(alertShown).toBe(true);
@@ -110,19 +108,19 @@ test.describe('File Upload Features', () => {
 
     // Open Add Task modal
     await page.click('button:has-text("Add Task")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Look for file upload button or icon
     const fileUploadTrigger = page.locator('[aria-label*="file"], [aria-label*="upload"], [title*="file"], [title*="upload"]').first();
 
     if (await fileUploadTrigger.isVisible()) {
       await fileUploadTrigger.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Upload the file
       const fileInput = page.locator('input[type="file"]');
       await fileInput.setInputFiles(testAudioPath);
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Click process/transcribe button
       const processButton = page.locator('button:has-text("Transcribe"), button:has-text("Process")').first();
@@ -172,19 +170,19 @@ test.describe('File Upload Features', () => {
 
     // Open Add Task modal
     await page.click('button:has-text("Add Task")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Look for file upload button
     const fileUploadTrigger = page.locator('[aria-label*="file"], [aria-label*="upload"], [title*="file"], [title*="upload"]').first();
 
     if (await fileUploadTrigger.isVisible()) {
       await fileUploadTrigger.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Upload the PDF
       const fileInput = page.locator('input[type="file"]');
       await fileInput.setInputFiles(testPdfPath);
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Click process button
       const processButton = page.locator('button:has-text("Read"), button:has-text("Process")').first();
@@ -234,7 +232,7 @@ test.describe('File Upload Features', () => {
     // Try to make an API call (e.g., smart parse)
     // Open Add Task modal
     await page.click('button:has-text("Add Task")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Type some text
     const textarea = page.locator('textarea[placeholder*="What needs"]').first();
@@ -245,7 +243,7 @@ test.describe('File Upload Features', () => {
       const smartParseButton = page.locator('button[aria-label*="smart"], button[title*="AI"]').first();
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
 
         // Alert should be shown
         expect(alertShown).toBe(true);

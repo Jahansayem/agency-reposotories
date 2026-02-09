@@ -25,13 +25,13 @@ test.describe('Dashboard Verification', () => {
       document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('theme', 'dark');
     });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Navigate to Dashboard
     const dashboardButton = page.locator('button:has-text("Dashboard")');
     if (await dashboardButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await dashboardButton.click();
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Take screenshot for verification
@@ -84,7 +84,7 @@ test.describe('Dashboard Verification', () => {
     const dashboardButton = page.locator('button:has-text("Dashboard"), nav a:has-text("Dashboard")').first();
     if (await dashboardButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await dashboardButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
     }
 
     // Check for productivity score ring
@@ -111,7 +111,7 @@ test.describe('Dashboard Verification', () => {
     const dashboardButton = page.locator('button:has-text("Dashboard"), nav a:has-text("Dashboard")').first();
     if (await dashboardButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await dashboardButton.click();
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Test tab switching
@@ -120,7 +120,7 @@ test.describe('Dashboard Verification', () => {
       const tab = page.locator(`button:has-text("${tabName}")`).first();
       if (await tab.isVisible({ timeout: 1000 }).catch(() => false)) {
         await tab.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Check no errors occurred
         expect(pageErrors.filter(e => !e.includes('ResizeObserver'))).toHaveLength(0);

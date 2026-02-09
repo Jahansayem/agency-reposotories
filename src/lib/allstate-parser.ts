@@ -7,6 +7,7 @@
  * Supports multiple file formats and column naming conventions.
  */
 
+import Papa from 'papaparse';
 import type {
   AllstateBookOfBusinessRow,
   ParsedCrossSellRecord,
@@ -91,12 +92,13 @@ function parseDate(value: string | undefined): string | null {
 
   const trimmed = value.trim();
 
-  // Try MM/DD/YYYY format
+  // Try MM/DD/YYYY format (use UTC to avoid timezone shifts)
   const mmddyyyy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
   const match = trimmed.match(mmddyyyy);
   if (match) {
     const [, month, day, year] = match;
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const dateMs = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const date = new Date(dateMs);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
@@ -104,22 +106,25 @@ function parseDate(value: string | undefined): string | null {
 
   // Try MM/DD format (Book of Business with Email uses this for renewal dates)
   // Assume current year, or next year if the date has already passed
+  // Use UTC consistently since these are business dates without time components
   const mmdd = /^(\d{1,2})\/(\d{1,2})$/;
   const mmddMatch = trimmed.match(mmdd);
   if (mmddMatch) {
     const [, month, day] = mmddMatch;
     const now = new Date();
+    const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
     let year = now.getFullYear();
 
-    // Create date for this year
-    let date = new Date(year, parseInt(month) - 1, parseInt(day));
+    // Create date for this year in UTC
+    let dateMs = Date.UTC(year, parseInt(month) - 1, parseInt(day));
 
     // If the date has already passed, use next year
-    if (date < now) {
+    if (dateMs < todayUTC) {
       year++;
-      date = new Date(year, parseInt(month) - 1, parseInt(day));
+      dateMs = Date.UTC(year, parseInt(month) - 1, parseInt(day));
     }
 
+    const date = new Date(dateMs);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
@@ -429,32 +434,32 @@ export function parseAllstateRow(
 }
 
 /**
- * Finds the header row index in Allstate reports
+ * Finds the header row index in parsed CSV data
  * Allstate reports often have metadata rows before the actual headers
  * (e.g., "Book Of Business-Renewal Audit Report", "Download Date", etc.)
  */
-function findHeaderRowIndex(lines: string[]): number {
-  // Known header indicators - if a line contains these, it's likely the header row
+function findHeaderRowIndex(rows: string[][]): number {
+  // Known header indicators - if a row contains cells matching these, it's likely the header row
   // Includes both Renewal Audit Report and All Purpose Audit column names
   const headerIndicators = [
-    'Insured First Name',
-    'Insured Name',      // All Purpose Audit
-    'Insured Contact',   // All Purpose Audit (phone)
-    'Customer Name',
-    'Name',
-    'Phone',
-    'Email',
-    'Premium',
-    'Renewal Date',
-    'Policy',
+    'insured first name',
+    'insured name',      // All Purpose Audit
+    'insured contact',   // All Purpose Audit (phone)
+    'customer name',
+    'name',
+    'phone',
+    'email',
+    'premium',
+    'renewal date',
+    'policy',
   ];
 
   // Scan up to 50 rows to handle All Purpose Audit (headers at row 34)
-  for (let i = 0; i < Math.min(lines.length, 50); i++) {
-    const line = lines[i].toLowerCase();
-    // Check if this line contains multiple header indicators
+  for (let i = 0; i < Math.min(rows.length, 50); i++) {
+    const rowText = rows[i].join(',').toLowerCase();
+    // Check if this row contains multiple header indicators
     const matchCount = headerIndicators.filter(indicator =>
-      line.includes(indicator.toLowerCase())
+      rowText.includes(indicator)
     ).length;
 
     if (matchCount >= 2) {
@@ -467,28 +472,37 @@ function findHeaderRowIndex(lines: string[]): number {
 }
 
 /**
- * Parses CSV content string into rows
- * Simple CSV parser that handles quoted fields
+ * Parses CSV content string into rows using papaparse
+ * Handles quoted fields, escaped commas, different line endings, and BOM markers
  * Automatically detects and skips Allstate report metadata rows
  */
 export function parseCSV(content: string): AllstateBookOfBusinessRow[] {
-  const lines = content.split(/\r?\n/).filter(line => line.trim());
+  // Use papaparse for robust CSV parsing — handles quoted fields,
+  // embedded commas, escaped quotes, different line endings (\r\n, \n, \r),
+  // and BOM (byte order mark) characters automatically
+  const parsed = Papa.parse<string[]>(content, {
+    header: false,       // We handle headers ourselves due to metadata rows
+    skipEmptyLines: true,
+    delimiter: ',',
+  });
 
-  if (lines.length < 2) {
+  const allRows = parsed.data;
+
+  if (allRows.length < 2) {
     return [];
   }
 
   // Find the actual header row (skip Allstate metadata rows)
-  const headerRowIndex = findHeaderRowIndex(lines);
+  const headerRowIndex = findHeaderRowIndex(allRows);
 
-  // Parse header row
-  const headers = parseCSVLine(lines[headerRowIndex]);
+  // Extract headers from the detected header row, trimming whitespace
+  const headers = allRows[headerRowIndex].map(h => h.trim());
 
   // Parse data rows (starting after header row)
   const rows: AllstateBookOfBusinessRow[] = [];
 
-  for (let i = headerRowIndex + 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
+  for (let i = headerRowIndex + 1; i < allRows.length; i++) {
+    const values = allRows[i];
 
     if (values.length !== headers.length) {
       continue; // Skip malformed rows
@@ -496,47 +510,13 @@ export function parseCSV(content: string): AllstateBookOfBusinessRow[] {
 
     const row: AllstateBookOfBusinessRow = {};
     headers.forEach((header, index) => {
-      row[header] = values[index];
+      row[header] = values[index].trim();
     });
 
     rows.push(row);
   }
 
   return rows;
-}
-
-/**
- * Parses a single CSV line, handling quoted fields
- */
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    const nextChar = line[i + 1];
-
-    if (char === '"') {
-      if (inQuotes && nextChar === '"') {
-        // Escaped quote
-        current += '"';
-        i++;
-      } else {
-        // Toggle quote mode
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-
-  result.push(current.trim());
-
-  return result;
 }
 
 /**

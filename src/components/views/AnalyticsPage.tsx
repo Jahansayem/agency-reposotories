@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { logger } from '@/lib/logger';
 import {
   ConnectedBookOfBusinessDashboard,
   TodayOpportunitiesPanel,
@@ -134,7 +135,7 @@ export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunitie
         isOpen={showUploadModal}
         onClose={() => setShowUploadModal(false)}
         onUploadComplete={(result) => {
-          console.log(`Imported ${result.recordsCreated} cross-sell opportunities`);
+          logger.info(`Imported ${result.recordsCreated} cross-sell opportunities`, { component: 'AnalyticsPage', action: 'onUploadComplete' });
           // Refresh analytics data if needed
         }}
         currentUserName={currentUser?.name || 'Unknown'}

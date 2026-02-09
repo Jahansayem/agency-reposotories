@@ -42,7 +42,6 @@ test.describe('Accessibility - Skip Link', () => {
     await page.keyboard.press('Enter');
 
     // Wait a moment for focus to move
-    await page.waitForTimeout(200);
 
     // Verify main content is focused
     const focusedId = await page.evaluate(() => document.activeElement?.id);
@@ -57,7 +56,6 @@ test.describe('Accessibility - Skip Link', () => {
     await page.keyboard.press(' ');
 
     // Wait a moment for focus to move
-    await page.waitForTimeout(200);
 
     // Verify main content is focused
     const focusedId = await page.evaluate(() => document.activeElement?.id);
@@ -124,8 +122,6 @@ test.describe('Accessibility - Skip Link', () => {
     await page.keyboard.press('Tab'); // Skip link
     await page.keyboard.press('Enter'); // Activate skip link
 
-    await page.waitForTimeout(200);
-
     const focusedAfterSkip = await page.evaluate(() => document.activeElement?.id);
     expect(focusedAfterSkip).toBe('main-content');
 
@@ -139,8 +135,6 @@ test.describe('Accessibility - Skip Link', () => {
     if (await themeToggle.isVisible()) {
       await themeToggle.click();
     }
-
-    await page.waitForTimeout(200);
 
     // Tab to skip link
     await page.keyboard.press('Tab');

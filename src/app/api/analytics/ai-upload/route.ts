@@ -8,6 +8,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { logger } from '@/lib/logger';
 import Anthropic from '@anthropic-ai/sdk';
 import * as XLSX from 'xlsx';
 
@@ -335,24 +337,6 @@ function transformRow(
   const currentProducts = products.length > 0 ? products.join(', ') : 'Unknown';
   const isMonoline = products.length === 1;
 
-  // DEBUG: Log for ZOROB and first few rows
-  const isDebugRow = customerName.includes('ZOROB');
-  if (isDebugRow) {
-    console.log('DEBUG ZOROB RAW:', {
-      customerName,
-      products,
-      'products.length': products.length,
-      isMonoline,
-      'mapping.has_auto': mapping.has_auto,
-      'row[mapping.has_auto]': mapping.has_auto ? row[mapping.has_auto] : 'N/A',
-      'row value lowercase': mapping.has_auto ? String(row[mapping.has_auto] || '').toLowerCase() : 'N/A',
-      'mapping.has_property': mapping.has_property,
-      'row[mapping.has_property]': mapping.has_property ? row[mapping.has_property] : 'N/A',
-      'mapping.monoline_flag': mapping.monoline_flag,
-      'row[mapping.monoline_flag]': mapping.monoline_flag ? row[mapping.monoline_flag] : 'N/A',
-    });
-  }
-
   // Check monoline flag if available
   // IMPORTANT: "Multiline" contains "mono" so we need to check for "multi" first
   let monolineFromFlag = false;
@@ -405,23 +389,6 @@ function transformRow(
     // Fully loaded customer
     segmentType = 'add_umbrella';
     recommendedProduct = 'Umbrella Coverage';
-  }
-
-  // DEBUG: Log segment determination for ZOROB
-  if (isDebugRow) {
-    console.log('DEBUG ZOROB SEGMENT:', {
-      customerName,
-      products,
-      hasAuto,
-      hasProperty,
-      hasLife,
-      hasUmbrella,
-      isMonoline,
-      monolineFromFlag,
-      isTrueMonoline,
-      segmentType,
-      recommendedProduct,
-    });
   }
 
   // Calculate priority score
@@ -524,13 +491,13 @@ function transformRow(
   };
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const uploadedBy = formData.get('uploaded_by') as string;
-    const agencyId = formData.get('agency_id') as string | null;
+    const agencyId = ctx.agencyId;
     const dryRun = formData.get('dry_run') === 'true';
 
     if (!file) {
@@ -558,36 +525,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No data rows found in file' }, { status: 400 });
     }
 
-    console.log(`Processing ${rows.length} rows...`);
+    logger.debug(`Processing ${rows.length} rows`, { component: 'ai-upload', action: 'POST' });
 
     // Use AI to detect column mapping (single API call)
-    console.log('Detecting column mapping with AI...');
     const aiResponse = await detectColumnMapping(headers, rows.slice(0, 10));
-    console.log('AI Column Mapping:', JSON.stringify(aiResponse.column_mapping, null, 2));
-    console.log('Product Detection:', aiResponse.product_detection);
-
-    // Log presence flag mappings specifically
-    console.log('PRESENCE FLAG MAPPING:', {
-      has_auto: aiResponse.column_mapping.has_auto,
-      has_property: aiResponse.column_mapping.has_property,
-      has_life: aiResponse.column_mapping.has_life,
-      has_umbrella: aiResponse.column_mapping.has_umbrella,
-      monoline_flag: aiResponse.column_mapping.monoline_flag,
-    });
-
-    // Log first row's values for these columns
-    const firstRow = rows[0];
-    console.log('FIRST ROW PRESENCE VALUES:', {
-      has_auto_col: aiResponse.column_mapping.has_auto,
-      has_auto_val: aiResponse.column_mapping.has_auto ? firstRow[aiResponse.column_mapping.has_auto] : 'N/A',
-      has_property_col: aiResponse.column_mapping.has_property,
-      has_property_val: aiResponse.column_mapping.has_property ? firstRow[aiResponse.column_mapping.has_property] : 'N/A',
-      monoline_col: aiResponse.column_mapping.monoline_flag,
-      monoline_val: aiResponse.column_mapping.monoline_flag ? firstRow[aiResponse.column_mapping.monoline_flag] : 'N/A',
-    });
+    logger.debug('AI column mapping detected', { component: 'ai-upload', action: 'detectColumnMapping' });
 
     // Apply mapping to all rows programmatically (fast!)
-    console.log('Transforming rows...');
     const customers: ParsedCustomer[] = [];
     for (const row of rows) {
       const customer = transformRow(row, aiResponse.column_mapping);
@@ -596,34 +540,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log(`Transformed ${customers.length} valid records from ${rows.length} rows`);
-
-    // Log segment distribution to verify scoring
-    const segmentCounts: Record<string, number> = {};
-    const productCounts: Record<number, number> = {};
-    customers.forEach(c => {
-      segmentCounts[c.segment_type] = (segmentCounts[c.segment_type] || 0) + 1;
-      const productCount = c.current_products.split(',').length;
-      productCounts[productCount] = (productCounts[productCount] || 0) + 1;
-    });
-    console.log('SEGMENT DISTRIBUTION:', segmentCounts);
-    console.log('PRODUCT COUNT DISTRIBUTION:', productCounts);
-
-    // Log some examples of multiline customers to verify fix
-    const multilineWithAutoHome = customers.filter(c =>
-      c.current_products.includes('Auto') &&
-      c.current_products.includes('Property') &&
-      c.segment_type === 'auto_to_home'
-    );
-    if (multilineWithAutoHome.length > 0) {
-      console.log('WARNING: Found bundled customers with auto_to_home segment:', multilineWithAutoHome.slice(0, 3).map(c => ({
-        name: c.customer_name,
-        products: c.current_products,
-        segment: c.segment_type,
-      })));
-    } else {
-      console.log('GOOD: No bundled customers incorrectly assigned auto_to_home segment');
-    }
+    logger.debug(`Transformed ${customers.length} valid records from ${rows.length} rows`, { component: 'ai-upload', action: 'transformRows' });
 
     if (customers.length === 0) {
       return NextResponse.json({ error: 'Could not extract any valid records' }, { status: 400 });
@@ -690,7 +607,7 @@ export async function POST(request: NextRequest) {
       const existingNames = new Set(existing?.map(e => e.customer_name) || []);
       const existingIds = existing?.map(e => e.id) || [];
 
-      console.log(`Found ${existingNames.size} existing customers to update`);
+      logger.debug(`Found ${existingNames.size} existing customers to update`, { component: 'ai-upload', action: 'upsert' });
 
       // Delete existing records for these customers (to replace with fresh data)
       if (existingIds.length > 0) {
@@ -700,7 +617,7 @@ export async function POST(request: NextRequest) {
           .in('id', existingIds);
 
         if (deleteError) {
-          console.error('Failed to delete existing records:', deleteError);
+          logger.error('Failed to delete existing records', deleteError, { component: 'ai-upload', action: 'deleteExisting' });
         } else {
           recordsUpdated = existingIds.length;
         }
@@ -716,7 +633,7 @@ export async function POST(request: NextRequest) {
           .insert(batch);
 
         if (insertError) {
-          console.error('Failed to insert batch:', insertError);
+          logger.error('Failed to insert batch', insertError, { component: 'ai-upload', action: 'insertBatch' });
           recordsFailed += batch.length;
         } else {
           // Count as created or updated based on whether they existed before
@@ -731,7 +648,7 @@ export async function POST(request: NextRequest) {
       }
 
       // ALSO populate customer_insights table for Customer Lookup to show the data
-      console.log('Populating customer_insights table...');
+      logger.debug('Populating customer_insights table', { component: 'ai-upload', action: 'populateInsights' });
       const insights = customers.map(c => ({
         agency_id: agencyId || null,
         customer_name: c.customer_name,
@@ -766,10 +683,10 @@ export async function POST(request: NextRequest) {
           .insert(batch);
 
         if (insightError) {
-          console.error('Failed to insert customer_insights batch:', insightError);
+          logger.error('Failed to insert customer_insights batch', insightError, { component: 'ai-upload', action: 'insertInsights' });
         }
       }
-      console.log(`Inserted ${insights.length} records into customer_insights`);
+      logger.debug(`Inserted ${insights.length} records into customer_insights`, { component: 'ai-upload', action: 'populateInsights' });
     }
 
     // Calculate summary stats
@@ -810,13 +727,13 @@ export async function POST(request: NextRequest) {
       sample_records: customers.slice(0, 5),
     });
   } catch (error) {
-    console.error('AI Upload error:', error);
+    logger.error('AI Upload error', error as Error, { component: 'ai-upload', action: 'POST' });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to process upload' },
       { status: 500 }
     );
   }
-}
+});
 
 // Helper functions for estimates
 function getPotentialPremium(segment: string): number {

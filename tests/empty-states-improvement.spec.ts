@@ -21,12 +21,10 @@ test.describe('Empty States Improvement (Issue #28)', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
@@ -53,7 +51,7 @@ test.describe('Empty States Improvement (Issue #28)', () => {
         await searchInput.fill('xyznonexistent123456');
 
         // Wait for empty state
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         const noResults = page.locator('text=No matches found').or(page.locator('text=No tasks match'));
 
@@ -81,7 +79,7 @@ test.describe('Empty States Improvement (Issue #28)', () => {
 
       if (await searchInput.isVisible({ timeout: 2000 })) {
         await searchInput.fill('xyznonexistent123456');
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         const clearButton = page.locator('button:has-text("Clear Search")');
 

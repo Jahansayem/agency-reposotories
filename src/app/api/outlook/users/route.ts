@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -43,22 +44,12 @@ async function getUsersFromAgency(agencyId: string): Promise<string[]> {
   return Array.from(userNames).sort();
 }
 
-export async function GET(request: NextRequest) {
-  // Verify API key (constant-time comparison)
-  if (!verifyOutlookApiKey(request)) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
-    // Get optional agency_id from query params
-    const { searchParams } = new URL(request.url);
-    const agencyId = searchParams.get('agency_id');
+    const agencyId = ctx.agencyId;
 
-    // If agency_id is provided, return only users from that agency
+    // If agency is scoped via auth context, return only users from that agency
     if (agencyId) {
       const agencyUsers = await getUsersFromAgency(agencyId);
 
@@ -70,7 +61,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Backward compatible: return all users when no agency_id specified
+    // Backward compatible: return all users when no agency context
     // Fetch registered users
     const { data: registeredUsers, error: usersError } = await supabase
       .from('users')
@@ -119,7 +110,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // Handle CORS preflight - only allow specific Outlook origins
 export async function OPTIONS(request: NextRequest) {

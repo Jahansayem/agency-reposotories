@@ -22,20 +22,19 @@ test.describe('Task Click Flow', () => {
     await pinInputs.nth(3).fill('8');
 
     // Wait a moment for auto-submit to trigger
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for navigation and main app to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Navigate to Tasks view - use JavaScript click for better mobile compatibility
     const tasksTab = page.locator('[role="tab"]').filter({ hasText: 'Tasks' });
     await tasksTab.waitFor({ state: 'visible', timeout: 5000 });
     await tasksTab.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
     await tasksTab.evaluate(node => (node as HTMLElement).click());
 
     // Wait longer for view transition and tasks to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('clicking on a task opens the detail modal without errors', async ({ page }) => {
@@ -52,7 +51,7 @@ test.describe('Task Click Flow', () => {
     });
 
     // Wait for tasks to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Find a task item - look for listitem role (longer timeout for mobile)
     const firstTask = page.locator('[role="listitem"]').first();
@@ -60,7 +59,6 @@ test.describe('Task Click Flow', () => {
 
     // Scroll task into view and use JavaScript click to bypass overlay
     await firstTask.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
     await firstTask.evaluate(node => (node as HTMLElement).click());
 
     // Wait for detail modal to open - look for the modal dialog
@@ -79,20 +77,18 @@ test.describe('Task Click Flow', () => {
     // Close the modal using X button - use JavaScript click
     const closeButton = page.locator('button[aria-label*="Close"]').first();
     await closeButton.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
     await closeButton.evaluate(node => (node as HTMLElement).click());
     await expect(modal).not.toBeVisible({ timeout: 3000 });
   });
 
   test('task detail modal displays all key sections', async ({ page }) => {
     // Wait for tasks to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Click on the first task - use JavaScript click (longer timeout for mobile)
     const firstTask = page.locator('[role="listitem"]').first();
     await expect(firstTask).toBeVisible({ timeout: 10000 });
     await firstTask.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(300);
     await firstTask.evaluate(node => (node as HTMLElement).click());
 
     // Wait for modal

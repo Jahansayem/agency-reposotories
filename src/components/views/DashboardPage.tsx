@@ -67,6 +67,8 @@ interface DashboardPageProps {
   onFilterByUser?: (userName: string) => void;
   onRefreshTodos?: () => void;
   onOpenChat?: () => void;
+  onNavigateToAnalytics?: () => void;
+  onNavigateToCustomers?: () => void;
   /** Use new role-based dashboards instead of legacy dashboard */
   useNewDashboards?: boolean;
 }
@@ -117,6 +119,8 @@ export default function DashboardPage({
   onFilterByUser,
   onRefreshTodos,
   onOpenChat,
+  onNavigateToAnalytics,
+  onNavigateToCustomers,
   useNewDashboards = true, // Default to new dashboards
 }: DashboardPageProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -146,6 +150,8 @@ export default function DashboardPage({
           onFilterByCategory={onFilterByCategory}
           onFilterByUser={onFilterByUser}
           onRefreshTodos={onRefreshTodos}
+          onNavigateToAnalytics={onNavigateToAnalytics}
+          onNavigateToCustomers={onNavigateToCustomers}
         />
       );
     } else {
@@ -158,6 +164,8 @@ export default function DashboardPage({
           onTaskClick={onTaskClick}
           onFilterOverdue={onFilterOverdue}
           onFilterDueToday={onFilterDueToday}
+          onNavigateToAnalytics={onNavigateToAnalytics}
+          onNavigateToCustomers={onNavigateToCustomers}
         />
       );
     }

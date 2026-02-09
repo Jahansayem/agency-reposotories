@@ -107,7 +107,7 @@ export function startPeriodicSync(): void {
     return; // Already running
   }
 
-  console.log('Starting periodic sync...');
+  logger.debug('Starting periodic sync', { component: 'offlineSync', action: 'startPeriodicSync' });
   syncState.markInitialized();
 
   // Sync immediately on start
@@ -129,7 +129,7 @@ export function startPeriodicSync(): void {
  */
 export function stopPeriodicSync(): void {
   syncState.reset();
-  console.log('Stopped periodic sync');
+  logger.debug('Stopped periodic sync', { component: 'offlineSync', action: 'stopPeriodicSync' });
 }
 
 /**
@@ -142,7 +142,7 @@ export async function syncOfflineData(): Promise<void> {
   }
 
   if (!navigator.onLine) {
-    console.log('Cannot sync: offline');
+    logger.debug('Cannot sync: offline', { component: 'offlineSync', action: 'syncOfflineData' });
     return;
   }
 
@@ -157,7 +157,7 @@ export async function syncOfflineData(): Promise<void> {
       return;
     }
 
-    console.log(`Syncing ${queue.length} operations...`);
+    logger.debug(`Syncing ${queue.length} operations`, { component: 'offlineSync', action: 'syncOfflineData' });
 
     // Process queue items in order (by timestamp)
     for (const item of queue) {
@@ -165,7 +165,7 @@ export async function syncOfflineData(): Promise<void> {
         await processSyncQueueItem(item);
         // Success - remove from queue
         await removeFromSyncQueue(item.id);
-        console.log(`✓ Synced ${item.type} ${item.table}:`, item.id);
+        logger.debug(`Synced ${item.type} ${item.table}`, { component: 'offlineSync', action: 'syncOfflineData', metadata: { itemId: item.id } });
       } catch (error) {
         logger.error(`Failed to sync ${item.type} ${item.table}`, error as Error, { component: 'offlineSync', action: 'syncOfflineData', itemId: item.id, itemType: item.type, itemTable: item.table });
 
@@ -183,7 +183,7 @@ export async function syncOfflineData(): Promise<void> {
     // Sync unsynced messages
     await syncUnsyncedMessages();
 
-    console.log('Sync complete');
+    logger.debug('Sync complete', { component: 'offlineSync', action: 'syncOfflineData' });
   } catch (error) {
     logger.error('Sync error', error as Error, { component: 'offlineSync', action: 'syncOfflineData' });
   } finally {
@@ -269,7 +269,7 @@ async function syncUnsyncedMessages(): Promise<void> {
     return;
   }
 
-  console.log(`Syncing ${unsyncedMessages.length} unsynced messages...`);
+  logger.debug(`Syncing ${unsyncedMessages.length} unsynced messages`, { component: 'offlineSync', action: 'syncUnsyncedMessages' });
 
   const syncedIds: string[] = [];
 
@@ -289,7 +289,7 @@ async function syncUnsyncedMessages(): Promise<void> {
 
   if (syncedIds.length > 0) {
     await markMessagesAsSyncedInIDB(syncedIds);
-    console.log(`Synced ${syncedIds.length} messages`);
+    logger.debug(`Synced ${syncedIds.length} messages`, { component: 'offlineSync', action: 'syncUnsyncedMessages' });
   }
 }
 
@@ -298,7 +298,7 @@ async function syncUnsyncedMessages(): Promise<void> {
  */
 export async function fetchAndCacheData(): Promise<void> {
   if (!navigator.onLine) {
-    console.log('Cannot fetch: offline');
+    logger.debug('Cannot fetch: offline', { component: 'offlineSync', action: 'fetchAndCacheData' });
     return;
   }
 
@@ -313,7 +313,7 @@ export async function fetchAndCacheData(): Promise<void> {
 
     if (todos) {
       await saveTodosToIDB(todos as Todo[]);
-      console.log(`Cached ${todos.length} todos`);
+      logger.debug(`Cached ${todos.length} todos`, { component: 'offlineSync', action: 'fetchAndCacheData' });
     }
 
     // Fetch messages
@@ -327,7 +327,7 @@ export async function fetchAndCacheData(): Promise<void> {
 
     if (messages) {
       await saveMessagesToIDB(messages as Message[]);
-      console.log(`Cached ${messages.length} messages`);
+      logger.debug(`Cached ${messages.length} messages`, { component: 'offlineSync', action: 'fetchAndCacheData' });
     }
 
     // Fetch users
@@ -337,7 +337,7 @@ export async function fetchAndCacheData(): Promise<void> {
 
     if (users) {
       await saveUsersToIDB(users);
-      console.log(`Cached ${users.length} users`);
+      logger.debug(`Cached ${users.length} users`, { component: 'offlineSync', action: 'fetchAndCacheData' });
     }
   } catch (error) {
     logger.error('Error fetching and caching data', error as Error, { component: 'offlineSync', action: 'fetchAndCacheData' });
@@ -380,7 +380,7 @@ export async function getOfflineStatus(): Promise<{
  * Force sync now (manual sync trigger)
  */
 export async function forceSyncNow(): Promise<void> {
-  console.log('Force syncing...');
+  logger.debug('Force syncing', { component: 'offlineSync', action: 'forceSyncNow' });
 
   if (!navigator.onLine) {
     throw new Error('Cannot sync while offline');

@@ -7,6 +7,7 @@ import { generateAgencySlug, DEFAULT_PERMISSIONS, SUBSCRIPTION_LIMITS } from '@/
 import { logger } from '@/lib/logger';
 import { apiErrorResponse } from '@/lib/apiResponse';
 import { safeLogActivity } from '@/lib/safeActivityLog';
+import { isWeakPin } from '@/lib/constants';
 
 /**
  * Hash PIN using SHA-256 (server-side, matching existing client-side hash format)
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest) {
 
     if (!pin || !/^\d{4}$/.test(pin)) {
       return apiErrorResponse('VALIDATION_ERROR', 'PIN must be exactly 4 digits');
+    }
+
+    // Reject common weak PINs
+    if (isWeakPin(pin)) {
+      return apiErrorResponse('VALIDATION_ERROR', 'PIN is too common. Please choose a less predictable PIN.');
     }
 
     if (name.trim().length > 100) {

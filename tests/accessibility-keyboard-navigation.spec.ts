@@ -24,7 +24,7 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     const tasksButton = page.locator('button:has-text("Tasks")').first();
     if (await tasksButton.isVisible()) {
       await tasksButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
   });
 
@@ -32,13 +32,11 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should focus task list when tabbing from input', async ({ page }) => {
       // Create a few tasks first
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 3; i++) {
         await taskInput.fill(`Task ${i} for keyboard test`);
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(300);
       }
 
       // Tab through the page
@@ -62,13 +60,11 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should support Home key to jump to first task', async ({ page }) => {
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 5; i++) {
         await taskInput.fill(`Task ${i}`);
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(200);
       }
 
       // Focus somewhere in the list
@@ -81,7 +77,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
       await page.keyboard.press('Home');
 
       // Should focus first item (implementation-dependent)
-      await page.waitForTimeout(100);
 
       const focusedElement = await page.evaluate(() => {
         return document.activeElement?.getAttribute('data-keyboard-nav-index');
@@ -96,13 +91,11 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should support End key to jump to last task', async ({ page }) => {
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 5; i++) {
         await taskInput.fill(`Task ${i}`);
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(200);
       }
 
       // Focus first task
@@ -113,8 +106,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
       // Press End key
       await page.keyboard.press('End');
-
-      await page.waitForTimeout(100);
 
       const focusedElement = await page.evaluate(() => {
         return document.activeElement?.getAttribute('data-keyboard-nav-index');
@@ -131,13 +122,11 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should have only one task focusable at a time (roving tabindex)', async ({ page }) => {
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 3; i++) {
         await taskInput.fill(`Keyboard nav task ${i}`);
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(200);
       }
 
       // Check tabindex pattern
@@ -159,16 +148,13 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should move focus with arrow keys (when implemented)', async ({ page }) => {
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       await taskInput.fill('First keyboard task');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
 
       await taskInput.fill('Second keyboard task');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(200);
 
       // Find first task with keyboard nav attribute
       const firstNavItem = page.locator('[data-keyboard-nav-index="0"]').first();
@@ -178,8 +164,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
         // Press ArrowDown
         await page.keyboard.press('ArrowDown');
-
-        await page.waitForTimeout(100);
 
         // Check if focus moved
         const focusedIndex = await page.evaluate(() => {
@@ -194,13 +178,11 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should prevent default scroll behavior on arrow keys', async ({ page }) => {
       // Create many tasks to enable scrolling
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 10; i++) {
         await taskInput.fill(`Scroll test task ${i}`);
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(100);
       }
 
       // Focus a task
@@ -218,7 +200,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
         // Press ArrowDown multiple times
         for (let i = 0; i < 3; i++) {
           await page.keyboard.press('ArrowDown');
-          await page.waitForTimeout(50);
         }
 
         // Scroll position should either stay same or change minimally
@@ -240,11 +221,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should allow Tab to exit task list', async ({ page }) => {
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Tab exit test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
 
       // Focus the task
       const task = page.locator('text=Tab exit test').first();
@@ -253,8 +232,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
         // Press Tab (should move to next interactive element, not next task)
         await page.keyboard.press('Tab');
-
-        await page.waitForTimeout(100);
 
         // Should have moved focus away from current task
         const focusedElement = await page.evaluate(() => {
@@ -270,11 +247,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should support Shift+Tab for reverse navigation', async ({ page }) => {
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Reverse nav test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
 
       // Focus somewhere in the page
       await page.keyboard.press('Tab');
@@ -282,8 +257,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
 
       // Press Shift+Tab
       await page.keyboard.press('Shift+Tab');
-
-      await page.waitForTimeout(100);
 
       // Should be able to navigate backwards
       const focused = await page.evaluate(() => {
@@ -296,17 +269,13 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should maintain focus visibility when navigating with keyboard', async ({ page }) => {
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Focus visibility test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
 
       // Tab to the task
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
-
-      await page.waitForTimeout(100);
 
       // Check if focused element has visible focus indicator
       const hasFocusIndicator = await page.evaluate(() => {
@@ -329,11 +298,10 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should not interfere with button/checkbox interactions', async ({ page }) => {
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Interaction test task');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find the task's checkbox
       const checkbox = page.locator('input[type="checkbox"]').last();
@@ -342,8 +310,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
         // Focus and activate checkbox
         await checkbox.focus();
         await page.keyboard.press('Space');
-
-        await page.waitForTimeout(300);
 
         // Checkbox should toggle (if not disabled)
         const isChecked = await checkbox.isChecked();
@@ -368,11 +334,9 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should have aria-label on focusable task items', async ({ page }) => {
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('ARIA label test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
 
       // Check if task has accessible name
       const hasAccessibleName = await page.evaluate(() => {
@@ -394,13 +358,11 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should announce current position when navigating (aria-live)', async ({ page }) => {
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
 
       for (let i = 1; i <= 3; i++) {
         await taskInput.fill(`Position ${i}`);
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(200);
       }
 
       // Check if there's an aria-live region for navigation feedback
@@ -418,11 +380,10 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should work with task completion via keyboard', async ({ page }) => {
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Complete via keyboard');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find and check the checkbox via keyboard
       const checkbox = page.locator('input[type="checkbox"]').last();
@@ -430,8 +391,6 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
       if (await checkbox.isVisible()) {
         await checkbox.focus();
         await page.keyboard.press('Space');
-
-        await page.waitForTimeout(300);
 
         // Task should be marked complete
         const isComplete = await checkbox.isChecked();
@@ -442,18 +401,16 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should work with task deletion via keyboard', async ({ page }) => {
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Delete via keyboard');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find delete button (may require hovering or opening menu)
       const taskItem = page.locator('text=Delete via keyboard').first();
 
       if (await taskItem.isVisible()) {
         await taskItem.hover();
-        await page.waitForTimeout(200);
 
         // Look for delete button
         const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
@@ -463,15 +420,12 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
           await page.keyboard.press('Enter');
 
           // Confirm if dialog appears
-          await page.waitForTimeout(300);
           const confirmButton = page.locator('button:has-text("Delete"), button:has-text("Confirm")').first();
 
           if (await confirmButton.isVisible()) {
             await confirmButton.focus();
             await page.keyboard.press('Enter');
           }
-
-          await page.waitForTimeout(300);
 
           // Task should be gone
           const stillExists = await page.locator('text=Delete via keyboard').isVisible();
@@ -483,11 +437,10 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should work with task editing via keyboard', async ({ page }) => {
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Edit via keyboard');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Click on task to open edit modal/sheet
       const task = page.locator('text=Edit via keyboard').first();
@@ -495,8 +448,7 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
       if (await task.isVisible()) {
         // Focus and activate
         await task.click();
-
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Should open edit interface (modal or inline edit)
         // Check if edit input appears
@@ -513,23 +465,19 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should not conflict with touch interactions', async ({ page }) => {
       // Set mobile viewport
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.waitForTimeout(300);
 
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Touch test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Tap on task
       const task = page.locator('text=Touch test').first();
 
       if (await task.isVisible()) {
         await task.click();
-
-        await page.waitForTimeout(300);
 
         // Should respond to touch (open detail or select)
         // Success means no errors and something happened
@@ -540,21 +488,16 @@ test.describe('Accessibility - Keyboard Navigation in Task Lists', () => {
     test('should support external keyboard on mobile devices', async ({ page }) => {
       // Set mobile viewport
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.waitForTimeout(300);
 
       // Create tasks
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       const taskInput = page.locator('textarea[placeholder*="What needs to be done"]').first();
       await taskInput.fill('Mobile keyboard test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
 
       // Use keyboard (as if external keyboard connected)
       await page.keyboard.press('Tab');
       await page.keyboard.press('Tab');
-
-      await page.waitForTimeout(100);
 
       // Should be able to navigate with keyboard even on mobile
       const focused = await page.evaluate(() => !!document.activeElement);

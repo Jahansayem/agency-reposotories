@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAgencyAccess, type AgencyAuthContext } from '@/lib/agencyAuth';
 import type {
   ContactMethod,
   ContactOutcome,
@@ -81,7 +82,14 @@ interface RouteParams {
 export async function GET(
   request: NextRequest,
   { params }: RouteParams
-): Promise<NextResponse<ContactHistoryListResponse | { error: string }>> {
+): Promise<NextResponse> {
+  // Verify agency authentication
+  const auth = await verifyAgencyAccess(request);
+  if (!auth.success || !auth.context) {
+    return auth.response || NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const ctx = auth.context;
+
   try {
     const supabase = getSupabaseClient();
     const { id: opportunityId } = await params;
@@ -99,12 +107,17 @@ export async function GET(
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50', 10), 1), 100);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
-    // Verify opportunity exists
-    const { data: opportunity, error: oppError } = await supabase
+    // Verify opportunity exists (scoped to agency)
+    let oppQuery = supabase
       .from('cross_sell_opportunities')
       .select('id')
-      .eq('id', opportunityId)
-      .single();
+      .eq('id', opportunityId);
+
+    if (ctx.agencyId) {
+      oppQuery = oppQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: opportunity, error: oppError } = await oppQuery.single();
 
     if (oppError || !opportunity) {
       return NextResponse.json(
@@ -191,7 +204,14 @@ export async function GET(
 export async function POST(
   request: NextRequest,
   { params }: RouteParams
-): Promise<NextResponse<LogContactResponse | { error: string }>> {
+): Promise<NextResponse> {
+  // Verify agency authentication
+  const auth = await verifyAgencyAccess(request);
+  if (!auth.success || !auth.context) {
+    return auth.response || NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const ctx = auth.context;
+
   try {
     const supabase = getSupabaseClient();
     const { id: opportunityId } = await params;
@@ -259,12 +279,17 @@ export async function POST(
       );
     }
 
-    // Verify opportunity exists
-    const { data: opportunity, error: oppError } = await supabase
+    // Verify opportunity exists (scoped to agency)
+    let oppVerifyQuery = supabase
       .from('cross_sell_opportunities')
       .select('id, customer_name')
-      .eq('id', opportunityId)
-      .single();
+      .eq('id', opportunityId);
+
+    if (ctx.agencyId) {
+      oppVerifyQuery = oppVerifyQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: opportunity, error: oppError } = await oppVerifyQuery.single();
 
     if (oppError || !opportunity) {
       return NextResponse.json(

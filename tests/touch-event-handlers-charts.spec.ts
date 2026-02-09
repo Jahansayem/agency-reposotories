@@ -46,7 +46,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Hover over first bar
       await bars.first().hover();
-      await page.waitForTimeout(300);
 
       // Tooltip should appear
       const tooltip = page.locator('[role="tooltip"]');
@@ -65,14 +64,12 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Hover over bar
       await bars.first().hover();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
 
       // Move mouse away
       await page.mouse.move(0, 0);
-      await page.waitForTimeout(300);
 
       // Tooltip should disappear
       await expect(tooltip).not.toBeVisible();
@@ -89,14 +86,12 @@ test.describe('Touch Event Handlers for Charts', () => {
       if (barCount >= 2) {
         // Hover over first bar
         await bars.nth(0).hover();
-        await page.waitForTimeout(300);
 
         const tooltip1 = page.locator('[role="tooltip"]').first();
         const day1 = await tooltip1.textContent();
 
         // Hover over second bar
         await bars.nth(1).hover();
-        await page.waitForTimeout(300);
 
         const tooltip2 = page.locator('[role="tooltip"]').first();
         const day2 = await tooltip2.textContent();
@@ -118,7 +113,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Tap first bar
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       // Tooltip should appear
       const tooltip = page.locator('[role="tooltip"]');
@@ -135,7 +129,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Tap bar
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
@@ -158,7 +151,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Tap bar
       await firstBar.click();
-      await page.waitForTimeout(300);
 
       // Get new scale (should be 1.05)
       const newTransform = await firstBar.evaluate(el => window.getComputedStyle(el).transform);
@@ -189,7 +181,6 @@ test.describe('Touch Event Handlers for Charts', () => {
       if (barCount >= 2) {
         // Tap first bar
         await bars.nth(0).click();
-        await page.waitForTimeout(300);
 
         const tooltip1 = page.locator('[role="tooltip"]').first();
         const day1 = await tooltip1.textContent();
@@ -199,7 +190,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
         // Tap second bar
         await bars.nth(1).click();
-        await page.waitForTimeout(300);
 
         const tooltip2 = page.locator('[role="tooltip"]').first();
         const day2 = await tooltip2.textContent();
@@ -214,7 +204,6 @@ test.describe('Touch Event Handlers for Charts', () => {
     test('should show day name in tooltip', async ({ page }) => {
       const bars = page.locator('.rounded-t-lg.cursor-pointer');
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
@@ -227,7 +216,6 @@ test.describe('Touch Event Handlers for Charts', () => {
     test('should show completed count in tooltip', async ({ page }) => {
       const bars = page.locator('.rounded-t-lg.cursor-pointer');
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
 
@@ -238,7 +226,6 @@ test.describe('Touch Event Handlers for Charts', () => {
     test('should show created count in tooltip', async ({ page }) => {
       const bars = page.locator('.rounded-t-lg.cursor-pointer');
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
 
@@ -254,7 +241,6 @@ test.describe('Touch Event Handlers for Charts', () => {
       let foundGoalMet = false;
       for (let i = 0; i < barCount; i++) {
         await bars.nth(i).click();
-        await page.waitForTimeout(300);
 
         const tooltip = page.locator('[role="tooltip"]');
         const text = await tooltip.textContent();
@@ -284,7 +270,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Click bar
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       // Count label should be visible and highlighted
       await expect(countLabel).toBeVisible();
@@ -297,12 +282,11 @@ test.describe('Touch Event Handlers for Charts', () => {
     test('should show bar animation on load', async ({ page }) => {
       // Close and reopen chart to trigger animation
       await page.click('[aria-label="Close weekly progress chart"]');
-      await page.waitForTimeout(300);
 
       const chartButton = page.locator('text=View Weekly Progress').or(page.locator('[data-testid="weekly-progress-button"]'));
       if (await chartButton.count() > 0) {
         await chartButton.first().click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
 
       // Bars should animate upward
@@ -327,7 +311,6 @@ test.describe('Touch Event Handlers for Charts', () => {
       await bars.first().click();
 
       // Give animation time to complete
-      await page.waitForTimeout(200);
 
       // Bar should be scaled (visual feedback)
       const transform = await bars.first().evaluate(el => window.getComputedStyle(el).transform);
@@ -341,7 +324,6 @@ test.describe('Touch Event Handlers for Charts', () => {
     test('should have role="tooltip" on tooltip', async ({ page }) => {
       const bars = page.locator('.rounded-t-lg.cursor-pointer');
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
@@ -366,7 +348,6 @@ test.describe('Touch Event Handlers for Charts', () => {
     test('should be keyboard accessible', async ({ page }) => {
       // Tab to chart area
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(200);
 
       // Focus should be visible
       const focusedElement = page.locator(':focus');
@@ -393,7 +374,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Tap bar
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
@@ -406,7 +386,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Hover over bar
       await bars.first().hover();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
@@ -419,7 +398,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Hover over bar
       await bars.first().hover();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
@@ -443,7 +421,7 @@ test.describe('Touch Event Handlers for Charts', () => {
         await page.waitForTimeout(50); // Rapid taps
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // No errors should occur
       expect(errors.length).toBe(0);
@@ -452,7 +430,6 @@ test.describe('Touch Event Handlers for Charts', () => {
     test('should render chart within reasonable time', async ({ page }) => {
       // Close and reopen to measure
       await page.click('[aria-label="Close weekly progress chart"]');
-      await page.waitForTimeout(300);
 
       const startTime = Date.now();
 
@@ -476,7 +453,6 @@ test.describe('Touch Event Handlers for Charts', () => {
       // Tap 3 bars in sequence, let each auto-hide
       for (let i = 0; i < 3; i++) {
         await bars.nth(i).click();
-        await page.waitForTimeout(300);
 
         const tooltip = page.locator('[role="tooltip"]');
         await expect(tooltip).toBeVisible();
@@ -509,11 +485,9 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Tap first bar
       await bars.nth(0).click();
-      await page.waitForTimeout(300);
 
       // Immediately tap second bar
       await bars.nth(1).click();
-      await page.waitForTimeout(300);
 
       // Should only show one tooltip
       const tooltips = page.locator('[role="tooltip"]');
@@ -529,7 +503,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Tap bar
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       const tooltip = page.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
@@ -540,7 +513,6 @@ test.describe('Touch Event Handlers for Charts', () => {
 
       // Tap same bar again
       await bars.first().click();
-      await page.waitForTimeout(300);
 
       // Tooltip should reappear
       await expect(tooltip).toBeVisible();

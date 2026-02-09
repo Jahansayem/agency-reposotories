@@ -219,7 +219,7 @@ export default function SignupPage() {
 
       if (agencyError) throw agencyError;
 
-      console.log('Created agency:', agencyResult);
+      logger.info('Agency created successfully', { component: 'SignupPage', action: 'handleSignup' });
 
       setStep('complete');
     } catch (err) {

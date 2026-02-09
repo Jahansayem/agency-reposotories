@@ -26,19 +26,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Test task for deletion');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog (find delete button in task)
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -46,7 +45,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Press Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         // Dialog should be closed
         await expect(dialog).not.toBeVisible();
@@ -62,13 +60,13 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Task to delete via Cmd+Enter');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Count tasks before deletion
       const tasksBefore = await page.locator('[data-testid*="task-"], .task-item').count();
@@ -77,7 +75,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -85,7 +82,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Press Cmd+Enter (macOS)
         await page.keyboard.press('Meta+Enter');
-        await page.waitForTimeout(500);
 
         // Dialog should be closed
         await expect(dialog).not.toBeVisible();
@@ -105,13 +101,13 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Task to delete via Ctrl+Enter');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Count tasks before deletion
       const tasksBefore = await page.locator('[data-testid*="task-"], .task-item').count();
@@ -120,7 +116,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -128,7 +123,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Press Ctrl+Enter (Windows/Linux)
         await page.keyboard.press('Control+Enter');
-        await page.waitForTimeout(500);
 
         // Dialog should be closed
         await expect(dialog).not.toBeVisible();
@@ -143,19 +137,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Test task for focus test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -183,18 +176,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Test task for bottom sheet');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Click on task to open bottom sheet
       const taskItem = page.locator('text=Test task for bottom sheet').first();
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify bottom sheet is open (look for edit/detail view)
       const bottomSheet = page.locator('[role="dialog"], .bottom-sheet, [aria-modal="true"]').last();
@@ -203,7 +196,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       if (isVisible) {
         // Press Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         // Bottom sheet should be closed
         await expect(bottomSheet).not.toBeVisible();
@@ -219,18 +211,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Task for Cmd+Down test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Click on task to open bottom sheet
       const taskItem = page.locator('text=Task for Cmd+Down test').first();
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify bottom sheet is open
       const bottomSheet = page.locator('[role="dialog"], .bottom-sheet, [aria-modal="true"]').last();
@@ -239,7 +231,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       if (isVisible) {
         // Press Cmd+Down (macOS dismiss gesture)
         await page.keyboard.press('Meta+ArrowDown');
-        await page.waitForTimeout(300);
 
         // Bottom sheet should be closed
         await expect(bottomSheet).not.toBeVisible();
@@ -255,18 +246,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Task for Ctrl+Down test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Click on task to open bottom sheet
       const taskItem = page.locator('text=Task for Ctrl+Down test').first();
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify bottom sheet is open
       const bottomSheet = page.locator('[role="dialog"], .bottom-sheet, [aria-modal="true"]').last();
@@ -275,7 +266,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       if (isVisible) {
         // Press Ctrl+Down (Windows/Linux dismiss gesture)
         await page.keyboard.press('Control+ArrowDown');
-        await page.waitForTimeout(300);
 
         // Bottom sheet should be closed
         await expect(bottomSheet).not.toBeVisible();
@@ -286,22 +276,21 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Focus test task');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Click on task to open bottom sheet
       const taskItem = page.locator('text=Focus test task').first();
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Close with Escape
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
 
       // Focus should return to the page (not trapped in closed modal)
       const focusedElement = await page.evaluate(() => {
@@ -318,14 +307,13 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse / AI Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
 
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(300);
 
         // Verify Smart Parse modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -333,7 +321,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Press Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         // Modal should be closed
         await expect(modal).not.toBeVisible();
@@ -349,14 +336,13 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
 
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(300);
 
         // Verify modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -370,7 +356,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Press Cmd+Enter to confirm
         await page.keyboard.press('Meta+Enter');
-        await page.waitForTimeout(500);
 
         // Modal should be closed
         await expect(modal).not.toBeVisible();
@@ -386,14 +371,13 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
 
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(300);
 
         // Verify modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -407,7 +391,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Press Ctrl+Enter to confirm
         await page.keyboard.press('Control+Enter');
-        await page.waitForTimeout(500);
 
         // Modal should be closed
         await expect(modal).not.toBeVisible();
@@ -418,14 +401,13 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
 
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(300);
 
         // Verify modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -451,19 +433,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Focus trap test task');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -492,19 +473,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Reverse focus trap test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -532,13 +512,13 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Focus restoration test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Get the delete button element
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
@@ -548,11 +528,9 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Open delete dialog
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Close dialog with Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         // Focus should ideally return to the button that opened the modal
         // (This is an advanced accessibility feature, not always implemented)
@@ -570,7 +548,7 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Focus the task input
       const taskInput = page.locator('input[placeholder*="Add"]').first();
@@ -593,19 +571,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Cross-browser test task');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -613,7 +590,6 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
 
         // Escape should work in all browsers
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         await expect(dialog).not.toBeVisible();
 
@@ -626,19 +602,18 @@ test.describe('Accessibility - Modal Keyboard Shortcuts', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Screen reader test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();

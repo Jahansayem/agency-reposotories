@@ -11,13 +11,10 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
 
       // Login as Derrick (manager)
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
@@ -90,16 +87,16 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
     test('should not break with long task names', async ({ page }) => {
       // Navigate to tasks and create a task with a very long name
       await page.click('button:has-text("Tasks")');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const longTaskName = 'A'.repeat(200) + Date.now();
       await page.fill('[data-testid="add-task-input"]', longTaskName);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Go back to dashboard
       await page.click('button:has-text("Dashboard")');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check for overflow
       const hasOverflow = await page.evaluate(() => {
@@ -117,13 +114,10 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
 
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     });
@@ -160,13 +154,10 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await page.setViewportSize({ width: 1024, height: 768 });
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     });
@@ -195,13 +186,10 @@ test.describe('Responsive Dashboard - Tablet Layout', () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto('http://localhost:3000');
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
       await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
     });
@@ -252,13 +240,10 @@ test.describe('Dashboard Header - Responsive', () => {
 
         await page.goto('http://localhost:3000');
         await page.click('[data-testid="user-card-Derrick"]');
-        await page.waitForTimeout(600);
-        await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
         await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
@@ -274,13 +259,10 @@ test.describe('Dashboard Header - Responsive', () => {
 
         await page.goto('http://localhost:3000');
         await page.click('[data-testid="user-card-Derrick"]');
-        await page.waitForTimeout(600);
-        await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
         await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 

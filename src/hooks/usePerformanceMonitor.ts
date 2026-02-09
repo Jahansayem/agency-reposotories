@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { logger } from '@/lib/logger';
 
 /**
  * usePerformanceMonitor Hook
@@ -281,7 +282,7 @@ export function usePerformanceMonitor(interval: number = 1000) {
       calculateMetrics();
     }, interval);
 
-    console.log('🚀 Performance monitoring started');
+    logger.debug('Performance monitoring started', { component: 'usePerformanceMonitor', action: 'startMonitoring' });
   }, [isMonitoring, measureFPS, calculateMetrics, interval]);
 
   /**
@@ -302,7 +303,7 @@ export function usePerformanceMonitor(interval: number = 1000) {
       clearInterval(intervalRef.current);
     }
 
-    console.log('🛑 Performance monitoring stopped');
+    logger.debug('Performance monitoring stopped', { component: 'usePerformanceMonitor', action: 'stopMonitoring' });
   }, [isMonitoring]);
 
   /**
@@ -396,7 +397,7 @@ export function useRenderMonitor(componentName: string, onRender?: (time: number
       const renderTime = performance.now() - renderStartRef.current;
 
       if (renderTime > 16) {
-        console.warn(`⚠️ Slow render in ${componentName}: ${renderTime.toFixed(2)}ms`);
+        logger.warn(`Slow render in ${componentName}: ${renderTime.toFixed(2)}ms`, { component: componentName, action: 'useRenderMonitor', duration: renderTime });
       }
 
       if (onRender) {

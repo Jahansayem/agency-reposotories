@@ -23,27 +23,25 @@ test.describe('Version History (Issue #41)', () => {
     test('should create version on task update', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Create a task
       await page.fill('[data-testid="add-todo-input"]', 'Test versioning');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await expect(page.locator('text=Test versioning')).toBeVisible({ timeout: 5000 });
 
       // Edit the task (should create version 1)
       const task = page.locator('text=Test versioning').first();
       if (await task.isVisible({ timeout: 2000 })) {
         await task.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // PostgreSQL trigger creates version automatically
         const bodyVisible = await page.locator('body').isVisible();
@@ -53,15 +51,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should increment version numbers', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Each update creates new version with incremented number
       // Version 1, 2, 3, etc.
@@ -71,15 +67,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should store complete todo snapshot', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Version stores:
       // - text, completed, status, priority
@@ -91,15 +85,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should track change metadata', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Metadata includes:
       // - changed_by (user name)
@@ -114,15 +106,13 @@ test.describe('Version History (Issue #41)', () => {
   test.describe('Version History Modal', () => {
     test('should open version history modal', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Look for version history button/icon
       const hasHistoryUI = await page.evaluate(() => {
@@ -135,15 +125,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should display version timeline', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Timeline with:
       // - Vertical line connecting versions
@@ -155,15 +143,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should show version numbers', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "Version 1", "Version 2", etc.
       const bodyVisible = await page.locator('body').isVisible();
@@ -172,15 +158,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should show "Current" badge on latest version', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Latest version has blue "Current" badge
       const bodyVisible = await page.locator('body').isVisible();
@@ -189,15 +173,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should show change type badges', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Color-coded badges:
       // - Green: "created"
@@ -211,15 +193,13 @@ test.describe('Version History (Issue #41)', () => {
   test.describe('Version Details', () => {
     test('should show user who made change', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // User icon + name: "Derrick"
       const bodyVisible = await page.locator('body').isVisible();
@@ -228,15 +208,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should show relative timestamp', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "5 minutes ago", "2 hours ago"
       // Uses date-fns formatDistance
@@ -246,15 +224,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should show change summary', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "Updated by Derrick"
       // "Restored to version 3 by Sefra"
@@ -264,15 +240,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should expand to show full version details', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Click version card to expand
       // Shows: title, status, priority, assigned_to, due_date, completed, notes, subtasks
@@ -282,15 +256,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should animate expansion', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Framer Motion height animation
       const hasAnimations = await page.evaluate(() => {
@@ -305,15 +277,13 @@ test.describe('Version History (Issue #41)', () => {
   test.describe('Version Restoration', () => {
     test('should show Restore button on old versions', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Purple "Restore" button with RotateCcw icon
       // Only on non-current versions
@@ -323,15 +293,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should confirm before restoring', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Shows confirmation dialog:
       // "Restore to version X? This will create a new version."
@@ -341,15 +309,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should restore version successfully', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Restoring version 2:
       // 1. Updates todo with version 2's data
@@ -361,15 +327,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should create new version on restore', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Restore doesn't delete newer versions
       // Instead creates new version marked as 'restored'
@@ -380,15 +344,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should update todo immediately after restore', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Todo should reflect restored version's data
       // Real-time update via Supabase subscription
@@ -398,15 +360,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should reload version list after restore', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Version list refreshes to show new restored version
       const bodyVisible = await page.locator('body').isVisible();
@@ -417,15 +377,13 @@ test.describe('Version History (Issue #41)', () => {
   test.describe('Performance', () => {
     test('should load versions quickly', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Database query with index on todo_id
       // Should load < 500ms even with many versions
@@ -435,15 +393,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should use database indexes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Indexes:
       // - idx_todo_versions_todo_id
@@ -455,15 +411,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should handle many versions without lag', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Virtualization or pagination if > 50 versions
       const bodyVisible = await page.locator('body').isVisible();
@@ -474,15 +428,13 @@ test.describe('Version History (Issue #41)', () => {
   test.describe('Edge Cases', () => {
     test('should handle task with no versions', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Newly created task (not yet updated)
       // Shows "No version history available"
@@ -492,15 +444,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should handle deleted task', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // ON DELETE CASCADE removes all versions when task deleted
       const bodyVisible = await page.locator('body').isVisible();
@@ -509,15 +459,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should handle restore failure', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // If restore fails (network error, etc.)
       // Shows error message, doesn't update todo
@@ -529,15 +477,13 @@ test.describe('Version History (Issue #41)', () => {
   test.describe('UI/UX', () => {
     test('should animate timeline entrance', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Versions slide in from left sequentially
       // Staggered delay: index * 0.05s
@@ -551,15 +497,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should highlight current version', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Latest version has:
       // - Blue border
@@ -571,15 +515,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should show loading state', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Spinning loader while fetching versions
       const bodyVisible = await page.locator('body').isVisible();
@@ -588,15 +530,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should close modal on backdrop click', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Click outside modal to close
       const bodyVisible = await page.locator('body').isVisible();
@@ -605,15 +545,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should close modal on X button click', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // X button in top-right corner
       const bodyVisible = await page.locator('body').isVisible();
@@ -624,15 +562,13 @@ test.describe('Version History (Issue #41)', () => {
   test.describe('Accessibility', () => {
     test('should have proper ARIA labels', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // aria-label="Close" on X button
       // Descriptive labels on all interactive elements
@@ -646,19 +582,16 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should support keyboard navigation', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Tab through versions and restore buttons
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
       expect(focusedElement).toBeTruthy();
@@ -666,15 +599,13 @@ test.describe('Version History (Issue #41)', () => {
 
     test('should trap focus in modal', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Focus stays within modal when tabbing
       // Can't tab to elements behind modal

@@ -13,7 +13,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(bealerText).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card to select them
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -21,7 +21,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN - look for 4 password inputs
   const pinInputs = page.locator('input[type="password"]');
@@ -30,11 +30,10 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Enter each digit of the PIN
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100); // Small delay between digits
   }
 
   // Wait for automatic login after PIN entry
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present (click outside, X button, or View Tasks button)
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
@@ -43,12 +42,12 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Try clicking View Tasks first (most reliable)
   if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
   // Or try clicking the close button
   else if (await closeModalBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
     await closeModalBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for main app to load
@@ -75,7 +74,7 @@ async function isSupabaseConfigured(page: Page): Promise<boolean> {
   const configRequired = page.locator('text=Configuration Required');
 
   // Wait a bit for page to settle
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // If we see config required, Supabase is NOT configured
   if (await configRequired.isVisible().catch(() => false)) {
@@ -106,18 +105,15 @@ async function dismissCelebrationModal(page: Page): Promise<void> {
   const closeBtn = page.locator('button svg.lucide-x').locator('..');
 
   // Wait a moment for modal to appear
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Try to dismiss the modal using available buttons
   if (await keepGoingBtn.isVisible({ timeout: 1500 }).catch(() => false)) {
     await keepGoingBtn.click();
-    await page.waitForTimeout(300);
   } else if (await doneForNowBtn.isVisible({ timeout: 500 }).catch(() => false)) {
     await doneForNowBtn.click();
-    await page.waitForTimeout(300);
   } else if (await closeBtn.first().isVisible({ timeout: 500 }).catch(() => false)) {
     await closeBtn.first().click();
-    await page.waitForTimeout(300);
   }
 }
 
@@ -132,7 +128,7 @@ async function createTask(page: Page, taskName: string): Promise<void> {
   const createNewBtn = page.locator('button').filter({ hasText: 'Create New Task' });
   if (await createNewBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await createNewBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for task to appear in the list
@@ -263,7 +259,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await checkbox.click();
 
       // Wait for completion animation
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Task should show as completed (text should have line-through or task should have completed styling)
       // The completed task may be moved to different section, so just verify the click worked
@@ -282,7 +278,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await checkbox.click();
 
       // Wait for completion
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Stats will update - we just verify the action completed without error
     });
@@ -297,24 +293,22 @@ test.describe('Comprehensive Feature Tests', () => {
       await createTask(page, taskName);
 
       // Wait for any toast notifications to disappear
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Dismiss any visible toast by clicking on it (toasts are clickable to dismiss)
       const toast = page.locator('[role="status"]');
       if (await toast.isVisible({ timeout: 500 }).catch(() => false)) {
         await toast.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
 
       // Find the task and hover over it to reveal the actions button
       const taskElement = page.locator(`text=${taskName}`).first();
       await taskElement.hover();
-      await page.waitForTimeout(300);
 
       // Click the task actions button (3 dots menu) - appears on hover
       const actionsButton = page.locator('button[aria-label="Task actions"]').first();
       await actionsButton.click({ force: true });
-      await page.waitForTimeout(300);
 
       // Click delete option from dropdown - use force to bypass any overlapping elements
       const deleteOption = page.locator('button').filter({ hasText: 'Delete' }).first();
@@ -322,7 +316,7 @@ test.describe('Comprehensive Feature Tests', () => {
       await deleteOption.click({ force: true });
 
       // Wait for deletion
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
     });
 
     test('should update total count after deletion', async ({ page }) => {
@@ -333,31 +327,29 @@ test.describe('Comprehensive Feature Tests', () => {
       await createTask(page, taskName);
 
       // Wait for any toast notifications to disappear
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Dismiss any visible toast by clicking on it (toasts are clickable to dismiss)
       const toast = page.locator('[role="status"]');
       if (await toast.isVisible({ timeout: 500 }).catch(() => false)) {
         await toast.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
 
       // Find the task and hover over it to reveal the actions button
       const taskElement = page.locator(`text=${taskName}`).first();
       await taskElement.hover();
-      await page.waitForTimeout(300);
 
       // Delete the task via actions menu
       const actionsButton = page.locator('button[aria-label="Task actions"]').first();
       await actionsButton.click({ force: true });
-      await page.waitForTimeout(300);
 
       const deleteOption = page.locator('button').filter({ hasText: 'Delete' }).first();
       await expect(deleteOption).toBeVisible({ timeout: 3000 });
       await deleteOption.click({ force: true });
 
       // Wait for deletion
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify count changed (this test just checks deletion works without counting)
     });
@@ -375,7 +367,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Default is list view, click Board view button
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should see kanban columns
       await expect(page.locator('text=To Do').first()).toBeVisible();
@@ -394,13 +386,13 @@ test.describe('Comprehensive Feature Tests', () => {
       // Switch to kanban first
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       await expect(page.locator('text=To Do').first()).toBeVisible();
 
       // Switch back to list
       const listButton = page.locator('button[aria-label="List view"]');
       await listButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // List view should show the sidebar navigation
       await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible();
@@ -432,7 +424,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Switch to kanban
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Task should still be visible
       await expect(page.locator(`text=${uniqueTaskName}`)).toBeVisible();
@@ -440,7 +432,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Switch back to list
       const listButton = page.locator('button[aria-label="List view"]');
       await listButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Task should still be visible
       await expect(page.locator(`text=${uniqueTaskName}`)).toBeVisible();
@@ -459,7 +451,6 @@ test.describe('Comprehensive Feature Tests', () => {
       // Click the "To Do" stat card to show active tasks
       const toDoCard = page.locator('button').filter({ hasText: 'To Do' }).first();
       await toDoCard.click();
-      await page.waitForTimeout(300);
 
       // The task we just created should still be visible
       await expect(page.locator(`text=${taskName}`).first()).toBeVisible();
@@ -475,7 +466,6 @@ test.describe('Comprehensive Feature Tests', () => {
       // Find and hover the task to reveal the checkbox
       const taskElement = page.locator(`text=${taskName}`).first();
       await taskElement.hover();
-      await page.waitForTimeout(200);
 
       // Complete the task
       const checkbox = page.locator('button[title="Mark as complete"]').first();
@@ -488,7 +478,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const showCompletedBtn = page.locator('button').filter({ hasText: 'Show Completed' });
       await expect(showCompletedBtn).toBeVisible({ timeout: 5000 });
       await showCompletedBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Task should still be visible when showing completed
       // (Note: Completed tasks appear in a separate section at the bottom)
@@ -500,7 +490,6 @@ test.describe('Comprehensive Feature Tests', () => {
       // Click "To Do" stat card first (applies a filter)
       const toDoCard = page.locator('button').filter({ hasText: 'To Do' }).first();
       await toDoCard.click();
-      await page.waitForTimeout(300);
 
       // Click To Do again to make sure it's the selected filter
       // The card should have ring styling when selected
@@ -513,7 +502,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Click "Overdue" stat card when we likely have no overdue tasks
       const overdueCard = page.locator('button').filter({ hasText: 'Overdue' }).first();
       await overdueCard.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should either see an empty state or 0 in the overdue count
       // The UI handles this gracefully by showing the count as 0
@@ -528,7 +517,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await expect(kanbanButton).toBeVisible({ timeout: 5000 });
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify three columns exist - look for column headers
       await expect(page.locator('text=To Do').first()).toBeVisible({ timeout: 5000 });
@@ -546,7 +535,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Switch to kanban
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // The columns should be visible with counts
       // Kanban shows counts in column headers
@@ -559,7 +548,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Switch to kanban
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Kanban view should show all three columns
       await expect(page.locator('text=Done').first()).toBeVisible({ timeout: 5000 });
@@ -575,7 +564,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Switch to kanban
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Kanban cards are draggable - verify the card is visible
       await expect(page.locator(`text=${taskName}`).first()).toBeVisible({ timeout: 5000 });
@@ -626,7 +615,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const expandButton = page.locator('button[aria-label="Expand task details"]').first();
       await expect(expandButton).toBeVisible({ timeout: 5000 });
       await expandButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should see expanded panel with priority options
       // The expanded panel has priority buttons/selectors
@@ -720,7 +709,6 @@ test.describe('Comprehensive Feature Tests', () => {
       await expect(overdueCard).toBeVisible({ timeout: 5000 });
       // Clicking it filters to show only overdue tasks
       await overdueCard.click();
-      await page.waitForTimeout(300);
     });
   });
 
@@ -736,7 +724,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const expandButton = page.locator('button[aria-label="Expand task details"]').first();
       await expect(expandButton).toBeVisible({ timeout: 5000 });
       await expandButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Expanded panel should show assignee dropdown or "Unassigned"
     });
@@ -752,7 +740,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const expandButton = page.locator('button[aria-label="Expand task details"]').first();
       await expect(expandButton).toBeVisible({ timeout: 5000 });
       await expandButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Expanded panel should show assignee select dropdown
     });
@@ -816,7 +804,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // First open the user menu dropdown
       const userBtn = page.locator('button.flex.items-center.gap-2').filter({ hasText: 'DE' }).first();
       await userBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Now look for Logout button in the dropdown
       const signOutBtn = page.locator('button').filter({ hasText: 'Logout' });
@@ -835,7 +823,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // First open the user menu dropdown
       const userBtn = page.locator('button.flex.items-center.gap-2').filter({ hasText: 'DE' }).first();
       await userBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Click Logout button
       const signOutBtn = page.locator('button').filter({ hasText: 'Logout' });
@@ -952,8 +940,6 @@ test.describe('Comprehensive Feature Tests', () => {
         if (await createNewBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
           await createNewBtn.click();
         }
-
-        await page.waitForTimeout(300);
       }
 
       // All tasks should be created (verify at least one)
@@ -970,12 +956,11 @@ test.describe('Comprehensive Feature Tests', () => {
       // Find the task and hover to ensure checkbox is accessible
       const taskElement = page.locator(`text=${taskName}`).first();
       await taskElement.hover();
-      await page.waitForTimeout(200);
 
       // Toggle the task completion
       const checkbox = page.locator('button[title="Mark as complete"]').first();
       await checkbox.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Task should still exist (may be completed or uncompleted)
       // Just verify no errors occurred
@@ -994,7 +979,7 @@ test.describe('Comprehensive Feature Tests', () => {
       // Switch to kanban
       const kanbanButton = page.locator('button[aria-label="Board view"]');
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Kanban should be visible with its columns
       // At minimum, we should see the column headers
@@ -1008,7 +993,6 @@ test.describe('Comprehensive Feature Tests', () => {
 
       const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
-      await page.waitForTimeout(300);
 
       // Should show expanded options - the form has priority select when expanded
       const prioritySelect = page.locator('select[aria-label="Priority"]');
@@ -1020,7 +1004,6 @@ test.describe('Comprehensive Feature Tests', () => {
 
       const input = page.locator('[data-testid="add-task-input"]');
       await input.click();
-      await page.waitForTimeout(300);
 
       // Verify expanded - priority select should be visible
       const prioritySelect = page.locator('select[aria-label="Priority"]');
@@ -1028,7 +1011,7 @@ test.describe('Comprehensive Feature Tests', () => {
 
       // Click outside on the page body
       await page.mouse.click(10, 10);
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Form may remain visible but should be usable
     });
@@ -1042,7 +1025,6 @@ test.describe('Comprehensive Feature Tests', () => {
 
       // Click outside
       await page.mouse.click(10, 10);
-      await page.waitForTimeout(300);
 
       // Input should still have the text
       await expect(input).toHaveValue('Some text to keep form open');
@@ -1061,7 +1043,7 @@ test.describe('Comprehensive Feature Tests', () => {
       const expandButton = page.locator('button[aria-label="Expand task details"]').first();
       await expect(expandButton).toBeVisible({ timeout: 5000 });
       await expandButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should see expanded options - the expand button changes to collapse
       const collapseButton = page.locator('button[aria-label="Collapse task details"]').first();
@@ -1079,13 +1061,12 @@ test.describe('Comprehensive Feature Tests', () => {
       const expandButton = page.locator('button[aria-label="Expand task details"]').first();
       await expect(expandButton).toBeVisible({ timeout: 5000 });
       await expandButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Click collapse button
       const collapseButton = page.locator('button[aria-label="Collapse task details"]').first();
       await expect(collapseButton).toBeVisible({ timeout: 3000 });
       await collapseButton.click();
-      await page.waitForTimeout(300);
 
       // Should show expand button again
       await expect(page.locator('button[aria-label="Expand task details"]').first()).toBeVisible({ timeout: 3000 });
@@ -1125,7 +1106,7 @@ test.describe('Responsive Design', () => {
     await page.goto('/');
 
     // Wait for login screen - on mobile we should see "Bealer Agency" somewhere
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Either see login screen elements (visible ones) or the config required message
     const loginElement = page.locator('text=Bealer Agency >> visible=true').first();
@@ -1139,7 +1120,7 @@ test.describe('Responsive Design', () => {
     await page.goto('/');
 
     // Wait for login screen
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Either see login screen elements (visible ones) or the config required message
     const loginElement = page.locator('text=Bealer Agency >> visible=true').first();
@@ -1156,7 +1137,7 @@ test.describe('Responsive Design', () => {
     const kanbanButton = page.locator('button[aria-label="Board view"]');
     await expect(kanbanButton).toBeVisible({ timeout: 10000 });
     await kanbanButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Columns should still be visible (stacked vertically)
     await expect(page.locator('text=To Do').first()).toBeVisible({ timeout: 5000 });

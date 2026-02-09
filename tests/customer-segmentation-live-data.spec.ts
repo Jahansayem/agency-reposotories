@@ -58,15 +58,15 @@ async function loginAsDerrick(page: any) {
 // Helper to navigate to Customer Segmentation Dashboard
 async function navigateToCustomerSegmentation(page: any) {
   // Wait for page to stabilize
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on Analytics in the navigation
   await page.click('text=Analytics');
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Click on Customer Insights tab
   await page.click('text=Customer Insights');
-  await page.waitForTimeout(2000);
+  await expect(page.locator('text=Customer Segmentation').first()).toBeVisible({ timeout: 10000 });
 
   // Verify we're on the Customer Segmentation dashboard
   await expect(page.locator('text=Customer Segmentation').first()).toBeVisible();
@@ -102,7 +102,7 @@ test.describe('Customer Segmentation Dashboard - Live Data Connection', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for segments to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // All segment types should be present (case-insensitive)
     await expect(page.locator('h3:has-text("elite")').or(page.locator('h3:has-text("Elite")'))).toBeVisible();
@@ -115,7 +115,7 @@ test.describe('Customer Segmentation Dashboard - Live Data Connection', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for data to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Summary cards should be visible (use .first() to avoid strict mode violations from matching descriptions)
     await expect(page.locator('text=Total Customers').first()).toBeVisible();
@@ -139,7 +139,7 @@ test.describe('Customer Segmentation Dashboard - Live Data Connection', () => {
     await expect(page.locator('.animate-spin')).toBeVisible({ timeout: 2000 });
 
     // Wait for refresh to complete
-    await page.waitForTimeout(5000);
+    await page.waitForLoadState('networkidle');
 
     // Verify dashboard still works after refresh
     await expect(page.locator('text=Customer Segmentation').first()).toBeVisible();
@@ -160,7 +160,7 @@ test.describe('Customer Segmentation Dashboard - Live Data Connection', () => {
     // If info button exists, click it
     if (await infoButton.count() > 0) {
       await infoButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Methodology panel should appear
       await expect(page.locator('text=Segmentation Methodology')).toBeVisible();
@@ -173,7 +173,7 @@ test.describe('Customer Segmentation Dashboard - Live Data Connection', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for content to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Marketing allocation section should be visible
     await expect(page.locator('text=Recommended Marketing Allocation')).toBeVisible();
@@ -186,7 +186,7 @@ test.describe('Customer Segmentation Dashboard - Live Data Connection', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for segments to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Check for some characteristic tags that should appear in segments
     const characteristicTags = [
@@ -216,7 +216,7 @@ test.describe('Customer Segmentation Dashboard - Live Data Connection', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for segments to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Each segment card should have these metric labels
     await expect(page.locator('text=Avg LTV').first()).toBeVisible();
@@ -239,7 +239,7 @@ test.describe('Customer Segmentation Dashboard - API Integration', () => {
     await expect(initialBadge).toBeVisible();
 
     // Wait for API calls to complete
-    await page.waitForTimeout(5000);
+    await page.waitForLoadState('networkidle');
 
     // Check the current state after data loads
     const liveBadge = page.locator('text=Live Data');
@@ -276,7 +276,7 @@ test.describe('Customer Segmentation Dashboard - API Integration', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for API calls to be made
-    await page.waitForTimeout(5000);
+    await page.waitForLoadState('networkidle');
 
     // Should have made at least one customer-related API call
     console.log('API calls made:', apiCalls);
@@ -304,7 +304,7 @@ test.describe('Customer Segmentation Dashboard - API Integration', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for segmentation API to be called
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle');
 
     // If segmentation was called (customers exist), verify the request format
     if (segmentationRequest) {
@@ -360,7 +360,7 @@ test.describe('Customer Segmentation Dashboard - API Integration', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for API response
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle');
 
     if (segmentationResponse && segmentationResponse.success) {
       console.log('Segmentation API response received');
@@ -399,7 +399,7 @@ test.describe('Customer Segmentation Dashboard - Error Handling', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for error handling
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Should show Demo Data badge when API fails
     const demoBadge = page.locator('text=Demo Data');
@@ -427,7 +427,7 @@ test.describe('Customer Segmentation Dashboard - Error Handling', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for API response
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Should show Demo Data when no customers
     const demoBadge = page.locator('text=Demo Data');
@@ -448,19 +448,17 @@ test.describe('Customer Segmentation Dashboard - Refresh Race Condition', () => 
     await navigateToCustomerSegmentation(page);
 
     // Wait for initial load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const refreshButton = page.locator('button[title="Refresh data"]');
 
     // Click refresh multiple times rapidly
     await refreshButton.click();
-    await page.waitForTimeout(100);
     await refreshButton.click();
-    await page.waitForTimeout(100);
     await refreshButton.click();
 
     // Wait for all refreshes to complete
-    await page.waitForTimeout(5000);
+    await page.waitForLoadState('networkidle');
 
     // Dashboard should still be in a valid state
     await expect(page.locator('text=Customer Segmentation').first()).toBeVisible();
@@ -508,7 +506,7 @@ test.describe('Customer Segmentation Dashboard - Refresh Race Condition', () => 
     events.push({ type: 'refresh_clicked', time: Date.now() - startTime });
 
     // Wait for completion
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle');
 
     console.log('Event sequence:', events);
 

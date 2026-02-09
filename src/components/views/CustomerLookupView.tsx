@@ -8,7 +8,7 @@
  * and access to customer details.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -40,6 +40,8 @@ interface CustomerLookupViewProps {
   onClose?: () => void;
   initialSegment?: CustomerSegment | 'all'; // For navigation from segmentation dashboard
   initialSort?: CustomerSortOption; // For navigation from TodayOpportunitiesPanel
+  onTaskClick?: (taskId: string) => void;  // Navigate to task in tasks view
+  onNavigateBack?: () => void;  // Go back to previous view (analytics)
 }
 
 // Customer value tier filters - dynamically generated from SEGMENT_CONFIGS
@@ -92,10 +94,21 @@ export function CustomerLookupView({
   onClose,
   initialSegment = 'all',
   initialSort = 'priority',
+  onTaskClick,
+  onNavigateBack,
 }: CustomerLookupViewProps) {
   const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>(initialSegment);
   const [selectedOpportunityType, setSelectedOpportunityType] = useState<OpportunityType | 'all'>('all');
   const [sortBy, setSortBy] = useState<CustomerSortOption>(initialSort);
+
+  // Sync filter state when navigating from other views (props change on re-navigation)
+  useEffect(() => {
+    setSelectedSegment(initialSegment);
+  }, [initialSegment]);
+
+  useEffect(() => {
+    setSortBy(initialSort);
+  }, [initialSort]);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showDueTodayOnly, setShowDueTodayOnly] = useState(false);
@@ -188,9 +201,9 @@ export function CustomerLookupView({
               Browse your book of business
             </p>
           </div>
-          {onClose && (
+          {(onNavigateBack || onClose) && (
             <button
-              onClick={onClose}
+              onClick={onNavigateBack || onClose}
               className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors"
             >
               <X className="w-5 h-5" />
@@ -535,12 +548,10 @@ export function CustomerLookupView({
                   customerId={selectedCustomerId}
                   currentUser={currentUser}
                   onViewTask={(taskId) => {
-                    // Could navigate to task detail
-                    console.log('View task:', taskId);
+                    onTaskClick?.(taskId);
                   }}
                   onCreateTask={(taskId) => {
-                    // Could navigate to newly created task
-                    console.log('Created task:', taskId);
+                    onTaskClick?.(taskId);
                   }}
                 />
               </div>

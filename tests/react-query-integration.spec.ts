@@ -20,12 +20,10 @@ test.describe('React Query Integration (Issue #31)', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
@@ -37,7 +35,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Test caching task');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify task appears
       await expect(page.locator('text=Test caching task')).toBeVisible();
@@ -49,7 +47,7 @@ test.describe('React Query Integration (Issue #31)', () => {
 
       if (await dashboardButton.isVisible({ timeout: 2000 })) {
         await dashboardButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Navigate back to tasks
         const tasksButton = page.locator('button:has-text("Tasks")').or(
@@ -70,19 +68,17 @@ test.describe('React Query Integration (Issue #31)', () => {
       // This test verifies no loading spinner appears for cached data
 
       // Wait for initial load
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Refresh the page to trigger data refetch
       await page.reload();
 
       // Wait for login again
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
       // Page should show content quickly (from cache if available)
@@ -103,7 +99,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Task to complete');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Find and complete the task
       const taskCheckbox = page.locator('text=Task to complete').locator('..').locator('input[type="checkbox"]').first();
@@ -134,7 +130,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Task for rollback test');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Find the task checkbox
       const checkbox = page.locator('text=Task for rollback test').locator('..').locator('input[type="checkbox"]').first();
@@ -159,7 +155,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Task for loading test');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // The task should appear immediately (no loading state for reads)
       await expect(page.locator('text=Task for loading test')).toBeVisible({ timeout: 2000 });
@@ -172,7 +168,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Test cache invalidation');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Task should be visible
       await expect(page.locator('text=Test cache invalidation')).toBeVisible();
@@ -184,12 +180,10 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.reload();
 
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
       // Task should still be visible (persisted to database)
@@ -203,7 +197,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Consistency test task');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify task appears
       await expect(page.locator('text=Consistency test task')).toBeVisible();
@@ -235,7 +229,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       });
 
       // Initial load
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
       const initialFetches = fetchCount;
 
       // Simulate window blur/focus (user switches tabs)
@@ -243,13 +237,13 @@ test.describe('React Query Integration (Issue #31)', () => {
         window.dispatchEvent(new Event('blur'));
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       await page.evaluate(() => {
         window.dispatchEvent(new Event('focus'));
       });
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       const finalFetches = fetchCount;
 
@@ -270,7 +264,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Batch test 3');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // All three tasks should appear
       await expect(page.locator('text=Batch test 1')).toBeVisible();
@@ -290,12 +284,10 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.reload();
 
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
       // Page should load even if data fetch fails
@@ -309,7 +301,7 @@ test.describe('React Query Integration (Issue #31)', () => {
 
       // This is difficult to test in E2E without network mocking
       // We verify the configuration exists by checking the app loads successfully
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const header = page.locator('header');
       await expect(header).toBeVisible();
@@ -336,7 +328,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Concurrent test task');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Make multiple rapid updates
       const taskItem = page.locator('text=Concurrent test task').locator('..');
@@ -350,7 +342,7 @@ test.describe('React Query Integration (Issue #31)', () => {
           await checkbox.click();
           await checkbox.click();
 
-          await page.waitForTimeout(2000);
+          await page.waitForLoadState('networkidle');
 
           // Final state should be consistent (not flickering)
           const isChecked = await checkbox.isChecked();
@@ -370,7 +362,7 @@ test.describe('React Query Integration (Issue #31)', () => {
       // This test verifies the configuration exists
       // (Cannot actually wait 5 minutes in E2E test)
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify app is functional (cache is working)
       const addTaskInput = page.locator('[data-testid="add-todo-input"]');

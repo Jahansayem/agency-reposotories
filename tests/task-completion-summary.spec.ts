@@ -57,7 +57,7 @@ async function _createAndCompleteTask(page: Page, taskName: string) {
   await page.keyboard.press('Enter');
 
   // Wait for task to appear
-  await page.waitForTimeout(1500);
+  await page.waitForLoadState('networkidle');
   await expect(page.locator(`text=${taskName}`).first()).toBeVisible({ timeout: 10000 });
 
   // Find and click the checkbox to complete the task
@@ -72,14 +72,14 @@ async function _createAndCompleteTask(page: Page, taskName: string) {
     await checkbox.click();
   }
 
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe('TaskCompletionSummary Component', () => {
   test.describe('Accessibility (WCAG 2.1 AA)', () => {
     test('should have proper dialog role and ARIA attributes', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if TaskCompletionSummary has correct ARIA attributes when opened
       const dialogAttributes = await page.evaluate(() => {
@@ -101,7 +101,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should have visible focus indicators on all interactive elements', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test that focus ring classes are applied correctly
       const focusClasses = await page.evaluate(() => {
@@ -120,7 +120,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should have aria-live region for status announcements', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check for aria-live region structure
       const liveRegionAttributes = await page.evaluate(() => {
@@ -138,7 +138,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should have proper heading hierarchy', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check modal heading is properly labeled
       const headingExists = await page.evaluate(() => {
@@ -154,7 +154,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should have accessible close button with label', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check close button has proper accessible name
       const closeButtonLabel = 'Close task summary modal';
@@ -163,7 +163,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('format buttons should have proper ARIA attributes', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check format selector buttons have correct ARIA
       const formatButtonAttributes = await page.evaluate(() => {
@@ -182,7 +182,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('view tabs should have proper tab semantics', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const tabAttributes = await page.evaluate(() => {
         return {
@@ -203,7 +203,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('Keyboard Navigation', () => {
     test('should trap focus within modal when open', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test focus trap behavior
       const focusTrapWorks = await page.evaluate(() => {
@@ -222,7 +222,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should close modal on Escape key', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test Escape key handling
       const escapeHandled = await page.evaluate(() => {
@@ -247,7 +247,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should handle Cmd/Ctrl+C shortcut for copy', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test keyboard shortcut
       const shortcutHandled = await page.evaluate(() => {
@@ -274,7 +274,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should cycle through elements with Tab', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test tab navigation
       const tabWorks = await page.evaluate(() => {
@@ -292,7 +292,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should reverse cycle with Shift+Tab', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test shift+tab navigation
       const shiftTabWorks = await page.evaluate(() => {
@@ -306,7 +306,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('Error Handling', () => {
     test('should show error state when copy fails', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test error state display
       const errorState = {
@@ -323,7 +323,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should auto-clear error state after 4 seconds', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const autoClearTimeout = 4000;
       expect(autoClearTimeout).toBe(4000);
@@ -331,7 +331,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should announce error to screen readers', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const errorMessage = 'Failed to copy to clipboard. Please try selecting and copying manually.';
       expect(errorMessage).toBeTruthy();
@@ -340,7 +340,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should show success state when copy succeeds', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const successState = {
         buttonColor: 'bg-green-500',
@@ -356,7 +356,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should auto-clear success state after 2 seconds', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const successClearTimeout = 2000;
       expect(successClearTimeout).toBe(2000);
@@ -366,7 +366,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('User Preferences', () => {
     test('should remember format selection across page refreshes', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test localStorage persistence
       const persistenceWorks = await page.evaluate(() => {
@@ -381,7 +381,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should default to text format when no preference exists', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const defaultFormat = await page.evaluate(() => {
         const key = 'todo_summary_format_preference';
@@ -395,7 +395,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should handle localStorage errors gracefully', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test graceful degradation when localStorage fails
       const handlesError = await page.evaluate(() => {
@@ -414,7 +414,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should validate stored format values', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const validationWorks = await page.evaluate(() => {
         const key = 'todo_summary_format_preference';
@@ -438,7 +438,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should be SSR-safe (no window errors during server rendering)', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Test SSR safety
       const ssrSafe = await page.evaluate(() => {
@@ -452,7 +452,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('Format Selection', () => {
     test('should update summary when format changes', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const formatsExist = ['text', 'markdown', 'json', 'csv'];
       expect(formatsExist.length).toBe(4);
@@ -460,7 +460,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should show visual indicator for selected format', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const selectedClasses = [
         'bg-blue-100',
@@ -474,7 +474,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should show checkmark icon on selected format', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Verify checkmark is shown
       const hasCheckmark = true; // Component shows Check icon when selected
@@ -483,7 +483,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should be distinguishable without color (WCAG)', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check for non-color indicators
       const indicators = {
@@ -501,7 +501,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('View Toggle (Preview/Raw)', () => {
     test('should toggle between Preview and Raw views', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const viewToggleWorks = true;
       expect(viewToggleWorks).toBe(true);
@@ -509,7 +509,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should show correct panel based on selected view', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const panels = {
         preview: 'preview-panel',
@@ -522,7 +522,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should have proper tab semantics for view toggle', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const tabSemantics = {
         role: 'tab',
@@ -537,7 +537,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('Copy Button States', () => {
     test('should show idle state by default', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const idleState = {
         color: 'bg-blue-600',
@@ -552,7 +552,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should show keyboard shortcut hint', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check for kbd element with shortcut
       const hasShortcutHint = true;
@@ -561,7 +561,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should disable button during success state', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Button should be disabled when in success state
       const disabledDuringSuccess = true;
@@ -572,7 +572,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('Modal Behavior', () => {
     test('should close on backdrop click', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Backdrop has onClick={onClose}
       const backdropCloses = true;
@@ -581,7 +581,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should prevent body scroll when open', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const preventsBodyScroll = await page.evaluate(() => {
         document.body.style.overflow = 'hidden';
@@ -598,7 +598,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should restore body scroll on close', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const restoresScroll = await page.evaluate(() => {
         document.body.style.overflow = 'hidden';
@@ -611,7 +611,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should stop propagation on modal click', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Modal has onClick={(e) => e.stopPropagation()}
       const stopsPropagation = true;
@@ -622,7 +622,7 @@ test.describe('TaskCompletionSummary Component', () => {
   test.describe('Screen Reader Announcements', () => {
     test('should announce copy success', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const successAnnouncement = '{FORMAT} summary copied to clipboard';
       expect(successAnnouncement).toContain('clipboard');
@@ -630,7 +630,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should announce copy failure', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const failureAnnouncement = 'Failed to copy to clipboard. Please try selecting and copying manually.';
       expect(failureAnnouncement).toContain('Failed');
@@ -639,7 +639,7 @@ test.describe('TaskCompletionSummary Component', () => {
 
     test('should have sr-only class for live region', async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Live region should be visually hidden but accessible
       const hasSrOnly = true;
@@ -651,7 +651,7 @@ test.describe('TaskCompletionSummary Component', () => {
 test.describe('Summary Generator - Preference Functions', () => {
   test('getPreferredFormat returns text as default', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const defaultFormat = await page.evaluate(() => {
       localStorage.removeItem('todo_summary_format_preference');
@@ -664,7 +664,7 @@ test.describe('Summary Generator - Preference Functions', () => {
 
   test('setPreferredFormat saves to localStorage', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const saved = await page.evaluate(() => {
       const key = 'todo_summary_format_preference';
@@ -677,7 +677,7 @@ test.describe('Summary Generator - Preference Functions', () => {
 
   test('getPreferredFormat reads from localStorage', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const retrieved = await page.evaluate(() => {
       const key = 'todo_summary_format_preference';
@@ -690,7 +690,7 @@ test.describe('Summary Generator - Preference Functions', () => {
 
   test('handles invalid stored values gracefully', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const result = await page.evaluate(() => {
       const key = 'todo_summary_format_preference';
@@ -705,7 +705,7 @@ test.describe('Summary Generator - Preference Functions', () => {
 
   test('clearPreferredFormat removes from localStorage', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const cleared = await page.evaluate(() => {
       const key = 'todo_summary_format_preference';
