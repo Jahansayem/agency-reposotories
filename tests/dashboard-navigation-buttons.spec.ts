@@ -31,25 +31,22 @@ async function login(page: Page) {
 
   await page.waitForLoadState('networkidle');
 
-  // Dismiss AI Feature Tour and any other post-login modals
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const skipTourBtn = page.locator('button').filter({ hasText: "Don't show again" });
-    const skipTourX = page.locator('button[aria-label="Skip tour"]');
-    const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
-    const dismissBtn = page.locator('button').filter({ hasText: 'Dismiss' });
-    const dialog = page.locator('[role="dialog"]');
+  // Wait for and dismiss the AI Feature Tour (renders after app loads with a delay)
+  const dontShowBtn = page.locator('button').filter({ hasText: "Don't show again" });
+  try {
+    await expect(dontShowBtn).toBeVisible({ timeout: 5000 });
+    await dontShowBtn.click();
+    await page.waitForTimeout(500);
+  } catch {
+    // Tour didn't appear — that's fine
+  }
 
-    if (await skipTourBtn.isVisible({ timeout: 500 }).catch(() => false)) {
-      await skipTourBtn.click();
-      await page.waitForTimeout(300);
-    } else if (await skipTourX.isVisible({ timeout: 300 }).catch(() => false)) {
-      await skipTourX.click();
-      await page.waitForTimeout(300);
-    } else if (await viewTasksBtn.isVisible({ timeout: 300 }).catch(() => false)) {
+  // Dismiss any remaining modals/overlays
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
+    const dialog = page.locator('[role="dialog"]');
+    if (await viewTasksBtn.isVisible({ timeout: 500 }).catch(() => false)) {
       await viewTasksBtn.click();
-      await page.waitForTimeout(300);
-    } else if (await dismissBtn.isVisible({ timeout: 300 }).catch(() => false)) {
-      await dismissBtn.click();
       await page.waitForTimeout(300);
     } else if (await dialog.isVisible({ timeout: 300 }).catch(() => false)) {
       await page.keyboard.press('Escape');
@@ -837,7 +834,7 @@ test.describe('Navigation state and view switching', () => {
     }
 
     const sidebar = page.getByRole('complementary', { name: 'Main navigation' });
-    const mainContent = page.locator('#main-content');
+    const mainContent = page.locator('#main-content').last();
 
     // Go to Tasks view
     const tasksBtn = sidebar.locator('button').filter({ hasText: 'Tasks' });

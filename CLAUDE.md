@@ -74,9 +74,17 @@ npm run migrate:dry-run  # Preview migrations
 - `ios-app/` — fully independent from web app
 - `docs/` — independent documentation files
 
+## CI / TypeScript Check
+- CI runs `npx tsc --noEmit` in `.github/workflows/security.yml` on every push to main
+- `tsconfig.json` excludes test files: `src/test/`, `**/*.test.ts`, `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx`, `vitest.config.ts`
+- **CRITICAL**: When adding new test files or test utilities, ensure they are covered by the exclude patterns above. If a test file has type errors, it will break CI for the entire project.
+- When adding new `src/test/` helpers, `*.test.ts`, or `*.spec.ts` files: they are excluded from `tsc` — do NOT add them to `tsconfig.json` include patterns
+- Always run `npx tsc --noEmit` locally before pushing to verify CI will pass
+
 ## Gotchas
 - RLS policies are critical — test data isolation when changing API routes
 - `src/lib/segmentation.ts` is referenced by multiple components — changes cascade
 - 100+ test files in `tests/` — many are debug/one-off specs
 - Two auth patterns exist (PIN-based and session-based)
 - iOS app shares Supabase backend but is otherwise independent
+- Test files (`*.spec.ts`, `*.test.ts`, `src/test/`) are excluded from TypeScript compilation — see CI section above

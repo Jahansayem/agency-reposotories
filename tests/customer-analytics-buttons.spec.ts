@@ -61,14 +61,26 @@ async function login(page: Page) {
     await expect(page.locator('nav[aria-label="Main navigation"]')).toBeVisible({ timeout: 15000 });
   }
 
-  // Dismiss any post-login modals
+  // Wait for and dismiss the AI Feature Tour (renders after app loads with a delay)
+  const dontShowBtn = page.locator('button').filter({ hasText: "Don't show again" });
+  try {
+    await expect(dontShowBtn).toBeVisible({ timeout: 5000 });
+    await dontShowBtn.click();
+    await page.waitForTimeout(500);
+  } catch {
+    // Tour didn't appear — that's fine
+  }
+
+  // Dismiss any remaining post-login modals
   for (let attempt = 0; attempt < 3; attempt++) {
     const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
-    const dismissBtn = page.locator('button').filter({ hasText: 'Dismiss' });
-    if (await viewTasksBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+    const dialog = page.locator('[role="dialog"]');
+    if (await viewTasksBtn.isVisible({ timeout: 500 }).catch(() => false)) {
       await viewTasksBtn.click();
-    } else if (await dismissBtn.isVisible({ timeout: 500 }).catch(() => false)) {
-      await dismissBtn.click();
+      await page.waitForTimeout(300);
+    } else if (await dialog.isVisible({ timeout: 300 }).catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
     } else {
       break;
     }
@@ -122,8 +134,22 @@ async function navigateToAnalytics(page: Page) {
   await expect(analyticsBtn).toBeVisible({ timeout: 5000 });
   await analyticsBtn.click();
 
-  // Wait for the Analytics page header
-  await expect(page.locator('h1:has-text("Analytics")')).toBeVisible({ timeout: 10000 });
+  // Wait for the Analytics page header (either "Analytics" or "Book of Business Analytics")
+  await expect(page.getByRole('heading', { name: 'Analytics', exact: true }).first()).toBeVisible({ timeout: 10000 });
+}
+
+/**
+ * Wait for customer data to finish loading.
+ */
+async function waitForCustomersLoaded(page: Page) {
+  // Verify we're on the Customers page
+  await expect(page.locator('input[placeholder*="Search customers"]')).toBeVisible({ timeout: 10000 });
+  // Wait for the "Loading customers..." spinner to disappear
+  const spinner = page.locator('text=Loading customers...');
+  await expect(spinner).not.toBeVisible({ timeout: 15000 });
+  // Wait for at least one customer card to appear
+  await expect(page.locator('input[placeholder*="Search customers"]')).toBeVisible();
+  await page.waitForTimeout(1000);
 }
 
 // ===========================================================================
@@ -182,7 +208,7 @@ test.describe('Customer Lookup View', () => {
   // 3. Search filters customers by name
   // -------------------------------------------------------------------------
   test('3 - search input filters customers by name', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await waitForCustomersLoaded(page);
 
     const searchInput = page.locator('input[placeholder*="Search customers"]');
     await expect(searchInput).toBeVisible();
@@ -197,6 +223,10 @@ test.describe('Customer Lookup View', () => {
 
     // Wait for search results to update
     await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(500);
+
+    // Wait for search results to load
+    await expect(page.locator('text=Loading customers...')).not.toBeVisible({ timeout: 10000 });
     await page.waitForTimeout(500);
 
     // All visible customer names should contain the search term (case-insensitive)
@@ -282,7 +312,7 @@ test.describe('Customer Lookup View', () => {
   // 6. Sort dropdown
   // -------------------------------------------------------------------------
   test('6 - sort dropdown changes customer order', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await waitForCustomersLoaded(page);
 
     // The sort button shows the current sort label; default is "Priority (Hot First)"
     const sortButton = page.locator('button').filter({ has: page.locator('text=Priority') }).first();
@@ -329,7 +359,7 @@ test.describe('Customer Lookup View', () => {
   // 7. Clicking a customer card opens the detail panel
   // -------------------------------------------------------------------------
   test('7 - clicking a customer card opens the detail panel', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await waitForCustomersLoaded(page);
 
     // Get the first customer name
     const firstCardName = await page.locator('h3').first().textContent();
@@ -364,7 +394,7 @@ test.describe('Customer Lookup View', () => {
   // 8. Customer detail panel close button
   // -------------------------------------------------------------------------
   test('8 - customer detail panel close button works', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
+    await waitForCustomersLoaded(page);
 
     // Open a customer detail
     await page.locator('[class*="cursor-pointer"]').first().click();
@@ -446,7 +476,7 @@ test.describe('Analytics View', () => {
   // -------------------------------------------------------------------------
   test('10 - analytics view loads without errors', async ({ page }) => {
     // Heading is visible
-    await expect(page.locator('h1:has-text("Analytics")')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Analytics', exact: true })).toBeVisible();
 
     // Subtitle is visible
     await expect(
@@ -542,7 +572,7 @@ test.describe('Analytics View', () => {
   // -------------------------------------------------------------------------
   test('13 - navigating from Analytics to Customers and back works', async ({ page }) => {
     // We start on Analytics
-    await expect(page.locator('h1:has-text("Analytics")')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Analytics', exact: true })).toBeVisible();
 
     // Navigate to Customers
     await navigateToCustomers(page);
@@ -550,7 +580,7 @@ test.describe('Analytics View', () => {
 
     // Navigate back to Analytics
     await navigateToAnalytics(page);
-    await expect(page.locator('h1:has-text("Analytics")')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Analytics', exact: true })).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -650,7 +680,7 @@ test.describe('Analytics — Data Flow Banner', () => {
     // It shows customer count and dashboard count. We just verify the analytics
     // content area renders without crashing.
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1:has-text("Analytics")')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Analytics', exact: true })).toBeVisible();
 
     // Page should not show a generic error state
     const hasError = await page.locator('text=/Something went wrong|Unhandled Runtime Error/i')
