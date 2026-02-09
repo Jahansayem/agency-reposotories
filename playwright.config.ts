@@ -16,7 +16,7 @@ export default defineConfig({
   reporter: 'list',
   timeout: 60000,  // Increase default test timeout to 60 seconds
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
