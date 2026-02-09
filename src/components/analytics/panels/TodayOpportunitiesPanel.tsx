@@ -172,7 +172,7 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
     }
   };
 
-  // Handle inline task creation
+  // Handle inline task creation — creates via API then navigates to the new task
   const handleQuickCreateTask = async (opp: TodayOpportunity) => {
     setCreatingTask(opp.id);
 
@@ -189,18 +189,26 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
         if (response.status === 409) {
-          // Task already exists
+          // Task already exists — navigate to it
           setCreatedTaskIds(prev => new Set(prev).add(opp.id));
-          setToastMessage({ type: 'success', message: 'Task already exists for this opportunity' });
+          setToastMessage({ type: 'success', message: 'Task already exists — opening it now' });
+          if (data.taskId && onTaskClick) {
+            onTaskClick(data.taskId);
+          }
         } else {
-          throw new Error(errorData.error || 'Failed to create task');
+          throw new Error(data.error || 'Failed to create task');
         }
       } else {
         setCreatedTaskIds(prev => new Set(prev).add(opp.id));
         setToastMessage({ type: 'success', message: `Task created for ${opp.customerName}` });
+        // Navigate to the newly created task
+        if (data.taskId && onTaskClick) {
+          onTaskClick(data.taskId);
+        }
       }
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err) {
@@ -214,6 +222,40 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
     } finally {
       setCreatingTask(null);
     }
+  };
+
+  // Build a mailto: link with a pre-crafted email using opportunity talking points
+  const buildEmailLink = (opp: TodayOpportunity): string => {
+    const firstName = opp.customerName.split(' ')[0];
+    const agentName = currentUser.name || 'Your Allstate Agent';
+
+    const subject = `${firstName}, let's make sure you're fully protected before your renewal`;
+
+    const body = [
+      `Hi ${firstName},`,
+      ``,
+      `I hope this message finds you well! I'm reaching out because your policy is coming up for renewal, and I wanted to make sure you have the best coverage for your needs.`,
+      ``,
+      `After reviewing your account, I noticed a few things that could really benefit you:`,
+      ``,
+      `• ${opp.talkingPoint1}`,
+      `• ${opp.talkingPoint2}`,
+      `• ${opp.talkingPoint3}`,
+      ``,
+      `You currently have ${opp.currentProducts}, and adding ${opp.recommendedProduct} could give you more comprehensive protection — and in many cases, bundling policies can actually save you money.`,
+      ``,
+      `I'd love to walk you through your options. Would you have a few minutes this week for a quick call? I'm happy to work around your schedule.`,
+      ``,
+      `You can reach me directly at this email or give me a call anytime.`,
+      ``,
+      `Looking forward to hearing from you!`,
+      ``,
+      `Best regards,`,
+      `${agentName}`,
+      `Your Local Allstate Agent`,
+    ].join('\n');
+
+    return `mailto:${encodeURIComponent(opp.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   // Loading state
@@ -436,10 +478,10 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
               {/* Primary Action: Create Task - Always visible inline */}
               <button
                 onClick={() => handleQuickCreateTask(opp)}
-                disabled={creatingTask === opp.id || createdTaskIds.has(opp.id)}
+                disabled={creatingTask === opp.id}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
                   createdTaskIds.has(opp.id)
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer'
                     : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25'
                 }`}
               >
@@ -450,8 +492,8 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
                   </>
                 ) : createdTaskIds.has(opp.id) ? (
                   <>
-                    <CheckCircle className="h-5 w-5" />
-                    Task Created
+                    <ListTodo className="h-5 w-5" />
+                    View Task
                   </>
                 ) : (
                   <>
@@ -472,9 +514,9 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
                   Call {opp.phone}
                 </a>
 
-                {/* Email Button */}
+                {/* Email Button — opens pre-crafted email with talking points */}
                 <a
-                  href={`mailto:${opp.email}`}
+                  href={buildEmailLink(opp)}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-lg hover:bg-sky-500/30 transition-colors font-medium"
                 >
                   <Mail className="h-5 w-5" />
