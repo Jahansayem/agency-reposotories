@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, User, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { hashPin, getRandomUserColor, getUserInitials, isValidPin } from '@/lib/auth';
+import { getRandomUserColor, getUserInitials, isValidPin } from '@/lib/auth';
+// Note: hashPin removed — PIN hashing now happens server-side in /api/auth/register
 import type { AuthUser } from '@/types/todo';
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
@@ -148,81 +149,46 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
     setError('');
 
     try {
-      // Hash the PIN
-      const pin_hash = await hashPin(pinString);
-
-      // Create user in database
-      const { data: newUser, error: createError } = await supabase
-        .from('users')
-        .insert({
+      // Use the server-side register API (handles PIN hashing, session creation, weak PIN validation)
+      const response = await fetchWithCsrf('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: name.trim(),
-          pin_hash,
-          color: getRandomUserColor(),
-          role: 'staff',
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+          pin: pinString,
+          ...(inviteCode.trim() ? { invitation_token: inviteCode.trim() } : {}),
+        }),
+      });
 
-      if (createError) {
-        logger.error('Registration error', createError, { component: 'RegisterModal', action: 'handlePinSubmit', userName: name.trim() });
-        if (createError.code === '23505') {
-          // Unique constraint violation
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (result.error === 'DUPLICATE_NAME') {
           setError('This name is already taken. Please try a different name.');
           setStep('name');
         } else {
-          setError('Failed to create account. Please try again.');
+          setError(result.message || 'Failed to create account. Please try again.');
         }
         setIsSubmitting(false);
         return;
       }
 
-      if (!newUser) {
+      if (!result.success || !result.user) {
         setError('Failed to create account. Please try again.');
         setIsSubmitting(false);
         return;
       }
 
-      // If invite code was provided, try to accept invitation
-      if (inviteCode.trim()) {
-        try {
-          const response = await fetchWithCsrf('/api/invitations/accept', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token: inviteCode.trim(),
-              is_new_user: true,
-              name: newUser.name,
-            }),
-          });
+      // Build AuthUser from server response (server already created session + HttpOnly cookie)
+      const newUser: AuthUser = {
+        id: result.user.id,
+        name: result.user.name,
+        color: result.user.color || getRandomUserColor(),
+        role: result.user.role || 'staff',
+        created_at: new Date().toISOString(),
+      };
 
-          if (response.ok) {
-            logger.info('User auto-joined agency via invite code', {
-              component: 'RegisterModal',
-              action: 'handlePinSubmit',
-              userName: newUser.name,
-            });
-          } else {
-            // Log but don't fail registration
-            logger.warn('Invalid invite code during registration', {
-              component: 'RegisterModal',
-              action: 'handlePinSubmit',
-              userName: newUser.name,
-            });
-          }
-        } catch (inviteError) {
-          // Log but don't fail registration
-          logger.warn('Failed to process invite code', {
-            component: 'RegisterModal',
-            action: 'handlePinSubmit',
-            userName: newUser.name,
-            error: inviteError instanceof Error ? inviteError.message : String(inviteError),
-          });
-        }
-      }
-
-      // Auto-login the newly created user
-      onSuccess(newUser as AuthUser);
+      onSuccess(newUser);
       onClose();
     } catch (err) {
       logger.error('Unexpected registration error', err as Error, { component: 'RegisterModal', action: 'handlePinSubmit', userName: name.trim() });

@@ -300,10 +300,20 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
       const isValid = response.ok && result.success;
 
       if (isValid) {
+        // Build AuthUser from server response (includes agency context)
+        const loggedInUser: AuthUser = {
+          ...selectedUser,
+          id: result.user?.id || selectedUser.id,
+          name: result.user?.name || selectedUser.name,
+          color: result.user?.color || selectedUser.color,
+          role: result.user?.role || selectedUser.role || 'staff',
+          current_agency_id: result.currentAgencyId || undefined,
+          current_agency_role: result.currentAgencyRole || undefined,
+        };
         // Store session in localStorage for client-side state (components use this to know who is logged in)
         // The HttpOnly cookie set by the server handles actual authentication
-        setStoredSession(selectedUser);
-        onLogin(selectedUser);
+        setStoredSession(loggedInUser);
+        onLogin(loggedInUser);
       } else {
         if (result.locked || response.status === 429) {
           setLockoutSeconds(result.remainingSeconds || 300);
@@ -311,8 +321,12 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         } else if (result.attemptsRemaining !== undefined) {
           setAttemptsRemaining(result.attemptsRemaining);
           setError('Incorrect PIN');
+        } else if (response.status === 403) {
+          setError('Session expired. Please refresh the page and try again.');
+        } else if (response.status >= 500) {
+          setError('Server error. Please try again later.');
         } else {
-          setError(result.error || 'Incorrect PIN');
+          setError(result.message || 'Incorrect PIN');
         }
         setPin(['', '', '', '']);
         pinRefs.current[0]?.focus();
