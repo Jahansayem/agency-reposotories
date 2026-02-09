@@ -72,9 +72,10 @@ const OUTCOME_ICONS: Record<ContactOutcome, React.ComponentType<{ className?: st
 
 interface TodayOpportunitiesPanelProps {
   onNavigateToAllOpportunities?: () => void;
+  onTaskClick?: (taskId: string) => void;
 }
 
-export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayOpportunitiesPanelProps = {}) {
+export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskClick }: TodayOpportunitiesPanelProps = {}) {
   const currentUser = useCurrentUser();
 
   const {
@@ -369,7 +370,7 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
               <div>
                 <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <button
-                    onClick={() => setSelectedCustomerId(opp.id)}
+                    onClick={() => setSelectedCustomerId(opp.customerInsightId || opp.id)}
                     className="text-xl font-bold text-white hover:text-sky-400 hover:underline transition-colors cursor-pointer text-left flex items-center gap-2 group"
                   >
                     {opp.customerName}
@@ -653,6 +654,10 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
                       taskId,
                       customerId: selectedCustomerId,
                     });
+                    if (onTaskClick) {
+                      setSelectedCustomerId(null);
+                      onTaskClick(taskId);
+                    }
                   }}
                 />
               </div>

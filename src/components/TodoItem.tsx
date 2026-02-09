@@ -449,6 +449,7 @@ function TodoItemComponent({
           showTranscription={showTranscription}
           showSubtasks={showSubtasks}
           showAttachments={showAttachments}
+          canEdit={canEdit}
           onToggleSubtask={toggleSubtask}
           onDeleteSubtask={deleteSubtask}
           onUpdateSubtaskText={updateSubtaskText}

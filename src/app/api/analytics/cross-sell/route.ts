@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
-import { VALIDATION_LIMITS } from '@/lib/constants';
+import { VALIDATION_LIMITS, escapeLikePattern } from '@/lib/constants';
 import type {
   CrossSellOpportunity,
   CrossSellPriorityTier,
@@ -35,7 +35,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters - use ctx.agencyId from auth context instead of query param
-    const agencyId = ctx.agencyId || searchParams.get('agency_id');
+    const agencyId = ctx.agencyId;
     const tier = searchParams.get('tier')?.split(',') as CrossSellPriorityTier[] | undefined;
     const segment = searchParams.get('segment')?.split(',');
     const daysUntilRenewalMax = parseInt(searchParams.get('days_until_renewal_max') || '', 10);
@@ -100,7 +100,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     }
 
     if (search) {
-      query = query.ilike('customer_name', `%${search}%`);
+      query = query.ilike('customer_name', `%${escapeLikePattern(search)}%`);
     }
 
     // Apply sorting
@@ -205,7 +205,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 
     // Set defaults - use ctx.agencyId from auth context instead of body
     const opportunity: Partial<CrossSellOpportunity> = {
-      agency_id: ctx.agencyId || body.agency_id,
+      agency_id: ctx.agencyId,
       customer_name: body.customer_name,
       phone: body.phone || '',
       email: body.email || '',

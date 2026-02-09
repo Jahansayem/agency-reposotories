@@ -259,6 +259,11 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     navigateWithHistory('customers');
   }, [navigateWithHistory]);
 
+  // Reset customer segment filter after CustomerLookupView consumes it
+  const handleInitialSegmentApplied = useCallback(() => {
+    setCustomerSegmentFilter('all');
+  }, []);
+
   // Handle navigation from TodayOpportunitiesPanel to CustomerLookupView with renewal date sort
   const handleNavigateToAllOpportunities = useCallback(() => {
     setCustomerSegmentFilter('all');
@@ -509,6 +514,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               key={agencyKey}
               onNavigateToSegment={handleNavigateToCustomerSegment}
               onNavigateToAllOpportunities={handleNavigateToAllOpportunities}
+              onTaskClick={handleTaskLinkClick}
             />
           </ErrorBoundary>
         );
@@ -526,6 +532,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               onTaskClick={handleTaskLinkClick}
               initialSegment={customerSegmentFilter}
               initialSort={customerInitialSort}
+              onInitialSegmentApplied={handleInitialSegmentApplied}
             />
           </ErrorBoundary>
         );
@@ -580,6 +587,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleNavigateToAnalytics,
     handleNavigateToCustomers,
     handleNavigateBack,
+    handleInitialSegmentApplied,
     onUserChange,
     currentAgencyId,
   ]);

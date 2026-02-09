@@ -56,7 +56,8 @@ export function areTodoItemPropsEqual(
     prevTodo.reminder_at !== nextTodo.reminder_at ||
     prevTodo.reminder_sent !== nextTodo.reminder_sent ||
     prevTodo.transcription !== nextTodo.transcription ||
-    prevTodo.updated_at !== nextTodo.updated_at
+    prevTodo.updated_at !== nextTodo.updated_at ||
+    prevTodo.merged_from !== nextTodo.merged_from
   ) {
     return false;
   }
@@ -81,6 +82,11 @@ export function areTodoItemPropsEqual(
   if (prevAttachments.length !== nextAttachments.length) return false;
   for (let i = 0; i < prevAttachments.length; i++) {
     if (prevAttachments[i].id !== nextAttachments[i].id) return false;
+  }
+
+  // Check callback references
+  if (prevProps.onSelect !== nextProps.onSelect) {
+    return false;
   }
 
   // Check other props that affect rendering

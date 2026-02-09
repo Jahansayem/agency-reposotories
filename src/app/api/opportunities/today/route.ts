@@ -55,7 +55,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters - use ctx.agencyId from auth context instead of query param
-    const agencyId = ctx.agencyId || searchParams.get('agency_id');
+    const agencyId = ctx.agencyId;
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20', 10), 1), 100);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
@@ -102,8 +102,32 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       );
     }
 
+    // Enrich opportunities with customer_insight_id by matching customer_name
+    let enrichedOpportunities = data || [];
+    if (enrichedOpportunities.length > 0) {
+      const customerNames = [...new Set(enrichedOpportunities.map(o => o.customer_name))];
+      let insightQuery = supabase
+        .from('customer_insights')
+        .select('id, customer_name')
+        .in('customer_name', customerNames);
+      if (agencyId) {
+        insightQuery = insightQuery.eq('agency_id', agencyId);
+      }
+      const { data: insights } = await insightQuery;
+      const nameToInsightId = new Map<string, string>();
+      if (insights) {
+        for (const insight of insights) {
+          nameToInsightId.set(insight.customer_name, insight.id);
+        }
+      }
+      enrichedOpportunities = enrichedOpportunities.map(opp => ({
+        ...opp,
+        customer_insight_id: nameToInsightId.get(opp.customer_name) || null,
+      }));
+    }
+
     const response: TodayOpportunitiesResponse = {
-      opportunities: data || [],
+      opportunities: enrichedOpportunities,
       total: count || 0,
       limit,
       offset,

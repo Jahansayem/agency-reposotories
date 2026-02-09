@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 export interface TodayOpportunity {
   id: string;
+  customerInsightId: string | null;
   customerName: string;
   phone: string;
   email: string;
@@ -75,6 +76,7 @@ export function useTodayOpportunities(limit: number = 10) {
       // Map API response to component format
       const mapped = (data.opportunities || []).map((opp: Record<string, unknown>) => ({
         id: opp.id,
+        customerInsightId: (opp.customer_insight_id as string) || null,
         customerName: opp.customer_name,
         phone: opp.phone || '',
         email: opp.email || '',

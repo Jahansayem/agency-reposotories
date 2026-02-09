@@ -49,7 +49,6 @@ interface GenerateTasksRequest {
   max_opportunities?: number;
   options?: Partial<CrossSellTaskGenerationOptions>;
   created_by: string;
-  agency_id?: string;
 }
 
 /**

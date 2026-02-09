@@ -42,6 +42,7 @@ interface CustomerLookupViewProps {
   initialSort?: CustomerSortOption; // For navigation from TodayOpportunitiesPanel
   onTaskClick?: (taskId: string) => void;  // Navigate to task in tasks view
   onNavigateBack?: () => void;  // Go back to previous view (analytics)
+  onInitialSegmentApplied?: () => void;  // Called after initial segment filter is consumed
 }
 
 // Customer value tier filters - dynamically generated from SEGMENT_CONFIGS
@@ -96,6 +97,7 @@ export function CustomerLookupView({
   initialSort = 'priority',
   onTaskClick,
   onNavigateBack,
+  onInitialSegmentApplied,
 }: CustomerLookupViewProps) {
   const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>(initialSegment);
   const [selectedOpportunityType, setSelectedOpportunityType] = useState<OpportunityType | 'all'>('all');
@@ -104,7 +106,10 @@ export function CustomerLookupView({
   // Sync filter state when navigating from other views (props change on re-navigation)
   useEffect(() => {
     setSelectedSegment(initialSegment);
-  }, [initialSegment]);
+    if (onInitialSegmentApplied) {
+      onInitialSegmentApplied();
+    }
+  }, [initialSegment, onInitialSegmentApplied]);
 
   useEffect(() => {
     setSortBy(initialSort);

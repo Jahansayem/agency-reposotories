@@ -88,7 +88,7 @@ export default function ExpandedPanel({
   };
 
   const toggleSubtask = (subtaskId: string) => {
-    if (!onUpdateSubtasks) return;
+    if (!onUpdateSubtasks || !canEdit) return;
     const updated = subtasks.map(s =>
       s.id === subtaskId ? { ...s, completed: !s.completed } : s
     );
@@ -96,13 +96,13 @@ export default function ExpandedPanel({
   };
 
   const deleteSubtask = (subtaskId: string) => {
-    if (!onUpdateSubtasks) return;
+    if (!onUpdateSubtasks || !canEdit) return;
     const updated = subtasks.filter(s => s.id !== subtaskId);
     onUpdateSubtasks(todo.id, updated);
   };
 
   const updateSubtaskText = (subtaskId: string, newText: string) => {
-    if (!onUpdateSubtasks) return;
+    if (!onUpdateSubtasks || !canEdit) return;
     const updated = subtasks.map(s =>
       s.id === subtaskId ? { ...s, text: newText } : s
     );
@@ -110,7 +110,7 @@ export default function ExpandedPanel({
   };
 
   const addManualSubtask = () => {
-    if (!onUpdateSubtasks || !newSubtaskText.trim()) return;
+    if (!onUpdateSubtasks || !canEdit || !newSubtaskText.trim()) return;
     const newSubtask: Subtask = {
       id: `${todo.id}-sub-${Date.now()}`,
       text: newSubtaskText.trim(),
@@ -177,7 +177,8 @@ export default function ExpandedPanel({
               <select
                 value={status}
                 onChange={(e) => onStatusChange(todo.id, e.target.value as TodoStatus)}
-                className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
+                disabled={!canEdit}
+                className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 <option value="todo">To Do</option>
                 <option value="in_progress">In Progress</option>
@@ -192,7 +193,8 @@ export default function ExpandedPanel({
             <select
               value={priority}
               onChange={(e) => onSetPriority(todo.id, e.target.value as TodoPriority)}
-              className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
+              disabled={!canEdit}
+              className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <option value="low">Low</option>
               <option value="medium">Medium</option>
@@ -216,9 +218,10 @@ export default function ExpandedPanel({
               type="date"
               value={todo.due_date ? todo.due_date.split('T')[0] : ''}
               onChange={(e) => onSetDueDate(todo.id, e.target.value || null)}
+              disabled={!canEdit}
               className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${
                 dueDateStatus === 'overdue' && !todo.completed ? 'border-red-500 bg-red-50 dark:bg-red-900/10' : ''
-              }`}
+              } ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
             />
           </div>
 
@@ -230,8 +233,8 @@ export default function ExpandedPanel({
               onChange={(e) => onAssign(todo.id, e.target.value || null)}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
-              disabled={!canAssignTasks}
-              className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${!canAssignTasks ? 'opacity-60 cursor-not-allowed' : ''}`}
+              disabled={!canEdit || !canAssignTasks}
+              className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${(!canEdit || !canAssignTasks) ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <option value="">Unassigned</option>
               {users.map((user) => (
@@ -247,7 +250,8 @@ export default function ExpandedPanel({
               <select
                 value={todo.recurrence || ''}
                 onChange={(e) => onSetRecurrence(todo.id, (e.target.value || null) as RecurrencePattern)}
-                className="input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)]"
+                disabled={!canEdit}
+                className={`input-refined w-full text-sm px-2.5 py-1.5 text-[var(--foreground)] ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
               >
                 <option value="">No repeat</option>
                 <option value="daily">Daily</option>
@@ -299,7 +303,8 @@ export default function ExpandedPanel({
             onChange={(e) => setNotes(e.target.value)}
             onBlur={handleNotesBlur}
             placeholder="Add notes or context..."
-            className="input-refined w-full text-sm leading-relaxed px-3 py-2.5 text-[var(--foreground)] resize-none"
+            disabled={!canEdit}
+            className={`input-refined w-full text-sm leading-relaxed px-3 py-2.5 text-[var(--foreground)] resize-none ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
             rows={4}
           />
         </div>
@@ -364,7 +369,8 @@ export default function ExpandedPanel({
               }
             }}
             placeholder="Add a subtask (press Enter)..."
-            className="input-refined w-full text-sm px-3 py-2 text-[var(--foreground)]"
+            disabled={!canEdit}
+            className={`input-refined w-full text-sm px-3 py-2 text-[var(--foreground)] ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
           />
         </div>
       )}

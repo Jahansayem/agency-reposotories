@@ -161,7 +161,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
  * GET /api/analytics/segmentation
  * Get segment definitions and benchmarks
  */
-export async function GET(): Promise<NextResponse> {
+export const GET = withAgencyAuth(async (_request: NextRequest, _ctx: AgencyAuthContext): Promise<NextResponse> => {
   return NextResponse.json({
     segments: CUSTOMER_SEGMENTS,
     segmentSummary: {
@@ -228,4 +228,4 @@ export async function GET(): Promise<NextResponse> {
       low_value: '$200 maximum CAC (9:1 LTV:CAC)',
     },
   });
-}
+});

@@ -372,7 +372,8 @@ export async function POST(
     const { error: updateError } = await supabase
       .from('cross_sell_opportunities')
       .update(opportunityUpdate)
-      .eq('id', opportunityId);
+      .eq('id', opportunityId)
+      .eq('agency_id', ctx.agencyId);
 
     if (updateError) {
       console.error('Failed to update opportunity:', updateError);

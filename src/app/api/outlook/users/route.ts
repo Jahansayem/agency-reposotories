@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
-import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
-import { createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
+import { type AgencyAuthContext } from '@/lib/agencyAuth';
+import { createOutlookCorsPreflightResponse, withOutlookAuth } from '@/lib/outlookAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -44,7 +44,7 @@ async function getUsersFromAgency(agencyId: string): Promise<string[]> {
   return Array.from(userNames).sort();
 }
 
-export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+export const GET = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const agencyId = ctx.agencyId;

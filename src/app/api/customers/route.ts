@@ -21,7 +21,7 @@ import { createClient } from '@supabase/supabase-js';
 import { decryptField } from '@/lib/fieldEncryption';
 import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
 import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
-import { VALIDATION_LIMITS } from '@/lib/constants';
+import { VALIDATION_LIMITS, escapeLikePattern } from '@/lib/constants';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -69,7 +69,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     if (query) {
       // Search by name only - email and phone are encrypted and cannot be searched with ILIKE
-      insightsQuery = insightsQuery.ilike('customer_name', `%${query}%`);
+      insightsQuery = insightsQuery.ilike('customer_name', `%${escapeLikePattern(query)}%`);
     }
 
     const { data: insights, error: insightsError } = await insightsQuery;
@@ -88,7 +88,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     if (query) {
       // Search by name only - email and phone may be encrypted
-      opportunitiesQuery = opportunitiesQuery.ilike('customer_name', `%${query}%`);
+      opportunitiesQuery = opportunitiesQuery.ilike('customer_name', `%${escapeLikePattern(query)}%`);
     }
 
     // Filter by opportunity type (segment_type in database)

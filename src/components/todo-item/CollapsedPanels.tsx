@@ -14,6 +14,7 @@ export interface CollapsedPanelsProps {
   showTranscription: boolean;
   showSubtasks: boolean;
   showAttachments: boolean;
+  canEdit: boolean;
   onToggleSubtask: (subtaskId: string) => void;
   onDeleteSubtask: (subtaskId: string) => void;
   onUpdateSubtaskText: (subtaskId: string, text: string) => void;
@@ -28,11 +29,24 @@ export default function CollapsedPanels({
   showTranscription,
   showSubtasks,
   showAttachments,
+  canEdit,
   onToggleSubtask,
   onDeleteSubtask,
   onUpdateSubtaskText,
   onUpdateAttachments,
 }: CollapsedPanelsProps) {
+  const guardedToggleSubtask = (subtaskId: string) => {
+    if (!canEdit) return;
+    onToggleSubtask(subtaskId);
+  };
+  const guardedDeleteSubtask = (subtaskId: string) => {
+    if (!canEdit) return;
+    onDeleteSubtask(subtaskId);
+  };
+  const guardedUpdateSubtaskText = (subtaskId: string, text: string) => {
+    if (!canEdit) return;
+    onUpdateSubtaskText(subtaskId, text);
+  };
   return (
     <>
       {/* Notes display */}
@@ -78,9 +92,9 @@ export default function CollapsedPanels({
               <SubtaskItem
                 key={subtask.id}
                 subtask={subtask}
-                onToggle={onToggleSubtask}
-                onDelete={onDeleteSubtask}
-                onUpdate={onUpdateSubtaskText}
+                onToggle={guardedToggleSubtask}
+                onDelete={guardedDeleteSubtask}
+                onUpdate={guardedUpdateSubtaskText}
               />
             ))}
           </div>

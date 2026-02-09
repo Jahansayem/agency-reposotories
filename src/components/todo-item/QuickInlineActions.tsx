@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { TodoPriority } from '@/types/todo';
 
@@ -12,9 +12,9 @@ export interface QuickInlineActionsProps {
   users: string[];
   canEdit: boolean;
   canAssignTasks: boolean;
-  onSetDueDate: (id: string, dueDate: string | null) => void;
-  onAssign: (id: string, assignedTo: string | null) => void;
-  onSetPriority: (id: string, priority: TodoPriority) => void;
+  onSetDueDate: (id: string, dueDate: string | null) => void | Promise<void>;
+  onAssign: (id: string, assignedTo: string | null) => void | Promise<void>;
+  onSetPriority: (id: string, priority: TodoPriority) => void | Promise<void>;
 }
 
 export default function QuickInlineActions({
@@ -34,6 +34,12 @@ export default function QuickInlineActions({
   const [savingPriority, setSavingPriority] = useState(false);
   const [savedField, setSavedField] = useState<'date' | 'assignee' | 'priority' | null>(null);
   const savedFieldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (savedFieldTimerRef.current) clearTimeout(savedFieldTimerRef.current);
+    };
+  }, []);
 
   return (
     <div

@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
 import { TodoPriority } from '@/types/todo';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
-import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
-import { createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
+import { type AgencyAuthContext } from '@/lib/agencyAuth';
+import { createOutlookCorsPreflightResponse, withOutlookAuth } from '@/lib/outlookAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -15,7 +15,7 @@ function getSupabaseClient() {
   );
 }
 
-export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const { text, assignedTo, priority, dueDate, createdBy } = await request.json();

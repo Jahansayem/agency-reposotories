@@ -155,7 +155,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     const file = formData.get('file') as File | null;
     const dataSource = (formData.get('data_source') as AllstateDataSource) || 'book_of_business';
     const uploadedBy = formData.get('uploaded_by') as string || ctx.userName;
-    const agencyId = ctx.agencyId || formData.get('agency_id') as string | null;
+    const agencyId = ctx.agencyId;
     const skipDuplicates = formData.get('skip_duplicates') === 'true';
     const updateExisting = formData.get('update_existing') === 'true';
     const dryRun = formData.get('dry_run') === 'true';
@@ -455,7 +455,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
-    const agencyId = ctx.agencyId || searchParams.get('agency_id');
+    const agencyId = ctx.agencyId;
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
     let query = supabase

@@ -104,7 +104,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-    const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+    const agencyId = ctx.agencyId;
 
     const { data, error } = await supabase
       .from('agency_members')
@@ -168,7 +168,7 @@ export const POST = withAgencyAuth(
       // Set RLS context for defense-in-depth
       await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-      const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+      const agencyId = ctx.agencyId;
       const body = await request.json();
       const { user_name, role } = body;
 
@@ -309,7 +309,7 @@ export const PATCH = withAgencyAuth(
       // Set RLS context for defense-in-depth
       await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-      const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+      const agencyId = ctx.agencyId;
       const body = await request.json();
       const { memberId, newRole, permissions: permissionUpdates } = body as {
         memberId: string;
@@ -570,7 +570,7 @@ export const DELETE = withAgencyAuth(
       // Set RLS context for defense-in-depth
       await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-      const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+      const agencyId = ctx.agencyId;
       const { searchParams } = new URL(request.url);
       const memberId = searchParams.get('memberId');
 

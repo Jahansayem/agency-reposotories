@@ -109,6 +109,9 @@ export function getUserInitials(name: string): string {
 export const WEAK_PINS = new Set([
   '0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999',
   '1234', '4321', '1122', '2233', '0123', '3210', '9876', '6789',
+  '2580', // vertical middle column of phone keypad (top 10 most used)
+  '0852', // reverse of 2580
+  '1010', // alternating pattern
 ]);
 
 /**
@@ -194,6 +197,19 @@ export const TRUNCATION_LIMITS = {
   /** Log recursion depth */
   LOG_MAX_DEPTH: 10,
 } as const;
+
+// ============================================================================
+// SQL / SEARCH UTILITIES
+// ============================================================================
+
+/**
+ * Escape SQL LIKE/ILIKE wildcard characters in user input.
+ * Prevents wildcard injection where user-supplied `%` or `_` characters
+ * are interpreted as pattern metacharacters by PostgreSQL.
+ */
+export function escapeLikePattern(input: string): string {
+  return input.replace(/[%_\\]/g, '\\$&');
+}
 
 // ============================================================================
 // VALIDATION LIMITS

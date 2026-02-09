@@ -271,6 +271,7 @@ export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuth
       .from('renewal_calendar')
       .update(updates)
       .eq('id', id)
+      .eq('agency_id', ctx.agencyId)
       .select()
       .single();
 

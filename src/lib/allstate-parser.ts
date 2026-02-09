@@ -477,9 +477,11 @@ function findHeaderRowIndex(rows: string[][]): number {
  * Automatically detects and skips Allstate report metadata rows
  */
 export function parseCSV(content: string): AllstateBookOfBusinessRow[] {
+  // Strip UTF-8 BOM character that papaparse doesn't handle in header:false mode
+  content = content.replace(/^\ufeff/, '');
+
   // Use papaparse for robust CSV parsing — handles quoted fields,
-  // embedded commas, escaped quotes, different line endings (\r\n, \n, \r),
-  // and BOM (byte order mark) characters automatically
+  // embedded commas, escaped quotes, different line endings (\r\n, \n, \r)
   const parsed = Papa.parse<string[]>(content, {
     header: false,       // We handle headers ourselves due to metadata rows
     skipEmptyLines: true,

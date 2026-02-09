@@ -26,9 +26,10 @@ type AnalyticsTab = 'overview' | 'opportunities' | 'customers';
 interface AnalyticsPageProps {
   onNavigateToSegment?: (segment: 'elite' | 'premium' | 'standard' | 'entry') => void;
   onNavigateToAllOpportunities?: () => void;
+  onTaskClick?: (taskId: string) => void;
 }
 
-export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunities }: AnalyticsPageProps = {}) {
+export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunities, onTaskClick }: AnalyticsPageProps = {}) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const currentUser = useCurrentUser();
@@ -113,7 +114,7 @@ export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunitie
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <TodayOpportunitiesPanel onNavigateToAllOpportunities={onNavigateToAllOpportunities} />
+            <TodayOpportunitiesPanel onNavigateToAllOpportunities={onNavigateToAllOpportunities} onTaskClick={onTaskClick} />
           </motion.div>
         )}
 

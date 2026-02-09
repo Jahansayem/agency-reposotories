@@ -16,7 +16,7 @@ import {
   BarChart3,
   Users,
 } from 'lucide-react';
-import { Todo, AuthUser, ActivityLogEntry } from '@/types/todo';
+import { Todo, AuthUser, ActivityLogEntry, QuickFilter } from '@/types/todo';
 import { useAppShell } from '../layout';
 import {
   generateDashboardAIData,
@@ -32,7 +32,7 @@ interface DoerDashboardProps {
   currentUser: AuthUser;
   todos: Todo[];
   activityLog?: ActivityLogEntry[];
-  onNavigateToTasks?: () => void;
+  onNavigateToTasks?: (filter?: QuickFilter) => void;
   onTaskClick?: (taskId: string) => void;
   onFilterOverdue?: () => void;
   onFilterDueToday?: () => void;

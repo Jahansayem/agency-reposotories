@@ -121,16 +121,11 @@ export class TodoService {
 
     try {
       // Convert the updates to a plain JSONB object for the RPC call.
-      // We set updated_at on the client side for consistency with the old
-      // behavior, but the PostgreSQL function also sets it via NOW().
-      const updatesPayload = {
-        ...updates,
-        updated_at: new Date().toISOString(),
-      };
-
+      // Note: updated_at is always set to NOW() by the PostgreSQL function,
+      // so we do not include it in the client-side payload.
       const { data, error } = await supabase.rpc('todo_update_with_sync', {
         p_todo_id: id,
-        p_updates: updatesPayload,
+        p_updates: updates,
         p_sync_normalized: useNormalizedSchema,
       });
 

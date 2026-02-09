@@ -46,6 +46,7 @@ CREATE OR REPLACE FUNCTION todo_create_with_sync(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_new_todo RECORD;
@@ -155,6 +156,7 @@ CREATE OR REPLACE FUNCTION todo_update_with_sync(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_updated_todo RECORD;
@@ -266,77 +268,74 @@ BEGIN
 
   -- Step 2: If normalized schema sync is enabled, re-sync normalized tables
   IF p_sync_normalized AND v_updated_todo IS NOT NULL THEN
-    -- Re-sync subtasks if they were updated
-    v_subtasks := v_updated_todo.subtasks;
-    IF v_subtasks IS NOT NULL AND jsonb_array_length(v_subtasks) > 0 THEN
+    -- Re-sync subtasks only if they were actually in the update payload
+    IF p_updates ? 'subtasks' THEN
+      v_subtasks := v_updated_todo.subtasks;
       -- Delete existing subtasks for this todo
       DELETE FROM subtasks_v2 WHERE todo_id = p_todo_id;
 
-      -- Insert updated subtasks
-      v_index := 0;
-      FOR v_subtask IN SELECT * FROM jsonb_array_elements(v_subtasks)
-      LOOP
-        INSERT INTO subtasks_v2 (
-          id, todo_id, text, completed, priority, estimated_minutes, display_order
-        )
-        VALUES (
-          COALESCE((v_subtask->>'id')::UUID, gen_random_uuid()),
-          p_todo_id,
-          v_subtask->>'text',
-          COALESCE((v_subtask->>'completed')::BOOLEAN, FALSE),
-          COALESCE(v_subtask->>'priority', 'medium'),
-          (v_subtask->>'estimatedMinutes')::INTEGER,
-          v_index
-        );
-        v_index := v_index + 1;
-      END LOOP;
-    ELSIF v_subtasks IS NOT NULL AND jsonb_array_length(v_subtasks) = 0 THEN
-      -- Subtasks were explicitly set to empty, remove all
-      DELETE FROM subtasks_v2 WHERE todo_id = p_todo_id;
+      IF v_subtasks IS NOT NULL AND jsonb_array_length(v_subtasks) > 0 THEN
+        -- Insert updated subtasks
+        v_index := 0;
+        FOR v_subtask IN SELECT * FROM jsonb_array_elements(v_subtasks)
+        LOOP
+          INSERT INTO subtasks_v2 (
+            id, todo_id, text, completed, priority, estimated_minutes, display_order
+          )
+          VALUES (
+            COALESCE((v_subtask->>'id')::UUID, gen_random_uuid()),
+            p_todo_id,
+            v_subtask->>'text',
+            COALESCE((v_subtask->>'completed')::BOOLEAN, FALSE),
+            COALESCE(v_subtask->>'priority', 'medium'),
+            (v_subtask->>'estimatedMinutes')::INTEGER,
+            v_index
+          );
+          v_index := v_index + 1;
+        END LOOP;
+      END IF;
     END IF;
 
-    -- Re-sync attachments if they were updated
-    v_attachments := v_updated_todo.attachments;
-    IF v_attachments IS NOT NULL AND jsonb_array_length(v_attachments) > 0 THEN
+    -- Re-sync attachments only if they were actually in the update payload
+    IF p_updates ? 'attachments' THEN
+      v_attachments := v_updated_todo.attachments;
       -- Delete existing attachments for this todo
       DELETE FROM attachments_v2 WHERE todo_id = p_todo_id;
 
-      -- Insert updated attachments
-      FOR v_attachment IN SELECT * FROM jsonb_array_elements(v_attachments)
-      LOOP
-        INSERT INTO attachments_v2 (
-          id, todo_id, file_name, file_type, file_size,
-          storage_path, mime_type, uploaded_by_name, uploaded_at
-        )
-        VALUES (
-          COALESCE((v_attachment->>'id')::UUID, gen_random_uuid()),
-          p_todo_id,
-          v_attachment->>'file_name',
-          v_attachment->>'file_type',
-          COALESCE((v_attachment->>'file_size')::INTEGER, 0),
-          v_attachment->>'storage_path',
-          v_attachment->>'mime_type',
-          v_attachment->>'uploaded_by',
-          COALESCE((v_attachment->>'uploaded_at')::TIMESTAMPTZ, NOW())
-        );
-      END LOOP;
-    ELSIF v_attachments IS NOT NULL AND jsonb_array_length(v_attachments) = 0 THEN
-      -- Attachments were explicitly set to empty, remove all
-      DELETE FROM attachments_v2 WHERE todo_id = p_todo_id;
+      IF v_attachments IS NOT NULL AND jsonb_array_length(v_attachments) > 0 THEN
+        -- Insert updated attachments
+        FOR v_attachment IN SELECT * FROM jsonb_array_elements(v_attachments)
+        LOOP
+          INSERT INTO attachments_v2 (
+            id, todo_id, file_name, file_type, file_size,
+            storage_path, mime_type, uploaded_by_name, uploaded_at
+          )
+          VALUES (
+            COALESCE((v_attachment->>'id')::UUID, gen_random_uuid()),
+            p_todo_id,
+            v_attachment->>'file_name',
+            v_attachment->>'file_type',
+            COALESCE((v_attachment->>'file_size')::INTEGER, 0),
+            v_attachment->>'storage_path',
+            v_attachment->>'mime_type',
+            v_attachment->>'uploaded_by',
+            COALESCE((v_attachment->>'uploaded_at')::TIMESTAMPTZ, NOW())
+          );
+        END LOOP;
+      END IF;
     END IF;
 
-    -- Re-sync user assignment
+    -- Re-sync user assignment: always delete old assignment first to
+    -- prevent ghost rows when the assigned user changes.
+    DELETE FROM user_assignments WHERE todo_id = p_todo_id;
+
     v_assigned_to := v_updated_todo.assigned_to;
-    IF v_assigned_to IS NOT NULL THEN
+    IF v_assigned_to IS NOT NULL AND v_assigned_to != '' THEN
       SELECT id INTO v_user_id FROM users WHERE name = v_assigned_to LIMIT 1;
       IF v_user_id IS NOT NULL THEN
         INSERT INTO user_assignments (todo_id, user_id, assigned_at)
-        VALUES (p_todo_id, v_user_id, COALESCE(v_updated_todo.created_at, NOW()))
-        ON CONFLICT (todo_id, user_id) DO NOTHING;
+        VALUES (p_todo_id, v_user_id, COALESCE(v_updated_todo.created_at, NOW()));
       END IF;
-    ELSE
-      -- If assigned_to was cleared, remove assignments
-      DELETE FROM user_assignments WHERE todo_id = p_todo_id;
     END IF;
   END IF;
 
@@ -371,6 +370,7 @@ CREATE OR REPLACE FUNCTION todo_delete_with_sync(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   -- Lock the row to prevent concurrent operations

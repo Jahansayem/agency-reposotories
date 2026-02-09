@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
-import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
-import { createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
+import { type AgencyAuthContext } from '@/lib/agencyAuth';
+import { createOutlookCorsPreflightResponse, withOutlookAuth } from '@/lib/outlookAuth';
 import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 // Create Supabase client lazily to avoid build-time env var access
@@ -71,7 +71,7 @@ async function getAllUsers(): Promise<string[]> {
   return (users || []).map((u: { name: string }) => u.name).filter(Boolean);
 }
 
-export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   // SECURITY: Rate limit AI operations to prevent abuse
   // Uses the 'ai' limiter: 10 requests per minute per IP
   const rateLimitResult = await withRateLimit(request, rateLimiters.ai);
