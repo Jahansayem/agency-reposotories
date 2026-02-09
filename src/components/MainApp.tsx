@@ -130,8 +130,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const [hasCheckedDailyDashboard, setHasCheckedDailyDashboard] = useState(false);
   // Track which task to auto-expand when navigating from dashboard/notifications
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  // Track customer segment filter when navigating from CustomerSegmentationDashboard
-  const [customerSegmentFilter, setCustomerSegmentFilter] = useState<'elite' | 'premium' | 'standard' | 'entry' | 'all'>('all');
   // Track initial sort option when navigating to customer lookup
   const [customerInitialSort, setCustomerInitialSort] = useState<'priority' | 'renewal_date'>('priority');
   // Track previous view for back-navigation (e.g., customers → analytics)
@@ -252,21 +250,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     setActiveView(prev || 'tasks');
   }, [setActiveView]);
 
-  // Handle navigation from CustomerSegmentationDashboard to CustomerLookupView with segment filter
-  const handleNavigateToCustomerSegment = useCallback((segment: 'elite' | 'premium' | 'standard' | 'entry') => {
-    setCustomerSegmentFilter(segment);
+  // Handle navigation from CustomerSegmentationDashboard to CustomerLookupView
+  const handleNavigateToCustomerSegment = useCallback(() => {
     setCustomerInitialSort('priority');
     navigateWithHistory('customers');
   }, [navigateWithHistory]);
 
-  // Reset customer segment filter after CustomerLookupView consumes it
-  const handleInitialSegmentApplied = useCallback(() => {
-    setCustomerSegmentFilter('all');
-  }, []);
-
   // Handle navigation from TodayOpportunitiesPanel to CustomerLookupView with renewal date sort
   const handleNavigateToAllOpportunities = useCallback(() => {
-    setCustomerSegmentFilter('all');
     setCustomerInitialSort('renewal_date');
     navigateWithHistory('customers');
   }, [navigateWithHistory]);
@@ -278,7 +269,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // Handle navigation from Dashboard to Customers
   const handleNavigateToCustomers = useCallback(() => {
-    setCustomerSegmentFilter('all');
     setCustomerInitialSort('priority');
     navigateWithHistory('customers');
   }, [navigateWithHistory]);
@@ -530,9 +520,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
               onClose={() => setActiveView('tasks')}
               onNavigateBack={handleNavigateBack}
               onTaskClick={handleTaskLinkClick}
-              initialSegment={customerSegmentFilter}
               initialSort={customerInitialSort}
-              onInitialSegmentApplied={handleInitialSegmentApplied}
             />
           </ErrorBoundary>
         );
@@ -568,7 +556,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     selectedTaskId,
     canViewStrategicGoals,
     canViewArchive,
-    customerSegmentFilter,
     customerInitialSort,
     handleNavigateToTasks,
     handleTaskLinkClick,
@@ -587,7 +574,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleNavigateToAnalytics,
     handleNavigateToCustomers,
     handleNavigateBack,
-    handleInitialSegmentApplied,
     onUserChange,
     currentAgencyId,
   ]);
