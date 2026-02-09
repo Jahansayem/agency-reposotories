@@ -333,10 +333,9 @@ test.describe('Customer Lookup View', () => {
 
     // Select "Name (A-Z)"
     await page.locator('button:has-text("Name (A-Z)")').click();
-    await page.waitForLoadState('networkidle');
 
-    // Wait for the list to re-render
-    await page.waitForTimeout(500);
+    // Wait for customer list to reload after sort change
+    await waitForCustomersLoaded(page);
 
     // Verify alphabetical order: collect the first few names
     const names = await page.locator('h3').allTextContents();
@@ -361,13 +360,14 @@ test.describe('Customer Lookup View', () => {
   test('7 - clicking a customer card opens the detail panel', async ({ page }) => {
     await waitForCustomersLoaded(page);
 
-    // Get the first customer name
-    const firstCardName = await page.locator('h3').first().textContent();
+    // Get the first customer name (h3 inside the customer cards area)
+    const customerNameEl = page.locator('h3').first();
+    await expect(customerNameEl).toBeVisible({ timeout: 5000 });
+    const firstCardName = await customerNameEl.textContent();
     expect(firstCardName).toBeTruthy();
 
-    // Click the first customer card
-    const firstCard = page.locator('[class*="cursor-pointer"]').first();
-    await firstCard.click();
+    // Click the customer name's parent card (the h3 is inside the card div)
+    await customerNameEl.click();
 
     // Wait for the detail panel to render
     await page.waitForLoadState('networkidle');
@@ -396,8 +396,8 @@ test.describe('Customer Lookup View', () => {
   test('8 - customer detail panel close button works', async ({ page }) => {
     await waitForCustomersLoaded(page);
 
-    // Open a customer detail
-    await page.locator('[class*="cursor-pointer"]').first().click();
+    // Open a customer detail by clicking the first customer name
+    await page.locator('h3').first().click();
     await page.waitForLoadState('networkidle');
 
     const isMobile = await page.evaluate(() => window.innerWidth < 768);
