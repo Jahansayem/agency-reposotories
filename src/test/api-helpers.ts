@@ -90,8 +90,8 @@ export function createMockSupabaseClient(defaultResult: MockQueryResult = { data
   return {
     client: qb,
     // Convenience: set what the next query chain should resolve to
-    setResult: (result: MockQueryResult) => qb._setResult(result),
-    reset: () => qb._reset(),
+    setResult: (result: MockQueryResult) => (qb._setResult as (r: MockQueryResult) => void)(result),
+    reset: () => (qb._reset as () => void)(),
   };
 }
 
@@ -184,7 +184,7 @@ export function createMockRequest(options: MockRequestOptions = {}): NextRequest
   }
 
   // Build request init
-  const init: RequestInit = {
+  const init: import('next/dist/server/web/spec-extension/request').RequestInit = {
     method,
     headers: new Headers(headers),
   };
