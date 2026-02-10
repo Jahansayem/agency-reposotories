@@ -482,7 +482,7 @@ export const ChatInputBar = memo(function ChatInputBar({
           </div>
           <motion.button
             onClick={handleSend}
-            disabled={!newMessage.trim() || disabled}
+            disabled={(!newMessage.trim() && !uploadedAttachment) || disabled}
             className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

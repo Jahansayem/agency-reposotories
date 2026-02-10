@@ -326,5 +326,5 @@ function calculateNextDueDate(currentDueDate: string | undefined, recurrence: st
       break;
   }
 
-  return nextDate.toISOString();
+  return nextDate.toISOString().split('T')[0];
 }

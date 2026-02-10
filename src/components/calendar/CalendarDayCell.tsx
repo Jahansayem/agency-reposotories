@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
@@ -153,6 +153,17 @@ export default function CalendarDayCell({
       onClick();
     }
   }, [todos.length, onClick]);
+
+  // Close popup when drag ends (isDragActive transitions from true to false)
+  // Without this, the popup can get stuck open because onMouseLeave won't fire
+  // if the mouse hasn't moved after the drag completes
+  const prevIsDragActive = useRef(isDragActive);
+  useEffect(() => {
+    if (prevIsDragActive.current && !isDragActive) {
+      setShowPopup(false);
+    }
+    prevIsDragActive.current = isDragActive;
+  }, [isDragActive]);
 
   return (
     <div

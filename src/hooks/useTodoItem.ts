@@ -236,7 +236,7 @@ export function useTodoItem({
   const handleSnooze = useCallback(async (days: number) => {
     const newDueDate = new Date();
     newDueDate.setDate(newDueDate.getDate() + days);
-    await onSetDueDate(todo.id, newDueDate.toISOString());
+    await onSetDueDate(todo.id, newDueDate.toISOString().split('T')[0]);
     setShowSnoozeMenu(false);
   }, [todo.id, onSetDueDate]);
 

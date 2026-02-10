@@ -269,13 +269,27 @@ export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuth
   try {
     const supabase = getSupabaseClient();
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id, ...rawUpdates } = body;
 
     if (!id) {
       return NextResponse.json(
         { error: 'id is required' },
         { status: 400 }
       );
+    }
+
+    // Whitelist allowed fields to prevent arbitrary column updates (e.g., agency_id)
+    const ALLOWED_FIELDS = new Set([
+      'notes', 'contacted_at', 'converted_at', 'converted_premium',
+      'dismissed', 'contact_method', 'next_action', 'next_action_date',
+      'mark_contacted', 'mark_converted', 'dismiss',
+    ]);
+
+    const updates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawUpdates)) {
+      if (ALLOWED_FIELDS.has(key)) {
+        updates[key] = value;
+      }
     }
 
     // Handle special update types
@@ -292,6 +306,13 @@ export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuth
     if (updates.dismiss) {
       updates.dismissed = true;
       delete updates.dismiss;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
     }
 
     let query = supabase

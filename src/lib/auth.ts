@@ -33,9 +33,18 @@ export async function hashPin(pin: string): Promise<string> {
 }
 
 // Verify PIN against hash
+// Uses constant-time comparison to prevent timing attacks
 export async function verifyPin(pin: string, hash: string): Promise<boolean> {
   const inputHash = await hashPin(pin);
-  return inputHash === hash;
+  if (inputHash.length !== hash.length) {
+    return false;
+  }
+  // Constant-time comparison to prevent timing attacks
+  let result = 0;
+  for (let i = 0; i < inputHash.length; i++) {
+    result |= inputHash.charCodeAt(i) ^ hash.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 // Session management

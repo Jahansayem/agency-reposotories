@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import {
   format,
-  isSameMonth,
   addMonths,
   subMonths,
   addWeeks,
@@ -178,15 +177,18 @@ export default function CalendarView({
   }, [todos, selectedCategories]);
 
   // Category counts for current month
+  // Uses string-based month extraction to avoid timezone issues with new Date()
   const categoryCounts = useMemo(() => {
     const counts: Record<DashboardTaskCategory, number> = {
       quote: 0, renewal: 0, claim: 0, service: 0,
       'follow-up': 0, prospecting: 0, other: 0,
     };
+    const currentYearMonth = format(currentDate, 'yyyy-MM');
     todos.forEach((todo) => {
       if (!todo.due_date) return;
-      const dueDate = new Date(todo.due_date);
-      if (!isSameMonth(dueDate, currentDate)) return;
+      // Extract YYYY-MM directly from the date string to avoid timezone shift
+      const dueDateYearMonth = todo.due_date.substring(0, 7);
+      if (dueDateYearMonth !== currentYearMonth) return;
       const category = todo.category || 'other';
       counts[category]++;
     });

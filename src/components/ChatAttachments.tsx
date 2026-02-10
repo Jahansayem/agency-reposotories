@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Image as ImageIcon, X, Download, ZoomIn, Loader2, Paperclip } from 'lucide-react';
 import { ChatAttachment } from '@/types/todo';
@@ -94,15 +94,20 @@ export function AttachmentPreview({
   const [previewUrl, setPreviewUrl] = useState<string>('');
 
   // Generate preview URL
-  useState(() => {
+  // BUGFIX: Was incorrectly using useState() as a side-effect initializer.
+  // useState() with a callback only runs once but does not track dependency changes.
+  // useEffect properly re-runs when `file` changes and cleans up the object URL.
+  useEffect(() => {
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviewUrl(e.target?.result as string);
       };
       reader.readAsDataURL(file);
+    } else {
+      setPreviewUrl('');
     }
-  });
+  }, [file]);
 
   return (
     <motion.div

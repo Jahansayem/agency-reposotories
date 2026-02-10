@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
 import crypto from 'crypto';
@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Look up user by email
+    // Look up user by email (use service role to bypass RLS)
+    const supabase = createServiceRoleClient();
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, name, email')

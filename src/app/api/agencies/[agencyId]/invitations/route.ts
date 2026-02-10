@@ -192,9 +192,12 @@ export async function POST(
     }
 
     // Build invite URL
-    const baseUrl = request.headers.get('origin')
-      || request.headers.get('x-forwarded-host')
-        ? `https://${request.headers.get('x-forwarded-host')}`
+    const origin = request.headers.get('origin');
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const baseUrl = origin
+      ? origin
+      : forwardedHost
+        ? `https://${forwardedHost}`
         : process.env.NEXT_PUBLIC_APP_URL
         || 'https://shared-todo-list-production.up.railway.app';
     const inviteUrl = `${baseUrl}/join/${token}`;

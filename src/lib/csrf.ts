@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { randomBytes, createHash } from 'crypto';
+import { randomBytes, createHash, createHmac } from 'crypto';
 import { logger } from './logger';
 
 const CSRF_SECRET_COOKIE = 'csrf_secret';  // HttpOnly
@@ -67,15 +67,19 @@ export function validateCsrfToken(request: NextRequest): boolean {
     return false;
   }
 
-  // Compute expected signature
-  const expectedHash = createHash('sha256')
-    .update(`${secretCookie}:${nonce}`)
+  // Compute expected signature using HMAC-SHA256 (must match middleware algorithm)
+  // The middleware uses HMAC(secret, nonce) and takes first 32 hex chars
+  const expectedSignature = createHmac('sha256', secretCookie)
+    .update(nonce)
     .digest('hex')
-    .substring(0, 16);
-  // Constant-time comparison
+    .slice(0, 32);
+  // Constant-time comparison to prevent timing attacks
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
   const providedHash = hashToken(signature);
-  const expectedHashHashed = hashToken(expectedHash);
-  return providedHash === expectedHashHashed;
+  const expectedHash = hashToken(expectedSignature);
+  return providedHash === expectedHash;
 }
 
 /**

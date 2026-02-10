@@ -156,7 +156,7 @@ export function useTaskDetail({
       const date = new Date();
       date.setDate(date.getDate() + days);
       date.setHours(9, 0, 0, 0);
-      onUpdate(todo.id, { due_date: date.toISOString() });
+      onUpdate(todo.id, { due_date: date.toISOString().split('T')[0] });
     },
     [todo.id, onUpdate]
   );
