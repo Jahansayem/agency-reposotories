@@ -472,6 +472,8 @@ export type ActivityAction =
   | 'customer_responded'
   | 'follow_up_overdue'
   | 'task_reordered'
+  | 'invitation_sent'
+  | 'invitation_accepted'
   | 'agency_created'
   | 'member_added'
   | 'member_removed'

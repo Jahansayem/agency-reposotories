@@ -93,3 +93,20 @@
 - Fix module-level Supabase client in attachments (MEDIUM)
 - Fix CSV parsed through Excel parser (MEDIUM)
 - Fix securityMonitor incomplete return type (MEDIUM)
+
+---
+
+# Wave 3: Remaining MEDIUM + LOW Items
+
+## Scope Splits (3 agents)
+
+### W3-1. Dead Code & Unused Imports (`w3-dead-code`)
+Items: 1, 2, 4, 5, 6, 7, 8, 11, 13, 19, 20, 26
+
+### W3-2. Logic & Data Bugs (`w3-logic`)
+Items: 3, 10, 14, 21, 22, 23, 24, 25, 27
+Plus remaining MEDIUM: VirtualTodoList any types, TaskDetailModal non-null assertion
+
+### W3-3. Runtime & UX Issues (`w3-runtime`)
+Items: 9, 12, 15, 16, 17, 18
+Plus remaining MEDIUM: CSV parsed through Excel parser

@@ -259,9 +259,9 @@ export default function CalendarDayCell({
               </button>
             </div>
 
-            {/* Task List */}
+            {/* Task List — show all tasks; container scrolls via max-h + overflow-y-auto */}
             <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
-              {todos.slice(0, 5).map((todo) => (
+              {todos.map((todo) => (
                 <DraggableTaskItem
                   key={todo.id}
                   todo={todo}
@@ -269,11 +269,6 @@ export default function CalendarDayCell({
                   enableDrag={enableDragDrop}
                 />
               ))}
-              {todos.length > 5 && (
-                <p className="text-xs text-[var(--text-muted)] text-center pt-1">
-                  +{todos.length - 5} more tasks
-                </p>
-              )}
             </div>
           </motion.div>
         )}

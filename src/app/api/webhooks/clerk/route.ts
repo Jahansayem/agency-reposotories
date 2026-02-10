@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { linkClerkUser, updateUserFromClerk } from '@/lib/auth/linkClerkUser';
+import { logger } from '@/lib/logger';
 
 /**
  * Clerk Webhook Handler
@@ -18,7 +19,7 @@ export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
-    console.error('CLERK_WEBHOOK_SECRET is not set');
+    logger.error('CLERK_WEBHOOK_SECRET is not set');
     return NextResponse.json(
       { error: 'Webhook secret not configured' },
       { status: 500 }
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       'svix-signature': svix_signature,
     }) as WebhookEvent;
   } catch (err) {
-    console.error('Error verifying webhook:', err);
+    logger.error('Error verifying webhook', err as Error, { component: 'webhooks/clerk' });
     return NextResponse.json(
       { error: 'Webhook verification failed' },
       { status: 400 }
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
   // Handle the event
   const eventType = evt.type;
 
-  console.log(`[Clerk Webhook] Received event: ${eventType}`);
+  logger.info(`Clerk webhook received event: ${eventType}`, { component: 'webhooks/clerk', action: eventType });
 
   try {
     switch (eventType) {
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
           lastName: last_name,
         });
 
-        console.log(`[Clerk Webhook] User created/linked: ${id}`);
+        logger.info(`Clerk webhook: user created/linked`, { component: 'webhooks/clerk', userId: id });
         break;
       }
 
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
           lastName: last_name,
         });
 
-        console.log(`[Clerk Webhook] User updated: ${id}`);
+        logger.info(`Clerk webhook: user updated`, { component: 'webhooks/clerk', userId: id });
         break;
       }
 
@@ -104,16 +105,16 @@ export async function POST(req: Request) {
         // Optionally handle user deletion
         // For now, we'll just log it - users remain in our DB for data integrity
         const { id } = evt.data;
-        console.log(`[Clerk Webhook] User deleted in Clerk: ${id}`);
+        logger.info(`Clerk webhook: user deleted in Clerk`, { component: 'webhooks/clerk', userId: id });
         // Note: We don't delete users from our DB to preserve task history
         break;
       }
 
       default:
-        console.log(`[Clerk Webhook] Unhandled event type: ${eventType}`);
+        logger.warn(`Clerk webhook: unhandled event type: ${eventType}`, { component: 'webhooks/clerk', action: eventType });
     }
   } catch (error) {
-    console.error(`[Clerk Webhook] Error handling ${eventType}:`, error);
+    logger.error(`Clerk webhook: error handling ${eventType}`, error as Error, { component: 'webhooks/clerk', action: eventType });
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 }

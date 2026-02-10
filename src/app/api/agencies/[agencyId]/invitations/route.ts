@@ -204,7 +204,7 @@ export async function POST(
 
     // Log activity (safe - will not break operation if it fails)
     await safeLogActivity(supabase, {
-      action: 'task_created', // Reuse existing action type; ideally 'invitation_created'
+      action: 'invitation_sent',
       user_name: auth.context.userName,
       agency_id: agencyId,
       details: {

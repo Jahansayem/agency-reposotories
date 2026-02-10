@@ -237,7 +237,6 @@ function TodoModals({
           newTaskAssignedTo={pendingTask.assignedTo}
           newTaskSubtasks={pendingTask.subtasks}
           newTaskTranscription={pendingTask.transcription}
-          newTaskSourceFile={pendingTask.sourceFile}
           duplicates={duplicateMatches}
           onCreateAnyway={onCreateTaskAnyway}
           onAddToExisting={onAddToExistingTask}

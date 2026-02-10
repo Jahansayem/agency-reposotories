@@ -84,8 +84,8 @@ export function sanitizeUsername(name: string): string {
     return '';
   }
 
-  // Only allow alphanumeric and underscore, max 50 chars
-  return name.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 50);
+  // Only allow alphanumeric, underscore, and spaces, max 50 chars
+  return name.replace(/[^a-zA-Z0-9_ ]/g, '').trim().slice(0, 50);
 }
 
 // ============================================================================

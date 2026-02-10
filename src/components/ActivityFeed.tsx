@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield } from 'lucide-react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield, Mail } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
@@ -102,6 +102,8 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)' },
   follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)' },
   task_reordered: { icon: ArrowRight, label: 'reordered task', color: 'var(--accent-vivid)' },
+  invitation_sent: { icon: Mail, label: 'sent invitation', color: 'var(--accent-vivid)' },
+  invitation_accepted: { icon: UserPlus, label: 'accepted invitation', color: 'var(--success-vivid)' },
   agency_created: { icon: Building, label: 'created agency', color: 'var(--success-vivid)' },
   member_added: { icon: UserPlus, label: 'added member', color: 'var(--success-vivid)' },
   member_removed: { icon: UserMinus, label: 'removed member', color: 'var(--danger)' },

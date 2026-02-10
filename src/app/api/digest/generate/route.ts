@@ -64,7 +64,7 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
     webPushInitialized = true;
   } catch (error) {
-    logger.error('Failed to initialize web-push', error, { component: 'digest/generate' });
+    logger.error('Failed to initialize web-push', error as Error, { component: 'digest/generate' });
   }
 }
 
@@ -222,12 +222,15 @@ async function generateDigestForUser(
   ]);
 
   if (overdueResult.error || todayResult.error || completedResult.error || activityResult.error) {
-    logger.error('Database query error in digest generation', {
-      overdue: overdueResult.error,
-      today: todayResult.error,
-      completed: completedResult.error,
-      activity: activityResult.error,
-    }, { component: 'DigestGenerate' });
+    logger.error('Database query error in digest generation', undefined, {
+      component: 'DigestGenerate',
+      metadata: {
+        overdue: overdueResult.error,
+        today: todayResult.error,
+        completed: completedResult.error,
+        activity: activityResult.error,
+      },
+    });
     return null;
   }
 
@@ -518,7 +521,7 @@ export const POST = withSystemAuth(async (request: NextRequest) => {
                 });
 
               if (insertError) {
-                logger.error('Failed to store digest', insertError, {
+                logger.error('Failed to store digest', insertError as Error, {
                   component: 'DigestGenerate',
                   agencyId: agency.id,
                 });
@@ -550,7 +553,7 @@ export const POST = withSystemAuth(async (request: NextRequest) => {
         .order('name');
 
       if (usersError) {
-        logger.error('Failed to fetch users', usersError, { component: 'DigestGenerate' });
+        logger.error('Failed to fetch users', usersError as Error, { component: 'DigestGenerate' });
         return NextResponse.json(
           { success: false, error: 'Failed to fetch users' },
           { status: 500 }
@@ -590,7 +593,7 @@ export const POST = withSystemAuth(async (request: NextRequest) => {
               });
 
             if (insertError) {
-              logger.error('Failed to store digest', insertError, { component: 'DigestGenerate' });
+              logger.error('Failed to store digest', insertError as Error, { component: 'DigestGenerate' });
               results.push({ userId: user.id, userName: user.name, generated: false, notified: false, error: `Storage failed: ${insertError.message}` });
               continue;
             }
@@ -642,7 +645,7 @@ export const POST = withSystemAuth(async (request: NextRequest) => {
     });
 
   } catch (error) {
-    logger.error('Error in digest generation', error, { component: 'DigestGenerate' });
+    logger.error('Error in digest generation', error as Error, { component: 'DigestGenerate' });
 
     return NextResponse.json(
       { success: false, error: 'Failed to generate digests' },

@@ -81,7 +81,7 @@ function sanitizeSensitiveData(input: unknown): unknown {
         lowerKey.includes('password') ||
         lowerKey.includes('pin_hash') ||
         lowerKey.includes('secret') ||
-        lowerKey.includes('token') && !lowerKey.includes('csrf') ||
+        (lowerKey.includes('token') && !lowerKey.includes('csrf')) ||
         lowerKey.includes('api_key') ||
         lowerKey.includes('apikey') ||
         lowerKey === 'ssn' ||

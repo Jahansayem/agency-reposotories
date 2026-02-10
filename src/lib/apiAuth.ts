@@ -251,7 +251,7 @@ export async function verifyAttachmentAccess(
  */
 export function extractTodoIdFromPath(storagePath: string): string | null {
   const parts = storagePath.split('/');
-  if (parts.length >= 1) {
+  if (parts.length >= 2) {
     return parts[0];
   }
   return null;

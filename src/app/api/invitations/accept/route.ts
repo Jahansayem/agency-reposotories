@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
 
     // Log activity (safe - will not break operation if it fails)
     await safeLogActivity(supabase, {
-      action: 'task_created', // Reuse existing action type
+      action: 'invitation_accepted',
       user_name: userName,
       agency_id: agency.id,
       details: {

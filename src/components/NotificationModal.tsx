@@ -28,6 +28,7 @@ import {
   UserPlus,
   UserMinus,
   Shield,
+  Mail,
 } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
@@ -115,6 +116,8 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   member_permissions_changed: { icon: Settings, label: 'updated permissions', color: 'var(--state-info)', verb: 'updated permissions for' },
   member_role_and_permissions_changed: { icon: Shield, label: 'updated role and permissions', color: 'var(--warning)', verb: 'updated' },
   customer_import: { icon: User, label: 'imported customers', color: 'var(--success-vivid)', verb: 'imported' },
+  invitation_sent: { icon: Mail, label: 'sent invitation', color: 'var(--accent-vivid)', verb: 'sent' },
+  invitation_accepted: { icon: UserPlus, label: 'accepted invitation', color: 'var(--success-vivid)', verb: 'accepted' },
 };
 
 // Local storage key for last seen notification
@@ -133,6 +136,9 @@ export default function NotificationModal({
   const modalRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Stable channel name — avoids creating a new Supabase channel on every render/effect run.
+  // Using a ref ensures the same name persists across the component's lifetime.
+  const channelNameRef = useRef(`notification-modal-${currentUserName}-${Date.now()}`);
 
   const [activities, setActivities] = useState<ActivityLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -211,7 +217,7 @@ export default function NotificationModal({
       if (!isOpen || channelRef.current) return;
 
       const channel = supabase
-        .channel(`notification-modal-${currentUserName}-${Date.now()}`)
+        .channel(channelNameRef.current)
         .on(
           'postgres_changes',
           {

@@ -36,6 +36,18 @@ export interface TaskDetailModalProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
 }
 
+// Placeholder todo used when the real todo is null so hooks can be called unconditionally
+const PLACEHOLDER_TODO: Todo = {
+  id: '',
+  text: '',
+  completed: false,
+  created_by: '',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  status: 'todo',
+  priority: 'medium',
+};
+
 const sectionStagger = {
   hidden: { opacity: 0, y: 4 },
   visible: (i: number) => ({
@@ -84,7 +96,7 @@ export default function TaskDetailModal({
   const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask);
 
   const detail = useTaskDetail({
-    todo: todo!,  // Assert non-null since parent guards with conditional render
+    todo: todo ?? PLACEHOLDER_TODO,
     currentUser,
     onUpdate,
     onDelete,

@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Users, ChevronRight } from 'lucide-react';
-import { getMonth, getYear, startOfMonth } from 'date-fns';
+import { getMonth, getYear } from 'date-fns';
 import { Todo, User } from '@/types/todo';
 
 interface TeamProductionPanelProps {
@@ -30,7 +30,6 @@ export default function TeamProductionPanel({
     const now = new Date();
     const currentMonth = getMonth(now);
     const currentYear = getYear(now);
-    const monthStart = startOfMonth(now);
 
     // Get all completed tasks this month
     const completedThisMonth = todos.filter((t) => {

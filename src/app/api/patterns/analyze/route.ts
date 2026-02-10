@@ -138,7 +138,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
         throw new Error('No JSON found in response');
       }
     } catch {
-      logger.error('Failed to parse AI response', responseText, { component: 'patterns/analyze' });
+      logger.error('Failed to parse AI response', undefined, { component: 'patterns/analyze', metadata: { responseText: responseText.substring(0, 500) } });
       return NextResponse.json(
         { error: 'Failed to parse AI analysis' },
         { status: 500 }
@@ -179,7 +179,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
       tasksAnalyzed: completedTasks.length,
     });
   } catch (error) {
-    logger.error('Pattern analysis error', error, { component: 'patterns/analyze' });
+    logger.error('Pattern analysis error', error as Error, { component: 'patterns/analyze' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

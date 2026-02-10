@@ -1055,6 +1055,7 @@ export default function KanbanBoard({
       <AnimatePresence>
         {!onOpenDetail && selectedTodo && (
           <TaskDetailModal
+            key={selectedTodo.id}
             todo={selectedTodo}
             users={users}
             currentUserName={currentUserName}
