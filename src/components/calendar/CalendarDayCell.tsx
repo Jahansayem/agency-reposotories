@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
+import { useDroppable, useDraggable } from '@dnd-kit/core';
+import { GripVertical } from 'lucide-react';
 import { Todo, DashboardTaskCategory } from '@/types/todo';
 
 // Category color mapping for task indicators
@@ -34,6 +36,69 @@ interface CalendarDayCellProps {
   isToday: boolean;
   onClick: () => void;
   onTaskClick: (todo: Todo) => void;
+  enableDragDrop?: boolean;
+  isDragActive?: boolean;
+}
+
+// Draggable task item inside the popup
+function DraggableTaskItem({
+  todo,
+  onTaskClick,
+  enableDrag,
+}: {
+  todo: Todo;
+  onTaskClick: (todo: Todo) => void;
+  enableDrag: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `calendar-task-${todo.id}`,
+    data: { todoId: todo.id, type: 'calendar-task' },
+    disabled: !enableDrag,
+  });
+
+  const category = todo.category || 'other';
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex items-start gap-2 p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors text-left ${isDragging ? 'opacity-30' : ''}`}
+    >
+      {enableDrag && (
+        <button
+          {...listeners}
+          {...attributes}
+          className="mt-1 cursor-grab active:cursor-grabbing text-[var(--text-muted)] hover:text-[var(--foreground)] flex-shrink-0"
+          aria-label={`Drag ${todo.customer_name || todo.text}`}
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+      )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onTaskClick(todo);
+        }}
+        className="flex-1 flex items-start gap-2 min-w-0 text-left"
+      >
+        <div
+          className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${CATEGORY_COLORS[category]}`}
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-[var(--foreground)] truncate">
+            {todo.customer_name || todo.text}
+          </p>
+          <p className="text-xs text-[var(--text-muted)]">
+            {CATEGORY_LABELS[category]}
+            {todo.premium_amount && (
+              <span className="ml-1">
+                - ${todo.premium_amount.toLocaleString()}
+              </span>
+            )}
+          </p>
+        </div>
+      </button>
+    </div>
+  );
 }
 
 export default function CalendarDayCell({
@@ -43,27 +108,30 @@ export default function CalendarDayCell({
   isToday,
   onClick,
   onTaskClick,
+  enableDragDrop = false,
+  isDragActive = false,
 }: CalendarDayCellProps) {
-  const [isHovered, setIsHovered] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+
+  const dateKey = format(date, 'yyyy-MM-dd');
+
+  // Make the cell a droppable target
+  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
+    id: `calendar-day-${dateKey}`,
+    data: { dateKey, type: 'calendar-day' },
+    disabled: !enableDragDrop,
+  });
 
   // Group todos by category for dot display
   const categoryGroups = useMemo(() => {
     const groups: Record<DashboardTaskCategory, Todo[]> = {
-      quote: [],
-      renewal: [],
-      claim: [],
-      service: [],
-      'follow-up': [],
-      prospecting: [],
-      other: [],
+      quote: [], renewal: [], claim: [], service: [],
+      'follow-up': [], prospecting: [], other: [],
     };
-
     todos.forEach((todo) => {
       const category = todo.category || 'other';
       groups[category].push(todo);
     });
-
-    // Return only categories that have tasks
     return Object.entries(groups)
       .filter(([, tasks]) => tasks.length > 0)
       .map(([category, tasks]) => ({
@@ -73,29 +141,37 @@ export default function CalendarDayCell({
       }));
   }, [todos]);
 
-  // Max visible dots (show +N more if exceeding)
   const MAX_VISIBLE_DOTS = 3;
   const visibleCategories = categoryGroups.slice(0, MAX_VISIBLE_DOTS);
   const hiddenCount = categoryGroups.length - MAX_VISIBLE_DOTS;
-
   const dayNumber = date.getDate();
+
+  const handleCellClick = useCallback(() => {
+    if (todos.length > 0) {
+      setShowPopup((prev) => !prev);
+    } else {
+      onClick();
+    }
+  }, [todos.length, onClick]);
 
   return (
     <div
+      ref={setDroppableRef}
       className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => !showPopup && todos.length > 0 && setShowPopup(true)}
+      onMouseLeave={() => !isDragActive && setShowPopup(false)}
     >
       <motion.button
-        onClick={onClick}
+        onClick={handleCellClick}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         className={`
           w-full aspect-square min-h-[80px] sm:min-h-[100px] p-2 rounded-lg
           flex flex-col items-start justify-start
           transition-all duration-200 border
-          ${
-            isToday
+          ${isOver
+            ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/20 border-[var(--accent)]'
+            : isToday
               ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30'
               : isCurrentMonth
                 ? 'bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)]'
@@ -107,12 +183,11 @@ export default function CalendarDayCell({
         <span
           className={`
             text-sm font-semibold mb-1
-            ${
-              isToday
-                ? 'text-[var(--accent)]'
-                : isCurrentMonth
-                  ? 'text-[var(--foreground)]'
-                  : 'text-[var(--text-muted)]'
+            ${isToday
+              ? 'text-[var(--accent)]'
+              : isCurrentMonth
+                ? 'text-[var(--foreground)]'
+                : 'text-[var(--text-muted)]'
             }
           `}
         >
@@ -144,54 +219,45 @@ export default function CalendarDayCell({
         )}
       </motion.button>
 
-      {/* Hover Preview Popup */}
+      {/* Popup with draggable tasks */}
       <AnimatePresence>
-        {isHovered && todos.length > 0 && (
+        {showPopup && todos.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 5, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 top-full left-0 mt-1 min-w-[200px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg"
+            className="absolute z-50 top-full left-0 mt-1 min-w-[220px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg"
             style={{ pointerEvents: 'auto' }}
+            onMouseEnter={() => setShowPopup(true)}
+            onMouseLeave={() => !isDragActive && setShowPopup(false)}
           >
             {/* Header */}
-            <div className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">
-              {format(date, 'EEEE, MMM d')}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                {format(date, 'EEEE, MMM d')}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick();
+                }}
+                className="text-xs font-medium text-[var(--accent)] hover:underline"
+              >
+                + Add
+              </button>
             </div>
 
-            {/* Task List Preview */}
-            <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-              {todos.slice(0, 5).map((todo) => {
-                const category = todo.category || 'other';
-                return (
-                  <button
-                    key={todo.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onTaskClick(todo);
-                    }}
-                    className="w-full flex items-start gap-2 p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors text-left"
-                  >
-                    <div
-                      className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${CATEGORY_COLORS[category]}`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-[var(--foreground)] truncate">
-                        {todo.customer_name || todo.text}
-                      </p>
-                      <p className="text-xs text-[var(--text-muted)]">
-                        {CATEGORY_LABELS[category]}
-                        {todo.premium_amount && (
-                          <span className="ml-1">
-                            - ${todo.premium_amount.toLocaleString()}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
+            {/* Task List */}
+            <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
+              {todos.slice(0, 5).map((todo) => (
+                <DraggableTaskItem
+                  key={todo.id}
+                  todo={todo}
+                  onTaskClick={onTaskClick}
+                  enableDrag={enableDragDrop}
+                />
+              ))}
               {todos.length > 5 && (
                 <p className="text-xs text-[var(--text-muted)] text-center pt-1">
                   +{todos.length - 5} more tasks

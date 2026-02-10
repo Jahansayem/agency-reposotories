@@ -26,6 +26,7 @@ interface AddTaskModalProps {
   users: string[];
   currentUserId?: string;
   agencyId?: string;
+  defaultDueDate?: string;
 }
 
 export default function AddTaskModal({
@@ -35,6 +36,7 @@ export default function AddTaskModal({
   users,
   currentUserId,
   agencyId,
+  defaultDueDate,
 }: AddTaskModalProps) {
   // Handle escape key to close
   useEffect(() => {
@@ -144,6 +146,7 @@ export default function AddTaskModal({
                   currentUserId={currentUserId}
                   autoFocus={true}
                   agencyId={agencyId}
+                  defaultDueDate={defaultDueDate}
                 />
               </div>
             </div>

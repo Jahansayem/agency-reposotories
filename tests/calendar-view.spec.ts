@@ -136,9 +136,10 @@ test.describe('Calendar view rendering', () => {
     const monthName = now.toLocaleDateString('en-US', { month: 'long' });
     const year = now.getFullYear().toString();
 
-    // Should show current month and year somewhere in the calendar
-    await expect(page.getByText(monthName, { exact: false })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(year, { exact: false })).toBeVisible();
+    // Should show current month and year in the calendar header (h2)
+    const calendarHeader = page.getByRole('heading', { level: 2 });
+    await expect(calendarHeader).toContainText(monthName, { timeout: 5000 });
+    await expect(calendarHeader).toContainText(year);
   });
 
   test('5. Calendar displays day-of-week headers', async ({ page }) => {
@@ -209,16 +210,18 @@ test.describe('Calendar month navigation', () => {
     const now = new Date();
     const currentMonth = now.toLocaleDateString('en-US', { month: 'long' });
 
+    // Use .first() to target the main header buttons (not mini calendar)
     // Go forward
-    await page.locator('button[aria-label="Next month"]').click();
+    await page.locator('button[aria-label="Next month"]').first().click();
     await page.waitForTimeout(500);
 
     // Go back
-    await page.locator('button[aria-label="Previous month"]').click();
+    await page.locator('button[aria-label="Previous month"]').first().click();
     await page.waitForTimeout(500);
 
-    // Should be back to current month
-    await expect(page.getByText(currentMonth, { exact: false })).toBeVisible({ timeout: 3000 });
+    // Should be back to current month in the calendar header
+    const calendarHeader = page.getByRole('heading', { level: 2 });
+    await expect(calendarHeader).toContainText(currentMonth, { timeout: 3000 });
   });
 });
 

@@ -82,6 +82,12 @@ const ArchiveView = dynamic(() => import('./ArchiveView'), {
   loading: () => <div className="flex items-center justify-center h-full"><div className="animate-spin w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full" /></div>,
 });
 
+// Lazy load AddTaskModal for calendar click-to-create
+const AddTaskModal = dynamic(() => import('./AddTaskModal'), {
+  ssr: false,
+  loading: () => null,
+});
+
 interface MainAppProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
@@ -152,6 +158,10 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // AI Preferences state
   const [showAIPreferences, setShowAIPreferences] = useState(false);
+
+  // Calendar click-to-create state
+  const [calendarAddTaskDate, setCalendarAddTaskDate] = useState<string | null>(null);
+  const updateTodoInStore = useTodoStore((state) => state.updateTodo);
 
   // Navigate to dashboard on first login of the day
   // Only check ONCE after initial data load - prevents flash on hard refresh
@@ -377,6 +387,85 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     logger.debug('Refresh AI inbox', { component: 'MainApp', action: 'handleAIRefresh' });
   }, []);
 
+  // Calendar: click-to-create opens AddTaskModal with date pre-filled
+  const handleCalendarDateClick = useCallback((date: Date) => {
+    // Format as YYYY-MM-DD for the date input
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    setCalendarAddTaskDate(`${year}-${month}-${day}`);
+  }, []);
+
+  // Calendar: drag-and-drop reschedule updates due_date
+  const handleCalendarReschedule = useCallback(async (todoId: string, newDate: string) => {
+    const oldTodo = todos.find((t) => t.id === todoId);
+    if (!oldTodo) return;
+
+    // Skip if dropping on the same date
+    const oldDateKey = oldTodo.due_date?.split('T')[0];
+    if (oldDateKey === newDate) return;
+
+    const updated_at = new Date().toISOString();
+    // Optimistic update
+    updateTodoInStore(todoId, { due_date: newDate, updated_at });
+
+    const { error } = await supabase
+      .from('todos')
+      .update({ due_date: newDate, updated_at })
+      .eq('id', todoId);
+
+    if (error) {
+      logger.error('Calendar reschedule failed', error, { component: 'MainApp' });
+      // Revert on error
+      updateTodoInStore(todoId, { due_date: oldTodo.due_date, updated_at: oldTodo.updated_at });
+    }
+  }, [todos, updateTodoInStore]);
+
+  // Calendar: add task from calendar modal
+  const handleCalendarAddTask = useCallback(async (
+    text: string,
+    priority: 'low' | 'medium' | 'high' | 'urgent',
+    dueDate?: string,
+    assignedTo?: string,
+  ) => {
+    if (!text.trim()) return;
+    const { v4: uuidv4 } = await import('uuid');
+    const newTodo: Todo = {
+      id: uuidv4(),
+      text: text.trim(),
+      completed: false,
+      status: 'todo',
+      priority,
+      created_at: new Date().toISOString(),
+      created_by: currentUser.name,
+      due_date: dueDate || undefined,
+      assigned_to: assignedTo || undefined,
+      subtasks: [],
+      agency_id: currentAgencyId || undefined,
+    };
+
+    useTodoStore.getState().addTodo(newTodo);
+
+    const insertData: Record<string, unknown> = {
+      id: newTodo.id,
+      text: newTodo.text,
+      completed: false,
+      status: 'todo',
+      priority: newTodo.priority,
+      created_at: newTodo.created_at,
+      created_by: newTodo.created_by,
+    };
+    if (newTodo.due_date) insertData.due_date = newTodo.due_date;
+    if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
+    if (currentAgencyId) insertData.agency_id = currentAgencyId;
+
+    const { error } = await supabase.from('todos').insert([insertData]);
+    if (error) {
+      logger.error('Calendar add task failed', error, { component: 'MainApp' });
+      useTodoStore.getState().deleteTodo(newTodo.id);
+    }
+  }, [currentUser.name, currentAgencyId]);
+
   const handleArchiveClose = useCallback(() => setActiveView('tasks'), [setActiveView]);
   const handleChatBack = useCallback(() => setActiveView('tasks'), [setActiveView]);
 
@@ -516,7 +605,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
                   key={agencyKey}
                   todos={todos}
                   onTaskClick={(todo) => handleTaskLinkClick(todo.id)}
-                  onDateClick={() => {}}
+                  onDateClick={handleCalendarDateClick}
+                  onReschedule={handleCalendarReschedule}
                 />
               </div>
             </div>
@@ -601,6 +691,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleNavigateToAnalytics,
     handleNavigateToCustomers,
     handleNavigateBack,
+    handleCalendarDateClick,
+    handleCalendarReschedule,
     onUserChange,
     currentAgencyId,
   ]);
@@ -709,6 +801,17 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <AIPreferencesModal
         isOpen={showAIPreferences}
         onClose={() => setShowAIPreferences(false)}
+      />
+
+      {/* Calendar Add Task Modal */}
+      <AddTaskModal
+        isOpen={calendarAddTaskDate !== null}
+        onClose={() => setCalendarAddTaskDate(null)}
+        onAdd={handleCalendarAddTask}
+        users={users}
+        currentUserId={currentUser.id}
+        agencyId={currentAgencyId || undefined}
+        defaultDueDate={calendarAddTaskDate || undefined}
       />
     </>
   );

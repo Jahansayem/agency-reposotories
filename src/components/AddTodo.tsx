@@ -30,6 +30,7 @@ interface AddTodoProps {
   currentUserId?: string;
   autoFocus?: boolean;
   agencyId?: string;
+  defaultDueDate?: string;
 }
 
 interface SmartParseResult {
@@ -98,7 +99,7 @@ declare global {
   }
 }
 
-export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agencyId }: AddTodoProps) {
+export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agencyId, defaultDueDate }: AddTodoProps) {
   const toast = useToast();
   const canUseAiFeatures = usePermission('can_use_ai_features');
 
@@ -117,7 +118,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
     }
     return 'medium';
   });
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState(defaultDueDate || '');
   const [reminderAt, setReminderAt] = useState<string | null>(null);
   const [assignedTo, setAssignedTo] = useState(() => {
     if (typeof window !== 'undefined' && currentUserId) {
