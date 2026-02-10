@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { X, User, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { getRandomUserColor, getUserInitials, isValidPin } from '@/lib/auth';
@@ -25,6 +25,9 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
   const [confirmPin, setConfirmPin] = useState(['', '', '', '']);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Stable random color — computed once per mount to prevent flickering on re-renders
+  const [userColor] = useState(() => getRandomUserColor());
 
   const nameInputRef = useRef<HTMLInputElement>(null);
   const pinInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -348,7 +351,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
               <div className="text-center">
                 <div
                   className="w-16 h-16 rounded-[var(--radius-2xl)] flex items-center justify-center text-white text-xl font-bold mx-auto mb-3"
-                  style={{ backgroundColor: getRandomUserColor() }}
+                  style={{ backgroundColor: userColor }}
                 >
                   {getUserInitials(name)}
                 </div>
@@ -414,7 +417,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
               <div className="text-center">
                 <div
                   className="w-16 h-16 rounded-[var(--radius-2xl)] flex items-center justify-center text-white text-xl font-bold mx-auto mb-3"
-                  style={{ backgroundColor: getRandomUserColor() }}
+                  style={{ backgroundColor: userColor }}
                 >
                   {getUserInitials(name)}
                 </div>

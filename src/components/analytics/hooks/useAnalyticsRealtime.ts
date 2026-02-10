@@ -171,24 +171,25 @@ export function useLiveMetrics(agencyId?: string, refreshInterval = 60000) {
 
   const fetchMetrics = useCallback(async () => {
     try {
-      // This would fetch from a dedicated metrics endpoint
-      // For now, we'll simulate with the segmentation API
+      // Fetch real customer stats from the customers API
+      // Use limit=1 to minimize data transfer — we only need the stats object
       const params = new URLSearchParams();
       if (agencyId) params.append('agency_id', agencyId);
+      params.append('limit', '1');
 
-      const response = await fetch(`/api/analytics/segmentation?${params}`);
+      const response = await fetch(`/api/customers?${params}`);
       if (!response.ok) throw new Error('Failed to fetch metrics');
 
       const data = await response.json();
 
-      if (data.success && data.portfolioAnalysis) {
+      if (data.success && data.stats) {
+        const total = data.stats.total || 0;
+        const highValueCount = (data.stats.hotCount || 0) + (data.stats.highCount || 0);
         setMetrics({
-          totalCustomers: data.portfolioAnalysis.totalCustomers,
-          totalPremium: data.portfolioAnalysis.totalLtv,
-          avgLtv: data.portfolioAnalysis.avgLtv,
-          highValuePercentage: data.segments
-            ?.filter((s: { segment: string }) => s.segment === 'elite' || s.segment === 'premium')
-            .reduce((sum: number, s: { percentage: number }) => sum + s.percentage, 0) || 0,
+          totalCustomers: total,
+          totalPremium: data.stats.totalPremium || 0,
+          avgLtv: total > 0 ? (data.stats.totalPremium || 0) / total : 0,
+          highValuePercentage: total > 0 ? (highValueCount / total) * 100 : 0,
           lastUpdated: new Date().toISOString(),
         });
       }

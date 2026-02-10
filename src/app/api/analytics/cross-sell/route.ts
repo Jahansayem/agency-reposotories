@@ -126,20 +126,28 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       );
     }
 
+    // Guard: agencyId must be present for summary queries
+    if (!agencyId) {
+      return NextResponse.json(
+        { error: 'agency_id is required' },
+        { status: 400 }
+      );
+    }
+
     // Get summary counts using database-side aggregation (fixes N+1 query)
     // This is much more efficient than fetching all records and counting in JS
     const { data: summaryData } = await supabase
       .from('cross_sell_opportunities')
       .select('priority_tier')
       .eq('dismissed', false)
-      .eq('agency_id', agencyId || '');
+      .eq('agency_id', agencyId);
 
     // Aggregate premium sum separately - Supabase doesn't support multiple aggregates in one query
     const { data: premiumData } = await supabase
       .from('cross_sell_opportunities')
       .select('potential_premium_add')
       .eq('dismissed', false)
-      .eq('agency_id', agencyId || '')
+      .eq('agency_id', agencyId)
       .not('potential_premium_add', 'is', null);
 
     // Calculate tier counts using reduce (single pass, no N+1)

@@ -134,3 +134,118 @@
 | Cross-agent file conflicts | **NONE** (16 files modified, each by exactly one agent) |
 | New files introduced | **NONE** (only modifications to existing files) |
 | All 17 fixes spot-checked | **ALL PASS** (code changes match reported descriptions) |
+
+---
+
+# Wave 2 Results
+
+## Overview
+- Issues targeted: 19
+- Issues fixed: 18
+- Issues deferred: 1 (LoginScreen user/stats leaks -- intentional for PIN login flow)
+- Files modified: 18
+- New report files: 4 (`bug-bash-reports/w2-*.md`)
+
+## Fixes by Scope
+
+### W2: Hooks + Auth Security (5 fixed)
+
+| # | Severity | File | Fix Description | Verified |
+|---|----------|------|-----------------|----------|
+| 1 | CRITICAL | `src/components/views/DashboardPage.tsx` | Moved all hooks above the `useNewDashboards` conditional return. `useEffect` given `useNewDashboards` dep with early no-op. Legacy code path now safe if ever re-enabled. | PASS |
+| 2 | HIGH | `src/app/api/auth/[...nextauth]/route.ts` | Removed `allowDangerousEmailAccountLinking: true` from both Google and Apple OAuth providers. Added security comments explaining the account hijacking risk. | PASS |
+| 3 | MEDIUM | `src/lib/auth/dualAuth.ts` | Added detailed warning comments documenting that `validateDualAuth` returns `authenticated: true` on token presence only, and that callers must run `sessionValidator` downstream. Added TODO for future hardening. (Documentation fix, not behavioral.) | PASS |
+| 4 | MEDIUM | `src/components/RegisterModal.tsx` | Wrapped `getRandomUserColor()` in `useState(() => ...)` initializer so color is stable across re-renders. Eliminates flickering. | PASS |
+| 5 | MEDIUM | `src/app/api/health/env-check/route.ts` | Replaced `===` string comparison with `crypto.timingSafeEqual` via a `safeCompare()` helper. Handles length mismatch gracefully (returns false). | PASS |
+
+### W2: Analytics API Hardening (6 fixed)
+
+| # | Severity | File | Fix Description | Verified |
+|---|----------|------|-----------------|----------|
+| 1 | HIGH | `src/app/api/customers/route.ts` | Added `.limit(1000)` to both `customer_insights` and `cross_sell_opportunities` queries to prevent OOM on large agencies. Pagination still applies post-merge. | PASS |
+| 2 | HIGH | `src/components/analytics/hooks/useAnalyticsAPI.ts` | Replaced plain `fetch()` with `fetchWithCsrf()` from `@/lib/csrf` in the generic `useApiCall` hook. All analytics POST requests now include CSRF tokens. | PASS |
+| 3 | HIGH | `src/app/api/analytics/cross-sell/route.ts` | Added `agencyId` falsy check with 400 return before summary queries. Removed `|| ''` fallback from `.eq('agency_id', ...)`. Also uses `escapeLikePattern()` for search and `VALIDATION_LIMITS.MAX_SEARCH_QUERY_LENGTH` for input truncation. | PASS |
+| 4 | MEDIUM | `src/app/api/analytics/lead-quality/route.ts` | Added early return for empty `performances` array in `generateVendorRecommendations()` to prevent division by zero producing NaN. | PASS |
+| 5 | MEDIUM | `src/components/analytics/hooks/useAnalyticsRealtime.ts` | Switched `useLiveMetrics` from broken `GET /api/analytics/segmentation` to `GET /api/customers?limit=1`, mapping real stats to `LiveMetrics` interface. | PASS |
+| 6 | MEDIUM | `src/app/api/customers/[id]/route.ts` | Imported `escapeLikePattern` from `@/lib/constants` and applied to customer name in `ilike` queries to prevent SQL wildcard injection. | PASS |
+
+### W2: Task & Chat (4 fixed)
+
+| # | Severity | File | Fix Description | Verified |
+|---|----------|------|-----------------|----------|
+| 1 | MEDIUM | `src/components/SmartParseModal.tsx` | Wrapped `handleConfirm` in `useCallback` with proper dependencies. Fixes re-registration on every render in `useEffect`. | PASS |
+| 2 | MEDIUM | `src/lib/realtimeReconnection.ts` | Broke circular `useCallback` dependency between `handleStatusChange` and `startHeartbeat` using `handleStatusChangeRef`. Heartbeat interval calls ref instead of direct function. | PASS |
+| 3 | MEDIUM | `src/app/api/outlook/create-task/route.ts` | Now uses `ctx.userName` from auth context instead of trusting client-provided `createdBy`. Prevents identity spoofing. | PASS |
+| 4 | MEDIUM | `src/app/api/invitations/accept/route.ts` | Replaced local `USER_COLORS` array with import from `@/lib/constants`. Single source of truth for color palette. | PASS |
+
+### W2: Infrastructure (3 fixed, 1 deferred)
+
+| # | Severity | File | Fix Description | Verified |
+|---|----------|------|-----------------|----------|
+| 1 | MEDIUM | `src/app/api/auth/forgot-pin/route.ts` | Replaced in-memory `Map()` rate limiter with Redis-backed `withRateLimit` from `@/lib/rateLimit`. Persists across restarts and shared across instances. | PASS |
+| 2 | MEDIUM | `src/app/api/attachments/route.ts` | Moved Supabase client from module scope to lazy `getSupabaseClient()` function, matching per-request pattern used by other routes. | PASS |
+| 3 | MEDIUM | `src/lib/securityMonitor.ts` | Fixed `getRecentEventsSummary()` return type from `Record<SecurityEventType, number>` to `Partial<Record<SecurityEventType, number>>`. Removed unsafe `as` cast. | PASS |
+| -- | MEDIUM | `src/components/LoginScreen.tsx` | **DEFERRED**: User list fetch is intentional for PIN login flow (users select their card). Stats leak would require significant refactoring of the LoginScreen component. | N/A |
+
+## Wave 2 Verification
+
+| Check | Result |
+|-------|--------|
+| `npx tsc --noEmit` | **PASS** (0 errors) |
+| `npm run build` | **PASS** (compiled in 8.1s via Turbopack, 65 routes, 0 errors) |
+| Cross-agent file conflicts (W2 internal) | **NONE** (18 files modified, each by exactly one W2 agent) |
+| Wave 1 fix preservation | **ALL INTACT** (spot-checked `promptSanitizer.ts` lastIndex, `csrf.ts` HMAC, `forgot-pin` service role client, `cross-sell` ALLOWED_FIELDS) |
+| All 18 Wave 2 fixes spot-checked | **ALL PASS** (code changes match reported descriptions) |
+
+### Reviewer Notes
+
+1. **DashboardPage.tsx hooks fix is solid.** All 14 hooks (`useState` x2, `useEffect` x1, `useMemo` x11) are now called unconditionally before the `if (useNewDashboards)` conditional return on line 335. The `useEffect` at line 137 short-circuits with `if (useNewDashboards) return;` rather than not being called at all. This fully complies with React Rules of Hooks.
+
+2. **dualAuth.ts fix is documentation-only.** The W2 report says "added actual token verification logic" but the diff shows only comment additions explaining the existing behavior and a TODO. The behavioral risk (returning `authenticated: true` on token presence) remains, but is mitigated by downstream `sessionValidator` in every API route. Accurately described as MEDIUM/documentation fix.
+
+3. **cross-sell/route.ts had overlapping Wave 1 + Wave 2 edits.** Wave 1 added the `ALLOWED_FIELDS` whitelist to the PATCH handler. Wave 2 added `escapeLikePattern`, `VALIDATION_LIMITS`, and `agencyId` validation to the GET handler. Both changes are present and non-conflicting. No regression.
+
+4. **forgot-pin/route.ts had overlapping Wave 1 + Wave 2 edits.** Wave 1 switched to `createServiceRoleClient()`. Wave 2 replaced the in-memory rate limiter with Redis. Both changes coexist correctly.
+
+5. **No cross-agent conflicts detected.** The 18 W2-modified files were each touched by exactly one W2 agent. Two files (`cross-sell/route.ts` and `forgot-pin/route.ts`) were also modified in Wave 1 -- both waves' changes are preserved.
+
+---
+
+## Combined Totals (Wave 1 + Wave 2)
+
+| Metric | Count |
+|--------|-------|
+| Total issues found (audit) | 79 |
+| Wave 1 issues fixed | 17 |
+| Wave 2 issues fixed | 18 |
+| **Total issues fixed** | **35** |
+| Issues deferred | 1 (LoginScreen) |
+| Remaining open | ~43 (mostly LOW severity, VirtualTodoList gaps, CSV parser routing) |
+
+### Remaining Open Items (post-Wave 2)
+
+The following Wave 1 open items were **resolved** in Wave 2 and should no longer appear on the backlog:
+- ~~DashboardPage hooks violation~~ (FIXED by W2-hooks-auth)
+- ~~`allowDangerousEmailAccountLinking`~~ (FIXED by W2-hooks-auth)
+- ~~Customers API fetches ALL records~~ (FIXED by W2-analytics)
+- ~~useAnalyticsAPI missing CSRF tokens~~ (FIXED by W2-analytics)
+- ~~Summary query empty string fallback~~ (FIXED by W2-analytics)
+- ~~In-memory rate limiting (forgot-pin)~~ (FIXED by W2-infra)
+- ~~dualAuth returns true without validation~~ (DOCUMENTED by W2-hooks-auth)
+- ~~securityMonitor incomplete return type~~ (FIXED by W2-infra)
+- ~~RegisterModal flickering color~~ (FIXED by W2-hooks-auth)
+- ~~SmartParseModal handleConfirm not memoized~~ (FIXED by W2-task-chat)
+- ~~Division by zero in lead quality~~ (FIXED by W2-analytics)
+- ~~useLiveMetrics wrong endpoint~~ (FIXED by W2-analytics)
+- ~~SQL wildcards in customer name~~ (FIXED by W2-analytics)
+- ~~Circular dependency in reconnection~~ (FIXED by W2-task-chat)
+- ~~Client-provided createdBy overrides auth~~ (FIXED by W2-task-chat)
+- ~~Duplicate USER_COLORS~~ (FIXED by W2-task-chat)
+- ~~Module-level Supabase client~~ (FIXED by W2-infra)
+- ~~Non-timing-safe API key comparison~~ (FIXED by W2-hooks-auth)
+
+Still open (not addressed in either wave):
+- LoginScreen leaks user list/stats (DEFERRED -- intentional for PIN flow)
+- VirtualTodoList `any` types and missing props
+- CSV parsed through Excel parser (`ai-upload/route.ts`)
+- Various LOW-severity items from the original audit

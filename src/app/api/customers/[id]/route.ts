@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
 import { verifyAgencyAccess } from '@/lib/agencyAuth';
+import { escapeLikePattern } from '@/lib/constants';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -173,7 +174,7 @@ export async function GET(
     let mentionedQuery = supabase
       .from('todos')
       .select('id, text, completed, status, priority, due_date, assigned_to, created_at')
-      .ilike('text', `%${customer.name}%`);
+      .ilike('text', `%${escapeLikePattern(customer.name)}%`);
     if (agencyId) {
       mentionedQuery = mentionedQuery.eq('agency_id', agencyId);
     }

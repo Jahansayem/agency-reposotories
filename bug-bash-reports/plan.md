@@ -59,3 +59,37 @@
 - Runs `npx tsc --noEmit` and `npm run build`
 - Checks for cross-module issues (shared type changes, import breaks)
 - Writes final summary to `bug-bash-reports/summary.md`
+
+---
+
+# Wave 2: Fix Remaining Open Items
+
+## Scope Splits (4 agents)
+
+### W2-1. DashboardPage Hooks + Auth Security (`w2-hooks-auth`)
+- Fix DashboardPage.tsx hooks violation (CRITICAL)
+- Fix allowDangerousEmailAccountLinking (HIGH)
+- Fix dualAuth returning true without validation (MEDIUM)
+- Fix LoginScreen user list/stats leaks (MEDIUM)
+- Fix RegisterModal flickering color (MEDIUM)
+- Fix non-timing-safe API key comparison in health check (MEDIUM)
+
+### W2-2. Analytics API Hardening (`w2-analytics`)
+- Fix customers API unbounded fetch (HIGH)
+- Fix useAnalyticsAPI missing CSRF tokens (HIGH)
+- Fix cross-sell summary empty string fallback (HIGH)
+- Fix division by zero in lead quality (MEDIUM)
+- Fix useLiveMetrics wrong endpoint (MEDIUM)
+- Fix SQL wildcards in customer name (MEDIUM)
+
+### W2-3. Task & Chat Fixes (`w2-task-chat`)
+- Fix SmartParseModal handleConfirm not memoized (MEDIUM)
+- Fix circular dependency in realtimeReconnection (MEDIUM)
+- Fix client-provided createdBy overrides auth in outlook (MEDIUM)
+- Fix duplicate USER_COLORS (MEDIUM)
+
+### W2-4. Infrastructure Fixes (`w2-infra`)
+- Fix in-memory rate limiting in forgot-pin (MEDIUM)
+- Fix module-level Supabase client in attachments (MEDIUM)
+- Fix CSV parsed through Excel parser (MEDIUM)
+- Fix securityMonitor incomplete return type (MEDIUM)

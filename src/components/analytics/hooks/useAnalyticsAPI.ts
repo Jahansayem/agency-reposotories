@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 // ============================================
 // Types for API Responses
@@ -158,7 +159,7 @@ function useApiCall<TRequest, TResponse>() {
     setState({ data: null, loading: true, error: null });
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetchWithCsrf(endpoint, {
         method,
         headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
         body: method === 'POST' ? JSON.stringify(request) : undefined,

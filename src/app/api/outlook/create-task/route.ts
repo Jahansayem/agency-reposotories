@@ -18,7 +18,7 @@ function getSupabaseClient() {
 export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
-    const { text, assignedTo, priority, dueDate, createdBy } = await request.json();
+    const { text, assignedTo, priority, dueDate } = await request.json();
     const agencyId = ctx.agencyId;
 
     if (!text || !text.trim()) {
@@ -31,8 +31,8 @@ export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuth
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    // Use authenticated user as creator, fall back to createdBy from body or auth context name
-    const creator = createdBy || ctx.userName || 'Outlook Add-in';
+    // Always use authenticated user's identity — never trust client-provided createdBy
+    const creator = ctx.userName || 'Outlook Add-in';
 
     // Build the task object with agency scoping from auth context
     const task: Record<string, unknown> = {

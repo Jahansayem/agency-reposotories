@@ -6,6 +6,7 @@ import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { apiErrorResponse } from '@/lib/apiResponse';
 import { safeLogActivity } from '@/lib/safeActivityLog';
+import { USER_COLORS } from '@/lib/constants';
 
 /**
  * Hash PIN using SHA-256 (matching existing format)
@@ -20,12 +21,6 @@ function hashPin(pin: string): string {
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
-
-// Allstate brand user colors
-const USER_COLORS = [
-  '#0033A0', '#72B5E8', '#C9A227', '#003D7A',
-  '#6E8AA7', '#5BA8A0', '#E87722', '#98579B',
-];
 
 /**
  * POST /api/invitations/accept

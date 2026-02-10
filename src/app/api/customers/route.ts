@@ -57,11 +57,12 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
     // First, try customer_insights table
-    // NOTE: No limit here - we need ALL customers for proper pagination after merge/dedupe
+    // Cap at 1000 rows to prevent OOM on large agencies
     let insightsQuery = supabase
       .from('customer_insights')
       .select('*')
-      .order('total_premium', { ascending: false });
+      .order('total_premium', { ascending: false })
+      .limit(1000);
 
     if (agencyId) {
       insightsQuery = insightsQuery.eq('agency_id', agencyId);
@@ -75,12 +76,13 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const { data: insights, error: insightsError } = await insightsQuery;
 
     // Also search cross_sell_opportunities for customers not in insights
-    // NOTE: No limit here - we need ALL opportunities for proper pagination after merge/dedupe
+    // Cap at 1000 rows to prevent OOM on large agencies
     let opportunitiesQuery = supabase
       .from('cross_sell_opportunities')
       .select('*')
       .eq('dismissed', false)
-      .order('priority_score', { ascending: false });
+      .order('priority_score', { ascending: false })
+      .limit(1000);
 
     if (agencyId) {
       opportunitiesQuery = opportunitiesQuery.eq('agency_id', agencyId);

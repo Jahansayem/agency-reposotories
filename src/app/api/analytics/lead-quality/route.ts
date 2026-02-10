@@ -312,6 +312,9 @@ function generateVendorRecommendations(performances: VendorPerformance[]): strin
   }
 
   // Check for overall portfolio health
+  if (performances.length === 0) {
+    return recommendations;
+  }
   const avgLtvCac = performances.reduce((sum, p) => sum + p.ltvCacRatio, 0) / performances.length;
   if (avgLtvCac < 5) {
     recommendations.push('Overall lead quality below target - review acquisition strategy');

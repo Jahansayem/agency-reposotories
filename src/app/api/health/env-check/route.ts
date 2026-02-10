@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 
 /**
  * Environment variable check endpoint (Secured)
@@ -12,6 +13,21 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 /**
+ * Timing-safe string comparison to prevent timing attacks on API key checks.
+ * Returns false if either string is empty or if lengths differ.
+ */
+function safeCompare(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  // Pad the shorter value so timingSafeEqual gets equal-length buffers;
+  // the length mismatch already leaks some timing info, but this avoids
+  // the exception and still prevents content-based timing attacks.
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
+
+/**
  * Validate request authentication
  */
 function isAuthorized(request: NextRequest): boolean {
@@ -19,14 +35,14 @@ function isAuthorized(request: NextRequest): boolean {
   const apiKey = request.headers.get('X-API-Key');
   const validApiKey = process.env.HEALTH_CHECK_API_KEY || process.env.OUTLOOK_ADDON_API_KEY;
 
-  if (apiKey && validApiKey && apiKey === validApiKey) {
+  if (apiKey && validApiKey && safeCompare(apiKey, validApiKey)) {
     return true;
   }
 
   // Check Authorization header against a configured admin API key
   const authHeader = request.headers.get('Authorization');
   const adminApiKey = process.env.ADMIN_API_KEY || process.env.HEALTH_CHECK_API_KEY || process.env.OUTLOOK_ADDON_API_KEY;
-  if (authHeader?.startsWith('Bearer ') && adminApiKey && authHeader === `Bearer ${adminApiKey}`) {
+  if (authHeader?.startsWith('Bearer ') && adminApiKey && safeCompare(authHeader, `Bearer ${adminApiKey}`)) {
     return true;
   }
 

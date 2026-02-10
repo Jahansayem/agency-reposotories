@@ -11,21 +11,18 @@ import { logger } from '@/lib/logger';
 import { verifyTodoAccess, extractTodoIdFromPath } from '@/lib/apiAuth';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
 
-// Create a Supabase client for storage operations
-// SECURITY: Use service role key on server-side for storage operations
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-
-const getSupabaseClient = () => {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-  return createClient(supabaseUrl, key);
-};
-
-const supabase = getSupabaseClient();
+// Create Supabase client lazily per-request to avoid module-scope auth context issues
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+}
 
 const STORAGE_BUCKET = 'todo-attachments';
 
 // Helper to ensure bucket exists
-async function ensureBucketExists() {
+async function ensureBucketExists(supabase: ReturnType<typeof getSupabaseClient>) {
   try {
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
 
@@ -54,6 +51,7 @@ async function ensureBucketExists() {
 // POST - Upload a new attachment
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -137,7 +135,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     const todoText = todo.text as string;
 
     // Ensure storage bucket exists
-    await ensureBucketExists();
+    await ensureBucketExists(supabase);
 
     // Generate unique file path
     const attachmentId = uuidv4();
@@ -277,6 +275,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 // DELETE - Remove an attachment
 export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -353,6 +352,7 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
 // GET - Get a signed URL for downloading
 export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
+    const supabase = getSupabaseClient();
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
