@@ -186,7 +186,7 @@ test.describe('Calendar month navigation', () => {
     // Should show a different month
     const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1);
     const prevMonthName = prevMonth.toLocaleDateString('en-US', { month: 'long' });
-    await expect(page.getByText(prevMonthName, { exact: false })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: prevMonthName })).toBeVisible({ timeout: 3000 });
   });
 
   test('8. Next month button navigates to next month', async ({ page }) => {
@@ -203,7 +203,7 @@ test.describe('Calendar month navigation', () => {
     const now = new Date();
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1);
     const nextMonthName = nextMonth.toLocaleDateString('en-US', { month: 'long' });
-    await expect(page.getByText(nextMonthName, { exact: false })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('heading', { name: nextMonthName })).toBeVisible({ timeout: 3000 });
   });
 
   test('9. Can navigate forward then back to return to current month', async ({ page }) => {

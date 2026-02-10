@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
@@ -35,6 +35,7 @@ interface CalendarDayCellProps {
   isCurrentMonth: boolean;
   isToday: boolean;
   onClick: () => void;
+  onAddTask?: () => void;
   onTaskClick: (todo: Todo) => void;
   enableDragDrop?: boolean;
   isDragActive?: boolean;
@@ -89,7 +90,7 @@ function DraggableTaskItem({
           </p>
           <p className="text-xs text-[var(--text-muted)]">
             {CATEGORY_LABELS[category]}
-            {todo.premium_amount && (
+            {todo.premium_amount != null && todo.premium_amount > 0 && (
               <span className="ml-1">
                 - ${todo.premium_amount.toLocaleString()}
               </span>
@@ -107,6 +108,7 @@ export default function CalendarDayCell({
   isCurrentMonth,
   isToday,
   onClick,
+  onAddTask,
   onTaskClick,
   enableDragDrop = false,
   isDragActive = false,
@@ -122,29 +124,12 @@ export default function CalendarDayCell({
     disabled: !enableDragDrop,
   });
 
-  // Group todos by category for dot display
-  const categoryGroups = useMemo(() => {
-    const groups: Record<DashboardTaskCategory, Todo[]> = {
-      quote: [], renewal: [], claim: [], service: [],
-      'follow-up': [], prospecting: [], other: [],
-    };
-    todos.forEach((todo) => {
-      const category = todo.category || 'other';
-      groups[category].push(todo);
-    });
-    return Object.entries(groups)
-      .filter(([, tasks]) => tasks.length > 0)
-      .map(([category, tasks]) => ({
-        category: category as DashboardTaskCategory,
-        tasks,
-        count: tasks.length,
-      }));
-  }, [todos]);
-
-  const MAX_VISIBLE_DOTS = 3;
-  const visibleCategories = categoryGroups.slice(0, MAX_VISIBLE_DOTS);
-  const hiddenCount = categoryGroups.length - MAX_VISIBLE_DOTS;
   const dayNumber = date.getDate();
+
+  // Full date label for screen readers (e.g. "Monday, February 9, 2026, 3 tasks")
+  const fullDateLabel = `${format(date, 'EEEE, MMMM d, yyyy')}${
+    todos.length > 0 ? `, ${todos.length} task${todos.length !== 1 ? 's' : ''}` : ''
+  }`;
 
   const handleCellClick = useCallback(() => {
     if (todos.length > 0) {
@@ -169,10 +154,12 @@ export default function CalendarDayCell({
     <div
       ref={setDroppableRef}
       className="relative"
-      onMouseEnter={() => !showPopup && todos.length > 0 && setShowPopup(true)}
+      onMouseEnter={() => !isDragActive && !showPopup && todos.length > 0 && setShowPopup(true)}
       onMouseLeave={() => !isDragActive && setShowPopup(false)}
     >
       <motion.button
+        role="gridcell"
+        aria-label={fullDateLabel}
         onClick={handleCellClick}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
@@ -205,25 +192,26 @@ export default function CalendarDayCell({
           {dayNumber}
         </span>
 
-        {/* Category Dots */}
-        {categoryGroups.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-auto">
-            {visibleCategories.map(({ category, count }) => (
-              <div key={category} className="flex items-center gap-0.5">
+        {/* Task Previews */}
+        {todos.length > 0 && (
+          <div className="w-full flex-1 flex flex-col gap-0.5 min-h-0 overflow-hidden">
+            {todos.slice(0, 2).map((todo) => {
+              const cat = todo.category || 'other';
+              return (
                 <div
-                  className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[category]}`}
-                  title={`${count} ${CATEGORY_LABELS[category]}${count > 1 ? 's' : ''}`}
-                />
-                {count > 1 && (
-                  <span className="text-[10px] font-medium text-[var(--text-muted)]">
-                    {count}
+                  key={todo.id}
+                  className="flex items-center gap-1 px-1 py-0.5 rounded text-[10px] sm:text-xs truncate bg-[var(--surface)]/60"
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[cat]}`} />
+                  <span className="truncate text-[var(--foreground)]">
+                    {todo.customer_name || todo.text}
                   </span>
-                )}
-              </div>
-            ))}
-            {hiddenCount > 0 && (
-              <span className="text-[10px] font-medium text-[var(--text-muted)]">
-                +{hiddenCount}
+                </div>
+              );
+            })}
+            {todos.length > 2 && (
+              <span className="text-[10px] text-[var(--text-muted)] px-1">
+                +{todos.length - 2} more
               </span>
             )}
           </div>
@@ -251,7 +239,7 @@ export default function CalendarDayCell({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onClick();
+                  (onAddTask || onClick)();
                 }}
                 className="text-xs font-medium text-[var(--accent)] hover:underline"
               >
@@ -277,4 +265,4 @@ export default function CalendarDayCell({
   );
 }
 
-export { CATEGORY_COLORS, CATEGORY_LABELS };
+export { DraggableTaskItem, CATEGORY_COLORS, CATEGORY_LABELS };

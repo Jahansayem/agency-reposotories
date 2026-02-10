@@ -7,10 +7,10 @@ interface CalendarViewSwitcherProps {
   onViewModeChange: (mode: CalendarViewMode) => void;
 }
 
-const VIEW_OPTIONS: { mode: CalendarViewMode; label: string }[] = [
-  { mode: 'day', label: 'Day' },
-  { mode: 'week', label: 'Week' },
-  { mode: 'month', label: 'Month' },
+const VIEW_OPTIONS: { mode: CalendarViewMode; label: string; shortcut: string }[] = [
+  { mode: 'day', label: 'Day', shortcut: 'D' },
+  { mode: 'week', label: 'Week', shortcut: 'W' },
+  { mode: 'month', label: 'Month', shortcut: 'M' },
 ];
 
 export default function CalendarViewSwitcher({
@@ -18,11 +18,14 @@ export default function CalendarViewSwitcher({
   onViewModeChange,
 }: CalendarViewSwitcherProps) {
   return (
-    <div className="flex items-center bg-[var(--surface-2)] rounded-lg p-0.5 border border-[var(--border)]">
-      {VIEW_OPTIONS.map(({ mode, label }) => (
+    <div role="tablist" aria-label="Calendar view" className="flex items-center bg-[var(--surface-2)] rounded-lg p-0.5 border border-[var(--border)]">
+      {VIEW_OPTIONS.map(({ mode, label, shortcut }) => (
         <button
           key={mode}
+          role="tab"
+          aria-selected={viewMode === mode}
           onClick={() => onViewModeChange(mode)}
+          title={`${label} view (${shortcut})`}
           className={`
             px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150
             ${
@@ -33,6 +36,9 @@ export default function CalendarViewSwitcher({
           `}
         >
           {label}
+          <span className={`ml-1 text-xs ${viewMode === mode ? 'text-white/70' : 'text-[var(--text-muted)]'}`}>
+            {shortcut}
+          </span>
         </button>
       ))}
     </div>

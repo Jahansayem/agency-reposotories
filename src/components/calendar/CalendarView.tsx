@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -17,6 +17,7 @@ import {
   subWeeks,
   addDays,
   subDays,
+  startOfDay,
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
@@ -129,14 +130,72 @@ export default function CalendarView({
 
   const goToToday = useCallback(() => {
     const today = new Date();
-    setDirection(today > currentDate ? 'right' : 'left');
+    setDirection(startOfDay(today) > startOfDay(currentDate) ? 'right' : 'left');
     setCurrentDate(today);
   }, [currentDate]);
 
   const handleMiniCalendarDateClick = useCallback((date: Date) => {
     setDirection(date > currentDate ? 'right' : 'left');
     setCurrentDate(date);
+    setViewMode('day');
   }, [currentDate]);
+
+  // Drill into day view when clicking a date in month/week views
+  const handleDrillToDay = useCallback((date: Date) => {
+    setDirection(date > currentDate ? 'right' : 'left');
+    setCurrentDate(date);
+    setViewMode('day');
+  }, [currentDate]);
+
+  // Keyboard shortcuts — scoped to when calendar container is visible
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Only handle shortcuts when this component is in the DOM and visible
+      if (!containerRef.current || containerRef.current.offsetParent === null) return;
+
+      // Skip when typing in inputs
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if ((e.target as HTMLElement).isContentEditable) return;
+
+      switch (e.key) {
+        case 'Escape':
+          if (showFilterMenu) {
+            setShowFilterMenu(false);
+            e.stopPropagation();
+          }
+          break;
+        case 'd':
+        case 'D':
+          setViewMode('day');
+          break;
+        case 'w':
+        case 'W':
+          setViewMode('week');
+          break;
+        case 'm':
+        case 'M':
+          setViewMode('month');
+          break;
+        case 't':
+        case 'T':
+          goToToday();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          goToPrevious();
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          goToNext();
+          break;
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [goToPrevious, goToNext, goToToday, showFilterMenu]);
 
   // Category filtering
   const toggleCategory = useCallback((category: DashboardTaskCategory) => {
@@ -165,13 +224,18 @@ export default function CalendarView({
     todos
       .filter((todo) => {
         if (!todo.due_date) return false;
+        if (todo.completed || todo.status === 'done') return false;
         const category = todo.category || 'other';
         return selectedCategories.has(category);
       })
       .forEach((todo) => {
         const dateKey = todo.due_date!.split('T')[0];
-        const existing = map.get(dateKey) || [];
-        map.set(dateKey, [...existing, todo]);
+        const existing = map.get(dateKey);
+        if (existing) {
+          existing.push(todo);
+        } else {
+          map.set(dateKey, [todo]);
+        }
       });
     return map;
   }, [todos, selectedCategories]);
@@ -198,10 +262,18 @@ export default function CalendarView({
   // Navigation label
   const navLabel = viewMode === 'month' ? 'month' : viewMode === 'week' ? 'week' : 'day';
 
+  // Accessible navigation announcement
+  const headerLabel = getHeaderLabel(viewMode, currentDate);
+
   return (
-    <div className="flex flex-col h-full bg-[var(--surface-2)] rounded-xl border border-[var(--border)] overflow-hidden">
+    <div ref={containerRef} className="flex flex-col h-full bg-[var(--surface-2)] rounded-xl border border-[var(--border)] overflow-hidden">
+      {/* Screen reader announcement for navigation changes */}
+      <div aria-live="polite" className="sr-only">
+        {headerLabel}
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
+      <div role="navigation" aria-label="Calendar navigation" className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="flex items-center gap-3">
           {/* Previous Button */}
           <button
@@ -240,10 +312,11 @@ export default function CalendarView({
           {/* Today Button */}
           <button
             onClick={goToToday}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+            aria-label="Go to today"
+            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
           >
             <CalendarIcon className="w-4 h-4" />
-            Today
+            <span className="hidden sm:inline">Today</span>
           </button>
         </div>
 
@@ -255,6 +328,8 @@ export default function CalendarView({
           <div className="relative">
             <button
               onClick={() => setShowFilterMenu(!showFilterMenu)}
+              aria-expanded={showFilterMenu}
+              aria-haspopup="true"
               className={`
                 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
                 ${
@@ -350,7 +425,8 @@ export default function CalendarView({
               currentMonth={currentDate}
               direction={direction}
               todosByDate={todosByDate}
-              onDateClick={onDateClick}
+              onDateClick={handleDrillToDay}
+              onAddTask={onDateClick}
               onTaskClick={onTaskClick}
               onReschedule={onReschedule}
             />
@@ -360,7 +436,7 @@ export default function CalendarView({
               currentDate={currentDate}
               direction={direction}
               todosByDate={todosByDate}
-              onDateClick={onDateClick}
+              onDateClick={handleDrillToDay}
               onTaskClick={onTaskClick}
               onReschedule={onReschedule}
             />
@@ -368,10 +444,10 @@ export default function CalendarView({
           {viewMode === 'day' && (
             <DayView
               currentDate={currentDate}
+              direction={direction}
               todosByDate={todosByDate}
               onDateClick={onDateClick}
               onTaskClick={onTaskClick}
-              onReschedule={onReschedule}
             />
           )}
         </div>

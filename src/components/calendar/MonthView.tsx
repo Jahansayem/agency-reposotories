@@ -31,6 +31,7 @@ interface MonthViewProps {
   direction: 'left' | 'right';
   todosByDate: Map<string, Todo[]>;
   onDateClick: (date: Date) => void;
+  onAddTask?: (date: Date) => void;
   onTaskClick: (todo: Todo) => void;
   onReschedule?: (todoId: string, newDate: string) => void;
 }
@@ -55,6 +56,7 @@ export default function MonthView({
   direction,
   todosByDate,
   onDateClick,
+  onAddTask,
   onTaskClick,
   onReschedule,
 }: MonthViewProps) {
@@ -67,12 +69,18 @@ export default function MonthView({
     })
   );
 
-  const calendarDays = useMemo(() => {
+  // Group calendar days into weeks (rows of 7) for ARIA grid structure
+  const calendarWeeks = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     const calendarStart = startOfWeek(monthStart);
     const calendarEnd = endOfWeek(monthEnd);
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+    const weeks: Date[][] = [];
+    for (let i = 0; i < days.length; i += 7) {
+      weeks.push(days.slice(i, i + 7));
+    }
+    return weeks;
   }, [currentMonth]);
 
   // Build a flat lookup of all todos for drag resolution
@@ -104,16 +112,21 @@ export default function MonthView({
     }
   }, [onReschedule]);
 
+  const handleDragCancel = useCallback(() => {
+    setActiveTodo(null);
+  }, []);
+
   const enableDragDrop = !!onReschedule;
   const isDragActive = activeTodo !== null;
 
   const content = (
-    <div className="flex-1 p-2 sm:p-4 overflow-auto">
+    <div role="grid" aria-label="Calendar month" className="flex-1 p-2 sm:p-4 overflow-auto">
       {/* Weekday Headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div role="row" className="grid grid-cols-7 gap-1 mb-2">
         {WEEKDAYS.map((day) => (
           <div
             key={day}
+            role="columnheader"
             className="text-center text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide py-2"
           >
             {day}
@@ -131,26 +144,31 @@ export default function MonthView({
           animate="center"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="grid grid-cols-7 gap-1"
+          className="space-y-1"
         >
-          {calendarDays.map((day) => {
-            const dateKey = format(day, 'yyyy-MM-dd');
-            const dayTodos = todosByDate.get(dateKey) || [];
+          {calendarWeeks.map((week) => (
+            <div key={format(week[0], 'yyyy-MM-dd')} role="row" className="grid grid-cols-7 gap-1">
+              {week.map((day) => {
+                const dateKey = format(day, 'yyyy-MM-dd');
+                const dayTodos = todosByDate.get(dateKey) || [];
 
-            return (
-              <CalendarDayCell
-                key={dateKey}
-                date={day}
-                todos={dayTodos}
-                isCurrentMonth={isSameMonth(day, currentMonth)}
-                isToday={isToday(day)}
-                onClick={() => onDateClick(day)}
-                onTaskClick={onTaskClick}
-                enableDragDrop={enableDragDrop}
-                isDragActive={isDragActive}
-              />
-            );
-          })}
+                return (
+                  <CalendarDayCell
+                    key={dateKey}
+                    date={day}
+                    todos={dayTodos}
+                    isCurrentMonth={isSameMonth(day, currentMonth)}
+                    isToday={isToday(day)}
+                    onClick={() => onDateClick(day)}
+                    onAddTask={onAddTask ? () => onAddTask(day) : undefined}
+                    onTaskClick={onTaskClick}
+                    enableDragDrop={enableDragDrop}
+                    isDragActive={isDragActive}
+                  />
+                );
+              })}
+            </div>
+          ))}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -163,6 +181,7 @@ export default function MonthView({
       sensors={sensors}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       {content}
       <CalendarDragOverlay activeTodo={activeTodo} />

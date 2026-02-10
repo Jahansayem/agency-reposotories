@@ -398,7 +398,8 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // Calendar: drag-and-drop reschedule updates due_date
   const handleCalendarReschedule = useCallback(async (todoId: string, newDate: string) => {
-    const oldTodo = todos.find((t) => t.id === todoId);
+    // Read from store directly to avoid stale closure on rapid successive drags
+    const oldTodo = useTodoStore.getState().todos.find((t) => t.id === todoId);
     if (!oldTodo) return;
 
     // Skip if dropping on the same date
@@ -419,7 +420,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       // Revert on error
       updateTodoInStore(todoId, { due_date: oldTodo.due_date, updated_at: oldTodo.updated_at });
     }
-  }, [todos, updateTodoInStore]);
+  }, [updateTodoInStore]);
 
   // Calendar: add task from calendar modal
   const handleCalendarAddTask = useCallback(async (
