@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
@@ -34,6 +34,9 @@ interface MonthViewProps {
   onAddTask?: (date: Date) => void;
   onTaskClick: (todo: Todo) => void;
   onReschedule?: (todoId: string, newDate: string) => void;
+  onQuickComplete?: (todoId: string) => void;
+  onToggleWaiting?: (todoId: string, waiting: boolean) => void;
+  onQuickAdd?: (dateKey: string, text: string) => void;
 }
 
 const monthVariants = {
@@ -59,8 +62,13 @@ export default function MonthView({
   onAddTask,
   onTaskClick,
   onReschedule,
+  onQuickComplete,
+  onToggleWaiting,
+  onQuickAdd,
 }: MonthViewProps) {
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
+  const [focusedCellIndex, setFocusedCellIndex] = useState<{ row: number; col: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
   // Require 8px of drag distance before starting (prevents accidental drags on click)
   const sensors = useSensors(
@@ -119,8 +127,115 @@ export default function MonthView({
   const enableDragDrop = !!onReschedule;
   const isDragActive = activeTodo !== null;
 
+  // Keyboard navigation handler for the grid container
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const maxRow = calendarWeeks.length - 1;
+
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        setFocusedCellIndex((prev) => {
+          const current = prev || { row: 0, col: 0 };
+          let { row, col } = current;
+
+          switch (e.key) {
+            case 'ArrowUp':
+              row = Math.max(0, row - 1);
+              break;
+            case 'ArrowDown':
+              row = Math.min(maxRow, row + 1);
+              break;
+            case 'ArrowLeft':
+              if (col === 0) {
+                if (row > 0) {
+                  row -= 1;
+                  col = 6;
+                }
+              } else {
+                col -= 1;
+              }
+              break;
+            case 'ArrowRight':
+              if (col === 6) {
+                if (row < maxRow) {
+                  row += 1;
+                  col = 0;
+                }
+              } else {
+                col += 1;
+              }
+              break;
+          }
+          return { row, col };
+        });
+      } else if (e.key === 'Enter') {
+        if (focusedCellIndex) {
+          const day = calendarWeeks[focusedCellIndex.row]?.[focusedCellIndex.col];
+          if (day) {
+            onDateClick(day);
+          }
+        }
+      } else if (e.key === 'Escape') {
+        setFocusedCellIndex(null);
+      }
+    },
+    [calendarWeeks, focusedCellIndex, onDateClick]
+  );
+
+  // When grid receives focus and no cell is focused, default to today or first day of month
+  const handleGridFocus = useCallback(() => {
+    if (focusedCellIndex === null) {
+      // Find today's cell if visible
+      for (let row = 0; row < calendarWeeks.length; row++) {
+        for (let col = 0; col < calendarWeeks[row].length; col++) {
+          if (isToday(calendarWeeks[row][col])) {
+            setFocusedCellIndex({ row, col });
+            return;
+          }
+        }
+      }
+      // Otherwise find first day of current month
+      for (let row = 0; row < calendarWeeks.length; row++) {
+        for (let col = 0; col < calendarWeeks[row].length; col++) {
+          if (isSameMonth(calendarWeeks[row][col], currentMonth)) {
+            setFocusedCellIndex({ row, col });
+            return;
+          }
+        }
+      }
+      // Fallback to first cell
+      setFocusedCellIndex({ row: 0, col: 0 });
+    }
+  }, [focusedCellIndex, calendarWeeks, currentMonth]);
+
+  // Scroll focused cell into view when it changes
+  useEffect(() => {
+    if (focusedCellIndex && gridRef.current) {
+      const cell = gridRef.current.querySelector(
+        `[data-cell-row="${focusedCellIndex.row}"][data-cell-col="${focusedCellIndex.col}"]`
+      );
+      if (cell) {
+        (cell as HTMLElement).scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [focusedCellIndex]);
+
+  // Reset focused cell when month changes
+  useEffect(() => {
+    setFocusedCellIndex(null);
+  }, [currentMonth]);
+
   const content = (
-    <div role="grid" aria-label="Calendar month" className="flex-1 p-2 sm:p-4 overflow-auto">
+    <div
+      ref={gridRef}
+      role="grid"
+      aria-label="Calendar month"
+      tabIndex={0}
+      onKeyDown={handleGridKeyDown}
+      onFocus={handleGridFocus}
+      className="flex-1 p-2 sm:p-4 overflow-auto outline-none"
+    >
       {/* Weekday Headers */}
       <div role="row" className="grid grid-cols-7 gap-1 mb-2">
         {WEEKDAYS.map((day) => (
@@ -166,6 +281,10 @@ export default function MonthView({
                     isDragActive={isDragActive}
                     columnIndex={colIndex}
                     rowIndex={weekRowIndex}
+                    onQuickComplete={onQuickComplete}
+                    onToggleWaiting={onToggleWaiting}
+                    onQuickAdd={onQuickAdd}
+                    isFocused={focusedCellIndex?.row === weekRowIndex && focusedCellIndex?.col === colIndex}
                   />
                 );
               })}

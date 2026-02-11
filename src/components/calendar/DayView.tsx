@@ -1,11 +1,24 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday } from 'date-fns';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, CheckCircle2, Clock, AlertTriangle, Bell } from 'lucide-react';
 import { Todo, TodoPriority } from '@/types/todo';
-import { CATEGORY_COLORS, CATEGORY_LABELS, isTaskOverdue } from './constants';
+import {
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  isTaskOverdue,
+  STATUS_BORDER,
+  SEGMENT_COLORS,
+  SEGMENT_LABELS,
+  getSubtaskProgress,
+  isFollowUpOverdue,
+  getInitials,
+  formatPremiumCompact,
+  hasPendingReminders,
+  PREMIUM_DISPLAY_THRESHOLD,
+} from './constants';
 
 interface DayViewProps {
   currentDate: Date;
@@ -13,6 +26,9 @@ interface DayViewProps {
   todosByDate: Map<string, Todo[]>;
   onDateClick: (date: Date) => void;
   onTaskClick: (todo: Todo) => void;
+  onQuickComplete?: (todoId: string) => void;
+  onToggleWaiting?: (todoId: string, waiting: boolean) => void;
+  onQuickAdd?: (dateKey: string, text: string) => void;
 }
 
 const PRIORITY_BADGES: Record<TodoPriority, { label: string; className: string }> = {
@@ -43,10 +59,26 @@ export default function DayView({
   todosByDate,
   onDateClick,
   onTaskClick,
+  onQuickComplete,
+  onToggleWaiting,
+  onQuickAdd,
 }: DayViewProps) {
   const dateKey = format(currentDate, 'yyyy-MM-dd');
   const dayTodos = useMemo(() => todosByDate.get(dateKey) || [], [todosByDate, dateKey]);
   const today = isToday(currentDate);
+
+  // Inline quick-add state
+  const [quickAddText, setQuickAddText] = useState('');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+
+  const handleQuickAddSubmit = useCallback(() => {
+    const trimmed = quickAddText.trim();
+    if (trimmed && onQuickAdd) {
+      onQuickAdd(dateKey, trimmed);
+      setQuickAddText('');
+      setShowQuickAdd(false);
+    }
+  }, [quickAddText, onQuickAdd, dateKey]);
 
   return (
     <div className="flex-1 p-4 sm:p-6 overflow-auto">
@@ -79,64 +111,140 @@ export default function DayView({
                 const category = todo.category || 'other';
                 const priority = todo.priority || 'medium';
                 const priorityBadge = PRIORITY_BADGES[priority];
-                const subtaskCount = todo.subtasks?.length || 0;
-                const completedSubtasks = todo.subtasks?.filter((s) => s.completed).length || 0;
-                const isOverdue = isTaskOverdue(todo.due_date);
+                const isOverdue = !todo.completed && isTaskOverdue(todo.due_date);
+                const subtaskProgress = getSubtaskProgress(todo.subtasks);
+                const isWaitingOverdue = isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours);
+
+                // Status border: overdue > in_progress > default
+                const statusClass = isOverdue
+                  ? 'border-l-2 border-l-red-500'
+                  : STATUS_BORDER[todo.status] || '';
 
                 return (
-                  <button
-                    key={todo.id}
-                    onClick={() => onTaskClick(todo)}
-                    className="w-full text-left p-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)] transition-all group"
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Category Color Bar */}
-                      <div className={`w-1 self-stretch rounded-full ${CATEGORY_COLORS[category]}`} />
+                  <div key={todo.id} className={`relative rounded-xl border border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)] transition-all group ${statusClass}`}>
+                    <button
+                      onClick={() => onTaskClick(todo)}
+                      className="w-full text-left p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Category Color Bar */}
+                        <div className={`w-1 self-stretch rounded-full ${CATEGORY_COLORS[category]}`} />
 
-                      <div className="flex-1 min-w-0">
-                        {/* Title Row */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-sm font-semibold text-[var(--foreground)] truncate">
-                            {todo.customer_name || todo.text}
-                          </h3>
-                          {priorityBadge && (
-                            <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border ${priorityBadge.className}`}>
-                              {priorityBadge.label}
+                        <div className="flex-1 min-w-0">
+                          {/* Title Row */}
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-sm font-semibold text-[var(--foreground)] truncate">
+                              {todo.customer_name || todo.text}
+                            </h3>
+                            {priorityBadge && (
+                              <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border ${priorityBadge.className}`}>
+                                {priorityBadge.label}
+                              </span>
+                            )}
+                            {isOverdue && (
+                              <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-500">
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                Overdue
+                              </span>
+                            )}
+                            {todo.status === 'in_progress' && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-blue-500/10 text-blue-500">
+                                In Progress
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Details Row */}
+                          <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                            <span className="flex items-center gap-1">
+                              <div className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[category]}`} />
+                              {CATEGORY_LABELS[category]}
                             </span>
+                            {todo.assigned_to && (
+                              <span className="flex items-center gap-1">
+                                <span className="w-4 h-4 rounded-full bg-[var(--surface)] flex items-center justify-center text-[9px] font-bold">
+                                  {getInitials(todo.assigned_to)}
+                                </span>
+                                {todo.assigned_to}
+                              </span>
+                            )}
+                            {subtaskProgress && (
+                              <span>{subtaskProgress}</span>
+                            )}
+                          </div>
+
+                          {/* Indicators Row */}
+                          {(todo.waiting_for_response || todo.renewal_status === 'at-risk' || (todo.customer_segment === 'elite' || todo.customer_segment === 'premium') || hasPendingReminders(todo.reminders, todo.reminder_at) || (todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD)) && (
+                            <div className="flex items-center gap-2 mt-1.5 text-[11px]">
+                              {todo.waiting_for_response && (
+                                <span className={`flex items-center gap-1 ${isWaitingOverdue ? 'text-red-500' : 'text-amber-500'}`}>
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {isWaitingOverdue ? 'Follow-up overdue' : 'Waiting'}
+                                </span>
+                              )}
+                              {todo.renewal_status === 'at-risk' && (
+                                <span className="flex items-center gap-1 text-amber-500">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  At-risk
+                                </span>
+                              )}
+                              {(todo.customer_segment === 'elite' || todo.customer_segment === 'premium') && (
+                                <span className="flex items-center gap-1">
+                                  <span className={`w-2 h-2 rounded-full ${SEGMENT_COLORS[todo.customer_segment]}`} />
+                                  <span className="text-[var(--text-muted)]">{SEGMENT_LABELS[todo.customer_segment]}</span>
+                                </span>
+                              )}
+                              {hasPendingReminders(todo.reminders, todo.reminder_at) && (
+                                <span className="flex items-center gap-1 text-[var(--text-muted)]">
+                                  <Bell className="w-3.5 h-3.5" />
+                                  Reminder
+                                </span>
+                              )}
+                              {todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD && (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                  {formatPremiumCompact(todo.premium_amount)}
+                                </span>
+                              )}
+                            </div>
                           )}
-                          {isOverdue && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-500">
-                              Overdue
-                            </span>
+
+                          {/* Notes Preview */}
+                          {todo.notes && (
+                            <p className="mt-2 text-xs text-[var(--text-muted)] line-clamp-2">
+                              {todo.notes}
+                            </p>
                           )}
                         </div>
 
-                        {/* Details Row */}
-                        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-                          <span className="flex items-center gap-1">
-                            <div className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[category]}`} />
-                            {CATEGORY_LABELS[category]}
-                          </span>
-                          {todo.assigned_to && (
-                            <span>Assigned to {todo.assigned_to}</span>
-                          )}
-                          {subtaskCount > 0 && (
-                            <span>{completedSubtasks}/{subtaskCount} subtasks</span>
-                          )}
-                        </div>
+                        {/* Hover chevron */}
+                        <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
+                      </div>
+                    </button>
 
-                        {/* Notes Preview */}
-                        {todo.notes && (
-                          <p className="mt-2 text-xs text-[var(--text-muted)] line-clamp-2">
-                            {todo.notes}
-                          </p>
+                    {/* Quick Action Buttons */}
+                    {(onQuickComplete || onToggleWaiting) && (
+                      <div className="absolute top-2 right-8 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onQuickComplete && !todo.completed && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onQuickComplete(todo.id); }}
+                            className="p-1 rounded hover:bg-green-500/20 text-[var(--text-muted)] hover:text-green-500 transition-colors"
+                            title="Mark complete"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {onToggleWaiting && !todo.completed && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onToggleWaiting(todo.id, !todo.waiting_for_response); }}
+                            className={`p-1 rounded transition-colors ${todo.waiting_for_response ? 'text-amber-500 hover:bg-amber-500/20' : 'text-[var(--text-muted)] hover:bg-amber-500/20 hover:text-amber-500'}`}
+                            title={todo.waiting_for_response ? 'Stop waiting' : 'Mark waiting'}
+                          >
+                            <Clock className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
-
-                      {/* Hover chevron */}
-                      <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
-                    </div>
-                  </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -151,6 +259,33 @@ export default function DayView({
               >
                 + Create Task
               </button>
+            </div>
+          )}
+
+          {/* Inline Quick Add */}
+          {onQuickAdd && (
+            <div className="mt-4">
+              {showQuickAdd ? (
+                <input
+                  autoFocus
+                  value={quickAddText}
+                  onChange={(e) => setQuickAddText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleQuickAddSubmit();
+                    if (e.key === 'Escape') { setShowQuickAdd(false); setQuickAddText(''); }
+                  }}
+                  onBlur={() => { if (!quickAddText.trim()) { setShowQuickAdd(false); setQuickAddText(''); } }}
+                  placeholder="Task name — press Enter to add"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
+                />
+              ) : (
+                <button
+                  onClick={() => setShowQuickAdd(true)}
+                  className="w-full px-3 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-hover)] rounded-lg border border-dashed border-[var(--border)] transition-colors"
+                >
+                  + Quick add task
+                </button>
+              )}
             </div>
           )}
         </motion.div>

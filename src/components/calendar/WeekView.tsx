@@ -20,7 +20,8 @@ import {
 } from 'date-fns';
 import { Todo } from '@/types/todo';
 import { DraggableTaskItem } from './CalendarDayCell';
-import { CATEGORY_COLORS, isTaskOverdue } from './constants';
+import { CATEGORY_COLORS, isTaskOverdue, STATUS_BORDER, SEGMENT_COLORS, SEGMENT_LABELS, getSubtaskProgress, isFollowUpOverdue, getInitials, formatPremiumCompact, hasPendingReminders, PREMIUM_DISPLAY_THRESHOLD } from './constants';
+import { Clock, AlertTriangle, Bell } from 'lucide-react';
 import CalendarDragOverlay from './CalendarDragOverlay';
 
 /** Task count thresholds for badge color coding */
@@ -35,6 +36,8 @@ interface WeekViewProps {
   onTaskClick: (todo: Todo) => void;
   onReschedule?: (todoId: string, newDate: string) => void;
   onAddTask?: (date: Date) => void;
+  onQuickComplete?: (todoId: string) => void;
+  onToggleWaiting?: (todoId: string, waiting: boolean) => void;
 }
 
 const weekVariants = {
@@ -61,6 +64,8 @@ function DroppableDayColumn({
   onAddTask,
   enableDragDrop,
   isDragActive,
+  onQuickComplete,
+  onToggleWaiting,
 }: {
   day: Date;
   dayTodos: Todo[];
@@ -70,6 +75,8 @@ function DroppableDayColumn({
   onAddTask?: (date: Date) => void;
   enableDragDrop: boolean;
   isDragActive: boolean;
+  onQuickComplete?: (todoId: string) => void;
+  onToggleWaiting?: (todoId: string, waiting: boolean) => void;
 }) {
   const isWeekend = day.getDay() === 0 || day.getDay() === 6;
   const dateKey = format(day, 'yyyy-MM-dd');
@@ -131,12 +138,15 @@ function DroppableDayColumn({
       <div className="flex-1 p-1.5 space-y-0.5 overflow-y-auto">
         {dayTodos.map((todo) => {
           const overdue = !todo.completed && isTaskOverdue(todo.due_date);
+          const subtaskProgress = getSubtaskProgress(todo.subtasks);
           return (
-            <div key={todo.id} className="relative">
+            <div key={todo.id} className={`relative ${STATUS_BORDER[todo.status] || ''}`}>
               <DraggableTaskItem
                 todo={todo}
                 onTaskClick={onTaskClick}
                 enableDrag={enableDragDrop}
+                onQuickComplete={onQuickComplete}
+                onToggleWaiting={onToggleWaiting}
               />
               {overdue && (
                 <span
@@ -146,6 +156,44 @@ function DroppableDayColumn({
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                   Overdue
                 </span>
+              )}
+              {/* Wave 1 + Wave 2 indicators */}
+              {(todo.waiting_for_response || todo.renewal_status === 'at-risk' || subtaskProgress || todo.customer_segment === 'elite' || todo.customer_segment === 'premium' || hasPendingReminders(todo.reminders, todo.reminder_at) || (todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD) || todo.assigned_to) && (
+                <div className="flex items-center gap-1 px-2 pb-1 text-[10px]">
+                  {todo.waiting_for_response && (
+                    <span className={`flex items-center gap-0.5 ${isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours) ? 'text-red-500' : 'text-amber-500'}`} title="Waiting for customer">
+                      <Clock className="w-3 h-3" />
+                    </span>
+                  )}
+                  {todo.renewal_status === 'at-risk' && (
+                    <span className="flex items-center gap-0.5 text-amber-500" title="At-risk renewal">
+                      <AlertTriangle className="w-3 h-3" />
+                    </span>
+                  )}
+                  {subtaskProgress && (
+                    <span className="text-[var(--text-muted)]" title="Subtask progress">
+                      {subtaskProgress}
+                    </span>
+                  )}
+                  {(todo.customer_segment === 'elite' || todo.customer_segment === 'premium') && (
+                    <span className={`w-2 h-2 rounded-full ${SEGMENT_COLORS[todo.customer_segment]}`} title={`${SEGMENT_LABELS[todo.customer_segment]} customer`} />
+                  )}
+                  {hasPendingReminders(todo.reminders, todo.reminder_at) && (
+                    <span className="flex items-center text-[var(--text-muted)]" title="Has reminders">
+                      <Bell className="w-3 h-3" />
+                    </span>
+                  )}
+                  {todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium" title="Premium amount">
+                      {formatPremiumCompact(todo.premium_amount)}
+                    </span>
+                  )}
+                  {todo.assigned_to && (
+                    <span className="text-[var(--text-muted)] bg-[var(--surface)] px-1 rounded font-medium" title={`Assigned to ${todo.assigned_to}`}>
+                      {getInitials(todo.assigned_to)}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
           );
@@ -171,6 +219,8 @@ export default function WeekView({
   onTaskClick,
   onReschedule,
   onAddTask,
+  onQuickComplete,
+  onToggleWaiting,
 }: WeekViewProps) {
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
 
@@ -252,6 +302,8 @@ export default function WeekView({
                 onAddTask={onAddTask}
                 enableDragDrop={enableDragDrop}
                 isDragActive={isDragActive}
+                onQuickComplete={onQuickComplete}
+                onToggleWaiting={onToggleWaiting}
               />
             );
           })}

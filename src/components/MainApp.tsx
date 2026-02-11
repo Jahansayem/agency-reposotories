@@ -459,6 +459,81 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     }
   }, []);
 
+  // Calendar: quick complete from popup
+  const handleCalendarQuickComplete = useCallback(async (todoId: string) => {
+    const updated_at = new Date().toISOString();
+    updateTodoInStore(todoId, { completed: true, status: 'done' as Todo['status'], updated_at });
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('todos')
+        .update({ completed: true, status: 'done', updated_at })
+        .eq('id', todoId);
+      if (error) {
+        logger.error('Calendar quick complete failed', error, { component: 'MainApp' });
+      }
+    }
+  }, [updateTodoInStore]);
+
+  // Calendar: toggle waiting for response
+  const handleCalendarToggleWaiting = useCallback(async (todoId: string, waiting: boolean) => {
+    const updated_at = new Date().toISOString();
+    const updates: Partial<Todo> = {
+      waiting_for_response: waiting,
+      updated_at,
+    };
+    if (waiting) {
+      updates.waiting_since = updated_at;
+    }
+    updateTodoInStore(todoId, updates);
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('todos')
+        .update(updates)
+        .eq('id', todoId);
+      if (error) {
+        logger.error('Calendar toggle waiting failed', error, { component: 'MainApp' });
+      }
+    }
+  }, [updateTodoInStore]);
+
+  // Calendar: inline quick-add from month cell
+  const handleCalendarQuickAdd = useCallback(async (dateKey: string, text: string) => {
+    if (!text.trim()) return;
+    const { v4: uuidv4 } = await import('uuid');
+    const newTodo: Todo = {
+      id: uuidv4(),
+      text: text.trim(),
+      completed: false,
+      status: 'todo',
+      priority: 'medium',
+      created_at: new Date().toISOString(),
+      created_by: currentUser.name,
+      due_date: dateKey,
+      subtasks: [],
+      agency_id: currentAgencyId || undefined,
+    };
+
+    useTodoStore.getState().addTodo(newTodo);
+
+    const insertData: Record<string, unknown> = {
+      id: newTodo.id,
+      text: newTodo.text,
+      completed: false,
+      status: 'todo',
+      priority: 'medium',
+      created_at: newTodo.created_at,
+      created_by: newTodo.created_by,
+      due_date: dateKey,
+    };
+    if (currentAgencyId) insertData.agency_id = currentAgencyId;
+
+    const { error } = await supabase.from('todos').insert([insertData]);
+    if (error) {
+      logger.error('Calendar quick add failed', error, { component: 'MainApp' });
+      useTodoStore.getState().deleteTodo(newTodo.id);
+    }
+  }, [currentUser.name, currentAgencyId]);
+
   // Calendar: drag-and-drop reschedule updates due_date
   const handleCalendarReschedule = useCallback(async (todoId: string, newDate: string) => {
     // Read from store directly to avoid stale closure on rapid successive drags
@@ -671,6 +746,9 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
                   onTaskClick={handleCalendarTaskClick}
                   onDateClick={handleCalendarDateClick}
                   onReschedule={handleCalendarReschedule}
+                  onQuickComplete={handleCalendarQuickComplete}
+                  onToggleWaiting={handleCalendarToggleWaiting}
+                  onQuickAdd={handleCalendarQuickAdd}
                 />
               </div>
             </div>
@@ -758,6 +836,9 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleCalendarDateClick,
     handleCalendarTaskClick,
     handleCalendarReschedule,
+    handleCalendarQuickComplete,
+    handleCalendarToggleWaiting,
+    handleCalendarQuickAdd,
     onUserChange,
     currentAgencyId,
   ]);

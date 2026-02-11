@@ -8,6 +8,9 @@ import {
   Calendar as CalendarIcon,
   Filter,
   Check,
+  Clock,
+  Bell,
+  Printer,
 } from 'lucide-react';
 import {
   format,
@@ -37,6 +40,9 @@ interface CalendarViewProps {
   onTaskClick: (todo: Todo) => void;
   onDateClick: (date: Date) => void;
   onReschedule?: (todoId: string, newDate: string) => void;
+  onQuickComplete?: (todoId: string) => void;
+  onToggleWaiting?: (todoId: string, waiting: boolean) => void;
+  onQuickAdd?: (dateKey: string, text: string) => void;
 }
 
 const headerVariants = {
@@ -88,6 +94,9 @@ export default function CalendarView({
   onTaskClick,
   onDateClick,
   onReschedule,
+  onQuickComplete,
+  onToggleWaiting,
+  onQuickAdd,
 }: CalendarViewProps) {
   const toast = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -95,6 +104,7 @@ export default function CalendarView({
   const [selectedCategories, setSelectedCategories] = useState<Set<DashboardTaskCategory>>(
     new Set(ALL_CATEGORIES)
   );
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set()); // empty = show all
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [direction, setDirection] = useState<'left' | 'right'>('right');
 
@@ -223,6 +233,22 @@ export default function CalendarView({
     setSelectedCategories(new Set());
   }, []);
 
+  const toggleUser = useCallback((user: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(user)) {
+        next.delete(user);
+      } else {
+        next.add(user);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearUserFilter = useCallback(() => {
+    setSelectedUsers(new Set());
+  }, []);
+
   // Step 1: Group and sort ALL active todos by date (only recomputes when `todos` changes)
   const allTodosByDate = useMemo(() => {
     const map = new Map<string, Todo[]>();
@@ -244,24 +270,29 @@ export default function CalendarView({
     return map;
   }, [todos]);
 
-  // Step 2: Filter the pre-grouped map by selected categories (cheap when only filters change)
+  // Step 2: Filter the pre-grouped map by selected categories and users (cheap when only filters change)
   const todosByDate = useMemo(() => {
-    // Fast path: all categories selected — no filtering needed
-    if (selectedCategories.size === ALL_CATEGORIES.length) {
+    const allCategoriesSelected = selectedCategories.size === ALL_CATEGORIES.length;
+    const noUserFilter = selectedUsers.size === 0;
+
+    // Fast path: no filters active
+    if (allCategoriesSelected && noUserFilter) {
       return allTodosByDate;
     }
+
     const filtered = new Map<string, Todo[]>();
     allTodosByDate.forEach((dayTodos, dateKey) => {
       const matching = dayTodos.filter((todo) => {
-        const category = todo.category || 'other';
-        return selectedCategories.has(category);
+        const categoryMatch = allCategoriesSelected || selectedCategories.has(todo.category || 'other');
+        const userMatch = noUserFilter || (todo.assigned_to && selectedUsers.has(todo.assigned_to));
+        return categoryMatch && userMatch;
       });
       if (matching.length > 0) {
         filtered.set(dateKey, matching);
       }
     });
     return filtered;
-  }, [allTodosByDate, selectedCategories]);
+  }, [allTodosByDate, selectedCategories, selectedUsers]);
 
   // Category counts for current month
   // Uses string-based month extraction to avoid timezone issues with new Date()
@@ -282,6 +313,14 @@ export default function CalendarView({
     return counts;
   }, [todos, currentDate]);
 
+  const uniqueAssignees = useMemo(() => {
+    const users = new Set<string>();
+    todos.forEach((todo) => {
+      if (todo.assigned_to) users.add(todo.assigned_to);
+    });
+    return Array.from(users).sort();
+  }, [todos]);
+
   // Detect whether current view includes today (for Today button pulse)
   const viewIncludesToday = useMemo(() => {
     const today = startOfDay(new Date());
@@ -295,6 +334,44 @@ export default function CalendarView({
     return currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
   }, [currentDate, viewMode]);
 
+  // Today's Focus stats
+  const todayFocus = useMemo(() => {
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    const todayTodos = allTodosByDate.get(todayKey) || [];
+
+    let overdueCount = 0;
+    let reminderCount = 0;
+    let atRiskCount = 0;
+    let waitingCount = 0;
+    const totalToday = todayTodos.length;
+
+    // Count across ALL todos (not just today's)
+    todos.forEach((todo) => {
+      if (todo.completed || todo.status === 'done') return;
+      if (!todo.due_date) return;
+      const dateKey = todo.due_date.split('T')[0];
+
+      // Overdue = due before today and not done
+      if (dateKey < todayKey) overdueCount++;
+
+      // At-risk renewals
+      if (todo.renewal_status === 'at-risk') atRiskCount++;
+
+      // Waiting for response
+      if (todo.waiting_for_response) waitingCount++;
+    });
+
+    // Reminders: count tasks with pending reminders from today's tasks
+    todayTodos.forEach((todo) => {
+      if (todo.reminders?.some((r) => r.status === 'pending') ||
+          (todo.reminder_at && new Date(todo.reminder_at) > new Date())) {
+        reminderCount++;
+      }
+    });
+
+    return { totalToday, overdueCount, reminderCount, atRiskCount, waitingCount };
+  }, [todos, allTodosByDate]);
+
   // Navigation label
   const navLabel = viewMode === 'month' ? 'month' : viewMode === 'week' ? 'week' : 'day';
 
@@ -302,19 +379,19 @@ export default function CalendarView({
   const headerLabel = getHeaderLabel(viewMode, currentDate);
 
   return (
-    <div ref={containerRef} className="flex flex-col h-full bg-[var(--surface-2)] rounded-xl border border-[var(--border)] overflow-hidden">
+    <div ref={containerRef} className="flex flex-col h-full bg-[var(--surface-2)] rounded-xl border border-[var(--border)] overflow-hidden print:border-0 print:shadow-none print:rounded-none">
       {/* Screen reader announcement for navigation changes */}
       <div aria-live="polite" className="sr-only">
         {headerLabel}
       </div>
 
       {/* Header */}
-      <div role="navigation" aria-label="Calendar navigation" className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
+      <div role="navigation" aria-label="Calendar navigation" className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)] print:border-0 print:py-2 print:bg-white">
         <div className="flex items-center gap-3">
           {/* Previous Button */}
           <button
             onClick={goToPrevious}
-            className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors print:hidden"
             aria-label={`Previous ${navLabel}`}
           >
             <ChevronLeft className="w-5 h-5 text-[var(--text-muted)]" />
@@ -339,7 +416,7 @@ export default function CalendarView({
           {/* Next Button */}
           <button
             onClick={goToNext}
-            className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors print:hidden"
             aria-label={`Next ${navLabel}`}
           >
             <ChevronRight className="w-5 h-5 text-[var(--text-muted)]" />
@@ -349,7 +426,7 @@ export default function CalendarView({
           <button
             onClick={goToToday}
             aria-label="Go to today"
-            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors ${!viewIncludesToday ? 'animate-pulse ring-2 ring-[var(--accent)]/50' : ''}`}
+            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors print:hidden ${!viewIncludesToday ? 'animate-pulse ring-2 ring-[var(--accent)]/50' : ''}`}
           >
             <CalendarIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Today</span>
@@ -357,13 +434,25 @@ export default function CalendarView({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Print Button */}
+          <button
+            onClick={() => window.print()}
+            className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors text-[var(--text-muted)] hover:text-[var(--foreground)] print:hidden"
+            aria-label="Print calendar"
+            title="Print calendar"
+          >
+            <Printer className="w-4 h-4" />
+          </button>
+
           {/* View Switcher */}
-          <CalendarViewSwitcher viewMode={viewMode} onViewModeChange={setViewMode} />
+          <div className="print:hidden">
+            <CalendarViewSwitcher viewMode={viewMode} onViewModeChange={setViewMode} />
+          </div>
 
           {/* Filter Button */}
-          <div className="relative">
+          <div className="relative print:hidden">
             {(() => {
-              const filtersActive = selectedCategories.size < ALL_CATEGORIES.length;
+              const filtersActive = selectedCategories.size < ALL_CATEGORIES.length || selectedUsers.size > 0;
               const menuOpen = showFilterMenu;
               let btnClass = 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)] border-transparent';
               if (menuOpen && filtersActive) {
@@ -390,7 +479,7 @@ export default function CalendarView({
                   <span className="hidden sm:inline">Filter</span>
                   {filtersActive && (
                     <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-semibold">
-                      {selectedCategories.size}
+                      {(selectedCategories.size < ALL_CATEGORIES.length ? 1 : 0) + (selectedUsers.size > 0 ? 1 : 0)}
                     </span>
                   )}
                 </button>
@@ -457,6 +546,38 @@ export default function CalendarView({
                         );
                       })}
                     </div>
+                    {/* Person Filter */}
+                    {uniqueAssignees.length > 0 && (
+                      <>
+                        <div className="mt-2 pt-2 border-t border-[var(--border)]">
+                          <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
+                            <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Assigned To</span>
+                            {selectedUsers.size > 0 && (
+                              <button onClick={clearUserFilter} className="ml-auto text-xs text-[var(--accent)] hover:underline">
+                                Clear
+                              </button>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            {uniqueAssignees.map((user) => {
+                              const isSelected = selectedUsers.has(user);
+                              return (
+                                <button
+                                  key={user}
+                                  onClick={() => toggleUser(user)}
+                                  className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors ${isSelected ? 'bg-[var(--accent)]/10' : 'hover:bg-[var(--surface-hover)]'}`}
+                                >
+                                  <div className={`w-4 h-4 rounded flex items-center justify-center transition-colors ${isSelected ? 'bg-[var(--accent)]' : 'border-2 border-[var(--border)]'}`}>
+                                    {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                                  </div>
+                                  <span className="flex-1 text-left text-sm text-[var(--foreground)]">{user}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </motion.div>
                 </>
               )}
@@ -478,6 +599,9 @@ export default function CalendarView({
               onAddTask={onDateClick}
               onTaskClick={onTaskClick}
               onReschedule={handleCalendarReschedule}
+              onQuickComplete={onQuickComplete}
+              onToggleWaiting={onToggleWaiting}
+              onQuickAdd={onQuickAdd}
             />
           )}
           {viewMode === 'week' && (
@@ -489,6 +613,8 @@ export default function CalendarView({
               onAddTask={onDateClick}
               onTaskClick={onTaskClick}
               onReschedule={handleCalendarReschedule}
+              onQuickComplete={onQuickComplete}
+              onToggleWaiting={onToggleWaiting}
             />
           )}
           {viewMode === 'day' && (
@@ -498,12 +624,15 @@ export default function CalendarView({
               todosByDate={todosByDate}
               onDateClick={onDateClick}
               onTaskClick={onTaskClick}
+              onQuickComplete={onQuickComplete}
+              onToggleWaiting={onToggleWaiting}
+              onQuickAdd={onQuickAdd}
             />
           )}
         </div>
 
         {/* Sidebar: Mini Calendar + Category Legend (visible on larger screens) */}
-        <div className="hidden lg:flex flex-col w-56 border-l border-[var(--border)] bg-[var(--surface)]">
+        <div className="hidden lg:flex flex-col w-56 border-l border-[var(--border)] bg-[var(--surface)] print:hidden">
           {/* Mini Calendar */}
           <div className="p-3 border-b border-[var(--border)]">
             <MiniCalendar
@@ -511,6 +640,58 @@ export default function CalendarView({
               todosByDate={todosByDate}
               onDateClick={handleMiniCalendarDateClick}
             />
+          </div>
+
+          {/* Today's Focus */}
+          <div className="p-3 border-b border-[var(--border)]">
+            <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">
+              Today&apos;s Focus
+            </h3>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[var(--foreground)]">Today</span>
+                <span className="font-semibold text-[var(--foreground)]">{todayFocus.totalToday}</span>
+              </div>
+              {todayFocus.overdueCount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1.5 text-red-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    Overdue
+                  </span>
+                  <span className="font-semibold text-red-500">{todayFocus.overdueCount}</span>
+                </div>
+              )}
+              {todayFocus.atRiskCount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1.5 text-amber-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    At-Risk
+                  </span>
+                  <span className="font-semibold text-amber-500">{todayFocus.atRiskCount}</span>
+                </div>
+              )}
+              {todayFocus.waitingCount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                    <Clock className="w-3 h-3" />
+                    Waiting
+                  </span>
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">{todayFocus.waitingCount}</span>
+                </div>
+              )}
+              {todayFocus.reminderCount > 0 && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1.5 text-[var(--text-muted)]">
+                    <Bell className="w-3 h-3" />
+                    Reminders
+                  </span>
+                  <span className="font-semibold text-[var(--text-muted)]">{todayFocus.reminderCount}</span>
+                </div>
+              )}
+              {todayFocus.totalToday === 0 && todayFocus.overdueCount === 0 && (
+                <p className="text-xs text-[var(--text-muted)] italic">All clear!</p>
+              )}
+            </div>
           </div>
 
           {/* Category Filters */}
@@ -540,6 +721,37 @@ export default function CalendarView({
                 );
               })}
             </div>
+
+            {/* Person Filter */}
+            {uniqueAssignees.length > 0 && (
+              <div className="px-4 pb-4">
+                <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
+                  Team Members
+                </h3>
+                <div className="space-y-1">
+                  {uniqueAssignees.map((user) => {
+                    const isSelected = selectedUsers.has(user);
+                    return (
+                      <button
+                        key={user}
+                        onClick={() => toggleUser(user)}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${isSelected ? 'bg-[var(--accent)]/10 shadow-sm' : selectedUsers.size > 0 ? 'opacity-50 hover:opacity-75' : 'hover:bg-[var(--surface-hover)]'}`}
+                      >
+                        <span className="w-5 h-5 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[10px] font-bold text-[var(--text-muted)]">
+                          {user.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="flex-1 text-sm text-[var(--foreground)] truncate">{user}</span>
+                      </button>
+                    );
+                  })}
+                  {selectedUsers.size > 0 && (
+                    <button onClick={clearUserFilter} className="text-xs text-[var(--accent)] hover:underline px-2 py-1">
+                      Show all
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <div className="text-xs text-[var(--text-muted)] space-y-1">

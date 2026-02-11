@@ -4,9 +4,22 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Clock, AlertTriangle, Bell, CheckCircle2 } from 'lucide-react';
 import { Todo } from '@/types/todo';
-import { CATEGORY_COLORS, CATEGORY_LABELS, isTaskOverdue } from './constants';
+import {
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  isTaskOverdue,
+  STATUS_BORDER,
+  SEGMENT_COLORS,
+  SEGMENT_LABELS,
+  getSubtaskProgress,
+  isFollowUpOverdue,
+  getInitials,
+  formatPremiumCompact,
+  hasPendingReminders,
+  PREMIUM_DISPLAY_THRESHOLD,
+} from './constants';
 
 // Priority-based left border colors
 const PRIORITY_BORDER: Record<string, string> = {
@@ -28,6 +41,10 @@ interface CalendarDayCellProps {
   isDragActive?: boolean;
   columnIndex?: number;
   rowIndex?: number;
+  onQuickComplete?: (todoId: string) => void;
+  onToggleWaiting?: (todoId: string, waiting: boolean) => void;
+  onQuickAdd?: (dateKey: string, text: string) => void;
+  isFocused?: boolean;
 }
 
 // Draggable task item inside the popup
@@ -35,10 +52,14 @@ function DraggableTaskItem({
   todo,
   onTaskClick,
   enableDrag,
+  onQuickComplete,
+  onToggleWaiting,
 }: {
   todo: Todo;
   onTaskClick: (todo: Todo) => void;
   enableDrag: boolean;
+  onQuickComplete?: (todoId: string) => void;
+  onToggleWaiting?: (todoId: string, waiting: boolean) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `calendar-task-${todo.id}`,
@@ -49,15 +70,20 @@ function DraggableTaskItem({
   const category = todo.category || 'other';
   const isOverdue = isTaskOverdue(todo.due_date);
 
-  // Overdue border takes precedence over priority border
+  // Overdue border takes precedence, then status border, then priority border
   const borderClass = isOverdue
     ? 'border-l-2 border-l-red-500'
-    : PRIORITY_BORDER[todo.priority] || 'border-l-2 border-l-transparent';
+    : STATUS_BORDER[todo.status] || PRIORITY_BORDER[todo.priority] || 'border-l-2 border-l-transparent';
+
+  const subtaskProgress = getSubtaskProgress(todo.subtasks);
+  const followUpOverdue = todo.waiting_for_response
+    ? isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours)
+    : false;
 
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-start gap-2 p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors text-left ${borderClass} ${isDragging ? 'opacity-30' : ''}`}
+      className={`group/task flex items-start gap-2 p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors text-left ${borderClass} ${isDragging ? 'opacity-30' : ''}`}
     >
       {enableDrag && (
         <button
@@ -95,8 +121,75 @@ function DraggableTaskItem({
               </span>
             )}
           </p>
+          {/* Wave 1: Visual indicators row */}
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            {todo.status === 'in_progress' && !isOverdue && (
+              <span className="text-[10px] text-amber-500 font-medium">In Progress</span>
+            )}
+            {subtaskProgress && (
+              <span className="text-[10px] text-[var(--text-muted)]">{subtaskProgress}</span>
+            )}
+            {todo.waiting_for_response && (
+              <Clock
+                className={`w-3 h-3 ${followUpOverdue ? 'text-red-500' : 'text-amber-500'}`}
+                aria-label={followUpOverdue ? 'Follow-up overdue' : 'Waiting for response'}
+              />
+            )}
+            {todo.customer_segment && (
+              <span
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${SEGMENT_COLORS[todo.customer_segment] || ''}`}
+                title={SEGMENT_LABELS[todo.customer_segment] || todo.customer_segment}
+              />
+            )}
+            {todo.renewal_status === 'at-risk' && (
+              <AlertTriangle className="w-3 h-3 text-amber-500" aria-label="At-risk renewal" />
+            )}
+            {hasPendingReminders(todo.reminders, todo.reminder_at) && (
+              <Bell className="w-3 h-3 text-[var(--text-muted)]" aria-label="Has reminders" />
+            )}
+            {todo.assigned_to && (
+              <span className="text-[10px] font-medium text-[var(--text-muted)] bg-[var(--surface)] px-1 rounded" title={`Assigned to ${todo.assigned_to}`}>
+                {getInitials(todo.assigned_to)}
+              </span>
+            )}
+          </div>
         </div>
       </button>
+      {/* Quick action buttons — visible on hover */}
+      {(onQuickComplete || onToggleWaiting) && (
+        <div className="flex items-center gap-1 flex-shrink-0 mt-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
+          {onQuickComplete && !todo.completed && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickComplete(todo.id);
+              }}
+              className="text-[var(--text-muted)] hover:text-emerald-500 transition-colors"
+              aria-label="Mark complete"
+              title="Mark complete"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+            </button>
+          )}
+          {onToggleWaiting && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleWaiting(todo.id, !todo.waiting_for_response);
+              }}
+              className={`transition-colors ${
+                todo.waiting_for_response
+                  ? 'text-amber-500 hover:text-[var(--text-muted)]'
+                  : 'text-[var(--text-muted)] hover:text-amber-500'
+              }`}
+              aria-label={todo.waiting_for_response ? 'Remove waiting status' : 'Mark as waiting'}
+              title={todo.waiting_for_response ? 'Remove waiting status' : 'Mark as waiting'}
+            >
+              <Clock className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -113,8 +206,16 @@ export default function CalendarDayCell({
   isDragActive = false,
   columnIndex,
   rowIndex,
+  onQuickComplete,
+  onToggleWaiting,
+  onQuickAdd,
+  isFocused,
 }: CalendarDayCellProps) {
   const [showPopup, setShowPopup] = useState(false);
+  const [quickAddText, setQuickAddText] = useState('');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const quickAddInputRef = useRef<HTMLInputElement>(null);
+  const cellRef = useRef<HTMLButtonElement>(null);
 
   const dateKey = format(date, 'yyyy-MM-dd');
 
@@ -155,14 +256,71 @@ export default function CalendarDayCell({
   const popupHorizontal = columnIndex !== undefined && columnIndex >= 5 ? 'right-0' : 'left-0';
   const popupVertical = rowIndex !== undefined && rowIndex >= 4 ? 'bottom-full mb-1' : 'top-full mt-1';
 
+  // Workload heatmap: subtle background tint based on task count
+  const heatmapClass =
+    isCurrentMonth && !isOver && !isToday
+      ? todos.length >= 7
+        ? 'bg-red-500/5'
+        : todos.length >= 4
+          ? 'bg-amber-500/5'
+          : ''
+      : '';
+
+  // Auto-focus the quick-add input when it appears
+  useEffect(() => {
+    if (showQuickAdd && quickAddInputRef.current) {
+      quickAddInputRef.current.focus();
+    }
+  }, [showQuickAdd]);
+
+  // Scroll the cell into view when it becomes focused via keyboard navigation
+  useEffect(() => {
+    if (isFocused && cellRef.current) {
+      cellRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [isFocused]);
+
+  const handleQuickAddSubmit = useCallback(() => {
+    const trimmed = quickAddText.trim();
+    if (trimmed && onQuickAdd) {
+      onQuickAdd(dateKey, trimmed);
+    }
+    setQuickAddText('');
+    setShowQuickAdd(false);
+  }, [quickAddText, onQuickAdd, dateKey]);
+
+  const handleQuickAddKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleQuickAddSubmit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setQuickAddText('');
+        setShowQuickAdd(false);
+      }
+    },
+    [handleQuickAddSubmit]
+  );
+
+  const handleQuickAddBlur = useCallback(() => {
+    if (!quickAddText.trim()) {
+      setQuickAddText('');
+      setShowQuickAdd(false);
+    }
+  }, [quickAddText]);
+
   return (
     <div
       ref={setDroppableRef}
       className="relative"
+      data-cell-row={rowIndex}
+      data-cell-col={columnIndex}
       onMouseEnter={() => !isDragActive && !showPopup && todos.length > 0 && setShowPopup(true)}
       onMouseLeave={() => !isDragActive && setShowPopup(false)}
     >
       <motion.button
+        ref={cellRef}
         role="gridcell"
         aria-label={fullDateLabel}
         onClick={handleCellClick}
@@ -177,9 +335,10 @@ export default function CalendarDayCell({
             : isToday
               ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30'
               : isCurrentMonth
-                ? 'bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)]'
+                ? `bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)] ${heatmapClass}`
                 : 'bg-[var(--background)] dark:bg-[var(--background)] border-[var(--border-muted)]'
           }
+          ${isFocused ? 'ring-2 ring-[var(--accent)]/60 ring-offset-1 ring-offset-[var(--surface-2)]' : ''}
         `}
       >
         {/* Day Number */}
@@ -197,9 +356,32 @@ export default function CalendarDayCell({
           {dayNumber}
         </span>
 
-        {/* "+ Add task" hint on empty cells — always visible, brighter on hover */}
-        {todos.length === 0 && (
-          <span className="opacity-50 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] text-xs">+ Add task</span>
+        {/* "+ Add task" hint on empty cells — inline quick-add if onQuickAdd provided */}
+        {todos.length === 0 && !showQuickAdd && (
+          <span
+            className="opacity-50 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] text-xs"
+            onClick={(e) => {
+              if (onQuickAdd) {
+                e.stopPropagation();
+                setShowQuickAdd(true);
+              }
+            }}
+          >
+            + Add task
+          </span>
+        )}
+        {todos.length === 0 && showQuickAdd && (
+          <input
+            ref={quickAddInputRef}
+            type="text"
+            value={quickAddText}
+            onChange={(e) => setQuickAddText(e.target.value)}
+            onKeyDown={handleQuickAddKeyDown}
+            onBlur={handleQuickAddBlur}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Quick add..."
+            className="w-full text-xs bg-transparent border-b border-[var(--border)] focus:border-[var(--accent)] outline-none text-[var(--foreground)] placeholder:text-[var(--text-muted)] py-0.5"
+          />
         )}
 
         {/* Task Previews */}
@@ -208,21 +390,59 @@ export default function CalendarDayCell({
             {todos.slice(0, 3).map((todo) => {
               const cat = todo.category || 'other';
               const isOverdue = isTaskOverdue(todo.due_date);
+              const isAtRisk = todo.renewal_status === 'at-risk';
+              const isWaiting = todo.waiting_for_response;
+              const waitingOverdue = isWaiting
+                ? isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours)
+                : false;
+              const hasIncompleteSubtasks = todo.subtasks?.some((s) => !s.completed);
+              const showSegmentDot =
+                todo.customer_segment === 'elite' || todo.customer_segment === 'premium';
               return (
                 <div
                   key={todo.id}
                   className="flex items-center gap-1 px-1 py-0.5 rounded text-[10px] sm:text-xs truncate bg-[var(--surface)]/60"
                 >
-                  <div
-                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[cat]}`}
-                    title={CATEGORY_LABELS[cat]}
-                  />
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <div
+                      className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[cat]}`}
+                      title={CATEGORY_LABELS[cat]}
+                    />
+                    {showSegmentDot && (
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${SEGMENT_COLORS[todo.customer_segment!]}`}
+                        title={SEGMENT_LABELS[todo.customer_segment!]}
+                      />
+                    )}
+                  </div>
+                  {isWaiting && (
+                    <Clock
+                      className={`w-2.5 h-2.5 flex-shrink-0 ${waitingOverdue ? 'text-red-500' : 'text-amber-500'}`}
+                    />
+                  )}
                   <span
-                    className={`truncate ${isOverdue ? 'text-red-500' : 'text-[var(--text-light)]'}`}
+                    className={`truncate ${
+                      isOverdue
+                        ? 'text-red-500'
+                        : isAtRisk
+                          ? 'text-amber-500'
+                          : 'text-[var(--text-light)]'
+                    }`}
                     title={todo.customer_name || todo.text}
                   >
                     {todo.customer_name || todo.text}
                   </span>
+                  {hasIncompleteSubtasks && (
+                    <span className="text-[8px] text-[var(--text-muted)] flex-shrink-0" title="Has incomplete subtasks">●</span>
+                  )}
+                  {todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD && (
+                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium flex-shrink-0">
+                      {formatPremiumCompact(todo.premium_amount)}
+                    </span>
+                  )}
+                  {hasPendingReminders(todo.reminders, todo.reminder_at) && (
+                    <Bell className="w-2.5 h-2.5 text-[var(--text-muted)] flex-shrink-0" />
+                  )}
                 </div>
               );
             })}
@@ -272,6 +492,8 @@ export default function CalendarDayCell({
                   todo={todo}
                   onTaskClick={onTaskClick}
                   enableDrag={enableDragDrop}
+                  onQuickComplete={onQuickComplete}
+                  onToggleWaiting={onToggleWaiting}
                 />
               ))}
             </div>
