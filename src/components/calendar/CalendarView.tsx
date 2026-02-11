@@ -20,9 +20,11 @@ import {
   startOfDay,
   startOfWeek,
   endOfWeek,
+  isSameDay,
 } from 'date-fns';
 import { Todo, DashboardTaskCategory } from '@/types/todo';
 import { CalendarViewMode } from '@/types/calendar';
+import { useToast } from '@/components/ui/Toast';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from './CalendarDayCell';
 import CalendarViewSwitcher from './CalendarViewSwitcher';
 import MonthView from './MonthView';
@@ -36,6 +38,8 @@ interface CalendarViewProps {
   onDateClick: (date: Date) => void;
   onReschedule?: (todoId: string, newDate: string) => void;
 }
+
+const PRIORITY_WEIGHT: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
 const ALL_CATEGORIES: DashboardTaskCategory[] = [
   'quote',
@@ -97,8 +101,9 @@ export default function CalendarView({
   onDateClick,
   onReschedule,
 }: CalendarViewProps) {
+  const toast = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [selectedCategories, setSelectedCategories] = useState<Set<DashboardTaskCategory>>(
     new Set(ALL_CATEGORIES)
   );
@@ -137,8 +142,17 @@ export default function CalendarView({
   const handleMiniCalendarDateClick = useCallback((date: Date) => {
     setDirection(date > currentDate ? 'right' : 'left');
     setCurrentDate(date);
-    setViewMode('day');
+    // Keep current view mode — don't switch to day view
   }, [currentDate]);
+
+  // Wrap onReschedule to show a toast notification after drag-drop
+  const handleCalendarReschedule = useCallback((todoId: string, newDate: string) => {
+    if (onReschedule) {
+      onReschedule(todoId, newDate);
+      const formatted = format(new Date(newDate + 'T00:00:00'), 'MMM d, yyyy');
+      toast.success(`Task moved to ${formatted}`);
+    }
+  }, [onReschedule, toast]);
 
   // Drill into day view when clicking a date in month/week views
   const handleDrillToDay = useCallback((date: Date) => {
@@ -153,6 +167,9 @@ export default function CalendarView({
     function handleKeyDown(e: KeyboardEvent) {
       // Only handle shortcuts when this component is in the DOM and visible
       if (!containerRef.current || containerRef.current.offsetParent === null) return;
+
+      // Skip when a modal/dialog is open
+      if (document.querySelector('[role="dialog"]')) return;
 
       // Skip when typing in inputs
       const tag = (e.target as HTMLElement).tagName;
@@ -237,6 +254,10 @@ export default function CalendarView({
           map.set(dateKey, [todo]);
         }
       });
+    // Sort each day's tasks by priority: urgent > high > medium > low > undefined
+    map.forEach((arr) => {
+      arr.sort((a, b) => (PRIORITY_WEIGHT[a.priority || ''] ?? 4) - (PRIORITY_WEIGHT[b.priority || ''] ?? 4));
+    });
     return map;
   }, [todos, selectedCategories]);
 
@@ -258,6 +279,19 @@ export default function CalendarView({
     });
     return counts;
   }, [todos, currentDate]);
+
+  // Detect whether current view includes today (for Today button pulse)
+  const viewIncludesToday = useMemo(() => {
+    const today = startOfDay(new Date());
+    if (viewMode === 'day') return isSameDay(currentDate, today);
+    if (viewMode === 'week') {
+      const weekStart = startOfWeek(currentDate);
+      const weekEnd = endOfWeek(currentDate);
+      return today >= weekStart && today <= weekEnd;
+    }
+    // month
+    return currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
+  }, [currentDate, viewMode]);
 
   // Navigation label
   const navLabel = viewMode === 'month' ? 'month' : viewMode === 'week' ? 'week' : 'day';
@@ -313,7 +347,7 @@ export default function CalendarView({
           <button
             onClick={goToToday}
             aria-label="Go to today"
-            className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
+            className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors ${!viewIncludesToday ? 'animate-pulse ring-2 ring-[var(--accent)]/50' : ''}`}
           >
             <CalendarIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Today</span>
@@ -361,7 +395,7 @@ export default function CalendarView({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-xl z-50"
+                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] z-50"
                   >
                     <div className="flex items-center gap-2 px-2 py-1.5 mb-2 border-b border-[var(--border)]">
                       <button
@@ -428,7 +462,7 @@ export default function CalendarView({
               onDateClick={handleDrillToDay}
               onAddTask={onDateClick}
               onTaskClick={onTaskClick}
-              onReschedule={onReschedule}
+              onReschedule={handleCalendarReschedule}
             />
           )}
           {viewMode === 'week' && (
@@ -437,8 +471,9 @@ export default function CalendarView({
               direction={direction}
               todosByDate={todosByDate}
               onDateClick={handleDrillToDay}
+              onAddTask={onDateClick}
               onTaskClick={onTaskClick}
-              onReschedule={onReschedule}
+              onReschedule={handleCalendarReschedule}
             />
           )}
           {viewMode === 'day' && (

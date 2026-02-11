@@ -135,7 +135,7 @@ export default function MonthView({
       </div>
 
       {/* Day Grid */}
-      <AnimatePresence mode="wait" custom={direction}>
+      <AnimatePresence mode="popLayout" custom={direction}>
         <motion.div
           key={format(currentMonth, 'yyyy-MM')}
           custom={direction}
@@ -146,9 +146,9 @@ export default function MonthView({
           transition={{ duration: 0.2 }}
           className="space-y-1"
         >
-          {calendarWeeks.map((week) => (
+          {calendarWeeks.map((week, weekRowIndex) => (
             <div key={format(week[0], 'yyyy-MM-dd')} role="row" className="grid grid-cols-7 gap-1">
-              {week.map((day) => {
+              {week.map((day, colIndex) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 const dayTodos = todosByDate.get(dateKey) || [];
 
@@ -164,6 +164,8 @@ export default function MonthView({
                     onTaskClick={onTaskClick}
                     enableDragDrop={enableDragDrop}
                     isDragActive={isDragActive}
+                    columnIndex={colIndex}
+                    rowIndex={weekRowIndex}
                   />
                 );
               })}

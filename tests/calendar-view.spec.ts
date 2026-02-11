@@ -28,22 +28,21 @@ async function login(page: Page) {
 
   await page.waitForLoadState('networkidle');
 
-  // Dismiss AI Feature Tour if it appears
-  const dontShowBtn = page.locator('button').filter({ hasText: "Don't show again" });
-  try {
-    await expect(dontShowBtn).toBeVisible({ timeout: 5000 });
-    await dontShowBtn.click();
-    await page.waitForTimeout(500);
-  } catch {
-    // Tour didn't appear
-  }
-
-  // Dismiss any remaining modals/overlays
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // Dismiss AI Feature Tour and any other modals/overlays
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const dontShowBtn = page.locator('button').filter({ hasText: "Don't show again" });
+    const skipTourBtn = page.locator('button').filter({ hasText: 'Skip tour' });
     const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
     const dialog = page.locator('[role="dialog"]');
-    if (await viewTasksBtn.isVisible({ timeout: 500 }).catch(() => false)) {
-      await viewTasksBtn.click();
+
+    if (await dontShowBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await dontShowBtn.click({ force: true });
+      await page.waitForTimeout(500);
+    } else if (await skipTourBtn.isVisible({ timeout: 300 }).catch(() => false)) {
+      await skipTourBtn.click({ force: true });
+      await page.waitForTimeout(500);
+    } else if (await viewTasksBtn.isVisible({ timeout: 300 }).catch(() => false)) {
+      await viewTasksBtn.click({ force: true });
       await page.waitForTimeout(300);
     } else if (await dialog.isVisible({ timeout: 300 }).catch(() => false)) {
       await page.keyboard.press('Escape');
@@ -60,11 +59,21 @@ async function navigateToCalendar(page: Page) {
   // Click Calendar in the sidebar
   const calendarBtn = page.locator('aside[aria-label="Main navigation"] button').filter({ hasText: 'Calendar' });
   await expect(calendarBtn).toBeVisible({ timeout: 5000 });
-  await calendarBtn.click();
+  await calendarBtn.click({ force: true });
   await page.waitForTimeout(500);
 
   // Verify calendar view loaded
   await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible({ timeout: 10000 });
+}
+
+// ─── Switch to Month View ───────────────────────────────────────────────────
+
+async function switchToMonthView(page: Page) {
+  // Click the Month tab in the view switcher
+  const monthTab = page.locator('[role="tablist"][aria-label="Calendar view"] button').filter({ hasText: 'Month' });
+  await expect(monthTab).toBeVisible({ timeout: 5000 });
+  await monthTab.click();
+  await page.waitForTimeout(500);
 }
 
 // ─── CALENDAR NAVIGATION ─────────────────────────────────────────────────────
@@ -129,6 +138,8 @@ test.describe('Calendar view rendering', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
     await navigateToCalendar(page);
+    // These tests verify the month grid — switch from default week view to month
+    await switchToMonthView(page);
   });
 
   test('4. Calendar displays current month name and year', async ({ page }) => {
@@ -136,14 +147,15 @@ test.describe('Calendar view rendering', () => {
     const monthName = now.toLocaleDateString('en-US', { month: 'long' });
     const year = now.getFullYear().toString();
 
-    // Should show current month and year in the calendar header (h2)
-    const calendarHeader = page.getByRole('heading', { level: 2 });
+    // In month view, the h2 header shows "February 2026" format
+    // Use the navigation region's heading to avoid matching other h2s on the page
+    const calendarHeader = page.locator('[role="navigation"][aria-label="Calendar navigation"] h2');
     await expect(calendarHeader).toContainText(monthName, { timeout: 5000 });
     await expect(calendarHeader).toContainText(year);
   });
 
   test('5. Calendar displays day-of-week headers', async ({ page }) => {
-    // Should show weekday abbreviations
+    // Should show weekday abbreviations in the month grid
     const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     for (const day of weekdays) {
       await expect(page.getByText(day, { exact: true }).first()).toBeVisible({ timeout: 3000 });
@@ -151,8 +163,7 @@ test.describe('Calendar view rendering', () => {
   });
 
   test('6. Calendar displays day cells with numbers', async ({ page }) => {
-    // Should have day cells. Look for "1" as a day number (every month has day 1)
-    // The calendar grid should have multiple day cells
+    // Should have day cells in the month grid
     const dayCells = page.locator('[class*="grid"] > div');
     const cellCount = await dayCells.count();
     // A month calendar grid should have at least 28 cells (4 weeks minimum)
@@ -166,61 +177,54 @@ test.describe('Calendar month navigation', () => {
   test.beforeEach(async ({ page }) => {
     await login(page);
     await navigateToCalendar(page);
+    // Switch to month view so nav buttons use "Previous month" / "Next month"
+    await switchToMonthView(page);
   });
 
   test('7. Previous month button navigates to prior month', async ({ page }) => {
-    const now = new Date();
-    const currentMonth = now.toLocaleDateString('en-US', { month: 'long' });
-
-    // Find and click the previous month button (chevron left)
-    const prevBtn = page.locator('button[aria-label*="previous" i], button[aria-label*="prev" i]').first();
-    if (await prevBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await prevBtn.click();
-    } else {
-      // Try clicking the left chevron button near the month name
-      const chevronLeft = page.locator('button').filter({ has: page.locator('svg.lucide-chevron-left') }).first();
-      await chevronLeft.click();
-    }
+    // Click the Previous month button in the calendar navigation bar
+    const prevBtn = page.locator('button[aria-label="Previous month"]').first();
+    await expect(prevBtn).toBeVisible({ timeout: 3000 });
+    await prevBtn.click();
     await page.waitForTimeout(500);
 
-    // Should show a different month
+    // Should show the previous month name
+    const now = new Date();
     const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1);
     const prevMonthName = prevMonth.toLocaleDateString('en-US', { month: 'long' });
-    await expect(page.getByRole('heading', { name: prevMonthName })).toBeVisible({ timeout: 3000 });
+    const calendarHeader = page.locator('[role="navigation"][aria-label="Calendar navigation"] h2');
+    await expect(calendarHeader).toContainText(prevMonthName, { timeout: 3000 });
   });
 
   test('8. Next month button navigates to next month', async ({ page }) => {
-    // Click next month button
-    const nextBtn = page.locator('button[aria-label*="next" i]').first();
-    if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await nextBtn.click();
-    } else {
-      const chevronRight = page.locator('button').filter({ has: page.locator('svg.lucide-chevron-right') }).first();
-      await chevronRight.click();
-    }
+    // Click the Next month button in the calendar navigation bar
+    const nextBtn = page.locator('button[aria-label="Next month"]').first();
+    await expect(nextBtn).toBeVisible({ timeout: 3000 });
+    await nextBtn.click();
     await page.waitForTimeout(500);
 
+    // Should show the next month name
     const now = new Date();
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1);
     const nextMonthName = nextMonth.toLocaleDateString('en-US', { month: 'long' });
-    await expect(page.getByRole('heading', { name: nextMonthName })).toBeVisible({ timeout: 3000 });
+    const calendarHeader = page.locator('[role="navigation"][aria-label="Calendar navigation"] h2');
+    await expect(calendarHeader).toContainText(nextMonthName, { timeout: 3000 });
   });
 
   test('9. Can navigate forward then back to return to current month', async ({ page }) => {
     const now = new Date();
     const currentMonth = now.toLocaleDateString('en-US', { month: 'long' });
 
-    // Use .first() to target the main header buttons (not mini calendar)
-    // Go forward
+    // Go forward one month
     await page.locator('button[aria-label="Next month"]').first().click();
     await page.waitForTimeout(500);
 
-    // Go back
+    // Go back one month
     await page.locator('button[aria-label="Previous month"]').first().click();
     await page.waitForTimeout(500);
 
-    // Should be back to current month in the calendar header
-    const calendarHeader = page.getByRole('heading', { level: 2 });
+    // Should be back to current month
+    const calendarHeader = page.locator('[role="navigation"][aria-label="Calendar navigation"] h2');
     await expect(calendarHeader).toContainText(currentMonth, { timeout: 3000 });
   });
 });

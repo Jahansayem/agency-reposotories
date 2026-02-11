@@ -29,6 +29,14 @@ const CATEGORY_LABELS: Record<DashboardTaskCategory, string> = {
   other: 'Other',
 };
 
+// Priority-based left border colors
+const PRIORITY_BORDER: Record<string, string> = {
+  urgent: 'border-l-2 border-l-red-500',
+  high: 'border-l-2 border-l-orange-500',
+  medium: 'border-l-2 border-l-transparent',
+  low: 'border-l-2 border-l-transparent',
+};
+
 interface CalendarDayCellProps {
   date: Date;
   todos: Todo[];
@@ -39,6 +47,8 @@ interface CalendarDayCellProps {
   onTaskClick: (todo: Todo) => void;
   enableDragDrop?: boolean;
   isDragActive?: boolean;
+  columnIndex?: number;
+  rowIndex?: number;
 }
 
 // Draggable task item inside the popup
@@ -58,11 +68,17 @@ function DraggableTaskItem({
   });
 
   const category = todo.category || 'other';
+  const isOverdue = todo.due_date ? new Date(todo.due_date + 'T00:00:00') < new Date(new Date().toDateString()) : false;
+
+  // Overdue border takes precedence over priority border
+  const borderClass = isOverdue
+    ? 'border-l-2 border-l-red-500'
+    : PRIORITY_BORDER[todo.priority] || 'border-l-2 border-l-transparent';
 
   return (
     <div
       ref={setNodeRef}
-      className={`flex items-start gap-2 p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors text-left ${isDragging ? 'opacity-30' : ''}`}
+      className={`flex items-start gap-2 p-1.5 rounded hover:bg-[var(--surface-hover)] transition-colors text-left ${borderClass} ${isDragging ? 'opacity-30' : ''}`}
     >
       {enableDrag && (
         <button
@@ -85,7 +101,7 @@ function DraggableTaskItem({
           className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${CATEGORY_COLORS[category]}`}
         />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-[var(--foreground)] truncate">
+          <p className={`text-sm truncate ${isOverdue ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
             {todo.customer_name || todo.text}
           </p>
           <p className="text-xs text-[var(--text-muted)]">
@@ -112,6 +128,8 @@ export default function CalendarDayCell({
   onTaskClick,
   enableDragDrop = false,
   isDragActive = false,
+  columnIndex,
+  rowIndex,
 }: CalendarDayCellProps) {
   const [showPopup, setShowPopup] = useState(false);
 
@@ -150,6 +168,10 @@ export default function CalendarDayCell({
     prevIsDragActive.current = isDragActive;
   }, [isDragActive]);
 
+  // Determine popup positioning based on cell position in grid
+  const popupHorizontal = columnIndex !== undefined && columnIndex >= 5 ? 'right-0' : 'left-0';
+  const popupVertical = rowIndex !== undefined && rowIndex >= 4 ? 'bottom-full mb-1' : 'top-full mt-1';
+
   return (
     <div
       ref={setDroppableRef}
@@ -161,10 +183,10 @@ export default function CalendarDayCell({
         role="gridcell"
         aria-label={fullDateLabel}
         onClick={handleCellClick}
-        whileHover={{ scale: 1.02 }}
+        whileHover={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
         whileTap={{ scale: 0.98 }}
         className={`
-          w-full aspect-square min-h-[80px] sm:min-h-[100px] p-2 rounded-lg
+          group w-full aspect-square sm:aspect-auto sm:min-h-[100px] min-h-[80px] sm:min-h-[100px] p-2 rounded-lg
           flex flex-col items-start justify-start
           transition-all duration-200 border
           ${isOver
@@ -173,45 +195,51 @@ export default function CalendarDayCell({
               ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/30'
               : isCurrentMonth
                 ? 'bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)]'
-                : 'bg-[var(--surface)] border-[var(--border-muted)]'
+                : 'bg-[var(--background)] dark:bg-[var(--background)] border-[var(--border-muted)]'
           }
         `}
       >
         {/* Day Number */}
         <span
           className={`
-            text-sm font-semibold mb-1
+            mb-1 inline-flex items-center justify-center
             ${isToday
-              ? 'text-[var(--accent)]'
+              ? 'text-white bg-[var(--accent)] w-7 h-7 rounded-full text-sm font-bold'
               : isCurrentMonth
-                ? 'text-[var(--foreground)]'
-                : 'text-[var(--text-muted)]'
+                ? 'text-[var(--foreground)] text-base font-bold'
+                : 'text-[var(--text-muted)] dark:text-[var(--text-muted)]/50 text-sm font-medium'
             }
           `}
         >
           {dayNumber}
         </span>
 
+        {/* Hover "+" on empty cells */}
+        {todos.length === 0 && (
+          <span className="opacity-0 group-hover:opacity-60 transition-opacity text-[var(--text-muted)] text-lg">+</span>
+        )}
+
         {/* Task Previews */}
         {todos.length > 0 && (
           <div className="w-full flex-1 flex flex-col gap-0.5 min-h-0 overflow-hidden">
-            {todos.slice(0, 2).map((todo) => {
+            {todos.slice(0, 3).map((todo) => {
               const cat = todo.category || 'other';
+              const isOverdue = todo.due_date ? new Date(todo.due_date + 'T00:00:00') < new Date(new Date().toDateString()) : false;
               return (
                 <div
                   key={todo.id}
                   className="flex items-center gap-1 px-1 py-0.5 rounded text-[10px] sm:text-xs truncate bg-[var(--surface)]/60"
                 >
-                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[cat]}`} />
-                  <span className="truncate text-[var(--foreground)]">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${CATEGORY_COLORS[cat]}`} />
+                  <span className={`truncate ${isOverdue ? 'text-red-500' : 'text-[var(--text-light)]'}`}>
                     {todo.customer_name || todo.text}
                   </span>
                 </div>
               );
             })}
-            {todos.length > 2 && (
+            {todos.length > 3 && (
               <span className="text-[10px] text-[var(--text-muted)] px-1">
-                +{todos.length - 2} more
+                +{todos.length - 3} more
               </span>
             )}
           </div>
@@ -226,7 +254,7 @@ export default function CalendarDayCell({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 top-full left-0 mt-1 min-w-[220px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg"
+            className={`absolute z-50 ${popupVertical} ${popupHorizontal} min-w-[220px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)]`}
             style={{ pointerEvents: 'auto' }}
             onMouseEnter={() => setShowPopup(true)}
             onMouseLeave={() => !isDragActive && setShowPopup(false)}
@@ -248,7 +276,7 @@ export default function CalendarDayCell({
             </div>
 
             {/* Task List — show all tasks; container scrolls via max-h + overflow-y-auto */}
-            <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
+            <div className="space-y-0.5 max-h-[300px] overflow-y-auto">
               {todos.map((todo) => (
                 <DraggableTaskItem
                   key={todo.id}

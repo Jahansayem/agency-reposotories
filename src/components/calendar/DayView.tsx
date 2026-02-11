@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday } from 'date-fns';
+import { ChevronRight } from 'lucide-react';
 import { Todo, TodoPriority } from '@/types/todo';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from './CalendarDayCell';
 
@@ -17,7 +18,7 @@ interface DayViewProps {
 const PRIORITY_BADGES: Record<TodoPriority, { label: string; className: string }> = {
   urgent: { label: 'Urgent', className: 'bg-red-500/10 text-red-500 border-red-500/20' },
   high: { label: 'High', className: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
-  medium: { label: 'Medium', className: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' },
+  medium: { label: 'Medium', className: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20' },
   low: { label: 'Low', className: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
 };
 
@@ -49,7 +50,7 @@ export default function DayView({
 
   return (
     <div className="flex-1 p-4 sm:p-6 overflow-auto">
-      <AnimatePresence mode="wait" custom={direction}>
+      <AnimatePresence mode="popLayout" custom={direction}>
         <motion.div
           key={dateKey}
           custom={direction}
@@ -80,6 +81,7 @@ export default function DayView({
                 const priorityBadge = PRIORITY_BADGES[priority];
                 const subtaskCount = todo.subtasks?.length || 0;
                 const completedSubtasks = todo.subtasks?.filter((s) => s.completed).length || 0;
+                const isOverdue = todo.due_date ? new Date(todo.due_date + 'T00:00:00') < new Date(new Date().toDateString()) : false;
 
                 return (
                   <button
@@ -100,6 +102,11 @@ export default function DayView({
                           {priorityBadge && (
                             <span className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border ${priorityBadge.className}`}>
                               {priorityBadge.label}
+                            </span>
+                          )}
+                          {isOverdue && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/10 text-red-500">
+                              Overdue
                             </span>
                           )}
                         </div>
@@ -125,17 +132,22 @@ export default function DayView({
                           </p>
                         )}
                       </div>
+
+                      {/* Hover chevron */}
+                      <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
                     </div>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16">
-              <p className="text-sm text-[var(--text-muted)] mb-3">No tasks for this day</p>
+            <div className="flex flex-col items-center justify-center py-8">
+              <p className="text-[var(--text-muted)] mb-4">
+                No tasks for {format(currentDate, 'EEEE, MMMM d')}
+              </p>
               <button
                 onClick={() => onDateClick(currentDate)}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 transition-colors"
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-[var(--accent)]/10 text-[var(--accent)] hover:bg-[var(--accent)]/20 border border-[var(--accent)]/30 transition-colors"
               >
                 + Create Task
               </button>

@@ -29,6 +29,7 @@ interface WeekViewProps {
   onDateClick: (date: Date) => void;
   onTaskClick: (todo: Todo) => void;
   onReschedule?: (todoId: string, newDate: string) => void;
+  onAddTask?: (date: Date) => void;
 }
 
 const weekVariants = {
@@ -52,6 +53,7 @@ function DroppableDayColumn({
   today,
   onDateClick,
   onTaskClick,
+  onAddTask,
   enableDragDrop,
   isDragActive,
 }: {
@@ -60,9 +62,11 @@ function DroppableDayColumn({
   today: boolean;
   onDateClick: (date: Date) => void;
   onTaskClick: (todo: Todo) => void;
+  onAddTask?: (date: Date) => void;
   enableDragDrop: boolean;
   isDragActive: boolean;
 }) {
+  const isWeekend = day.getDay() === 0 || day.getDay() === 6;
   const dateKey = format(day, 'yyyy-MM-dd');
   const { setNodeRef, isOver } = useDroppable({
     id: `week-day-${dateKey}`,
@@ -78,8 +82,10 @@ function DroppableDayColumn({
         ${isOver
           ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/20 border-[var(--accent)]'
           : today
-            ? 'ring-2 ring-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/5'
-            : 'border-[var(--border)] bg-[var(--surface-2)]'
+            ? 'ring-2 ring-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/10'
+            : isWeekend
+              ? 'border-[var(--border)] bg-[var(--surface)]/50 opacity-75'
+              : 'border-[var(--border)] bg-[var(--surface-2)]'
         }
       `}
     >
@@ -100,7 +106,13 @@ function DroppableDayColumn({
           {format(day, 'd')}
         </span>
         {dayTodos.length > 0 && (
-          <span className="ml-auto text-xs text-[var(--text-muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded-full">
+          <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full ${
+            dayTodos.length >= 7
+              ? 'bg-red-500/10 text-red-500'
+              : dayTodos.length >= 4
+                ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                : 'bg-[var(--surface)] text-[var(--text-muted)]'
+          }`}>
             {dayTodos.length}
           </span>
         )}
@@ -118,7 +130,7 @@ function DroppableDayColumn({
         ))}
         {dayTodos.length === 0 && (
           <button
-            onClick={() => onDateClick(day)}
+            onClick={() => (onAddTask || onDateClick)(day)}
             className="w-full h-full min-h-[40px] flex items-center justify-center text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] rounded-md transition-colors"
           >
             + Add task
@@ -136,6 +148,7 @@ export default function WeekView({
   onDateClick,
   onTaskClick,
   onReschedule,
+  onAddTask,
 }: WeekViewProps) {
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
 
@@ -190,7 +203,7 @@ export default function WeekView({
 
   const content = (
     <div className="flex-1 p-2 sm:p-4 overflow-auto">
-      <AnimatePresence mode="wait" custom={direction}>
+      <AnimatePresence mode="popLayout" custom={direction}>
         <motion.div
           key={format(startOfWeek(currentDate), 'yyyy-MM-dd')}
           custom={direction}
@@ -199,7 +212,7 @@ export default function WeekView({
           animate="center"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="grid grid-cols-7 gap-2 h-full"
+          className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 h-full"
         >
           {weekDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');
@@ -214,6 +227,7 @@ export default function WeekView({
                 today={today}
                 onDateClick={onDateClick}
                 onTaskClick={onTaskClick}
+                onAddTask={onAddTask}
                 enableDragDrop={enableDragDrop}
                 isDragActive={isDragActive}
               />

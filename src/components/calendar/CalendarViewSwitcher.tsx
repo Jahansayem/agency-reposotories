@@ -30,7 +30,7 @@ export default function CalendarViewSwitcher({
             px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150
             ${
               viewMode === mode
-                ? 'bg-[var(--accent)] text-white shadow-sm'
+                ? 'bg-[var(--accent)] text-white shadow-sm dark:shadow-none dark:ring-1 dark:ring-white/10'
                 : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
             }
           `}
