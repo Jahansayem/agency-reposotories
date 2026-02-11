@@ -88,6 +88,12 @@ const AddTaskModal = dynamic(() => import('./AddTaskModal'), {
   loading: () => null,
 });
 
+// Lazy load TaskDetailModal for calendar task detail view
+const TaskDetailModal = dynamic(
+  () => import('./task-detail/TaskDetailModal'),
+  { ssr: false, loading: () => null }
+);
+
 interface MainAppProps {
   currentUser: AuthUser;
   onUserChange: (user: AuthUser | null) => void;
@@ -161,6 +167,12 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // Calendar click-to-create state
   const [calendarAddTaskDate, setCalendarAddTaskDate] = useState<string | null>(null);
+  // Calendar task detail modal state (shows detail without leaving calendar view)
+  const [calendarDetailTodoId, setCalendarDetailTodoId] = useState<string | null>(null);
+  const calendarDetailTodo = useMemo(
+    () => (calendarDetailTodoId ? todos.find((t) => t.id === calendarDetailTodoId) || null : null),
+    [todos, calendarDetailTodoId]
+  );
   const updateTodoInStore = useTodoStore((state) => state.updateTodo);
 
   // Navigate to dashboard on first login of the day
@@ -396,6 +408,57 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     setCalendarAddTaskDate(`${year}-${month}-${day}`);
   }, []);
 
+  // Calendar: click task opens detail modal without leaving calendar view
+  const handleCalendarTaskClick = useCallback((todo: Todo) => {
+    setCalendarDetailTodoId(todo.id);
+  }, []);
+
+  // Calendar task detail: update handler (writes to store + DB)
+  const handleCalendarDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
+    const updated_at = new Date().toISOString();
+    updateTodoInStore(id, { ...updates, updated_at });
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('todos')
+        .update({ ...updates, updated_at })
+        .eq('id', id);
+      if (error) {
+        logger.error('Calendar detail update failed', error, { component: 'MainApp' });
+      }
+    }
+  }, [updateTodoInStore]);
+
+  // Calendar task detail: toggle complete
+  const handleCalendarDetailComplete = useCallback(async (id: string, completed: boolean) => {
+    const updated_at = new Date().toISOString();
+    const newStatus = completed ? 'done' : 'todo';
+    updateTodoInStore(id, { completed, status: newStatus as Todo['status'], updated_at });
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('todos')
+        .update({ completed, status: newStatus, updated_at })
+        .eq('id', id);
+      if (error) {
+        logger.error('Calendar detail toggle failed', error, { component: 'MainApp' });
+      }
+    }
+  }, [updateTodoInStore]);
+
+  // Calendar task detail: delete handler
+  const handleCalendarDetailDelete = useCallback(async (id: string) => {
+    setCalendarDetailTodoId(null);
+    useTodoStore.getState().deleteTodo(id);
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', id);
+      if (error) {
+        logger.error('Calendar detail delete failed', error, { component: 'MainApp' });
+      }
+    }
+  }, []);
+
   // Calendar: drag-and-drop reschedule updates due_date
   const handleCalendarReschedule = useCallback(async (todoId: string, newDate: string) => {
     // Read from store directly to avoid stale closure on rapid successive drags
@@ -605,7 +668,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
                 <CalendarView
                   key={agencyKey}
                   todos={todos}
-                  onTaskClick={(todo) => handleTaskLinkClick(todo.id)}
+                  onTaskClick={handleCalendarTaskClick}
                   onDateClick={handleCalendarDateClick}
                   onReschedule={handleCalendarReschedule}
                 />
@@ -693,6 +756,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
     handleNavigateToCustomers,
     handleNavigateBack,
     handleCalendarDateClick,
+    handleCalendarTaskClick,
     handleCalendarReschedule,
     onUserChange,
     currentAgencyId,
@@ -802,6 +866,18 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       <AIPreferencesModal
         isOpen={showAIPreferences}
         onClose={() => setShowAIPreferences(false)}
+      />
+
+      {/* Calendar Task Detail Modal — shows task details without leaving the calendar */}
+      <TaskDetailModal
+        todo={calendarDetailTodo}
+        isOpen={!!calendarDetailTodo}
+        onClose={() => setCalendarDetailTodoId(null)}
+        currentUser={currentUser}
+        users={users}
+        onUpdate={handleCalendarDetailUpdate}
+        onDelete={handleCalendarDetailDelete}
+        onComplete={handleCalendarDetailComplete}
       />
 
       {/* Calendar Add Task Modal */}

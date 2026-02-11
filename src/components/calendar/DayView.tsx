@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, isToday } from 'date-fns';
 import { ChevronRight } from 'lucide-react';
 import { Todo, TodoPriority } from '@/types/todo';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from './CalendarDayCell';
+import { CATEGORY_COLORS, CATEGORY_LABELS, isTaskOverdue } from './constants';
 
 interface DayViewProps {
   currentDate: Date;
@@ -81,7 +81,7 @@ export default function DayView({
                 const priorityBadge = PRIORITY_BADGES[priority];
                 const subtaskCount = todo.subtasks?.length || 0;
                 const completedSubtasks = todo.subtasks?.filter((s) => s.completed).length || 0;
-                const isOverdue = todo.due_date ? new Date(todo.due_date + 'T00:00:00') < new Date(new Date().toDateString()) : false;
+                const isOverdue = isTaskOverdue(todo.due_date);
 
                 return (
                   <button

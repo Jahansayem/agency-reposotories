@@ -1,4 +1,5 @@
-export { default as CalendarView, CATEGORY_COLORS, CATEGORY_LABELS } from './CalendarView';
+export { default as CalendarView } from './CalendarView';
+export { CATEGORY_COLORS, CATEGORY_LABELS, ALL_CATEGORIES, PRIORITY_ORDER, isTaskOverdue } from './constants';
 export { default as CalendarDayCell } from './CalendarDayCell';
 export { default as MonthView } from './MonthView';
 export { default as WeekView } from './WeekView';

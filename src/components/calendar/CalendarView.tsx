@@ -25,7 +25,7 @@ import {
 import { Todo, DashboardTaskCategory } from '@/types/todo';
 import { CalendarViewMode } from '@/types/calendar';
 import { useToast } from '@/components/ui/Toast';
-import { CATEGORY_COLORS, CATEGORY_LABELS } from './CalendarDayCell';
+import { CATEGORY_COLORS, CATEGORY_LABELS, ALL_CATEGORIES, PRIORITY_ORDER } from './constants';
 import CalendarViewSwitcher from './CalendarViewSwitcher';
 import MonthView from './MonthView';
 import WeekView from './WeekView';
@@ -38,18 +38,6 @@ interface CalendarViewProps {
   onDateClick: (date: Date) => void;
   onReschedule?: (todoId: string, newDate: string) => void;
 }
-
-const PRIORITY_WEIGHT: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-
-const ALL_CATEGORIES: DashboardTaskCategory[] = [
-  'quote',
-  'renewal',
-  'claim',
-  'service',
-  'follow-up',
-  'prospecting',
-  'other',
-];
 
 const headerVariants = {
   enter: (direction: 'left' | 'right') => ({
@@ -235,31 +223,45 @@ export default function CalendarView({
     setSelectedCategories(new Set());
   }, []);
 
-  // Filtered todos by date
-  const todosByDate = useMemo(() => {
+  // Step 1: Group and sort ALL active todos by date (only recomputes when `todos` changes)
+  const allTodosByDate = useMemo(() => {
     const map = new Map<string, Todo[]>();
-    todos
-      .filter((todo) => {
-        if (!todo.due_date) return false;
-        if (todo.completed || todo.status === 'done') return false;
-        const category = todo.category || 'other';
-        return selectedCategories.has(category);
-      })
-      .forEach((todo) => {
-        const dateKey = todo.due_date!.split('T')[0];
-        const existing = map.get(dateKey);
-        if (existing) {
-          existing.push(todo);
-        } else {
-          map.set(dateKey, [todo]);
-        }
-      });
+    todos.forEach((todo) => {
+      if (!todo.due_date) return;
+      if (todo.completed || todo.status === 'done') return;
+      const dateKey = todo.due_date.split('T')[0];
+      const existing = map.get(dateKey);
+      if (existing) {
+        existing.push(todo);
+      } else {
+        map.set(dateKey, [todo]);
+      }
+    });
     // Sort each day's tasks by priority: urgent > high > medium > low > undefined
     map.forEach((arr) => {
-      arr.sort((a, b) => (PRIORITY_WEIGHT[a.priority || ''] ?? 4) - (PRIORITY_WEIGHT[b.priority || ''] ?? 4));
+      arr.sort((a, b) => (PRIORITY_ORDER[a.priority || ''] ?? 4) - (PRIORITY_ORDER[b.priority || ''] ?? 4));
     });
     return map;
-  }, [todos, selectedCategories]);
+  }, [todos]);
+
+  // Step 2: Filter the pre-grouped map by selected categories (cheap when only filters change)
+  const todosByDate = useMemo(() => {
+    // Fast path: all categories selected — no filtering needed
+    if (selectedCategories.size === ALL_CATEGORIES.length) {
+      return allTodosByDate;
+    }
+    const filtered = new Map<string, Todo[]>();
+    allTodosByDate.forEach((dayTodos, dateKey) => {
+      const matching = dayTodos.filter((todo) => {
+        const category = todo.category || 'other';
+        return selectedCategories.has(category);
+      });
+      if (matching.length > 0) {
+        filtered.set(dateKey, matching);
+      }
+    });
+    return filtered;
+  }, [allTodosByDate, selectedCategories]);
 
   // Category counts for current month
   // Uses string-based month extraction to avoid timezone issues with new Date()
@@ -360,27 +362,40 @@ export default function CalendarView({
 
           {/* Filter Button */}
           <div className="relative">
-            <button
-              onClick={() => setShowFilterMenu(!showFilterMenu)}
-              aria-expanded={showFilterMenu}
-              aria-haspopup="true"
-              className={`
-                flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                ${
-                  showFilterMenu || selectedCategories.size < ALL_CATEGORIES.length
-                    ? 'bg-[var(--accent)] text-white'
-                    : 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
-                }
-              `}
-            >
-              <Filter className="w-4 h-4" />
-              <span className="hidden sm:inline">Filter</span>
-              {selectedCategories.size < ALL_CATEGORIES.length && (
-                <span className="px-1.5 py-0.5 rounded-full bg-white/20 text-xs">
-                  {selectedCategories.size}
-                </span>
-              )}
-            </button>
+            {(() => {
+              const filtersActive = selectedCategories.size < ALL_CATEGORIES.length;
+              const menuOpen = showFilterMenu;
+              let btnClass = 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)] border-transparent';
+              if (menuOpen && filtersActive) {
+                // Both: accent background + prominent border
+                btnClass = 'bg-[var(--accent)]/15 text-[var(--accent)] border-2 border-[var(--accent)]';
+              } else if (menuOpen) {
+                // Menu open only: border highlight, no accent fill
+                btnClass = 'bg-[var(--surface)] text-[var(--foreground)] border-2 border-[var(--accent)]';
+              } else if (filtersActive) {
+                // Filters active, menu closed: subtle accent tint
+                btnClass = 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30';
+              }
+              return (
+                <button
+                  onClick={() => setShowFilterMenu(!showFilterMenu)}
+                  aria-expanded={showFilterMenu}
+                  aria-haspopup="true"
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border
+                    ${btnClass}
+                  `}
+                >
+                  <Filter className="w-4 h-4" />
+                  <span className="hidden sm:inline">Filter</span>
+                  {filtersActive && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-semibold">
+                      {selectedCategories.size}
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
 
             {/* Filter Dropdown */}
             <AnimatePresence>
@@ -544,5 +559,3 @@ export default function CalendarView({
     </div>
   );
 }
-
-export { CATEGORY_COLORS, CATEGORY_LABELS };

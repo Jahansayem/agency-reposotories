@@ -19,8 +19,13 @@ import {
   eachDayOfInterval,
 } from 'date-fns';
 import { Todo } from '@/types/todo';
-import { DraggableTaskItem, CATEGORY_COLORS } from './CalendarDayCell';
+import { DraggableTaskItem } from './CalendarDayCell';
+import { CATEGORY_COLORS, isTaskOverdue } from './constants';
 import CalendarDragOverlay from './CalendarDragOverlay';
+
+/** Task count thresholds for badge color coding */
+const TASK_COUNT_HIGH = 7;
+const TASK_COUNT_MEDIUM = 4;
 
 interface WeekViewProps {
   currentDate: Date;
@@ -78,7 +83,7 @@ function DroppableDayColumn({
     <div
       ref={setNodeRef}
       className={`
-        flex flex-col rounded-lg border overflow-hidden min-h-[200px] transition-all
+        flex flex-col sm:flex-col rounded-lg border overflow-hidden sm:min-h-[200px] transition-all
         ${isOver
           ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/20 border-[var(--accent)]'
           : today
@@ -94,7 +99,11 @@ function DroppableDayColumn({
         onClick={() => onDateClick(day)}
         className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors"
       >
-        <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
+        {/* Mobile: show full day name; tablet+: abbreviated */}
+        <span className="text-xs font-semibold text-[var(--text-muted)] uppercase sm:hidden">
+          {format(day, 'EEEE')}
+        </span>
+        <span className="text-xs font-semibold text-[var(--text-muted)] uppercase hidden sm:inline">
           {format(day, 'EEE')}
         </span>
         <span
@@ -103,35 +112,48 @@ function DroppableDayColumn({
             ${today ? 'text-[var(--accent)]' : 'text-[var(--foreground)]'}
           `}
         >
-          {format(day, 'd')}
+          {format(day, 'd MMM')}
         </span>
         {dayTodos.length > 0 && (
           <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full ${
-            dayTodos.length >= 7
-              ? 'bg-red-500/10 text-red-500'
-              : dayTodos.length >= 4
-                ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+            dayTodos.length >= TASK_COUNT_HIGH
+              ? 'bg-blue-500/10 text-blue-500'
+              : dayTodos.length >= TASK_COUNT_MEDIUM
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                 : 'bg-[var(--surface)] text-[var(--text-muted)]'
           }`}>
-            {dayTodos.length}
+            {dayTodos.length} {dayTodos.length === 1 ? 'task' : 'tasks'}
           </span>
         )}
       </button>
 
       {/* Tasks */}
       <div className="flex-1 p-1.5 space-y-0.5 overflow-y-auto">
-        {dayTodos.map((todo) => (
-          <DraggableTaskItem
-            key={todo.id}
-            todo={todo}
-            onTaskClick={onTaskClick}
-            enableDrag={enableDragDrop}
-          />
-        ))}
+        {dayTodos.map((todo) => {
+          const overdue = !todo.completed && isTaskOverdue(todo.due_date);
+          return (
+            <div key={todo.id} className="relative">
+              <DraggableTaskItem
+                todo={todo}
+                onTaskClick={onTaskClick}
+                enableDrag={enableDragDrop}
+              />
+              {overdue && (
+                <span
+                  className="absolute top-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-500/15 text-red-600 dark:text-red-400 leading-none"
+                  title="Overdue"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  Overdue
+                </span>
+              )}
+            </div>
+          );
+        })}
         {dayTodos.length === 0 && (
           <button
             onClick={() => (onAddTask || onDateClick)(day)}
-            className="w-full h-full min-h-[40px] flex items-center justify-center text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] rounded-md transition-colors"
+            className="w-full sm:h-full min-h-[40px] flex items-center justify-center text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] rounded-md transition-colors"
           >
             + Add task
           </button>
@@ -212,7 +234,7 @@ export default function WeekView({
           animate="center"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 h-full"
+          className="grid grid-cols-1 sm:grid-cols-4 md:grid-cols-7 gap-2 h-full"
         >
           {weekDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');

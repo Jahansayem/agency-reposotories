@@ -5,29 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { GripVertical } from 'lucide-react';
-import { Todo, DashboardTaskCategory } from '@/types/todo';
-
-// Category color mapping for task indicators
-const CATEGORY_COLORS: Record<DashboardTaskCategory, string> = {
-  quote: 'bg-blue-500',
-  renewal: 'bg-purple-500',
-  claim: 'bg-red-500',
-  service: 'bg-amber-500',
-  'follow-up': 'bg-emerald-500',
-  prospecting: 'bg-cyan-500',
-  other: 'bg-slate-500',
-};
-
-// Category labels for hover preview
-const CATEGORY_LABELS: Record<DashboardTaskCategory, string> = {
-  quote: 'Quote',
-  renewal: 'Renewal',
-  claim: 'Claim',
-  service: 'Service',
-  'follow-up': 'Follow-up',
-  prospecting: 'Prospecting',
-  other: 'Other',
-};
+import { Todo } from '@/types/todo';
+import { CATEGORY_COLORS, CATEGORY_LABELS, isTaskOverdue } from './constants';
 
 // Priority-based left border colors
 const PRIORITY_BORDER: Record<string, string> = {
@@ -68,7 +47,7 @@ function DraggableTaskItem({
   });
 
   const category = todo.category || 'other';
-  const isOverdue = todo.due_date ? new Date(todo.due_date + 'T00:00:00') < new Date(new Date().toDateString()) : false;
+  const isOverdue = isTaskOverdue(todo.due_date);
 
   // Overdue border takes precedence over priority border
   const borderClass = isOverdue
@@ -98,10 +77,14 @@ function DraggableTaskItem({
         className="flex-1 flex items-start gap-2 min-w-0 text-left"
       >
         <div
-          className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${CATEGORY_COLORS[category]}`}
+          className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${CATEGORY_COLORS[category]}`}
+          title={CATEGORY_LABELS[category]}
         />
         <div className="flex-1 min-w-0">
-          <p className={`text-sm truncate ${isOverdue ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
+          <p
+            className={`text-sm truncate ${isOverdue ? 'text-red-500' : 'text-[var(--foreground)]'}`}
+            title={todo.customer_name || todo.text}
+          >
             {todo.customer_name || todo.text}
           </p>
           <p className="text-xs text-[var(--text-muted)]">
@@ -186,7 +169,7 @@ export default function CalendarDayCell({
         whileHover={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
         whileTap={{ scale: 0.98 }}
         className={`
-          group w-full aspect-square sm:aspect-auto sm:min-h-[100px] min-h-[80px] sm:min-h-[100px] p-2 rounded-lg
+          group w-full aspect-square sm:aspect-auto min-h-[80px] sm:min-h-[100px] p-2 rounded-lg
           flex flex-col items-start justify-start
           transition-all duration-200 border
           ${isOver
@@ -214,9 +197,9 @@ export default function CalendarDayCell({
           {dayNumber}
         </span>
 
-        {/* Hover "+" on empty cells */}
+        {/* "+ Add task" hint on empty cells — always visible, brighter on hover */}
         {todos.length === 0 && (
-          <span className="opacity-0 group-hover:opacity-60 transition-opacity text-[var(--text-muted)] text-lg">+</span>
+          <span className="opacity-50 group-hover:opacity-100 transition-opacity text-[var(--text-muted)] text-xs">+ Add task</span>
         )}
 
         {/* Task Previews */}
@@ -224,14 +207,20 @@ export default function CalendarDayCell({
           <div className="w-full flex-1 flex flex-col gap-0.5 min-h-0 overflow-hidden">
             {todos.slice(0, 3).map((todo) => {
               const cat = todo.category || 'other';
-              const isOverdue = todo.due_date ? new Date(todo.due_date + 'T00:00:00') < new Date(new Date().toDateString()) : false;
+              const isOverdue = isTaskOverdue(todo.due_date);
               return (
                 <div
                   key={todo.id}
                   className="flex items-center gap-1 px-1 py-0.5 rounded text-[10px] sm:text-xs truncate bg-[var(--surface)]/60"
                 >
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${CATEGORY_COLORS[cat]}`} />
-                  <span className={`truncate ${isOverdue ? 'text-red-500' : 'text-[var(--text-light)]'}`}>
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[cat]}`}
+                    title={CATEGORY_LABELS[cat]}
+                  />
+                  <span
+                    className={`truncate ${isOverdue ? 'text-red-500' : 'text-[var(--text-light)]'}`}
+                    title={todo.customer_name || todo.text}
+                  >
                     {todo.customer_name || todo.text}
                   </span>
                 </div>
@@ -293,4 +282,4 @@ export default function CalendarDayCell({
   );
 }
 
-export { DraggableTaskItem, CATEGORY_COLORS, CATEGORY_LABELS };
+export { DraggableTaskItem };

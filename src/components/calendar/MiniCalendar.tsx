@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo } from 'react';
 import {
   startOfMonth,
   endOfMonth,
@@ -12,8 +11,6 @@ import {
   isSameMonth,
   isSameDay,
   isToday,
-  addMonths,
-  subMonths,
 } from 'date-fns';
 import { Todo } from '@/types/todo';
 
@@ -28,51 +25,24 @@ export default function MiniCalendar({
   todosByDate,
   onDateClick,
 }: MiniCalendarProps) {
-  const [miniMonth, setMiniMonth] = useState(currentDate);
-
-  // Sync mini calendar month when parent navigates to a different month
-  useEffect(() => {
-    setMiniMonth(currentDate);
-  }, [currentDate]);
-
+  // Derive displayed month directly from the main view's currentDate —
+  // no independent state, so the mini calendar always mirrors the main view.
   const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(miniMonth);
-    const monthEnd = endOfMonth(miniMonth);
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
     return eachDayOfInterval({
       start: startOfWeek(monthStart),
       end: endOfWeek(monthEnd),
     });
-  }, [miniMonth]);
-
-  const goToPrevMonth = useCallback(() => {
-    setMiniMonth((prev) => subMonths(prev, 1));
-  }, []);
-
-  const goToNextMonth = useCallback(() => {
-    setMiniMonth((prev) => addMonths(prev, 1));
-  }, []);
+  }, [currentDate]);
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <button
-          onClick={goToPrevMonth}
-          className="p-1 rounded hover:bg-[var(--surface-hover)] transition-colors"
-          aria-label="Previous month"
-        >
-          <ChevronLeft className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-        </button>
+      {/* Header — read-only month label, no independent navigation */}
+      <div className="flex items-center justify-center mb-2">
         <span className="text-xs font-semibold text-[var(--foreground)]">
-          {format(miniMonth, 'MMM yyyy')}
+          {format(currentDate, 'MMM yyyy')}
         </span>
-        <button
-          onClick={goToNextMonth}
-          className="p-1 rounded hover:bg-[var(--surface-hover)] transition-colors"
-          aria-label="Next month"
-        >
-          <ChevronRight className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-        </button>
       </div>
 
       {/* Weekday Headers */}
@@ -89,7 +59,7 @@ export default function MiniCalendar({
         {calendarDays.map((day) => {
           const dateKey = format(day, 'yyyy-MM-dd');
           const hasTasks = (todosByDate.get(dateKey)?.length || 0) > 0;
-          const isCurrentMonth = isSameMonth(day, miniMonth);
+          const isCurrentMonth = isSameMonth(day, currentDate);
           const isSelected = isSameDay(day, currentDate);
           const today = isToday(day);
 
@@ -98,19 +68,19 @@ export default function MiniCalendar({
               key={dateKey}
               onClick={() => onDateClick(day)}
               className={`
-                relative w-full aspect-square flex items-center justify-center rounded text-[11px] transition-colors
+                relative w-full aspect-square flex items-center justify-center text-[11px] transition-colors
                 ${isSelected
-                  ? 'bg-[var(--accent)] text-white font-bold'
+                  ? 'bg-[var(--accent)] text-white font-bold rounded-full'
                   : today
-                    ? 'text-[var(--accent)] font-bold hover:bg-[var(--accent)]/10'
+                    ? 'bg-[var(--accent)] text-white font-bold rounded-full'
                     : isCurrentMonth
-                      ? 'text-[var(--foreground)] hover:bg-[var(--surface-hover)]'
-                      : 'text-[var(--text-muted)]/50 hover:bg-[var(--surface-hover)]'
+                      ? 'text-[var(--foreground)] rounded hover:bg-[var(--surface-hover)]'
+                      : 'text-[var(--text-muted)]/50 rounded hover:bg-[var(--surface-hover)]'
                 }
               `}
             >
               {day.getDate()}
-              {hasTasks && !isSelected && (
+              {hasTasks && !isSelected && !today && (
                 <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--accent)]" />
               )}
             </button>

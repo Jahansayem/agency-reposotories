@@ -2,7 +2,7 @@
 
 import { DragOverlay } from '@dnd-kit/core';
 import { Todo } from '@/types/todo';
-import { CATEGORY_COLORS } from './CalendarDayCell';
+import { CATEGORY_COLORS } from './constants';
 
 interface CalendarDragOverlayProps {
   activeTodo: Todo | null;
@@ -12,11 +12,16 @@ export default function CalendarDragOverlay({ activeTodo }: CalendarDragOverlayP
   const category = activeTodo?.category || 'other';
 
   return (
-    <DragOverlay>
+    <DragOverlay dropAnimation={null}>
       {activeTodo ? (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--accent)] shadow-xl cursor-grabbing max-w-[200px]">
-          <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[category]}`} />
-          <span className="text-sm text-[var(--foreground)] truncate font-medium">
+        <div
+          className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[var(--surface)] border-2 border-[var(--accent)] shadow-2xl cursor-grabbing max-w-[260px] opacity-95"
+          style={{
+            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          <div className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white/30 ${CATEGORY_COLORS[category]}`} />
+          <span className="text-sm text-[var(--foreground)] truncate font-semibold">
             {activeTodo.customer_name || activeTodo.text}
           </span>
         </div>
