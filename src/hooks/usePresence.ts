@@ -108,7 +108,7 @@ export function usePresence(currentUser?: { name: string; id: string; color: str
       presenceChannel.untrack();
       supabase.removeChannel(presenceChannel);
     };
-  }, [currentUser?.id, currentUser?.name, currentUser?.color, location]);
+  }, [currentUser?.id, currentUser?.name, currentUser?.color]);
 
   // Update location when it changes
   useEffect(() => {
@@ -138,9 +138,10 @@ export function usePresence(currentUser?: { name: string; id: string; color: str
 
     updateLocation();
 
-    // Cleanup: prevent updates after unmount
+    // Cleanup: prevent updates after unmount and reset tracking flag
     return () => {
       isCancelled = true;
+      isTrackingRef.current = false;
     };
   }, [memoizedLocation, channel, currentUser?.id, currentUser?.name, currentUser?.color]);
 

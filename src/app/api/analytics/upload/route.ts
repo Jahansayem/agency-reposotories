@@ -316,6 +316,8 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       }
 
       // Check for existing record if skip_duplicates or update_existing
+      // NOTE: This check-then-insert is not atomic — concurrent uploads may bypass the dedup.
+      // A DB-level unique constraint on (customer_name, agency_id) is the proper long-term fix.
       if (skipDuplicates || updateExisting) {
         const { data: existing } = await supabase
           .from('cross_sell_opportunities')

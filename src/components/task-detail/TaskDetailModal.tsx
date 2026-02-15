@@ -154,8 +154,8 @@ export default function TaskDetailModal({
           onTitleChange={detail.setTitle}
           onSaveTitle={detail.saveTitle}
           onStartEditTitle={() => detail.setEditingTitle(true)}
-          onCancelEditTitle={() => {
-            detail.setTitle(todo.text);
+          onCancelEditTitle={(originalTitle) => {
+            detail.setTitle(originalTitle);
             detail.setEditingTitle(false);
           }}
           onClose={handleClose}

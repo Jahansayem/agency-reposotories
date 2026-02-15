@@ -380,7 +380,11 @@ export const PATCH = withAgencyAuth(
       }
 
       // Sole owner cannot remove their own can_manage_team permission
-      if (permissionUpdates?.can_manage_team === false && memberToUpdate.user_id === ctx.userId) {
+      // Check both explicit permission removal AND implicit removal via role change
+      const willLoseManageTeam =
+        permissionUpdates?.can_manage_team === false ||
+        (newRole && newRole !== 'owner' && !permissionUpdates?.can_manage_team);
+      if (willLoseManageTeam && memberToUpdate.user_id === ctx.userId && memberToUpdate.role === 'owner') {
         const { data: otherOwners } = await supabase
           .from('agency_members')
           .select('id')

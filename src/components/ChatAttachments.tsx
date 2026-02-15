@@ -19,6 +19,11 @@ import { logger } from '@/lib/logger';
  * - ImageLightbox: Full-screen image viewer
  */
 
+/** Strip any HTML/script from a file name to prevent XSS via crafted filenames */
+function sanitizeFileName(name: string): string {
+  return name.replace(/[<>"'&]/g, '');
+}
+
 /**
  * Upload button for chat input
  */
@@ -121,7 +126,7 @@ export function AttachmentPreview({
         {previewUrl ? (
           <img
             src={previewUrl}
-            alt={file.name}
+            alt={sanitizeFileName(file.name)}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -160,7 +165,7 @@ export function AttachmentPreview({
       {/* File name */}
       <div className="mt-1 max-w-24">
         <p className="text-xs text-[var(--foreground)] truncate">
-          {file.name}
+          {sanitizeFileName(file.name)}
         </p>
         <p className="text-xs text-[var(--text-muted)]">
           {(file.size / 1024).toFixed(1)} KB
@@ -217,7 +222,7 @@ export function ChatImageGallery({
           >
             <img
               src={imageUrl}
-              alt={attachment.file_name}
+              alt={sanitizeFileName(attachment.file_name)}
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -262,7 +267,7 @@ export function ImageLightbox({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = attachment.file_name;
+      a.download = sanitizeFileName(attachment.file_name);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -315,7 +320,7 @@ export function ImageLightbox({
 
         {/* File info */}
         <div className="absolute bottom-4 left-4 right-4 text-center">
-          <p className="text-white text-sm font-medium">{attachment.file_name}</p>
+          <p className="text-white text-sm font-medium">{sanitizeFileName(attachment.file_name)}</p>
           <p className="text-white/70 text-xs">
             {(attachment.file_size / 1024).toFixed(1)} KB • Uploaded by {attachment.uploaded_by}
           </p>

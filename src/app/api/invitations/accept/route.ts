@@ -92,6 +92,14 @@ export async function POST(request: NextRequest) {
       return apiErrorResponse('AGENCY_INACTIVE', 'The agency associated with this invitation is no longer active');
     }
 
+    // SECURITY: Verify agency_id exists BEFORE creating user account to avoid orphaned users
+    if (!invitation.agency_id) {
+      logger.error('Invitation has null agency_id', null, {
+        invitationId: invitation.id,
+      });
+      return apiErrorResponse('INVALID_STATE', 'Invalid invitation: missing agency association', 500);
+    }
+
     let userId: string;
     let userName: string;
 
@@ -162,16 +170,6 @@ export async function POST(request: NextRequest) {
     }
 
     // ---- Check if user is already a member ----
-    // SECURITY: Verify agency_id is present to prevent duplicate memberships
-    // when invitation has null agency_id (data integrity issue)
-    if (!invitation.agency_id) {
-      logger.error('Invitation has null agency_id', null, {
-        invitationId: invitation.id,
-        userId,
-      });
-      return apiErrorResponse('INVALID_STATE', 'Invalid invitation: missing agency association', 500);
-    }
-
     const { data: existingMember } = await supabase
       .from('agency_members')
       .select('id, status')
@@ -225,6 +223,12 @@ export async function POST(request: NextRequest) {
           });
 
         if (memberError) {
+          // Mark invitation as failed to prevent re-acceptance attempts
+          await supabase
+            .from('agency_invitations')
+            .update({ status: 'failed' })
+            .eq('id', invitation.id);
+
           logger.error('Fallback: failed to create membership', memberError, {
             userId,
             agencyId: invitation.agency_id,

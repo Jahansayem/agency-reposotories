@@ -721,39 +721,41 @@ export default function CalendarView({
                 );
               })}
             </div>
+          </div>
 
-            {/* Person Filter */}
-            {uniqueAssignees.length > 0 && (
-              <div className="px-4 pb-4">
-                <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-                  Team Members
-                </h3>
-                <div className="space-y-1">
-                  {uniqueAssignees.map((user) => {
-                    const isSelected = selectedUsers.has(user);
-                    return (
-                      <button
-                        key={user}
-                        onClick={() => toggleUser(user)}
-                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${isSelected ? 'bg-[var(--accent)]/10 shadow-sm' : selectedUsers.size > 0 ? 'opacity-50 hover:opacity-75' : 'hover:bg-[var(--surface-hover)]'}`}
-                      >
-                        <span className="w-5 h-5 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[10px] font-bold text-[var(--text-muted)]">
-                          {user.charAt(0).toUpperCase()}
-                        </span>
-                        <span className="flex-1 text-sm text-[var(--foreground)] truncate">{user}</span>
-                      </button>
-                    );
-                  })}
-                  {selectedUsers.size > 0 && (
-                    <button onClick={clearUserFilter} className="text-xs text-[var(--accent)] hover:underline px-2 py-1">
-                      Show all
+          {/* Person Filter */}
+          {uniqueAssignees.length > 0 && (
+            <div className="p-4 border-t border-[var(--border)]">
+              <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
+                Team Members
+              </h3>
+              <div className="space-y-1">
+                {uniqueAssignees.map((user) => {
+                  const isSelected = selectedUsers.has(user);
+                  return (
+                    <button
+                      key={user}
+                      onClick={() => toggleUser(user)}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${isSelected ? 'bg-[var(--accent)]/10 shadow-sm' : selectedUsers.size > 0 ? 'opacity-50 hover:opacity-75' : 'hover:bg-[var(--surface-hover)]'}`}
+                    >
+                      <span className="w-5 h-5 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[10px] font-bold text-[var(--text-muted)]">
+                        {user.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="flex-1 text-sm text-[var(--foreground)] truncate">{user}</span>
                     </button>
-                  )}
-                </div>
+                  );
+                })}
+                {selectedUsers.size > 0 && (
+                  <button onClick={clearUserFilter} className="text-xs text-[var(--accent)] hover:underline px-2 py-1">
+                    Show all
+                  </button>
+                )}
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="mt-auto pt-4 border-t border-[var(--border)]">
+          <div className="flex-shrink-0">
+            <div className="p-4 border-t border-[var(--border)]">
               <div className="text-xs text-[var(--text-muted)] space-y-1">
                 <p className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full ring-2 ring-[var(--accent)]" />

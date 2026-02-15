@@ -63,22 +63,16 @@ export async function validateDualAuth(request: NextRequest): Promise<DualAuthRe
     }
 
     if (sessionToken) {
-      // WARNING: This returns authenticated=true based on token PRESENCE only.
-      // Actual cryptographic token verification (checking the token against the
-      // database session record) is performed downstream by sessionValidator in
-      // the individual API route handlers (e.g., withSessionAuth / withAgencyAuth).
+      // This detects auth METHOD only — it does NOT validate the token.
+      // Callers MUST still run sessionValidator (via withSessionAuth / withAgencyAuth)
+      // before trusting the identity. The `authenticated` flag here means
+      // "a token was found", not "the token is cryptographically valid".
       //
-      // This function is an initial routing layer for dual-auth (Clerk vs PIN).
-      // It determines which auth method to use, but does NOT replace the real
-      // validation step. Callers MUST still run sessionValidator before trusting
-      // the identity.
-      //
-      // TODO: Consider verifying the token here to avoid callers accidentally
-      // trusting this result without downstream validation.
+      // All API route wrappers (withAgencyAuth, withSessionAuth) call
+      // sessionValidator internally, so this is safe in practice.
       return {
         authenticated: true,
         authMethod: 'pin',
-        // Actual user details come from sessionValidator in the API route
       };
     }
   }

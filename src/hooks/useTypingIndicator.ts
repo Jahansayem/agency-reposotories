@@ -123,6 +123,9 @@ export function useTypingIndicator(
   useEffect(() => {
     if (!currentUser) return;
 
+    // Capture user identity at effect start for cleanup
+    const userAtStart = { id: currentUser.id, name: currentUser.name, color: currentUser.color };
+
     const typingChannel = supabase.channel(`typing:${channel}`);
 
     typingChannel
@@ -169,9 +172,20 @@ export function useTypingIndicator(
     }, 1000);
 
     return () => {
-      // Stop typing on unmount using refs to avoid stale closures
-      if (isTypingRef.current && broadcastTypingRef.current) {
-        broadcastTypingRef.current(false);
+      // Stop typing on unmount — use captured user identity to avoid wrong-user broadcast
+      if (isTypingRef.current && channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'typing',
+          payload: {
+            user: userAtStart.name,
+            userId: userAtStart.id,
+            color: userAtStart.color,
+            channel,
+            typing: false,
+            timestamp: Date.now(),
+          },
+        }).catch(() => {});
       }
 
       // Clear timers

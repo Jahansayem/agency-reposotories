@@ -72,7 +72,7 @@ export default function MiniCalendar({
                 ${isSelected
                   ? 'bg-[var(--accent)] text-white font-bold rounded-full'
                   : today
-                    ? 'bg-[var(--accent)] text-white font-bold rounded-full'
+                    ? 'text-[var(--accent)] font-bold rounded-full ring-2 ring-[var(--accent)]'
                     : isCurrentMonth
                       ? 'text-[var(--foreground)] rounded hover:bg-[var(--surface-hover)]'
                       : 'text-[var(--text-muted)]/50 rounded hover:bg-[var(--surface-hover)]'

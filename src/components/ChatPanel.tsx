@@ -816,6 +816,9 @@ export default function ChatPanel({
       )
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED');
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          logger.error('Chat subscription failed', null, { component: 'ChatPanel', status });
+        }
       });
 
     // REACT-006: Track typing timeouts properly to prevent memory leaks

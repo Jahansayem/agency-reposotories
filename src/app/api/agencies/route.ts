@@ -113,7 +113,12 @@ export async function POST(request: NextRequest) {
     if (memberError) {
       logger.error('Failed to assign creator as owner', memberError, { component: 'api/agencies', action: 'POST' });
       // Rollback: delete the agency
-      await supabase.from('agencies').delete().eq('id', newAgency.id);
+      const { error: rollbackError } = await supabase.from('agencies').delete().eq('id', newAgency.id);
+      if (rollbackError) {
+        logger.error('CRITICAL: Failed to rollback agency creation — orphaned agency', rollbackError, {
+          component: 'api/agencies', action: 'POST', agencyId: newAgency.id,
+        });
+      }
 
       return apiErrorResponse('INSERT_FAILED', 'Failed to assign owner to agency', 500);
     }
