@@ -130,7 +130,7 @@ export default function WelcomeBackNotification({
   const handleMouseLeave = () => {
     const remaining = (progressRef.current / 100) * AUTO_DISMISS_MS;
     timerRef.current = setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, remaining);
 
     const step = 100 / (AUTO_DISMISS_MS / 50);

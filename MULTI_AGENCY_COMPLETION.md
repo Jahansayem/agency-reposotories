@@ -11,7 +11,7 @@ The multi-agency migration has been **successfully completed**. All 28 automated
 
 ### What Was Done Today
 
-1. ✅ **Verified migration status** - Bealer Agency existed but some data wasn't backfilled
+1. ✅ **Verified migration status** - Wavezly existed but some data wasn't backfilled
 2. ✅ **Fixed incomplete migration** - Backfilled 11 todos missing `agency_id`
 3. ✅ **Ran full test suite** - All 28 tests passing
 4. ✅ **Verified data isolation** - RLS policies working correctly
@@ -24,7 +24,7 @@ The multi-agency migration has been **successfully completed**. All 28 automated
 ╚════════════════════════════════════════════════════════════╝
 
 ✅ Database schema (6 tests)
-✅ Bealer Agency data (8 tests)
+✅ Wavezly data (8 tests)
 ✅ Database functions (2 tests)
 ✅ Permissions (7 tests)
 ✅ Data isolation (3 tests)
@@ -36,15 +36,15 @@ The multi-agency migration has been **successfully completed**. All 28 automated
 ## Current State
 
 ### Database ✅
-- **Bealer Agency:** Created with ID `893577db-4271-4a70-88ba-a93121f22e0e`
+- **Wavezly:** Created with ID `893577db-4271-4a70-88ba-a93121f22e0e`
 - **Subscription Tier:** Professional (50 users, 5GB storage)
-- **All data migrated:** All todos, messages, goals assigned to Bealer Agency
+- **All data migrated:** All todos, messages, goals assigned to Wavezly
 - **RLS policies:** Active and enforcing data isolation
 
 ### Agency Members ✅
 - **Derrick:** Owner (full permissions)
 - **Sefra:** Member (limited permissions)
-- **All existing users:** Migrated to Bealer Agency
+- **All existing users:** Migrated to Wavezly
 
 ### Application ✅
 - **Feature flag:** Enabled (`NEXT_PUBLIC_ENABLE_MULTI_TENANCY=true`)
@@ -62,13 +62,13 @@ Navigate to http://localhost:3000 and login:
 
 **As Derrick (Owner):**
 - PIN: 8008
-- You'll see "Bealer Agency" in the header with a crown icon
+- You'll see "Wavezly" in the header with a crown icon
 - All existing tasks are visible
 - Strategic Goals accessible (owner permission)
 
 **As Sefra (Member):**
 - PIN: [check database for her PIN hash]
-- You'll see "Bealer Agency" in the header
+- You'll see "Wavezly" in the header
 - Can create and view tasks
 - Cannot access Strategic Goals (member permission)
 
@@ -77,15 +77,15 @@ Navigate to http://localhost:3000 and login:
 Navigate to http://localhost:3000/signup
 
 - Create a new agency with different name
-- This will be completely isolated from Bealer Agency
-- Any tasks created in the new agency won't be visible to Bealer Agency users
+- This will be completely isolated from Wavezly
+- Any tasks created in the new agency won't be visible to Wavezly users
 
 ### 3. Test Data Isolation
 
 1. Create 2nd agency via signup
 2. Login to 2nd agency, create a task
-3. Login to Bealer Agency (switch users)
-4. Verify Bealer Agency users CANNOT see the 2nd agency's task
+3. Login to Wavezly (switch users)
+4. Verify Wavezly users CANNOT see the 2nd agency's task
 5. This confirms RLS is working correctly
 
 ### 4. Test Agency Switching
@@ -96,7 +96,7 @@ To test switching between agencies:
 -- In Supabase SQL Editor, add Derrick to the test agency
 INSERT INTO agency_members (agency_id, user_id, role, permissions)
 VALUES (
-  (SELECT id FROM agencies WHERE slug != 'bealer-agency' LIMIT 1),
+  (SELECT id FROM agencies WHERE slug != 'wavezly' LIMIT 1),
   (SELECT id FROM users WHERE name = 'Derrick'),
   'admin',
   '{
@@ -196,7 +196,7 @@ railway logs --tail
 
 ### Post-Deployment Verification
 
-1. Login as Derrick → See "Bealer Agency" in switcher
+1. Login as Derrick → See "Wavezly" in switcher
 2. All existing tasks visible
 3. Create new task → Verify saved to correct agency
 4. Real-time sync working
@@ -244,9 +244,9 @@ UPDATE goal_categories SET agency_id = NULL;
 `scripts/fix-migration.mjs` - Backfills `agency_id` on all tables
 
 **What it does:**
-1. Checks if Bealer Agency exists
+1. Checks if Wavezly exists
 2. Finds all rows with `agency_id IS NULL`
-3. Updates them to Bealer Agency ID
+3. Updates them to Wavezly ID
 4. Verifies all data is assigned
 
 **Safe to run multiple times** (idempotent)
@@ -254,7 +254,7 @@ UPDATE goal_categories SET agency_id = NULL;
 ### Database State
 
 ```
-Agency: Bealer Agency
+Agency: Wavezly
 ID: 893577db-4271-4a70-88ba-a93121f22e0e
 Tier: professional
 Max Users: 50

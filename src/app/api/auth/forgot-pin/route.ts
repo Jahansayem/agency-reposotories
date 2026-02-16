@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { logger } from '@/lib/logger';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 import crypto from 'crypto';
-
-// Rate limiting: 3 requests per 15 minutes per email
-const RATE_LIMIT = 3;
-const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-
-function checkRateLimit(email: string): boolean {
-  const now = Date.now();
-  const record = rateLimitMap.get(email);
-
-  if (!record || now > record.resetAt) {
-    rateLimitMap.set(email, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-
-  if (record.count >= RATE_LIMIT) {
-    return false;
-  }
-
-  record.count++;
-  return true;
-}
 
 /**
  * POST /api/auth/forgot-pin
@@ -35,7 +14,7 @@ function checkRateLimit(email: string): boolean {
  * and sends a reset email to the user.
  *
  * Security:
- * - Rate limited to 3 requests per 15 minutes per email
+ * - Rate limited via Redis (shared across instances), 5 requests per 15 minutes per IP
  * - Token is 32-byte random, hashed before storage
  * - Tokens expire after 1 hour
  * - Returns same success message whether email exists or not (prevent enumeration)
@@ -54,20 +33,20 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // Check rate limit
-    if (!checkRateLimit(normalizedEmail)) {
+    // Check rate limit using Redis-backed rate limiting (shared across instances)
+    // Uses the login limiter: 5 requests per 15 minutes per IP
+    const rateLimitResult = await withRateLimit(request, rateLimiters.login);
+    if (!rateLimitResult.success) {
       logger.warn('PIN reset rate limit exceeded', {
         component: 'forgot-pin',
         action: 'POST',
         metadata: { email: normalizedEmail },
       });
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again in 15 minutes.' },
-        { status: 429 }
-      );
+      return createRateLimitResponse(rateLimitResult);
     }
 
-    // Look up user by email
+    // Look up user by email (use service role to bypass RLS)
+    const supabase = createServiceRoleClient();
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id, name, email')

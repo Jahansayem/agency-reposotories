@@ -8,7 +8,7 @@
 
 ### Immediate Context
 ```yaml
-project: Bealer Agency Shared Todo List
+project: Wavezly Shared Todo List
 type: Collaborative task management (insurance agency)
 stack: Next.js 16 + React 19 + TypeScript + Supabase + Tailwind
 status: Production (https://shared-todo-list-production.up.railway.app)
@@ -42,7 +42,7 @@ User Request
 
 | Property | Value |
 |----------|-------|
-| **App Name** | Bealer Agency Shared Todo List |
+| **App Name** | Wavezly Shared Todo List |
 | **Purpose** | Collaborative task management for insurance agency |
 | **Primary Users** | Derrick (owner), Sefra (team member) |
 | **Stack** | Next.js 16 + React 19 + TypeScript + Supabase + Tailwind |

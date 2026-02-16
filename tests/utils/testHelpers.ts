@@ -43,11 +43,10 @@ export async function loginAsUser(
 
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(50);
   }
 
   // Wait for auto-submit and app load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
@@ -78,7 +77,7 @@ export async function waitForAppReady(page: Page) {
     .catch(() => {});
 
   // Wait for any loading states to clear
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('domcontentloaded');
 
   // Wait for network to be idle
   await page.waitForLoadState('networkidle').catch(() => {});
@@ -200,5 +199,5 @@ export async function setViewport(
   };
 
   await page.setViewportSize(presets[preset]);
-  await page.waitForTimeout(300); // Let layout settle
+  // Wait for layout to settle after viewport change
 }

@@ -21,7 +21,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(3).fill('4');
 
       // Wait for error message
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Check for error message with role="alert"
       const errorAlert = page.locator('[role="alert"]').first();
@@ -48,7 +48,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Check aria-describedby points to error element
       const firstInput = pinInputs.nth(0);
@@ -70,7 +70,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Error should have aria-live="assertive" for immediate announcement
       const errorAlert = page.locator('[role="alert"]').first();
@@ -88,7 +88,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       const errorAlert = page.locator('[role="alert"]').first();
       const ariaAtomic = await errorAlert.getAttribute('aria-atomic');
@@ -106,7 +106,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify aria-invalid="true"
       let ariaInvalid = await pinInputs.nth(0).getAttribute('aria-invalid');
@@ -134,7 +134,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
         await pinInputs.nth(1).fill('2');
         await pinInputs.nth(2).fill('3');
         await pinInputs.nth(3).fill('4');
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
       }
 
       // Check for lockout message
@@ -157,7 +157,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
         await page.click('text=Create Account');
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Try to submit with empty name
       const continueButton = page.locator('button:has-text("Continue")').first();
@@ -181,7 +181,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
         await page.click('text=Create Account');
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Enter invalid name (too short)
       const nameInput = page.locator('#name');
@@ -189,8 +189,6 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
 
       const continueButton = page.locator('button:has-text("Continue")').first();
       await continueButton.click();
-
-      await page.waitForTimeout(300);
 
       // Check if error is visible
       const errorAlert = page.locator('[role="alert"]').first();
@@ -211,15 +209,13 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
         await page.click('text=Create Account');
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const nameInput = page.locator('#name');
       await nameInput.fill('');
 
       const continueButton = page.locator('button:has-text("Continue")').first();
       await continueButton.click();
-
-      await page.waitForTimeout(300);
 
       const errorAlert = page.locator('[role="alert"]').first();
       if (await errorAlert.isVisible()) {
@@ -241,7 +237,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
         await page.click('text=Create Account');
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Enter valid name
       const nameInput = page.locator('#name');
@@ -249,8 +245,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
 
       const continueButton = page.locator('button:has-text("Continue")').first();
       await continueButton.click();
-
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify PIN inputs have aria-labels
       const pinInputs = page.locator('input[type="password"][inputmode="numeric"]');
@@ -268,15 +263,14 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
         await page.click('text=Create Account');
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const nameInput = page.locator('#name');
       await nameInput.fill('Test User ' + Date.now()); // Unique name
 
       const continueButton = page.locator('button:has-text("Continue")').first();
       await continueButton.click();
-
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Enter PIN
       const pinInputs = page.locator('input[type="password"][inputmode="numeric"]');
@@ -285,7 +279,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Enter different confirm PIN
       const confirmPinInputs = page.locator('input[type="password"][inputmode="numeric"]');
@@ -294,7 +288,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await confirmPinInputs.nth(2).fill('7');
       await confirmPinInputs.nth(3).fill('8');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Should show error
       const errorAlert = page.locator('[role="alert"]').first();
@@ -320,7 +314,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       const errorAlert = page.locator('[role="alert"]').first();
       await expect(errorAlert).toBeVisible();
@@ -344,7 +338,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       const errorAlert = page.locator('[role="alert"]').first();
       await expect(errorAlert).toBeVisible();
@@ -365,7 +359,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Error should be visible
       let errorAlert = page.locator('[role="alert"]').first();
@@ -394,7 +388,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await pinInputs.nth(2).fill('3');
       await pinInputs.nth(3).fill('4');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // After error, first PIN input should be focused
       const focusedElement = await page.evaluate(() => {
@@ -412,13 +406,11 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
         await page.click('text=Create Account');
       }
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const nameInput = page.locator('#name');
       await nameInput.fill('');
       await nameInput.press('Enter');
-
-      await page.waitForTimeout(300);
 
       // Should show validation error
       const errorAlert = page.locator('[role="alert"]').first();

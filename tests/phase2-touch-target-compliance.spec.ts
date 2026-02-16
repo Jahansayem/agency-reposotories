@@ -21,19 +21,17 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
     // Login
     await page.goto('/');
     await page.locator('[data-testid="user-card-Derrick"]').click();
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     // Wait for app to load
     await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
 
     // Navigate to tasks view by clicking "All" tab
     await page.click('button:has-text("All")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('TodoFiltersBar: Quick filter dropdown should be 44px minimum', async ({ page }) => {
@@ -85,7 +83,7 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
     await page.click('button:has-text("Filters")');
 
     // Wait for drawer to open
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Find close button
     const closeButton = page.locator('[aria-label="Close advanced filters panel"]');
@@ -123,9 +121,7 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
     const addTaskInput = page.locator('[data-testid="add-task-input"]');
     await addTaskInput.fill('Task with subtasks');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
-
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Expand task to show subtasks
     const todoItem = page.locator('[data-testid="todo-item"]').first();
@@ -149,9 +145,7 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
     const addTaskInput = page.locator('[data-testid="add-task-input"]');
     await addTaskInput.fill('Task with subtasks');
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
-
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Expand task to show subtasks
     const todoItem = page.locator('[data-testid="todo-item"]').first();
@@ -210,7 +204,7 @@ test.describe('Phase 2.4: Mobile Touch Target Compliance', () => {
       await progressButton.click();
 
       // Wait for modal
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find close button
       const closeButton = page.locator('[aria-label="Close progress summary"]');

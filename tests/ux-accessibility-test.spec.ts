@@ -7,7 +7,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -15,10 +15,10 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== ARIA LABELS: TodoHeader ===');
 
@@ -73,7 +73,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     });
     console.log(`Focused element has visible focus indicator: ${hasFocusRing ? '✅' : '❌'}`);
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should have proper ARIA in TodoFiltersBar and support keyboard navigation', async ({ page }) => {
@@ -82,7 +82,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -90,10 +90,10 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== ARIA LABELS: TodoFiltersBar ===');
 
@@ -110,7 +110,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
 
     // Open advanced filters to test drawer accessibility
     await advancedBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== ADVANCED FILTERS DRAWER ACCESSIBILITY ===');
 
@@ -131,17 +131,16 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
 
     // Activate a filter to create chips (while drawer is still open)
     await page.locator('select[aria-label="Quick filter"]').selectOption('my_tasks');
-    await page.waitForTimeout(300);
 
     // Test ESC key to close drawer
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     const drawerClosedByEsc = await drawer.isVisible() === false;
     console.log(`ESC key closes drawer: ${drawerClosedByEsc ? '✅' : '❌'}`);
 
     // Test filter chip accessibility
     console.log('\n=== FILTER CHIPS ACCESSIBILITY ===');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for active filters region
     const activeFiltersRegion = page.locator('[role="region"][aria-label="Active filters"]');
@@ -160,7 +159,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
 
       // Test Enter key
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const chipRemoved = await filterChip.count() === 0;
       console.log(`Enter key removes filter chip: ${chipRemoved ? '✅' : '❌'}`);
@@ -192,7 +191,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     console.log(`✅ aria-hidden on decorative icons`);
     console.log(`✅ Semantic structure with landmarks`);
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should support keyboard navigation throughout the app', async ({ page }) => {
@@ -201,7 +200,7 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     await page.waitForLoadState('networkidle');
 
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -209,10 +208,10 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== KEYBOARD NAVIGATION TEST ===');
 
@@ -233,7 +232,6 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
       focusedElements.push(label);
       console.log(`Tab ${tabCount}: ${label}`);
 
-      await page.waitForTimeout(100);
     }
 
     console.log(`\nTotal focusable elements found: ${focusedElements.length}`);
@@ -242,6 +240,6 @@ test.describe('UX Accessibility: Phase 4 Verification', () => {
       focusedElements.some(e => e.includes('Task')) ? '✅' : '❌'
     }`);
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
   });
 });

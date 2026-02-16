@@ -104,7 +104,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-    const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+    const agencyId = ctx.agencyId;
 
     const { data, error } = await supabase
       .from('agency_members')
@@ -168,7 +168,7 @@ export const POST = withAgencyAuth(
       // Set RLS context for defense-in-depth
       await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-      const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+      const agencyId = ctx.agencyId;
       const body = await request.json();
       const { user_name, role } = body;
 
@@ -309,7 +309,7 @@ export const PATCH = withAgencyAuth(
       // Set RLS context for defense-in-depth
       await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-      const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+      const agencyId = ctx.agencyId;
       const body = await request.json();
       const { memberId, newRole, permissions: permissionUpdates } = body as {
         memberId: string;
@@ -380,7 +380,11 @@ export const PATCH = withAgencyAuth(
       }
 
       // Sole owner cannot remove their own can_manage_team permission
-      if (permissionUpdates?.can_manage_team === false && memberToUpdate.user_id === ctx.userId) {
+      // Check both explicit permission removal AND implicit removal via role change
+      const willLoseManageTeam =
+        permissionUpdates?.can_manage_team === false ||
+        (newRole && newRole !== 'owner' && !permissionUpdates?.can_manage_team);
+      if (willLoseManageTeam && memberToUpdate.user_id === ctx.userId && memberToUpdate.role === 'owner') {
         const { data: otherOwners } = await supabase
           .from('agency_members')
           .select('id')
@@ -570,7 +574,7 @@ export const DELETE = withAgencyAuth(
       // Set RLS context for defense-in-depth
       await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
-      const agencyId = ctx.agencyId || validation.agencyIdFromParams;
+      const agencyId = ctx.agencyId;
       const { searchParams } = new URL(request.url);
       const memberId = searchParams.get('memberId');
 

@@ -1,5 +1,5 @@
 # Product Requirements Document (PRD)
-## Bealer Agency Todo List
+## Wavezly Todo List
 
 **Version:** 2.0
 **Last Updated:** 2025-01-08
@@ -26,7 +26,7 @@
 
 ## Executive Summary
 
-The Bealer Agency Todo List is a **comprehensive task management and collaboration platform** designed specifically for small insurance agencies. It combines traditional task management with AI-powered workflows, real-time team collaboration, and strategic planning tools to help agency teams stay organized, communicate effectively, and track long-term goals.
+The Wavezly Todo List is a **comprehensive task management and collaboration platform** designed specifically for small insurance agencies. It combines traditional task management with AI-powered workflows, real-time team collaboration, and strategic planning tools to help agency teams stay organized, communicate effectively, and track long-term goals.
 
 ### Key Highlights
 
@@ -447,7 +447,7 @@ Empower insurance agents to:
   - [x] Extract task details from email
   - [x] Preview task before creating
   - [x] Edit task details in add-in
-  - [x] Create task directly in Bealer Todo List
+  - [x] Create task directly in Wavezly Todo List
 - [x] API authentication with `X-API-Key` header
 - [x] Manifest files for all Outlook platforms
 - [x] Installation instructions page
@@ -927,7 +927,7 @@ Empower insurance agents to:
 | Real-time latency | < 100ms | WebSocket ping |
 | Uptime | 99.9% | Railway monitoring |
 
-#### Business Impact (for Bealer Agency)
+#### Business Impact (for Wavezly)
 
 | Metric | Target | How to Measure |
 |--------|--------|----------------|

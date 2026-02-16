@@ -51,12 +51,14 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-      allowDangerousEmailAccountLinking: true, // Allow linking with existing PIN accounts
+      // SECURITY: allowDangerousEmailAccountLinking removed — it allows email-based
+      // account hijacking across providers (e.g., attacker signs up with victim's email
+      // via a different OAuth provider and gains access to their account).
     }),
     AppleProvider({
       clientId: process.env.APPLE_CLIENT_ID || '',
       clientSecret: process.env.APPLE_CLIENT_SECRET || '',
-      allowDangerousEmailAccountLinking: true,
+      // SECURITY: allowDangerousEmailAccountLinking removed — see above.
     }),
   ],
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
-import { hashPin } from '@/lib/auth';
+import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
+import { isWeakPin } from '@/lib/constants';
 import crypto from 'crypto';
 
 /**
@@ -17,6 +17,13 @@ import crypto from 'crypto';
  * - Token can only be used once (marked as used_at)
  * - PIN is hashed client-side (SHA-256) before sending
  */
+/**
+ * Hash PIN using SHA-256 (server-side, matching existing client-side hash format)
+ */
+function hashPin(pin: string): string {
+  return crypto.createHash('sha256').update(pin).digest('hex');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { token, pin } = await request.json();
@@ -36,8 +43,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Reject common weak PINs
+    if (isWeakPin(pin)) {
+      return NextResponse.json(
+        { error: 'PIN is too common. Please choose a less predictable PIN.' },
+        { status: 400 }
+      );
+    }
+
     // Hash the provided token to look up in database
     const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+
+    // Use service role client to bypass RLS for security operations
+    const supabase = createServiceRoleClient();
 
     // Look up token in database
     const { data: resetToken, error: tokenError } = await supabase
@@ -87,8 +105,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash the new PIN (client should have already hashed it, but we hash again for storage)
-    const pinHash = await hashPin(pin);
+    // Hash the new PIN server-side for storage
+    const pinHash = hashPin(pin);
 
     // Update user's PIN
     const { error: updateError } = await supabase

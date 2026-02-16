@@ -256,7 +256,7 @@ export function CreateAgencyModal({
                     value={formData.name}
                     onChange={(e) => handleNameChange(e.target.value)}
                     disabled={isSubmitting}
-                    placeholder="e.g., Bealer Agency Chicago"
+                    placeholder="e.g., Wavezly Chicago"
                     className={`
                       w-full px-4 py-3 rounded-lg
                       bg-[var(--surface-2)]
@@ -290,7 +290,7 @@ export function CreateAgencyModal({
                       value={formData.slug}
                       onChange={(e) => handleSlugChange(e.target.value)}
                       disabled={isSubmitting}
-                      placeholder="bealer-agency-chicago"
+                      placeholder="wavezly-chicago"
                       className={`
                         flex-1 px-4 py-3 rounded-lg
                         bg-[var(--surface-2)]

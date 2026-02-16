@@ -67,6 +67,8 @@ interface DashboardPageProps {
   onFilterByUser?: (userName: string) => void;
   onRefreshTodos?: () => void;
   onOpenChat?: () => void;
+  onNavigateToAnalytics?: () => void;
+  onNavigateToCustomers?: () => void;
   /** Use new role-based dashboards instead of legacy dashboard */
   useNewDashboards?: boolean;
 }
@@ -117,6 +119,8 @@ export default function DashboardPage({
   onFilterByUser,
   onRefreshTodos,
   onOpenChat,
+  onNavigateToAnalytics,
+  onNavigateToCustomers,
   useNewDashboards = true, // Default to new dashboards
 }: DashboardPageProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -129,12 +133,12 @@ export default function DashboardPage({
   // Determine if user is owner/manager based on role
   const isOwnerOrManager = currentUser.role === 'owner' || currentUser.role === 'manager';
 
-  // Legacy dashboard below (kept for backwards compatibility)
-
+  // All hooks must be called unconditionally (before any early returns) per React Rules of Hooks
   useEffect(() => {
+    if (useNewDashboards) return; // No-op when using new dashboards
     const interval = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [useNewDashboards]);
 
   // Generate AI insights
   const aiData = useMemo(() => {
@@ -327,7 +331,7 @@ export default function DashboardPage({
   const getUrgencyColor = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyColors[urgency], [urgencyColors]);
   const getUrgencyBg = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyBgs[urgency], [urgencyBgs]);
 
-  // Use new role-based dashboards
+  // Use new role-based dashboards (conditional return placed AFTER all hooks per React Rules of Hooks)
   if (useNewDashboards) {
     if (isOwnerOrManager && hasTeam) {
       return (
@@ -344,23 +348,28 @@ export default function DashboardPage({
           onFilterByCategory={onFilterByCategory}
           onFilterByUser={onFilterByUser}
           onRefreshTodos={onRefreshTodos}
+          onNavigateToAnalytics={onNavigateToAnalytics}
+          onNavigateToCustomers={onNavigateToCustomers}
+        />
+      );
+    } else {
+      return (
+        <DoerDashboard
+          currentUser={currentUser}
+          todos={todos}
+          activityLog={activityLog}
+          onNavigateToTasks={onNavigateToTasks}
+          onTaskClick={onTaskClick}
+          onFilterOverdue={onFilterOverdue}
+          onFilterDueToday={onFilterDueToday}
+          onNavigateToAnalytics={onNavigateToAnalytics}
+          onNavigateToCustomers={onNavigateToCustomers}
         />
       );
     }
-
-    return (
-      <DoerDashboard
-        currentUser={currentUser}
-        todos={todos}
-        activityLog={activityLog}
-        onNavigateToTasks={onNavigateToTasks}
-        onTaskClick={onTaskClick}
-        onFilterOverdue={onFilterOverdue}
-        onFilterDueToday={onFilterDueToday}
-      />
-    );
   }
 
+  // Legacy dashboard below (kept for backwards compatibility)
   return (
     <div className="min-h-full bg-[var(--background)]">
       {/* Header */}

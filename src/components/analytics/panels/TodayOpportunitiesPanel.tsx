@@ -13,13 +13,14 @@
  * Matches BookOfBusinessDashboard and CustomerSegmentationDashboard styling
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTodayOpportunities, type ContactRequest, type TodayOpportunity } from '../hooks/useTodayOpportunities';
 import { CONTACT_OUTCOME_CONFIG, type ContactOutcome } from '@/types/allstate-analytics';
 import { CustomerDetailPanel } from '@/components/customer/CustomerDetailPanel';
 import { useCurrentUser } from '@/contexts/UserContext';
 import { logger } from '@/lib/logger';
+import { fetchWithCsrf } from '@/lib/csrf';
 import {
   Phone,
   Mail,
@@ -72,9 +73,10 @@ const OUTCOME_ICONS: Record<ContactOutcome, React.ComponentType<{ className?: st
 
 interface TodayOpportunitiesPanelProps {
   onNavigateToAllOpportunities?: () => void;
+  onTaskClick?: (taskId: string) => void;
 }
 
-export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayOpportunitiesPanelProps = {}) {
+export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskClick }: TodayOpportunitiesPanelProps = {}) {
   const currentUser = useCurrentUser();
 
   const {
@@ -89,7 +91,28 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
   const [loggingContact, setLoggingContact] = useState<string | null>(null);
   const [creatingTask, setCreatingTask] = useState<string | null>(null);
   const [createdTaskIds, setCreatedTaskIds] = useState<Set<string>>(new Set());
+  const [createdTaskIdMap, setCreatedTaskIdMap] = useState<Record<string, string>>({});
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Pre-populate createdTaskIds from opportunities that already have a linked task
+  useEffect(() => {
+    const linked = new Set<string>();
+    const idMap: Record<string, string> = {};
+    for (const opp of opportunities) {
+      if (opp.taskId) {
+        linked.add(opp.id);
+        idMap[opp.id] = opp.taskId;
+      }
+    }
+    if (linked.size > 0) {
+      setCreatedTaskIds(prev => {
+        const next = new Set(prev);
+        linked.forEach(id => next.add(id));
+        return next;
+      });
+      setCreatedTaskIdMap(prev => ({ ...prev, ...idMap }));
+    }
+  }, [opportunities]);
   // Track which opportunities have the outcome selector expanded
   const [expandedOutcomes, setExpandedOutcomes] = useState<Set<string>>(new Set());
   // Track selected customer for detail panel
@@ -123,7 +146,7 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
         notes: notes || `Contact logged via Today panel: ${CONTACT_OUTCOME_CONFIG[outcome].label}`,
       };
 
-      const response = await fetch(`/api/opportunities/${opportunityId}/contact`, {
+      const response = await fetchWithCsrf(`/api/opportunities/${opportunityId}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,34 +194,41 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
     }
   };
 
-  // Handle inline task creation
+  // Handle inline task creation — creates via API then navigates to the new task
   const handleQuickCreateTask = async (opp: TodayOpportunity) => {
     setCreatingTask(opp.id);
 
     try {
-      const response = await fetch('/api/opportunities/create-task', {
+      const response = await fetchWithCsrf('/api/opportunities/create-task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           opportunityId: opp.id,
-          assignedTo: 'Derrick', // Default assignee - could be made configurable
-          createdBy: 'System',
+          assignedTo: currentUser.name,
+          createdBy: currentUser.name,
           priority: mapTierToPriority(opp.priorityTier),
           customText: `Cross-sell: ${opp.customerName} - ${opp.recommendedProduct}`,
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
         if (response.status === 409) {
-          // Task already exists
+          // Task already exists — mark as created and store taskId
           setCreatedTaskIds(prev => new Set(prev).add(opp.id));
-          setToastMessage({ type: 'success', message: 'Task already exists for this opportunity' });
+          if (data.taskId) {
+            setCreatedTaskIdMap(prev => ({ ...prev, [opp.id]: data.taskId }));
+          }
+          setToastMessage({ type: 'success', message: 'Task already exists — click "View Task" to open it' });
         } else {
-          throw new Error(errorData.error || 'Failed to create task');
+          throw new Error(data.error || 'Failed to create task');
         }
       } else {
         setCreatedTaskIds(prev => new Set(prev).add(opp.id));
+        if (data.taskId) {
+          setCreatedTaskIdMap(prev => ({ ...prev, [opp.id]: data.taskId }));
+        }
         setToastMessage({ type: 'success', message: `Task created for ${opp.customerName}` });
       }
       setTimeout(() => setToastMessage(null), 3000);
@@ -213,6 +243,40 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
     } finally {
       setCreatingTask(null);
     }
+  };
+
+  // Build a mailto: link with a pre-crafted email using opportunity talking points
+  const buildEmailLink = (opp: TodayOpportunity): string => {
+    const firstName = opp.customerName.split(' ')[0];
+    const agentName = currentUser.name || 'Your Allstate Agent';
+
+    const subject = `${firstName}, let's make sure you're fully protected before your renewal`;
+
+    const body = [
+      `Hi ${firstName},`,
+      ``,
+      `I hope this message finds you well! I'm reaching out because your policy is coming up for renewal, and I wanted to make sure you have the best coverage for your needs.`,
+      ``,
+      `After reviewing your account, I noticed a few things that could really benefit you:`,
+      ``,
+      `• ${opp.talkingPoint1}`,
+      `• ${opp.talkingPoint2}`,
+      `• ${opp.talkingPoint3}`,
+      ``,
+      `You currently have ${opp.currentProducts}, and adding ${opp.recommendedProduct} could give you more comprehensive protection — and in many cases, bundling policies can actually save you money.`,
+      ``,
+      `I'd love to walk you through your options. Would you have a few minutes this week for a quick call? I'm happy to work around your schedule.`,
+      ``,
+      `You can reach me directly at this email or give me a call anytime.`,
+      ``,
+      `Looking forward to hearing from you!`,
+      ``,
+      `Best regards,`,
+      `${agentName}`,
+      `Your Local Allstate Agent`,
+    ].join('\n');
+
+    return `mailto:${encodeURIComponent(opp.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   // Loading state
@@ -369,7 +433,7 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
               <div>
                 <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <button
-                    onClick={() => setSelectedCustomerId(opp.id)}
+                    onClick={() => setSelectedCustomerId(opp.customerInsightId || opp.id)}
                     className="text-xl font-bold text-white hover:text-sky-400 hover:underline transition-colors cursor-pointer text-left flex items-center gap-2 group"
                   >
                     {opp.customerName}
@@ -432,13 +496,22 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              {/* Primary Action: Create Task - Always visible inline */}
+              {/* Primary Action: Create Task / View Task */}
               <button
-                onClick={() => handleQuickCreateTask(opp)}
-                disabled={creatingTask === opp.id || createdTaskIds.has(opp.id)}
+                onClick={() => {
+                  if (createdTaskIds.has(opp.id)) {
+                    const taskId = createdTaskIdMap[opp.id];
+                    if (taskId && onTaskClick) {
+                      onTaskClick(taskId);
+                    }
+                  } else {
+                    handleQuickCreateTask(opp);
+                  }
+                }}
+                disabled={creatingTask === opp.id}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
                   createdTaskIds.has(opp.id)
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 cursor-pointer'
                     : 'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/25'
                 }`}
               >
@@ -449,8 +522,8 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
                   </>
                 ) : createdTaskIds.has(opp.id) ? (
                   <>
-                    <CheckCircle className="h-5 w-5" />
-                    Task Created
+                    <ListTodo className="h-5 w-5" />
+                    View Task
                   </>
                 ) : (
                   <>
@@ -471,9 +544,9 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
                   Call {opp.phone}
                 </a>
 
-                {/* Email Button */}
+                {/* Email Button — opens pre-crafted email with talking points */}
                 <a
-                  href={`mailto:${opp.email}`}
+                  href={buildEmailLink(opp)}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded-lg hover:bg-sky-500/30 transition-colors font-medium"
                 >
                   <Mail className="h-5 w-5" />
@@ -653,6 +726,10 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities }: TodayO
                       taskId,
                       customerId: selectedCustomerId,
                     });
+                    if (onTaskClick) {
+                      setSelectedCustomerId(null);
+                      onTaskClick(taskId);
+                    }
                   }}
                 />
               </div>

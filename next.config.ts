@@ -50,9 +50,7 @@ const cspString = Object.entries(cspDirectives)
 const baseConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
-  turbopack: {
-    root: ".",
-  },
+  turbopack: {},
   // Bundle optimization
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion', '@dnd-kit/core', '@dnd-kit/sortable'],

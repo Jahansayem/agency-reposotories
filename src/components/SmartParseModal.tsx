@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Check, Clock, Flag, Calendar, User, ChevronDown, ChevronUp, Loader2, HelpCircle } from 'lucide-react';
 import { TodoPriority, Subtask, PRIORITY_CONFIG } from '@/types/todo';
@@ -75,6 +75,20 @@ export default function SmartParseModal({
     autoFocus: true,
   });
 
+  const reducedMotion = prefersReducedMotion();
+
+  const toggleSubtask = (index: number) => {
+    setSubtasks(prev =>
+      prev.map((st, i) => (i === index ? { ...st, included: !st.included } : st))
+    );
+  };
+
+  const updateSubtaskText = (index: number, text: string) => {
+    setSubtasks(prev =>
+      prev.map((st, i) => (i === index ? { ...st, text } : st))
+    );
+  };
+
   const handleConfirm = useCallback(() => {
     const includedSubtasks: Subtask[] = subtasks
       .filter(st => st.included && st.text.trim())
@@ -93,7 +107,7 @@ export default function SmartParseModal({
       assignedTo || undefined,
       includedSubtasks.length > 0 ? includedSubtasks : undefined
     );
-  }, [assignedTo, dueDate, mainTaskText, onConfirm, priority, subtasks]);
+  }, [mainTaskText, priority, dueDate, assignedTo, subtasks, onConfirm]);
 
   // Handle Cmd/Ctrl+Enter keyboard shortcut to confirm
   useEffect(() => {
@@ -109,20 +123,6 @@ export default function SmartParseModal({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleConfirm]);
-
-  const reducedMotion = prefersReducedMotion();
-
-  const toggleSubtask = (index: number) => {
-    setSubtasks(prev =>
-      prev.map((st, i) => (i === index ? { ...st, included: !st.included } : st))
-    );
-  };
-
-  const updateSubtaskText = (index: number, text: string) => {
-    setSubtasks(prev =>
-      prev.map((st, i) => (i === index ? { ...st, text } : st))
-    );
-  };
 
   const includedCount = subtasks.filter(st => st.included).length;
   const totalTime = subtasks

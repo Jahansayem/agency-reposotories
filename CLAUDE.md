@@ -1,4 +1,4 @@
-# Shared Todo List — Bealer Agency
+# Shared Todo List — Wavezly
 
 Multi-agency todo list and operations platform for Allstate agencies. Full-stack Next.js app with real-time collaboration, AI features, analytics, and an iOS companion app.
 
@@ -26,7 +26,7 @@ npm run migrate:dry-run  # Preview migrations
   - `sign-in/`, `sign-up/`, `join/` — Auth flows
 - `src/components/` — React components by domain
   - `analytics/` — Allstate analytics dashboards
-  - `calendar/` — Renewal calendar
+  - `calendar/` — Interactive calendar with day/week/month views, drag-and-drop rescheduling, mini calendar navigation
   - `chat/` — Real-time messaging
   - `customer/` — Customer lookup and segmentation
   - `dashboard/` — Main dashboard widgets
@@ -52,7 +52,8 @@ npm run migrate:dry-run  # Preview migrations
 ## Key Features
 - Multi-agency support with RLS isolation (47 API routes protected)
 - 21 granular permissions (owner/manager/staff roles)
-- Allstate analytics: CSV import, cross-sell scoring, renewal calendar
+- Allstate analytics: CSV import, cross-sell scoring, portfolio analysis
+- Calendar: day/week/month views, click-to-create, drag-and-drop rescheduling via @dnd-kit, mini calendar sidebar
 - Real-time: collaborative editing, typing indicators, presence
 - Push notifications, version history, chat with attachments
 
@@ -74,9 +75,29 @@ npm run migrate:dry-run  # Preview migrations
 - `ios-app/` — fully independent from web app
 - `docs/` — independent documentation files
 
+## CI / TypeScript Check
+- CI runs `npx tsc --noEmit` in `.github/workflows/security.yml` on every push to main
+- `tsconfig.json` excludes test files: `src/test/`, `**/*.test.ts`, `**/*.test.tsx`, `**/*.spec.ts`, `**/*.spec.tsx`, `vitest.config.ts`
+- **CRITICAL**: When adding new test files or test utilities, ensure they are covered by the exclude patterns above. If a test file has type errors, it will break CI for the entire project.
+- When adding new `src/test/` helpers, `*.test.ts`, or `*.spec.ts` files: they are excluded from `tsc` — do NOT add them to `tsconfig.json` include patterns
+- Always run `npx tsc --noEmit` locally before pushing to verify CI will pass
+
+## Calendar Architecture
+- Shell: `CalendarView.tsx` manages view mode (day/week/month), navigation, category filters
+- Sub-views: `MonthView.tsx`, `WeekView.tsx`, `DayView.tsx` render per view mode
+- Drag-and-drop: `@dnd-kit` in `MonthView` — `CalendarDayCell` is droppable, tasks are draggable
+- Types: `src/types/calendar.ts` (`CalendarViewMode = 'day' | 'week' | 'month'`)
+- Utils: `src/components/calendar/calendarUtils.ts` (shared date grouping, formatting)
+- Click-to-create: `MainApp.tsx` handles `onDateClick` → opens `AddTaskModal` with pre-filled date
+
 ## Gotchas
 - RLS policies are critical — test data isolation when changing API routes
 - `src/lib/segmentation.ts` is referenced by multiple components — changes cascade
 - 100+ test files in `tests/` — many are debug/one-off specs
 - Two auth patterns exist (PIN-based and session-based)
 - iOS app shares Supabase backend but is otherwise independent
+- Test files (`*.spec.ts`, `*.test.ts`, `src/test/`) are excluded from TypeScript compilation — see CI section above
+- `ActivityAction` type in `src/types/todo.ts` must stay in sync with `ACTION_CONFIG` maps in `ActivityFeed.tsx` and `NotificationModal.tsx`
+- Calendar E2E tests need `PLAYWRIGHT_BASE_URL=http://localhost:3001` if port 3000 is occupied
+- `allowDangerousEmailAccountLinking` was removed from OAuth providers — do not re-add without security review
+- `src/lib/constants.ts` is the single source of truth for `USER_COLORS` — do not duplicate in route files

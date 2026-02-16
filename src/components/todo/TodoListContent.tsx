@@ -17,6 +17,7 @@ const KanbanBoard = dynamic(() => import('../KanbanBoard'), {
 });
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -74,6 +75,7 @@ interface TodoListContentProps {
   onUpdateAttachments: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
   onEmailCustomer: (todo: Todo) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   onClearSearch: () => void;
   onAddTask: () => void;
   onOpenDetail?: (todoId: string) => void;
@@ -114,6 +116,7 @@ function TodoListContent({
   onUpdateAttachments,
   onSaveAsTemplate,
   onEmailCustomer,
+  onSetPrivacy,
   onClearSearch,
   onAddTask,
   onOpenDetail,
@@ -136,6 +139,8 @@ function TodoListContent({
   );
 
   const [isDragging, setIsDragging] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const activeDragTodo = activeDragId ? todos.find(t => t.id === activeDragId) : null;
   const isDragEnabled = !showBulkActions;
 
   // Determine empty state variant
@@ -204,6 +209,7 @@ function TodoListContent({
         onUpdateAttachments={onUpdateAttachments}
         onSaveAsTemplate={onSaveAsTemplate}
         onEmailCustomer={onEmailCustomer}
+        onSetPrivacy={onSetPrivacy}
         onOpenDetail={onOpenDetail}
         isDragEnabled={isDragEnabled}
       />
@@ -251,14 +257,19 @@ function TodoListContent({
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={(event) => {
+              setActiveDragId(event.active.id as string);
               setIsDragging(true);
               onDragStart?.(event);
             }}
             onDragEnd={(event) => {
+              setActiveDragId(null);
               setIsDragging(false);
               onDragEnd(event);
             }}
-            onDragCancel={() => setIsDragging(false)}
+            onDragCancel={() => {
+              setActiveDragId(null);
+              setIsDragging(false);
+            }}
           >
             <SortableContext
               items={todos.map((t) => t.id)}
@@ -307,6 +318,22 @@ function TodoListContent({
                 </div>
               )}
             </SortableContext>
+            {/* DragOverlay renders dragged item in a portal, escaping overflow-hidden
+                containers in TaskSections so tasks can be dragged upward across sections */}
+            <DragOverlay dropAnimation={null}>
+              {activeDragTodo ? (
+                <div className="bg-[var(--surface)] border-2 border-[var(--accent)] rounded-[var(--radius-xl)] shadow-2xl px-4 py-3 max-w-md">
+                  <p className="text-sm font-medium text-[var(--foreground)] truncate">
+                    {activeDragTodo.text}
+                  </p>
+                  {activeDragTodo.assigned_to && (
+                    <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
+                      {activeDragTodo.assigned_to}
+                    </p>
+                  )}
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         </motion.div>
       ) : (

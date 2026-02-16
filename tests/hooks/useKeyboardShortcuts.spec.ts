@@ -9,7 +9,7 @@ import { test, expect, Page } from '@playwright/test';
 // Test page setup helper
 async function setupTestPage(page: Page) {
   await page.goto('/');
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 }
 
 test.describe('useKeyboardShortcuts Hook', () => {

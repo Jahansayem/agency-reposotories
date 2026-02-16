@@ -73,7 +73,7 @@ async function main() {
     console.log('✅ Logged in successfully\n');
 
     // Check what the AgencySwitcher shows
-    const agencySwitcher = page.locator('button:has-text("Select Agency"), button:has-text("Bealer Agency"), button:has-text("Test Agency")').first();
+    const agencySwitcher = page.locator('button:has-text("Select Agency"), button:has-text("Wavezly"), button:has-text("Test Agency")').first();
     const buttonText = await agencySwitcher.textContent();
     console.log(`📍 AgencySwitcher button text: "${buttonText}"\n`);
 

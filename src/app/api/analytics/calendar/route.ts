@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import type { RenewalCalendarEntry, CrossSellOpportunity } from '@/types/allstate-analytics';
 
 function getSupabaseClient() {
@@ -20,11 +21,11 @@ function getSupabaseClient() {
  * GET /api/analytics/calendar
  * Get renewal calendar entries for a date range
  */
-export async function GET(request: NextRequest) {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
-    const agencyId = searchParams.get('agency_id');
+    const agencyId = ctx.agencyId;
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
     const includeCrossSell = searchParams.get('include_cross_sell') !== 'false';
@@ -175,13 +176,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/analytics/calendar
  * Create or update a calendar entry
  */
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const body = await request.json();
@@ -194,7 +195,7 @@ export async function POST(request: NextRequest) {
     }
 
     const entry: Partial<RenewalCalendarEntry> = {
-      agency_id: body.agency_id,
+      agency_id: ctx.agencyId,
       customer_name: body.customer_name,
       phone: body.phone,
       email: body.email,
@@ -235,13 +236,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/analytics/calendar
  * Update a calendar entry (mark contacted, confirm renewal)
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const body = await request.json();
@@ -270,6 +271,7 @@ export async function PATCH(request: NextRequest) {
       .from('renewal_calendar')
       .update(updates)
       .eq('id', id)
+      .eq('agency_id', ctx.agencyId)
       .select()
       .single();
 
@@ -292,4 +294,4 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

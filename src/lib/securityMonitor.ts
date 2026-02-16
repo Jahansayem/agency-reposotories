@@ -209,7 +209,7 @@ async function sendWebhookAlert(event: SecurityEvent, message: string): Promise<
             { title: 'IP Address', value: event.ip || 'Unknown', short: true },
             { title: 'Endpoint', value: event.endpoint || 'N/A', short: true },
           ],
-          footer: 'Bealer Agency Security Monitor',
+          footer: 'Wavezly Security Monitor',
           ts: Math.floor(Date.now() / 1000),
         },
       ],
@@ -505,7 +505,7 @@ class SecurityMonitor {
   /**
    * Get recent security events summary (for dashboard)
    */
-  async getRecentEventsSummary(): Promise<Record<SecurityEventType, number>> {
+  async getRecentEventsSummary(): Promise<Partial<Record<SecurityEventType, number>>> {
     const summary: Partial<Record<SecurityEventType, number>> = {};
     const windowMs = 3600000; // Last hour
 
@@ -516,7 +516,7 @@ class SecurityMonitor {
       }
     }
 
-    return summary as Record<SecurityEventType, number>;
+    return summary;
   }
 }
 

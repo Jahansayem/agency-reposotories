@@ -1,6 +1,6 @@
 # UI Component Library
 
-Reusable, accessible UI primitives for the Bealer Agency Todo List. All components use CSS custom properties from the design system defined in `globals.css`.
+Reusable, accessible UI primitives for the Wavezly Todo List. All components use CSS custom properties from the design system defined in `globals.css`.
 
 ---
 

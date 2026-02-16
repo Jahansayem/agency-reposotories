@@ -29,10 +29,9 @@ test.describe('Error Recovery Actions', () => {
 
       // Try to create a task (will fail)
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Test error toast');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Error toast should appear
       const errorToast = page.locator('[role="alert"]');
@@ -46,10 +45,9 @@ test.describe('Error Recovery Actions', () => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'ARIA test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -68,10 +66,9 @@ test.describe('Error Recovery Actions', () => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Auto-hide test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -85,10 +82,9 @@ test.describe('Error Recovery Actions', () => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Close test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -105,17 +101,15 @@ test.describe('Error Recovery Actions', () => {
       // Trigger an error
       await page.route('**/api/todos', route => route.abort());
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Escape test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
 
       // Press Escape
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
 
       // Toast should disappear
       await expect(errorToast).not.toBeVisible();
@@ -128,10 +122,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Network error test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -155,10 +148,9 @@ test.describe('Error Recovery Actions', () => {
       });
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Retry test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -168,7 +160,7 @@ test.describe('Error Recovery Actions', () => {
       await retryButton.click();
 
       // Should make second request (retry)
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       expect(requestCount).toBeGreaterThanOrEqual(2);
 
       // Error toast should dismiss after successful retry
@@ -179,10 +171,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Retry icon test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       const retryButton = errorToast.locator('button:has-text("Retry")');
@@ -201,10 +192,9 @@ test.describe('Error Recovery Actions', () => {
 
       // Try to create task with empty text (validation error)
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', '');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // If validation error toast appears with "Edit" button
       const errorToast = page.locator('[role="alert"]');
@@ -231,10 +221,9 @@ test.describe('Error Recovery Actions', () => {
       });
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Auth error test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -254,17 +243,16 @@ test.describe('Error Recovery Actions', () => {
       });
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Login redirect test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       const loginButton = errorToast.locator('button:has-text("Log In")');
 
       if (await loginButton.isVisible()) {
         await loginButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Should clear session and show login screen
         // (Implementation-dependent)
@@ -285,7 +273,7 @@ test.describe('Error Recovery Actions', () => {
 
       // Try to access owner-only feature
       await page.click('text=Strategic Goals').catch(() => {});
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       if (await errorToast.isVisible()) {
@@ -306,17 +294,15 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Keyboard nav test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
 
       // Tab to focus buttons
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(200);
 
       // Should focus a button
       const focusedElement = page.locator(':focus');
@@ -331,10 +317,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Enter key test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -345,7 +330,6 @@ test.describe('Error Recovery Actions', () => {
 
       // Press Enter
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
 
       // Toast should dismiss
       await expect(errorToast).not.toBeVisible({ timeout: 2000 });
@@ -355,10 +339,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Focus indicator test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       const retryButton = errorToast.locator('button:has-text("Retry")');
@@ -383,10 +366,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Color test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -404,10 +386,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Icon test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -421,10 +402,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Style test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -446,10 +426,9 @@ test.describe('Error Recovery Actions', () => {
 
       await page.route('**/api/todos', route => route.abort());
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Mobile width test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -465,10 +444,9 @@ test.describe('Error Recovery Actions', () => {
 
       await page.route('**/api/todos', route => route.abort());
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Desktop width test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -484,7 +462,6 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Animation test');
       await page.keyboard.press('Enter');
 
@@ -493,7 +470,7 @@ test.describe('Error Recovery Actions', () => {
       await expect(errorToast).not.toBeVisible();
 
       // Should animate in
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
     });
 
@@ -501,10 +478,9 @@ test.describe('Error Recovery Actions', () => {
       await page.route('**/api/todos', route => route.abort());
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Dismiss animation test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       await expect(errorToast).toBeVisible({ timeout: 3000 });
@@ -514,7 +490,6 @@ test.describe('Error Recovery Actions', () => {
       await dismissButton.click();
 
       // Should animate out (not immediate)
-      await page.waitForTimeout(300);
       await expect(errorToast).not.toBeVisible();
     });
   });
@@ -532,10 +507,9 @@ test.describe('Error Recovery Actions', () => {
       });
 
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Dev mode test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const errorToast = page.locator('[role="alert"]');
       if (await errorToast.isVisible()) {

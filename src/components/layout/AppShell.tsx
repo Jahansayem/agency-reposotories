@@ -14,11 +14,12 @@ import FloatingChatButton from '../FloatingChatButton';
 // ═══════════════════════════════════════════════════════════════════════════
 // APP SHELL - CORE LAYOUT ARCHITECTURE
 // A sophisticated three-column layout with persistent navigation and panels
-// Designed for the Bealer Agency insurance task management workflow
+// Designed for the Wavezly insurance task management workflow
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type ActiveView =
   | 'tasks'
+  | 'calendar'
   | 'dashboard'
   | 'activity'
   | 'chat'
@@ -26,6 +27,7 @@ export type ActiveView =
   | 'archive'
   | 'ai_inbox'
   | 'analytics'
+  | 'opportunities'
   | 'customers'
   | 'settings';
 
@@ -449,6 +451,7 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 
   const menuItems = [
     { id: 'tasks', label: 'Tasks', icon: '📋' },
+    { id: 'calendar', label: 'Calendar', icon: '📅' },
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'chat', label: 'Messages', icon: '💬' },
   ];

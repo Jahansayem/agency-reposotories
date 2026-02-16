@@ -63,7 +63,7 @@ interface BealerTasksDB extends DBSchema {
   };
 }
 
-const DB_NAME = 'bealer-tasks-db';
+const DB_NAME = 'wavezly-tasks-db';
 const DB_VERSION = 1;
 
 let dbInstance: IDBPDatabase<BealerTasksDB> | null = null;

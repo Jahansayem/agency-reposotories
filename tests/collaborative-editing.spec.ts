@@ -25,15 +25,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
     test('should initialize editing channel on login', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if Supabase editing channel is created
       const hasEditingChannel = await page.evaluate(() => {
@@ -45,27 +43,23 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should broadcast editing status when editing task', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Create a task
       await page.fill('[data-testid="add-todo-input"]', 'Test collaborative editing');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
-
       // Click task to edit
       const task = page.locator('text=Test collaborative editing').first();
       if (await task.isVisible({ timeout: 2000 })) {
         await task.click();
-        await page.waitForTimeout(500);
+        await expect(page.locator('body')).toBeVisible();
 
         // Should broadcast editing status
         const bodyVisible = await page.locator('body').isVisible();
@@ -75,15 +69,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should auto-clear editing after timeout', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Start editing, then become inactive
       // After 30 seconds of inactivity, editing should auto-clear
@@ -93,15 +85,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should keep editing alive with heartbeat', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // keepAlive() should be called periodically while editing
       // Resets the auto-clear timer
@@ -113,15 +103,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Editing Indicator Component', () => {
     test('should display editing indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Look for editing indicator UI
       const hasEditingUI = await page.evaluate(() => {
@@ -136,15 +124,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show Edit3 icon when single user editing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Edit icon for single editor
       const hasIcons = await page.evaluate(() => {
@@ -157,15 +143,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show AlertTriangle icon for conflicts', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // When multiple users editing, show warning icon
       const bodyVisible = await page.locator('body').isVisible();
@@ -174,15 +158,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should display user avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Avatars showing who is editing
       const hasAvatars = await page.evaluate(() => {
@@ -195,15 +177,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should limit avatars to 3 with overflow', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Max 3 avatars + "+N more"
       const bodyVisible = await page.locator('body').isVisible();
@@ -214,15 +194,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Field-Specific Indicators', () => {
     test('should track editing by field', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Different indicators for different fields:
       // - Title field
@@ -234,15 +212,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show field name in indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "John editing title"
       // "Sarah editing notes"
@@ -252,15 +228,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should allow editing different fields simultaneously', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // User A editing title, User B editing notes = no conflict
       // Only conflicts if editing same field
@@ -273,15 +247,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
     test('should detect multiple users editing same task', async ({ page, context }) => {
       // Login first user
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // In multi-user test, would open second browser
       // and verify conflict warning appears
@@ -291,15 +263,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should show conflict warning banner', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Yellow warning banner with:
       // - "Editing Conflict Detected"
@@ -311,15 +281,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should change indicator color on conflict', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Blue for single editor
       // Yellow for conflict
@@ -335,15 +303,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Real-Time Updates', () => {
     test('should update when user starts editing', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // When User B starts editing, User A should see indicator appear
       const pageLoaded = await page.locator('[data-testid="add-todo-input"]').isVisible();
@@ -352,15 +318,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should update when user stops editing', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // When User B stops editing, indicator should disappear
       const bodyVisible = await page.locator('body').isVisible();
@@ -369,15 +333,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should sync across tabs', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Open second tab
       const page2 = await context.newPage();
@@ -392,15 +354,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should broadcast via Supabase Realtime', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Channel: 'task-editing'
       // Event: 'task_editing'
@@ -412,15 +372,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Performance', () => {
     test('should handle rapid edit start/stop', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Rapid setEditing(true) / setEditing(false) cycles
       // Should not cause memory leaks or duplicate indicators
@@ -430,20 +388,19 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should cleanup stale editing states', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Cleanup interval removes users who:
       // - Disconnected without stopping editing
       // - Exceeded timeout without heartbeat
       // Runs every 5 seconds
+      // Genuine timing wait: cleanup interval is 5s, wait 6s to ensure it fires
       await page.waitForTimeout(6000);
 
       const bodyVisible = await page.locator('body').isVisible();
@@ -452,15 +409,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should batch broadcasts efficiently', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Heartbeat prevents spam broadcasts
       // Only broadcast when needed
@@ -472,15 +427,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Edge Cases', () => {
     test('should exclude current user from indicators', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Current user shouldn't see their own editing indicator
       // Only shows other users
@@ -490,15 +443,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should handle user disconnect', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // If user closes tab/browser while editing,
       // cleanup interval should remove their editing state
@@ -508,15 +459,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should handle network disconnection', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Editing indicators should degrade gracefully offline
       const pageLoaded = await page.locator('[data-testid="add-todo-input"]').isVisible();
@@ -525,15 +474,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should handle same user in multiple tabs', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Same user in Tab A and Tab B
       // Should not show conflict with self
@@ -545,15 +492,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('UI/UX', () => {
     test('should animate indicator entrance', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Framer Motion slide-in animation
       const hasAnimations = await page.evaluate(() => {
@@ -566,15 +511,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should use user colors in avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Each user's avatar uses their assigned color
       const hasColoredElements = await page.evaluate(() => {
@@ -587,15 +530,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should have tooltips on avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "John is editing"
       const hasTooltips = await page.evaluate(() => {
@@ -610,15 +551,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Conflict Resolution', () => {
     test('should offer Cancel option', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "Cancel My Changes" button
       // Discards current user's edits
@@ -628,15 +567,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should offer Save Anyway option', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "Save Anyway (Overwrite)" button
       // Last write wins (overwrites other user's changes)
@@ -648,15 +585,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
   test.describe('Accessibility', () => {
     test('should have ARIA live region', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // role="status" aria-live="polite"
       const hasAriaLive = await page.evaluate(() => {
@@ -669,15 +604,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should have descriptive aria-label', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // "John is editing"
       // "John, Sarah are editing"
@@ -691,15 +624,13 @@ test.describe('Collaborative Editing Indicators (Issue #40)', () => {
 
     test('should announce editing status changes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Screen readers should announce when editing starts/stops
       const bodyVisible = await page.locator('body').isVisible();

@@ -140,6 +140,16 @@ export async function POST(request: NextRequest) {
     // Verify PIN server-side using constant-time comparison
     const pinHash = hashPin(pin);
     const storedHash = user.pin_hash;
+
+    if (!storedHash) {
+      // User exists but has no PIN set (e.g., created via OAuth or incomplete registration)
+      await recordFailedAttempt(lockoutId, { ip, userAgent, userName: user.name });
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+
     const isValid = storedHash.length === pinHash.length &&
       timingSafeEqual(Buffer.from(storedHash), Buffer.from(pinHash));
     if (!isValid) {

@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { useCustomerDetail, useCreateTaskFromOpportunity, useDismissOpportunity } from '@/hooks/useCustomers';
-import { SegmentIndicator } from './CustomerBadge';
 import type { CustomerOpportunity, CustomerTask } from '@/types/customer';
 
 interface CustomerDetailPanelProps {
@@ -108,25 +107,10 @@ export function CustomerDetailPanel({
       {/* Header */}
       <div className="p-4 bg-[var(--surface)] border-b border-[var(--border)]">
         <div className="flex items-start gap-3">
-          <SegmentIndicator segment={customer.segment} size="md" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-[var(--foreground)] truncate">
-                {customer.name}
-              </h3>
-              <span className={`
-                px-2 py-0.5 text-xs font-medium rounded capitalize
-                ${customer.segment === 'elite' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                  customer.segment === 'premium' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                  customer.segment === 'standard' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                  'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400'}
-              `}>
-                {customer.segment}
-              </span>
-            </div>
-            <p className="text-sm text-[var(--text-muted)] mt-0.5">
-              {customer.segmentConfig.description}
-            </p>
+            <h3 className="text-lg font-bold text-[var(--foreground)] truncate">
+              {customer.name}
+            </h3>
           </div>
         </div>
 
@@ -164,11 +148,7 @@ export function CustomerDetailPanel({
         <StatBox label="Premium" value={formatCurrency(customer.totalPremium)} subtext="/year" />
         <StatBox label="Policies" value={customer.policyCount.toString()} />
         <StatBox label="Tenure" value={`${customer.tenureYears}yr`} />
-        <StatBox
-          label="LTV"
-          value={formatCurrency(customer.segmentConfig.avgLtv)}
-          className={customer.segment === 'elite' ? 'text-amber-600 dark:text-amber-400' : ''}
-        />
+        <StatBox label="Products" value={customer.products.length.toString()} />
       </div>
 
       {/* Products */}

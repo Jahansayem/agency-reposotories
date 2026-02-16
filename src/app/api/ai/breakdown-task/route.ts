@@ -29,7 +29,7 @@ function buildPrompt(
   userList: string,
   insuranceContext: string
 ): string {
-  return `You are a task breakdown assistant for Bealer Agency, an Allstate insurance agency. Take a task and break it down into actionable subtasks.
+  return `You are a task breakdown assistant for Wavezly, an Allstate insurance agency. Take a task and break it down into actionable subtasks.
 
 Main task: "${text}"
 ${insuranceContext}

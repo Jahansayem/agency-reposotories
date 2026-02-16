@@ -62,7 +62,7 @@ test.describe('Haptic Feedback API Integration', () => {
         errors.push(error.message);
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       expect(errors.length).toBe(0);
     });
   });
@@ -71,10 +71,9 @@ test.describe('Haptic Feedback API Integration', () => {
     test('should trigger success haptic on task completion', async ({ page }) => {
       // Create a test task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Test haptic feedback');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Monitor vibration calls
       const vibrationCalls: number[][] = [];
@@ -93,7 +92,6 @@ test.describe('Haptic Feedback API Integration', () => {
       // Complete the task
       const checkbox = page.locator('[data-testid="task-checkbox"]').first();
       await checkbox.click();
-      await page.waitForTimeout(300);
 
       // Verify success pattern was triggered: [10, 50, 10]
       // Note: Only works on browsers with vibration support
@@ -108,7 +106,6 @@ test.describe('Haptic Feedback API Integration', () => {
     test('should trigger medium haptic on button press', async ({ page }) => {
       // Navigate to task view
       await page.click('text=Tasks');
-      await page.waitForTimeout(300);
 
       // Monitor vibrations
       const vibrationCalls: number[] = [];
@@ -128,7 +125,6 @@ test.describe('Haptic Feedback API Integration', () => {
 
       // Click a button (should trigger medium haptic: 20ms)
       await page.click('text=Dashboard');
-      await page.waitForTimeout(200);
 
       // Verify medium haptic was triggered
       // Note: May not trigger on all buttons, test is browser-dependent
@@ -140,10 +136,9 @@ test.describe('Haptic Feedback API Integration', () => {
     test('should trigger heavy haptic on task deletion', async ({ page }) => {
       // Create a test task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Task to delete');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Open task menu
       const taskItem = page.locator('text=Task to delete').locator('..');
@@ -171,7 +166,6 @@ test.describe('Haptic Feedback API Integration', () => {
 
       // Confirm deletion
       await page.click('button:has-text("Delete"):not(:has-text("Cancel"))');
-      await page.waitForTimeout(300);
 
       // Verify heavy haptic was triggered: 50ms
       if (vibrationCalls.length > 0) {
@@ -187,12 +181,12 @@ test.describe('Haptic Feedback API Integration', () => {
 
       // Navigate to chat
       await page.click('text=Chat');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Send a message
       await page.fill('[data-testid="chat-input"]', 'Test message for swipe');
       await page.press('[data-testid="chat-input"]', 'Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Monitor vibrations
       const vibrationPatterns: number[][] = [];
@@ -216,7 +210,6 @@ test.describe('Haptic Feedback API Integration', () => {
       await page.mouse.down();
       await page.mouse.move(100, 0);
       await page.mouse.up();
-      await page.waitForTimeout(300);
 
       // Verify reply pattern: [30, 20, 30]
       if (vibrationPatterns.length > 0) {
@@ -232,12 +225,12 @@ test.describe('Haptic Feedback API Integration', () => {
 
       // Navigate to chat
       await page.click('text=Chat');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Send a message
       await page.fill('[data-testid="chat-input"]', 'Long press test');
       await page.press('[data-testid="chat-input"]', 'Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Monitor vibrations
       const vibrationCalls: number[] = [];
@@ -258,6 +251,7 @@ test.describe('Haptic Feedback API Integration', () => {
       // Simulate long-press (touch and hold for 500ms)
       const message = page.locator('text=Long press test').locator('..');
       await message.dispatchEvent('touchstart', { touches: [{ clientX: 0, clientY: 0 }] });
+      // Genuine timing wait: hold past 500ms long-press threshold
       await page.waitForTimeout(600); // Longer than 500ms threshold
       await message.dispatchEvent('touchend');
 
@@ -275,10 +269,9 @@ test.describe('Haptic Feedback API Integration', () => {
 
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Long press task');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Monitor vibrations
       const vibrationCalls: number[] = [];
@@ -299,9 +292,9 @@ test.describe('Haptic Feedback API Integration', () => {
       // Simulate long-press on task
       const task = page.locator('text=Long press task').locator('..');
       await task.dispatchEvent('touchstart', { touches: [{ clientX: 0, clientY: 0 }] });
+      // Genuine timing wait: hold past 500ms long-press threshold
       await page.waitForTimeout(600); // Longer than 500ms threshold
       await task.dispatchEvent('touchend');
-      await page.waitForTimeout(200);
 
       // Verify heavy haptic: 50ms
       if (vibrationCalls.length > 0) {
@@ -463,10 +456,9 @@ test.describe('Haptic Feedback API Integration', () => {
     test('should not use haptics as sole indicator of actions', async ({ page }) => {
       // Create a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Accessibility test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Complete the task
       const checkbox = page.locator('[data-testid="task-checkbox"]').first();
@@ -490,14 +482,11 @@ test.describe('Haptic Feedback API Integration', () => {
 
       // Try to trigger haptics
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'OS settings test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
 
       const checkbox = page.locator('[data-testid="task-checkbox"]').first();
       await checkbox.click();
-      await page.waitForTimeout(300);
 
       // No errors should occur even if vibration is disabled
       expect(errors.length).toBe(0);
@@ -517,10 +506,9 @@ test.describe('Haptic Feedback API Integration', () => {
 
       // Try to complete a task
       await page.click('button:has-text("New Task")');
-      await page.waitForTimeout(300);
       await page.fill('[data-testid="add-task-input"]', 'Failure test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const checkbox = page.locator('[data-testid="task-checkbox"]').first();
       await checkbox.click();
@@ -541,7 +529,6 @@ test.describe('Haptic Feedback API Integration', () => {
             navigator.vibrate(10);
           }
         });
-        await page.waitForTimeout(50);
       }
 
       const duration = Date.now() - startTime;
@@ -565,7 +552,7 @@ test.describe('Haptic Feedback API Integration', () => {
         }
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // No errors should occur
       expect(errors.length).toBe(0);

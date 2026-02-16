@@ -233,19 +233,25 @@ export function calculateSegmentLtv(
   commissionRate: number = 0.07,
   servicingCostPerPolicy: number = 50
 ): number {
-  const segment = getCustomerSegment(totalPremium, policyCount);
+  // Guard against negative inputs
+  const safePremium = Math.max(0, totalPremium);
+  const safePolicyCount = Math.max(0, policyCount);
+
+  const segment = getCustomerSegment(safePremium, safePolicyCount);
   const config = SEGMENT_CONFIGS[segment];
 
-  // Expected years based on retention (geometric series approximation)
-  const retention = config.avgRetention;
-  const expectedYears = retention < 1.0 ? -1 / Math.log(retention) : 20;
+  // Clamp retention to valid range to avoid math edge cases:
+  // - retention <= 0 would cause Math.log(0) = -Infinity → expectedYears = 0 (underestimates LTV)
+  // - retention >= 1 would cause Math.log(1) = 0 → division by zero (Infinity)
+  const safeRetention = Math.max(0.01, Math.min(0.99, config.avgRetention));
+  const expectedYears = -1 / Math.log(safeRetention);
 
   // Annual commission revenue
-  const annualCommission = totalPremium * commissionRate;
+  const annualCommission = safePremium * commissionRate;
 
   // Lifetime calculations
   const lifetimeRevenue = annualCommission * expectedYears;
-  const lifetimeServicingCost = servicingCostPerPolicy * policyCount * expectedYears;
+  const lifetimeServicingCost = servicingCostPerPolicy * safePolicyCount * expectedYears;
 
   return Math.max(0, lifetimeRevenue - lifetimeServicingCost);
 }

@@ -12,7 +12,6 @@ import { logger } from './logger';
 
 const SESSION_COOKIE_NAME = 'session_token';
 const SESSION_MAX_AGE = 8 * 60 * 60; // 8 hours in seconds
-const IDLE_TIMEOUT = 30 * 60; // 30 minutes in seconds
 
 export interface CookieOptions {
   httpOnly: boolean;
@@ -146,10 +145,3 @@ export function refreshSessionCookieIfNeeded(
   return response;
 }
 
-/**
- * Check if session has exceeded idle timeout
- */
-export function isSessionIdle(lastActivity: Date): boolean {
-  const idleTime = Date.now() - lastActivity.getTime();
-  return idleTime > IDLE_TIMEOUT * 1000;
-}

@@ -19,10 +19,10 @@ test.describe('Add Task Modal UI Fixes', () => {
     await pinInputs.nth(3).fill('8');
 
     // Wait a moment for auto-submit to trigger
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for navigation and main app to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Dismiss any welcome modals
     const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });

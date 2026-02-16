@@ -83,7 +83,7 @@ export default function UserSetup({ onSetUser }: UserSetupProps) {
               transition={{ delay: 0.3 }}
               className="text-2xl font-bold text-slate-900 dark:text-white mb-1"
             >
-              Bealer Agency
+              Wavezly
             </motion.h1>
 
             <motion.p

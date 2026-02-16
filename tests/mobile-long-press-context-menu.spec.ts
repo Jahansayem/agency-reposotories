@@ -31,7 +31,7 @@ test.describe('Long-Press Context Menus', () => {
         const input = page.locator('[placeholder*="Add a task"]').or(page.locator('input[type="text"]'));
         await input.fill('Test task for long-press');
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
       }
     });
 
@@ -48,6 +48,7 @@ test.describe('Long-Press Context Menus', () => {
 
       // Simulate long-press (touch and hold for 500ms)
       await page.touchscreen.tap(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
+      // Genuine timing wait: hold past 500ms long-press threshold
       await page.waitForTimeout(600); // Hold > 500ms threshold
 
       // Context menu should appear
@@ -90,6 +91,7 @@ test.describe('Long-Press Context Menus', () => {
       // Start long-press
       await page.mouse.move(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
       await page.mouse.down();
+      // Genuine timing wait: hold past 500ms long-press threshold
       await page.waitForTimeout(550); // Hold for long-press
 
       // Check for ring-2 ring-[var(--accent)]/50 class during press
@@ -128,7 +130,6 @@ test.describe('Long-Press Context Menus', () => {
       }
 
       await page.touchscreen.tap(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(600);
 
       // Check vibrate was called with 50ms duration
       const vibrateCallCount = await page.evaluate(() => (window as any).__vibrateCallCount);
@@ -152,10 +153,9 @@ test.describe('Long-Press Context Menus', () => {
 
       await page.mouse.move(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
       await page.mouse.down();
+      // Genuine timing wait: hold past 500ms long-press threshold
       await page.waitForTimeout(600); // Hold for long-press
       await page.mouse.up();
-
-      await page.waitForTimeout(300);
 
       // Context menu should NOT appear (prevented by target check)
       const contextMenu = page.locator('[role="menu"][aria-label="Task actions menu"]');
@@ -174,7 +174,6 @@ test.describe('Long-Press Context Menus', () => {
 
       // Long-press to open menu
       await page.touchscreen.tap(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(600);
 
       // Find Edit action
       const editAction = page.locator('[role="menuitem"]').filter({ hasText: 'Edit' });
@@ -192,7 +191,6 @@ test.describe('Long-Press Context Menus', () => {
       }
 
       await page.touchscreen.tap(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(600);
 
       const duplicateAction = page.locator('[role="menuitem"]').filter({ hasText: 'Duplicate' });
       await expect(duplicateAction).toBeVisible({ timeout: 1000 });
@@ -209,7 +207,6 @@ test.describe('Long-Press Context Menus', () => {
       }
 
       await page.touchscreen.tap(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(600);
 
       const deleteAction = page.locator('[role="menuitem"]').filter({ hasText: 'Delete' });
       await expect(deleteAction).toBeVisible({ timeout: 1000 });
@@ -228,7 +225,7 @@ test.describe('Long-Press Context Menus', () => {
       const teamConv = page.locator('text=Team Chat');
       if (await teamConv.count() > 0) {
         await teamConv.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
 
       // Ensure at least one message exists
@@ -239,7 +236,7 @@ test.describe('Long-Press Context Menus', () => {
         const input = page.locator('[placeholder*="message"]').or(page.locator('textarea'));
         await input.fill('Test message for long-press');
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
       }
     });
 
@@ -256,13 +253,12 @@ test.describe('Long-Press Context Menus', () => {
 
       // Long-press (touch and hold)
       await page.touchscreen.tap(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(600);
 
       // Tapback menu should appear (emojis)
       const tapbackMenu = page.locator('text=/❤️|👍|👎|😂|❗|❓/');
 
       // Give time for menu to appear
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check if tapback UI is visible
       // (May be implemented differently, checking for any emoji reactions)
@@ -282,6 +278,7 @@ test.describe('Long-Press Context Menus', () => {
       // Start long-press
       await page.mouse.move(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
       await page.mouse.down();
+      // Genuine timing wait: hold past 500ms long-press threshold
       await page.waitForTimeout(550);
 
       // Check for ring styling during press
@@ -316,7 +313,6 @@ test.describe('Long-Press Context Menus', () => {
       }
 
       await page.touchscreen.tap(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(600);
 
       const vibrateCallCount = await page.evaluate(() => (window as any).__vibrateCallCount);
       expect(vibrateCallCount).toBeGreaterThanOrEqual(1);
@@ -334,7 +330,7 @@ test.describe('Long-Press Context Menus', () => {
         const input = page.locator('[placeholder*="Add a task"]').or(page.locator('input[type="text"]'));
         await input.fill('Test task');
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
       }
     });
 
@@ -353,7 +349,6 @@ test.describe('Long-Press Context Menus', () => {
       await page.touchscreen.tap(centerX, centerY);
 
       // Move significantly before 500ms threshold
-      await page.waitForTimeout(300);
 
       // Context menu should NOT appear (touch moved, not stationary)
       const contextMenu = page.locator('[role="menu"]');
@@ -371,9 +366,9 @@ test.describe('Long-Press Context Menus', () => {
       // Simulate touchcancel by starting and immediately ending
       await page.mouse.move(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
       await page.mouse.down();
-      await page.waitForTimeout(200);
       await page.mouse.up(); // Ends before 500ms
 
+      // Genuine timing wait: verify short press completes before 500ms threshold
       await page.waitForTimeout(400);
 
       // Menu should NOT appear
@@ -435,7 +430,7 @@ test.describe('Long-Press Context Menus', () => {
         const input = page.locator('[placeholder*="Add a task"]');
         await input.fill('Test task');
         await page.keyboard.press('Enter');
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
       }
     });
 
@@ -452,10 +447,7 @@ test.describe('Long-Press Context Menus', () => {
       // Test long-press in WebKit
       await page.mouse.move(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
       await page.mouse.down();
-      await page.waitForTimeout(600);
       await page.mouse.up();
-
-      await page.waitForTimeout(300);
 
       // Should work without errors
       expect(true).toBeTruthy();
@@ -473,7 +465,6 @@ test.describe('Long-Press Context Menus', () => {
 
       await page.mouse.move(boundingBox.x + boundingBox.width / 2, boundingBox.y + boundingBox.height / 2);
       await page.mouse.down();
-      await page.waitForTimeout(600);
       await page.mouse.up();
 
       expect(true).toBeTruthy();

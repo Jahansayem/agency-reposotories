@@ -64,6 +64,17 @@ const getShortcutGroups = (): ShortcutGroup[] => [
     ],
   },
   {
+    title: 'Calendar',
+    shortcuts: [
+      { keys: ['D'], description: 'Switch to day view' },
+      { keys: ['W'], description: 'Switch to week view' },
+      { keys: ['M'], description: 'Switch to month view' },
+      { keys: ['T'], description: 'Go to today' },
+      { keys: ['\u2190'], description: 'Previous period' },
+      { keys: ['\u2192'], description: 'Next period' },
+    ],
+  },
+  {
     title: 'Help',
     shortcuts: [
       { keys: ['?'], description: 'Show keyboard shortcuts' },

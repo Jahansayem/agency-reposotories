@@ -30,7 +30,7 @@ test.describe('Service Worker & PWA (Issue #34)', () => {
       const manifest = JSON.parse(manifestText || '{}');
 
       // Verify required fields
-      expect(manifest.name).toBe('Bealer Agency - Task Management');
+      expect(manifest.name).toBe('Wavezly - Task Management');
       expect(manifest.short_name).toBe('BA Tasks');
       expect(manifest.theme_color).toBe('#0033A0');
       expect(manifest.background_color).toBe('#ffffff');
@@ -411,15 +411,13 @@ test.describe('Service Worker & PWA (Issue #34)', () => {
 
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Navigate to different views
       const dashboardButton = page.locator('button:has-text("Dashboard")').or(
@@ -428,7 +426,7 @@ test.describe('Service Worker & PWA (Issue #34)', () => {
 
       if (await dashboardButton.isVisible({ timeout: 2000 })) {
         await dashboardButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // App shell should remain visible during navigation
         const body = page.locator('body');

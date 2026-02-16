@@ -29,7 +29,7 @@ test('Test digest on production', async ({ page }) => {
   });
 
   await page.goto(PROD_URL);
-  await page.waitForTimeout(3000);
+  await page.waitForLoadState('networkidle');
 
   // Check cookies
   const cookies = await page.context().cookies();
@@ -39,15 +39,14 @@ test('Test digest on production', async ({ page }) => {
   const userCard = page.locator('button').filter({ hasText: 'Derrick' }).first();
   if (await userCard.isVisible({ timeout: 5000 }).catch(() => false)) {
     await userCard.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Close welcome modal
     const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
@@ -56,13 +55,13 @@ test('Test digest on production', async ({ page }) => {
     }
   }
 
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Navigate to Dashboard
   const dashboardLink = page.locator('button, a').filter({ hasText: 'Dashboard' }).first();
   if (await dashboardLink.isVisible({ timeout: 5000 }).catch(() => false)) {
     await dashboardLink.click();
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   }
 
   // Take screenshot
@@ -73,6 +72,7 @@ test('Test digest on production', async ({ page }) => {
   if (await generateBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
     console.log('\n=== Clicking Generate Now on PRODUCTION ===');
     await generateBtn.click();
+    // Genuine timing wait: production digest generation takes time
     await page.waitForTimeout(15000);
     await page.screenshot({ path: 'test-results/prod-digest-2.png', fullPage: true });
   }

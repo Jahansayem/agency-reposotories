@@ -10,13 +10,13 @@ test.describe('Visual Dashboard Color Check', () => {
       document.documentElement.setAttribute('data-theme', 'light');
       localStorage.setItem('theme', 'light');
     });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Navigate to Dashboard if not already there
     const dashboardButton = page.locator('button:has-text("Dashboard")');
     if (await dashboardButton.isVisible().catch(() => false)) {
       await dashboardButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
     }
 
     // Take screenshot
@@ -36,13 +36,13 @@ test.describe('Visual Dashboard Color Check', () => {
       document.documentElement.setAttribute('data-theme', 'dark');
       localStorage.setItem('theme', 'dark');
     });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Navigate to Dashboard if not already there
     const dashboardButton = page.locator('button:has-text("Dashboard")');
     if (await dashboardButton.isVisible().catch(() => false)) {
       await dashboardButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
     }
 
     // Take screenshot

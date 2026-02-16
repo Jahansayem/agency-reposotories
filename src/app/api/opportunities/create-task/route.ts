@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -24,11 +25,11 @@ interface CreateTaskRequest {
   customText?: string;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const body: CreateTaskRequest = await request.json();
-    const { opportunityId, assignedTo, createdBy, priority = 'high', customText } = body;
+    const { opportunityId, assignedTo, createdBy = ctx.userName, priority = 'high', customText } = body;
 
     if (!opportunityId) {
       return NextResponse.json({ error: 'opportunityId is required' }, { status: 400 });
@@ -38,12 +39,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'assignedTo and createdBy are required' }, { status: 400 });
     }
 
-    // Get opportunity details
-    const { data: opp, error: oppError } = await supabase
+    // Get opportunity details (scoped to agency)
+    let oppQuery = supabase
       .from('cross_sell_opportunities')
       .select('*')
-      .eq('id', opportunityId)
-      .single();
+      .eq('id', opportunityId);
+
+    if (ctx.agencyId) {
+      oppQuery = oppQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: opp, error: oppError } = await oppQuery.single();
 
     if (oppError || !opp) {
       return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 });
@@ -73,22 +79,28 @@ export async function POST(request: NextRequest) {
     // Build notes with opportunity details
     const notes = buildTaskNotes(opp);
 
-    // Create the task
+    // Create the task (with agency scoping)
+    const taskData: Record<string, unknown> = {
+      text: taskText,
+      priority: mapPriorityTier(opp.priority_tier, priority),
+      assigned_to: assignedTo,
+      created_by: createdBy,
+      due_date: opp.renewal_date || null,
+      customer_id: customerInsight?.id || null,
+      customer_name: opp.customer_name,
+      customer_segment: segment,
+      notes,
+      status: 'todo',
+      completed: false,
+    };
+
+    if (ctx.agencyId) {
+      taskData.agency_id = ctx.agencyId;
+    }
+
     const { data: newTask, error: taskError } = await supabase
       .from('todos')
-      .insert({
-        text: taskText,
-        priority: mapPriorityTier(opp.priority_tier, priority),
-        assigned_to: assignedTo,
-        created_by: createdBy,
-        due_date: opp.renewal_date || null,
-        customer_id: customerInsight?.id || null,
-        customer_name: opp.customer_name,
-        customer_segment: segment,
-        notes,
-        status: 'todo',
-        completed: false,
-      })
+      .insert(taskData)
       .select('id')
       .single();
 
@@ -118,7 +130,7 @@ export async function POST(request: NextRequest) {
     console.error('Error creating task from opportunity:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
+});
 
 function getSegment(premium: number, policyCount: number): string {
   if (premium >= 15000 || policyCount >= 4) return 'elite';

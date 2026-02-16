@@ -24,31 +24,31 @@ export function ServiceWorkerRegistration() {
       // Event: Service worker installed
       wb.addEventListener('installed', (event) => {
         if (event.isUpdate) {
-          console.log('Service Worker updated. New content available.');
+          logger.info('Service Worker updated. New content available.', { component: 'ServiceWorkerRegistration', action: 'installed' });
           // Show update notification to user
           if (confirm('New version available! Reload to update?')) {
             window.location.reload();
           }
         } else {
-          console.log('Service Worker installed for the first time.');
+          logger.info('Service Worker installed for the first time.', { component: 'ServiceWorkerRegistration', action: 'installed' });
         }
       });
 
       // Event: Service worker activated
       wb.addEventListener('activated', (event) => {
         if (!event.isUpdate) {
-          console.log('Service Worker activated.');
+          logger.debug('Service Worker activated', { component: 'ServiceWorkerRegistration', action: 'activated' });
         }
       });
 
       // Event: Service worker controlling the page
       wb.addEventListener('controlling', () => {
-        console.log('Service Worker is now controlling the page.');
+        logger.debug('Service Worker is now controlling the page', { component: 'ServiceWorkerRegistration', action: 'controlling' });
       });
 
       // Event: Service worker waiting to activate
       wb.addEventListener('waiting', () => {
-        console.log('Service Worker is waiting to activate.');
+        logger.debug('Service Worker is waiting to activate', { component: 'ServiceWorkerRegistration', action: 'waiting' });
         // Show update notification
         if (confirm('New version waiting. Activate now?')) {
           wb.messageSkipWaiting();
@@ -57,13 +57,13 @@ export function ServiceWorkerRegistration() {
 
       // Listen for offline/online events with named handlers for cleanup
       const handleOnline = () => {
-        console.log('App is online');
+        logger.debug('App is online', { component: 'ServiceWorkerRegistration', action: 'online' });
         // Dispatch custom event for components to listen to
         window.dispatchEvent(new CustomEvent('app-online'));
       };
 
       const handleOffline = () => {
-        console.log('App is offline');
+        logger.debug('App is offline', { component: 'ServiceWorkerRegistration', action: 'offline' });
         // Dispatch custom event for components to listen to
         window.dispatchEvent(new CustomEvent('app-offline'));
       };
@@ -77,7 +77,7 @@ export function ServiceWorkerRegistration() {
       // Register the service worker
       wb.register()
         .then((registration) => {
-          console.log('Service Worker registered:', registration);
+          logger.info('Service Worker registered', { component: 'ServiceWorkerRegistration', action: 'register' });
 
           // Check for updates every hour
           updateIntervalId = setInterval(() => {

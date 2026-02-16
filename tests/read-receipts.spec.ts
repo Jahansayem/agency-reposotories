@@ -25,15 +25,13 @@ test.describe('Read Receipts (Issue #39)', () => {
     test('should mark message as read', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Navigate to chat
       const chatButton = page.locator('button:has-text("Chat")').or(
@@ -42,7 +40,7 @@ test.describe('Read Receipts (Issue #39)', () => {
 
       if (await chatButton.isVisible({ timeout: 2000 })) {
         await chatButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Messages should be automatically marked as read when viewed
         const bodyVisible = await page.locator('body').isVisible();
@@ -52,15 +50,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should store read receipts in database', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Read receipts should be persisted in message_read_receipts table
       // (In real implementation, would query Supabase)
@@ -70,15 +66,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle duplicate read receipts', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Marking same message as read twice should not create duplicates
       // UNIQUE constraint on (message_id, user_id)
@@ -88,15 +82,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should batch mark messages as read', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // When scrolling through messages, should batch-mark as read
       // More efficient than marking one at a time
@@ -108,15 +100,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Read Indicator Component', () => {
     test('should show single check when not read', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Single checkmark for unread message
       const hasCheckmarks = await page.evaluate(() => {
@@ -130,15 +120,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should show double check when read', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Double checkmark (blue) when message has been read
       // Would verify via CheckCheck icon
@@ -148,15 +136,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should animate read indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Read indicator should animate when status changes
       // Framer Motion scale + opacity animation
@@ -172,15 +158,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Read Receipts Display', () => {
     test('should show avatar stack for read users', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Avatar stack showing who read the message
       const hasAvatars = await page.evaluate(() => {
@@ -193,15 +177,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should limit avatars to 3 with overflow', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Max 3 avatars + "+N more" indicator
       // Prevents UI clutter with many readers
@@ -211,15 +193,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should show detailed view with timestamps', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Detailed view shows:
       // - User names
@@ -231,15 +211,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should use user colors in avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Each user's avatar uses their assigned color
       const hasColoredElements = await page.evaluate(() => {
@@ -255,15 +233,13 @@ test.describe('Read Receipts (Issue #39)', () => {
     test('should update read status in real-time', async ({ page, context }) => {
       // Login first user
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // In multi-user test, when user B reads a message,
       // user A should see read indicator update instantly
@@ -273,15 +249,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should broadcast read events', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Read events should be broadcast via Supabase Realtime
       // Channel: 'read-receipts'
@@ -292,15 +266,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should sync read receipts across tabs', async ({ page, context }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Open second tab
       const page2 = await context.newPage();
@@ -317,15 +289,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Read Count Badge', () => {
     test('should display read count', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Badge showing "3" for 3 readers
       // CheckCheck icon + count
@@ -335,15 +305,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should hide badge when count is 0', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // No badge for unread messages
       const bodyVisible = await page.locator('body').isVisible();
@@ -352,15 +320,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should be clickable to show details', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Clicking badge should open detailed read receipts modal
       const bodyVisible = await page.locator('body').isVisible();
@@ -371,15 +337,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Edge Cases', () => {
     test('should exclude sender from read receipts', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Sender shouldn't see themselves in read receipts
       // Only shows other users who read the message
@@ -389,15 +353,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle deleted messages', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Read receipts should be cascade-deleted when message is deleted
       // ON DELETE CASCADE foreign key
@@ -407,15 +369,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle user who leaves agency', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Read receipts should be cascade-deleted when user is deleted
       // ON DELETE CASCADE foreign key
@@ -425,15 +385,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle rapid read/unread cycles', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Shouldn't create duplicate read receipts
       // UNIQUE constraint prevents duplicates
@@ -445,15 +403,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Performance', () => {
     test('should batch load read receipts efficiently', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Load read receipts for multiple messages in single query
       // SELECT * WHERE message_id IN (...)
@@ -463,15 +419,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should use indexes for fast queries', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Indexes on message_id and user_id for fast lookups
       // idx_read_receipts_message_id, idx_read_receipts_user_id
@@ -481,15 +435,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should handle many readers without lag', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Avatar stack limits to 3 + overflow
       // Prevents rendering hundreds of avatars
@@ -501,15 +453,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('UI/UX', () => {
     test('should format read timestamps', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Relative timestamps: "5 minutes ago", "2 hours ago"
       // Uses date-fns formatDistance
@@ -519,15 +469,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should have tooltips on avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Hovering avatar shows "Read by John 5 minutes ago"
       const hasTooltips = await page.evaluate(() => {
@@ -540,15 +488,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should animate avatar entrance', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Avatars should animate in sequentially (staggered)
       // Delay: index * 0.05s
@@ -564,15 +510,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Accessibility', () => {
     test('should have ARIA labels on read indicators', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // aria-label="Read by 3 people"
       const hasAriaLabels = await page.evaluate(() => {
@@ -585,15 +529,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should announce read status changes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Screen readers should announce when message is read
       // (Using aria-live regions)
@@ -603,19 +545,16 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should support keyboard navigation', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Tab navigation to read count badge
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
       expect(focusedElement).toBeTruthy();
@@ -625,15 +564,13 @@ test.describe('Read Receipts (Issue #39)', () => {
   test.describe('Integration', () => {
     test('should work with chat messages', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const chatButton = page.locator('button:has-text("Chat")').or(
         page.locator('a:has-text("Chat")')
@@ -641,7 +578,7 @@ test.describe('Read Receipts (Issue #39)', () => {
 
       if (await chatButton.isVisible({ timeout: 2000 })) {
         await chatButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Chat messages should show read receipts
         const bodyVisible = await page.locator('body').isVisible();
@@ -651,15 +588,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should work with task discussions', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Task-specific messages should have read receipts
       const bodyVisible = await page.locator('body').isVisible();
@@ -668,15 +603,13 @@ test.describe('Read Receipts (Issue #39)', () => {
 
     test('should work with DMs', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Direct messages should show read receipts
       // Especially useful for 1-on-1 conversations

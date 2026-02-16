@@ -56,7 +56,7 @@ test.describe('Summary Generator - Unit Tests', () => {
     await page.goto('/');
 
     // Wait for app to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const result = await page.evaluate((todo) => {
       // Import the module dynamically in browser context
@@ -79,7 +79,7 @@ test.describe('Summary Generator - Unit Tests', () => {
 
   test('plain text summary includes all sections when todo has full data', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Test that a full todo would include expected sections
     const sections = ['SUBTASKS', 'NOTES', 'ATTACHMENTS', 'VOICEMAIL TRANSCRIPTION'];
@@ -97,7 +97,7 @@ test.describe('Summary Generator - Integration Tests', () => {
     await page.goto('/');
 
     // Wait for login screen
-    const header = page.locator('h1').filter({ hasText: 'Bealer Agency' });
+    const header = page.locator('h1').filter({ hasText: 'Wavezly' });
     await expect(header).toBeVisible({ timeout: 15000 });
 
     // Click Add New User button
@@ -133,7 +133,7 @@ test.describe('Summary Generator - Integration Tests', () => {
     await page.keyboard.press('Enter');
 
     // Wait for task to appear
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 10000 });
 
     console.log('✓ Task created for summary test');
@@ -269,7 +269,7 @@ test.describe('Summary Generator - Edge Cases', () => {
 test.describe('Summary Generator - Copy Functionality', () => {
   test('copy to clipboard function exists', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Test that navigator.clipboard API is available
     const hasClipboardAPI = await page.evaluate(() => {

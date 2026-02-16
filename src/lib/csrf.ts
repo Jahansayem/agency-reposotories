@@ -14,7 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { randomBytes, createHmac } from 'crypto';
+import { randomBytes, createHash, createHmac } from 'crypto';
 import { logger } from './logger';
 
 const CSRF_SECRET_COOKIE = 'csrf_secret';  // HttpOnly
@@ -30,17 +30,10 @@ export function generateCsrfToken(): string {
 }
 
 /**
- * Constant-time string comparison to prevent timing attacks.
+ * Hash a CSRF token for comparison (prevents timing attacks)
  */
-function constantTimeCompare(a: string, b: string): boolean {
-  const maxLen = Math.max(a.length, b.length);
-  let result = a.length ^ b.length; // Length difference contributes to mismatch
-  for (let i = 0; i < maxLen; i++) {
-    const charA = i < a.length ? a.charCodeAt(i) : 0;
-    const charB = i < b.length ? b.charCodeAt(i) : 0;
-    result |= charA ^ charB;
-  }
-  return result === 0;
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
 }
 
 /**
@@ -74,14 +67,19 @@ export function validateCsrfToken(request: NextRequest): boolean {
     return false;
   }
 
-  // Compute expected signature: HMAC-SHA256(secret, nonce) truncated to 32 hex chars.
-  // Must match src/middleware.ts and src/app/api/csrf/route.ts.
+  // Compute expected signature using HMAC-SHA256 (must match middleware algorithm)
+  // The middleware uses HMAC(secret, nonce) and takes first 32 hex chars
   const expectedSignature = createHmac('sha256', secretCookie)
     .update(nonce)
     .digest('hex')
     .slice(0, 32);
-
-  return constantTimeCompare(signature, expectedSignature);
+  // Constant-time comparison to prevent timing attacks
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
+  const providedHash = hashToken(signature);
+  const expectedHash = hashToken(expectedSignature);
+  return providedHash === expectedHash;
 }
 
 /**
@@ -223,11 +221,6 @@ function getCookieValue(name: string): string | null {
 // Cached CSRF token (nonce:signature) from the server
 let cachedCsrfToken: string | null = null;
 let csrfTokenPromise: Promise<string | null> | null = null;
-
-export function __resetCsrfClientCacheForTests(): void {
-  cachedCsrfToken = null;
-  csrfTokenPromise = null;
-}
 
 /**
  * Fetch CSRF token from the server endpoint.

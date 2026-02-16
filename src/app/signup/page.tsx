@@ -13,10 +13,10 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
 import { generateAgencySlug } from '@/types/agency';
 import { isFeatureEnabled } from '@/lib/featureFlags';
 import { logger } from '@/lib/logger';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 // ============================================
 // Types
@@ -152,74 +152,41 @@ export default function SignupPage() {
     }
   };
 
-  const hashPin = async (pin: string): Promise<string> => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(pin);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  };
-
   const handleSignup = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Hash the PIN
-      const pinHash = await hashPin(formData.pin);
-
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('name', formData.userName)
-        .single();
-
-      if (existingUser) {
-        setError('A user with this name already exists');
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if agency slug is taken
-      const { data: existingAgency } = await supabase
-        .from('agencies')
-        .select('id')
-        .eq('slug', formData.agencySlug)
-        .single();
-
-      if (existingAgency) {
-        setError('This agency URL is already taken. Please choose another.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Create user
-      const { data: newUser, error: userError } = await supabase
-        .from('users')
-        .insert({
+      // Use server-side register API (handles PIN hashing, session creation, weak PIN validation)
+      const response = await fetchWithCsrf('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           name: formData.userName.trim(),
-          email: formData.email.trim() || null,
-          pin_hash: pinHash,
-          color: '#0033A0', // Default Allstate blue
-          global_role: 'user',
-        })
-        .select()
-        .single();
+          pin: formData.pin,
+          email: formData.email.trim() || undefined,
+          create_agency: {
+            name: formData.agencyName.trim(),
+            slug: formData.agencySlug.trim(),
+          },
+        }),
+      });
 
-      if (userError) throw userError;
+      const result = await response.json();
 
-      // Create agency with owner
-      const { data: agencyResult, error: agencyError } = await supabase
-        .rpc('create_agency_with_owner', {
-          p_name: formData.agencyName.trim(),
-          p_slug: formData.agencySlug.trim(),
-          p_user_id: newUser.id,
-        });
+      if (!response.ok) {
+        if (result.error === 'DUPLICATE_NAME') {
+          setError('A user with this name already exists');
+        } else if (result.error === 'DUPLICATE_SLUG') {
+          setError('This agency URL is already taken. Please choose another.');
+        } else {
+          setError(result.message || 'Failed to create account');
+        }
+        setIsLoading(false);
+        return;
+      }
 
-      if (agencyError) throw agencyError;
-
-      console.log('Created agency:', agencyResult);
+      logger.info('Agency created successfully', { component: 'SignupPage', action: 'handleSignup' });
 
       setStep('complete');
     } catch (err) {

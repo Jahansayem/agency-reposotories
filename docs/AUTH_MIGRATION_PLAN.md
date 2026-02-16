@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This plan migrates the Bealer Agency Todo List from PIN-based authentication to **Federated SSO** using an Auth Broker pattern. This is required for Allstate production deployment per ISSAS security standards.
+This plan migrates the Wavezly Todo List from PIN-based authentication to **Federated SSO** using an Auth Broker pattern. This is required for Allstate production deployment per ISSAS security standards.
 
 **Current State:** PIN-based authentication (4-digit)
 **Target State:** Federated SSO via SAML 2.0/OIDC with Auth Broker

@@ -46,11 +46,11 @@ async function loginAsDerrick(page: Page) {
 
 // Helper to navigate to Customer Segmentation Dashboard
 async function navigateToCustomerSegmentation(page: Page) {
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
   await page.click('text=Analytics');
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
   await page.click('text=Customer Insights');
-  await page.waitForTimeout(2000);
+  await expect(page.locator('text=Customer Segmentation').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('text=Customer Segmentation').first()).toBeVisible();
 }
 
@@ -60,7 +60,7 @@ test.describe('Mobile Responsiveness - Portrait (375px)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should stack segment cards vertically on mobile', async ({ page }) => {
@@ -165,7 +165,7 @@ test.describe('Mobile Responsiveness - Tablet (768px)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should display segment cards in 2-column grid on tablet', async ({ page }) => {
@@ -193,7 +193,7 @@ test.describe('Accessibility - Keyboard Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should allow keyboard navigation through interactive elements', async ({ page }) => {
@@ -264,7 +264,7 @@ test.describe('Accessibility - ARIA Labels', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should have descriptive button labels', async ({ page }) => {
@@ -293,7 +293,7 @@ test.describe('Accessibility - Color Contrast', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('should have sufficient contrast for header text', async ({ page }) => {
@@ -406,7 +406,7 @@ test.describe('Loading States', () => {
     });
 
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Should show "Demo Data" badge
     const demoBadge = page.locator('text=Demo Data');
@@ -437,7 +437,7 @@ test.describe('Error Messages', () => {
     });
 
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Should fall back to demo data (no error message shown to user)
     const demoBadge = page.locator('text=Demo Data');
@@ -452,7 +452,7 @@ test.describe('Design System Consistency', () => {
   test('should use glass-card styling consistently', async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Check that segment cards use glass-card class
     const segmentCard = page.locator('.glass-card').first();
@@ -472,7 +472,7 @@ test.describe('Design System Consistency', () => {
   test('should use gradient backgrounds for segment cards', async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Check elite segment card for gradient
     const eliteCard = page.locator('.glass-card').filter({
@@ -495,9 +495,9 @@ test.describe('Design System Consistency', () => {
     await loginAsDerrick(page);
 
     // Navigate to Book of Business dashboard first
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     await page.click('text=Analytics');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Get header background color from Book of Business
     const bobHeader = page.locator('text=Book of Business').first();
@@ -510,7 +510,7 @@ test.describe('Design System Consistency', () => {
 
     // Navigate to Customer Insights
     await page.click('text=Customer Insights');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Get header background color from Customer Segmentation
     const segHeader = page.locator('text=Customer Segmentation').first();
@@ -534,7 +534,7 @@ test.describe('Reduced Motion Support', () => {
 
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Check that animations are disabled or reduced
     const progressBar = page.locator('.h-2.bg-white\\/10').first();
@@ -561,7 +561,7 @@ test.describe('Touch Target Sizes (WCAG 2.5.5)', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsDerrick(page);
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   });
 
   test('all interactive buttons should meet 44x44px minimum', async ({ page }) => {

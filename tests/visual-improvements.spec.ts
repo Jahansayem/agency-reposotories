@@ -15,7 +15,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await page.goto('/');
 
   // Wait for page to load
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Check if already logged in (has sidebar navigation)
   const sidebar = page.getByRole('complementary', { name: 'Main navigation' });
@@ -28,7 +28,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(header).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card to select them
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -36,7 +36,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN
   const pinInputs = page.locator('input[type="password"]');
@@ -44,17 +44,16 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
 
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for automatic login after PIN entry
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
   if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
@@ -64,7 +63,7 @@ test.describe('Visual Improvements Tests', () => {
 
   test('CSS variables for typography scale are defined', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Check that typography CSS variables are defined
     const fontSizeXs = await page.evaluate(() =>
@@ -99,7 +98,7 @@ test.describe('Visual Improvements Tests', () => {
 
   test('Spacing scale CSS variables are defined', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     const space1 = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue('--space-1').trim()
@@ -125,7 +124,7 @@ test.describe('Visual Improvements Tests', () => {
 
   test('Reduced motion media query is defined', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check that the CSS contains prefers-reduced-motion
     const styleSheets = await page.evaluate(() => {
@@ -155,7 +154,7 @@ test.describe('Visual Improvements Tests', () => {
 
   test('Task priority classes are defined', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Inject test elements with priority classes
     await page.evaluate(() => {
@@ -197,7 +196,7 @@ test.describe('Visual Improvements Tests', () => {
 
   test('Interactive card classes are defined', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Inject test element
     await page.evaluate(() => {
@@ -231,7 +230,7 @@ test.describe('Visual Improvements Tests', () => {
 
   test('Glass card premium class is defined', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Inject test element
     await page.evaluate(() => {
@@ -277,7 +276,7 @@ test.describe('Visual Improvements Tests', () => {
     await loginAsExistingUser(page, 'Derrick', '8008');
 
     // Check that the main UI is visible
-    const header = page.locator('text=Bealer Agency');
+    const header = page.locator('text=Wavezly');
     await expect(header).toBeVisible({ timeout: 5000 });
 
     // Check for task input
@@ -300,7 +299,7 @@ test.describe('Visual Improvements Tests', () => {
     await loginAsExistingUser(page, 'Derrick', '8008');
 
     // Wait for tasks to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Check if there are any task items
     const taskItems = page.locator('[class*="task"], [class*="todo"]').filter({ hasText: /.+/ });
@@ -319,7 +318,7 @@ test.describe('Visual Improvements Tests', () => {
 
   test('Theme colors are properly defined', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check brand colors
     const brandBlue = await page.evaluate(() =>

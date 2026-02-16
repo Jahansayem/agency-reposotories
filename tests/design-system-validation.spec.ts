@@ -19,13 +19,10 @@ test.describe('Design System - Core Functionality', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
@@ -46,7 +43,7 @@ test.describe('Design System - Core Functionality', () => {
 
     // Navigate through views
     await dashboardButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should have no critical errors
     const criticalErrors = errors.filter(e =>
@@ -60,13 +57,13 @@ test.describe('Design System - Core Functionality', () => {
     // Navigate to Tasks view
     const tasksButton = page.locator('button:has-text("Tasks")').first();
     await tasksButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Create a task with special characters
     const taskInput = page.locator('[data-testid="add-task-input"]').first();
     await taskInput.fill("Test task with apostrophe's and quotes\"");
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify the text renders correctly (not as HTML entities)
     const taskText = page.locator('text=Test task with apostrophe\'s and quotes"').first();
@@ -84,13 +81,10 @@ test.describe('Design System - Chat Encoding Fix', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -100,7 +94,7 @@ test.describe('Design System - Chat Encoding Fix', () => {
     const chatButton = page.locator('button:has-text("Chat")').first();
     if (await chatButton.isVisible()) {
       await chatButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Send a message with apostrophes
@@ -108,7 +102,7 @@ test.describe('Design System - Chat Encoding Fix', () => {
     if (await chatInput.isVisible()) {
       await chatInput.fill("Let's test this message with apostrophe's");
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Verify message appears correctly
       const message = page.locator('text=Let\'s test this message with apostrophe\'s').first();
@@ -128,13 +122,10 @@ test.describe('Design System - Board View Semantics', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -143,13 +134,13 @@ test.describe('Design System - Board View Semantics', () => {
     // Navigate to Tasks
     const tasksButton = page.locator('button:has-text("Tasks")').first();
     await tasksButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to Kanban view if available
     const kanbanButton = page.locator('button:has-text("Board"), button:has-text("Kanban")').first();
     if (await kanbanButton.isVisible()) {
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify column headers use format "To Do (3)" not separate badge
       const columnHeaders = page.locator('h3:has-text("To Do"), h3:has-text("In Progress"), h3:has-text("Done")');
@@ -169,13 +160,13 @@ test.describe('Design System - Board View Semantics', () => {
     // Navigate to Tasks
     const tasksButton = page.locator('button:has-text("Tasks")').first();
     await tasksButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Switch to Kanban view
     const kanbanButton = page.locator('button:has-text("Board"), button:has-text("Kanban")').first();
     if (await kanbanButton.isVisible()) {
       await kanbanButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find Done column
       const doneColumn = page.locator('h3:has-text("Done")').locator('..').locator('..');
@@ -199,13 +190,10 @@ test.describe('Design System - Archive View Restructure', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -215,7 +203,7 @@ test.describe('Design System - Archive View Restructure', () => {
     const archiveButton = page.locator('button:has-text("Archive")').first();
     if (await archiveButton.isVisible()) {
       await archiveButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Look for Summary header
       const summaryHeader = page.locator('h3:has-text("Summary"), text=Summary').first();
@@ -247,13 +235,10 @@ test.describe('Design System - Weekly Progress Modal', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -262,14 +247,14 @@ test.describe('Design System - Weekly Progress Modal', () => {
     // Navigate to Dashboard
     const dashboardButton = page.locator('button:has-text("Dashboard")').first();
     await dashboardButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Look for Weekly Progress trigger (usually in ProgressSummary)
     const weeklyButton = page.locator('button:has-text("Weekly"), button:has-text("Progress"), [data-testid*="weekly"]').first();
 
     if (await weeklyButton.isVisible()) {
       await weeklyButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify modal opened
       const modal = page.locator('role=dialog, [role="dialog"]').first();
@@ -298,14 +283,14 @@ test.describe('Design System - Weekly Progress Modal', () => {
     // Navigate to Dashboard
     const dashboardButton = page.locator('button:has-text("Dashboard")').first();
     await dashboardButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Open Weekly Progress
     const weeklyButton = page.locator('button:has-text("Weekly"), button:has-text("Progress")').first();
 
     if (await weeklyButton.isVisible()) {
       await weeklyButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check title includes date range with bullet separator
       const title = page.locator('h3:has-text("Weekly Progress •")').first();
@@ -325,13 +310,10 @@ test.describe('Design System - Semantic Colors', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -340,7 +322,7 @@ test.describe('Design System - Semantic Colors', () => {
     // Navigate to Tasks
     const tasksButton = page.locator('button:has-text("Tasks")').first();
     await tasksButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Create an overdue task (due yesterday)
     const yesterday = new Date();
@@ -351,7 +333,7 @@ test.describe('Design System - Semantic Colors', () => {
     if (await taskInput.isVisible()) {
       await taskInput.fill(`Overdue test task due:${dueDateStr}`);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
 
       // Look for "Overdue" text with semantic meaning
       const overdueLabel = page.locator('text=/Overdue \\d+d/').first();
@@ -403,13 +385,10 @@ test.describe('Design System - Dark Mode Compatibility', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -420,7 +399,7 @@ test.describe('Design System - Dark Mode Compatibility', () => {
 
     if (await themeToggle.isVisible()) {
       await themeToggle.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify dark mode is active
       const htmlElement = page.locator('html');
@@ -454,13 +433,10 @@ test.describe('Design System - Regression Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 5000 });
   });
@@ -471,7 +447,6 @@ test.describe('Design System - Regression Tests', () => {
     await dashboardButton.click();
 
     // Wait for initial render
-    await page.waitForTimeout(100);
 
     // Dashboard should be fully visible immediately (no opacity flicker)
     const dashboard = page.locator('[data-testid="dashboard"], .dashboard, main').first();
@@ -490,20 +465,20 @@ test.describe('Design System - Regression Tests', () => {
     // Navigate to Tasks
     const tasksButton = page.locator('button:has-text("Tasks")').first();
     await tasksButton.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Create a test task
     const taskInput = page.locator('[data-testid="add-task-input"]').first();
     if (await taskInput.isVisible()) {
       await taskInput.fill('Test task for editing');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
 
       // Click on the task to open detail modal
       const task = page.locator('text=Test task for editing').first();
       if (await task.isVisible()) {
         await task.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Find title input in modal
         const titleInput = page.locator('input[value*="Test task"], textarea:has-text("Test task")').first();
@@ -514,7 +489,6 @@ test.describe('Design System - Regression Tests', () => {
           await page.keyboard.type('Updated task title');
 
           // Wait a bit
-          await page.waitForTimeout(300);
 
           // Value should be stable
           const finalValue = await titleInput.inputValue();

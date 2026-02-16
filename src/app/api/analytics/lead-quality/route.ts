@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import {
   scoreLead,
   scoreLeadsBatch,
@@ -88,7 +89,7 @@ export interface LeadQualityResponse {
   budgetRecommendations?: BudgetAllocation[];
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<LeadQualityResponse | { error: string }>> {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext): Promise<NextResponse<LeadQualityResponse | { error: string }>> => {
   try {
     const body: LeadQualityRequest = await request.json();
     const {
@@ -206,13 +207,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<LeadQuali
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/analytics/lead-quality
  * Get scoring factors and benchmarks
  */
-export async function GET(): Promise<NextResponse> {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext): Promise<NextResponse> => {
   return NextResponse.json({
     scoringFactors: {
       product_intent: {
@@ -272,7 +273,7 @@ export async function GET(): Promise<NextResponse> {
       underperforming: 'LTV:CAC ratio <2x',
     },
   });
-}
+});
 
 // Helper functions
 
@@ -311,6 +312,9 @@ function generateVendorRecommendations(performances: VendorPerformance[]): strin
   }
 
   // Check for overall portfolio health
+  if (performances.length === 0) {
+    return recommendations;
+  }
   const avgLtvCac = performances.reduce((sum, p) => sum + p.ltvCacRatio, 0) / performances.length;
   if (avgLtvCac < 5) {
     recommendations.push('Overall lead quality below target - review acquisition strategy');

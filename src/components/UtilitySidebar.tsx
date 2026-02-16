@@ -156,7 +156,7 @@ export default function UtilitySidebar({
           </div>
           <div>
             <h1 className={`font-semibold text-sm ${'text-[var(--foreground)]'}`}>
-              Bealer Agency
+              Wavezly
             </h1>
             <p className={`text-xs ${'text-[var(--text-muted)]'}`}>
               {format(new Date(), 'EEEE, MMM d')}

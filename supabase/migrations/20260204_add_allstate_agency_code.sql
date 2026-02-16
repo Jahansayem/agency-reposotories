@@ -90,14 +90,14 @@ COMMENT ON FUNCTION normalize_allstate_agency_code() IS
   'Normalizes Allstate agency codes to uppercase on insert/update';
 
 -- ============================================
--- 5. Update Bealer Agency (optional)
+-- 5. Update Wavezly (optional)
 -- ============================================
 
--- If Bealer Agency exists and you want to assign it an Allstate code,
+-- If Wavezly exists and you want to assign it an Allstate code,
 -- uncomment and modify the following:
 -- UPDATE agencies
 -- SET allstate_agency_code = 'BEALER001'
--- WHERE slug = 'bealer-agency';
+-- WHERE slug = 'wavezly';
 
 -- ============================================
 -- 6. Add RLS policy for agency code queries

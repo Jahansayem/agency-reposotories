@@ -36,7 +36,7 @@ async function testAPIs() {
   console.log('║              API ENDPOINT TESTS                            ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 
-  // Get Derrick's user ID and Bealer Agency ID
+  // Get Derrick's user ID and Wavezly ID
   const { data: derrick } = await supabase
     .from('users')
     .select('id, name')
@@ -46,11 +46,11 @@ async function testAPIs() {
   const { data: bealerAgency } = await supabase
     .from('agencies')
     .select('id')
-    .eq('slug', 'bealer-agency')
+    .eq('slug', 'wavezly')
     .single();
 
   if (!derrick || !bealerAgency) {
-    console.log('❌ Could not find Derrick or Bealer Agency');
+    console.log('❌ Could not find Derrick or Wavezly');
     return;
   }
 

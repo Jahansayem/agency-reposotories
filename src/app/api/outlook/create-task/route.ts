@@ -4,7 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/lib/logger';
 import { TodoPriority } from '@/types/todo';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
-import { verifyOutlookApiKey, createOutlookCorsPreflightResponse } from '@/lib/outlookAuth';
+import { type AgencyAuthContext } from '@/lib/agencyAuth';
+import { createOutlookCorsPreflightResponse, withOutlookAuth } from '@/lib/outlookAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -14,96 +15,11 @@ function getSupabaseClient() {
   );
 }
 
-/**
- * Get the default agency ID (Bealer Agency) for backward compatibility
- * when no agency_id is provided in the request.
- */
-async function getDefaultAgencyId(): Promise<string | null> {
-  const supabase = getSupabaseClient();
-  const { data: agency, error } = await supabase
-    .from('agencies')
-    .select('id')
-    .eq('slug', 'bealer-agency')
-    .eq('is_active', true)
-    .single();
-
-  if (error || !agency) {
-    logger.warn('Default agency (bealer-agency) not found', {
-      component: 'OutlookCreateTaskAPI',
-      error: error?.message,
-    });
-    return null;
-  }
-
-  return agency.id;
-}
-
-/**
- * Validate that the specified agency exists and is active
- */
-async function validateAgency(agencyId: string): Promise<boolean> {
-  const supabase = getSupabaseClient();
-  const { data: agency, error } = await supabase
-    .from('agencies')
-    .select('id')
-    .eq('id', agencyId)
-    .eq('is_active', true)
-    .single();
-
-  return !error && !!agency;
-}
-
-// Validate that createdBy is a valid user in the system
-async function validateCreator(createdBy: string): Promise<{ valid: boolean; userId?: string }> {
-  if (!createdBy || typeof createdBy !== 'string' || createdBy.trim().length === 0) {
-    return { valid: false };
-  }
-
-  const supabase = getSupabaseClient();
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, name')
-    .eq('name', createdBy.trim())
-    .single();
-
-  if (error || !user) {
-    return { valid: false };
-  }
-
-  return { valid: true, userId: user.id };
-}
-
-export async function POST(request: NextRequest) {
-  // Verify API key (constant-time comparison)
-  if (!verifyOutlookApiKey(request)) {
-    logger.security('Outlook API key validation failed', {
-      endpoint: '/api/outlook/create-task',
-      ip: request.headers.get('x-forwarded-for') || 'unknown',
-    });
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized' },
-      { status: 401 }
-    );
-  }
-
+export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
-    const { text, assignedTo, priority, dueDate, createdBy, agency_id } = await request.json();
-
-    // SECURITY: Validate that createdBy is a real user in the system
-    // This prevents impersonation attacks
-    const creatorValidation = await validateCreator(createdBy);
-    if (!creatorValidation.valid) {
-      logger.security('Invalid creator in Outlook task creation', {
-        endpoint: '/api/outlook/create-task',
-        attemptedCreator: createdBy,
-        ip: request.headers.get('x-forwarded-for') || 'unknown',
-      });
-      return NextResponse.json(
-        { success: false, error: 'Invalid creator - user does not exist' },
-        { status: 400 }
-      );
-    }
+    const { text, assignedTo, priority, dueDate } = await request.json();
+    const agencyId = ctx.agencyId;
 
     if (!text || !text.trim()) {
       return NextResponse.json(
@@ -112,55 +28,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine target agency: use provided agency_id or fall back to default
-    let targetAgencyId: string | null = null;
-
-    if (agency_id) {
-      // Validate provided agency_id
-      const isValidAgency = await validateAgency(agency_id);
-      if (!isValidAgency) {
-        logger.security('Invalid agency_id in Outlook task creation', {
-          endpoint: '/api/outlook/create-task',
-          attemptedAgencyId: agency_id,
-          ip: request.headers.get('x-forwarded-for') || 'unknown',
-        });
-        return NextResponse.json(
-          { success: false, error: 'Invalid agency_id - agency does not exist or is inactive' },
-          { status: 400 }
-        );
-      }
-      targetAgencyId = agency_id;
-    } else {
-      // Use default Bealer Agency for backward compatibility
-      targetAgencyId = await getDefaultAgencyId();
-      if (!targetAgencyId) {
-        logger.error('No default agency found for Outlook task creation', undefined, {
-          component: 'OutlookCreateTaskAPI',
-        });
-        return NextResponse.json(
-          { success: false, error: 'No agency specified and default agency not found' },
-          { status: 400 }
-        );
-      }
-      logger.info('Using default agency for Outlook task creation', {
-        component: 'OutlookCreateTaskAPI',
-        agencyId: targetAgencyId,
-      });
-    }
-
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    // Build the task object with agency scoping
+    // Always use authenticated user's identity — never trust client-provided createdBy
+    const creator = ctx.userName || 'Outlook Add-in';
+
+    // Build the task object with agency scoping from auth context
     const task: Record<string, unknown> = {
       id: taskId,
       text: text.trim(),
       completed: false,
       status: 'todo',
       created_at: now,
-      created_by: createdBy || 'Outlook Add-in',
-      agency_id: targetAgencyId,
+      created_by: creator,
     };
+
+    // Only include agency_id if auth context provides one (multi-tenancy enabled)
+    if (agencyId) {
+      task.agency_id = agencyId;
+    }
 
     // Add optional fields
     if (priority && ['low', 'medium', 'high', 'urgent'].includes(priority)) {
@@ -190,7 +77,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Send notification if task is assigned to someone other than the creator
-    const creator = createdBy || 'Outlook Add-in';
     if (assignedTo && assignedTo.trim() && assignedTo.trim() !== creator) {
       await sendTaskAssignmentNotification({
         taskId,
@@ -205,7 +91,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       taskId,
-      agencyId: targetAgencyId,
+      agencyId: agencyId || undefined,
       message: 'Task created successfully',
     });
   } catch (error) {
@@ -215,7 +101,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // Handle CORS preflight - only allow specific Outlook origins
 export async function OPTIONS(request: NextRequest) {

@@ -53,7 +53,7 @@ export function useOfflineSupport() {
 
         if (mounted) {
           setIsInitialized(true);
-          console.log('IndexedDB initialized');
+          logger.debug('IndexedDB initialized', { component: 'useOfflineSupport', action: 'initialize' });
 
           // Load cached data
           const cachedTodos = await getTodosFromIDB();
@@ -94,7 +94,7 @@ export function useOfflineSupport() {
   // Monitor online/offline status
   useEffect(() => {
     const handleOnline = async () => {
-      console.log('App is online');
+      logger.debug('App is online', { component: 'useOfflineSupport', action: 'handleOnline' });
       setIsOnline(true);
 
       // Start syncing
@@ -115,7 +115,7 @@ export function useOfflineSupport() {
     };
 
     const handleOffline = () => {
-      console.log('App is offline');
+      logger.debug('App is offline', { component: 'useOfflineSupport', action: 'handleOffline' });
       setIsOnline(false);
 
       // Stop syncing

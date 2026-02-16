@@ -20,36 +20,6 @@ interface LoginScreenProps {
 }
 
 type Screen = 'users' | 'pin';
-const CSRF_REQUEST_TIMEOUT_MS = 8000;
-const LOGIN_REQUEST_TIMEOUT_MS = 12000;
-
-class LoginRequestTimeoutError extends Error {
-  constructor(stage: 'csrf' | 'login') {
-    super(stage === 'csrf' ? 'CSRF_REQUEST_TIMEOUT' : 'LOGIN_REQUEST_TIMEOUT');
-    this.name = 'LoginRequestTimeoutError';
-  }
-}
-
-async function fetchWithTimeout(
-  input: RequestInfo | URL,
-  init: RequestInit,
-  timeoutMs: number,
-  stage: 'csrf' | 'login'
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(input, { ...init, signal: controller.signal });
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new LoginRequestTimeoutError(stage);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
 
 // Animated grid background
 function AnimatedGrid() {
@@ -311,40 +281,39 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
 
     try {
       // Fetch CSRF token first
-      const csrfResponse = await fetchWithTimeout(
-        '/api/csrf',
-        { method: 'GET' },
-        CSRF_REQUEST_TIMEOUT_MS,
-        'csrf'
-      );
+      const csrfResponse = await fetch('/api/csrf');
       if (!csrfResponse.ok) {
         const errorMsg = ContextualErrorMessages.login(new Error('CSRF fetch failed'));
         throw new Error(errorMsg.message);
       }
       const { token: csrfToken } = await csrfResponse.json();
 
-      const response = await fetchWithTimeout(
-        '/api/auth/login',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': csrfToken,
-          },
-          body: JSON.stringify({ userId: selectedUser.id, pin: pinString }),
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
         },
-        LOGIN_REQUEST_TIMEOUT_MS,
-        'login'
-      );
+        body: JSON.stringify({ userId: selectedUser.id, pin: pinString }),
+      });
       const result = await response.json();
       const isValid = response.ok && result.success;
 
       if (isValid) {
-        const authenticatedUser = result.user || selectedUser;
+        // Build AuthUser from server response (includes agency context)
+        const loggedInUser: AuthUser = {
+          ...selectedUser,
+          id: result.user?.id || selectedUser.id,
+          name: result.user?.name || selectedUser.name,
+          color: result.user?.color || selectedUser.color,
+          role: result.user?.role || selectedUser.role || 'staff',
+          current_agency_id: result.currentAgencyId || undefined,
+          current_agency_role: result.currentAgencyRole || undefined,
+        };
         // Store session in localStorage for client-side state (components use this to know who is logged in)
         // The HttpOnly cookie set by the server handles actual authentication
-        setStoredSession(authenticatedUser);
-        onLogin(authenticatedUser);
+        setStoredSession(loggedInUser);
+        onLogin(loggedInUser);
       } else {
         if (result.locked || response.status === 429) {
           setLockoutSeconds(result.remainingSeconds || 300);
@@ -352,24 +321,22 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
         } else if (result.attemptsRemaining !== undefined) {
           setAttemptsRemaining(result.attemptsRemaining);
           setError('Incorrect PIN');
+        } else if (response.status === 403) {
+          setError('Session expired. Please refresh the page and try again.');
+        } else if (response.status >= 500) {
+          setError('Server error. Please try again later.');
         } else {
-          setError(result.error || 'Incorrect PIN');
+          setError(result.message || 'Incorrect PIN');
         }
         setPin(['', '', '', '']);
         pinRefs.current[0]?.focus();
       }
     } catch (err) {
-      if (err instanceof LoginRequestTimeoutError) {
-        setError('Login timed out. Check your connection and try again.');
-        setPin(['', '', '', '']);
-        pinRefs.current[0]?.focus();
-      } else {
-        const errorMsg = ContextualErrorMessages.login(err);
-        setError(`${errorMsg.message}. ${errorMsg.action}`);
-      }
-    } finally {
-      setIsSubmitting(false);
+      const errorMsg = ContextualErrorMessages.login(err);
+      setError(`${errorMsg.message}. ${errorMsg.action}`);
     }
+
+    setIsSubmitting(false);
   };
 
   useEffect(() => {
@@ -453,7 +420,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     Team Workspace
                   </motion.div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Bealer Agency</h2>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Wavezly</h2>
                 </div>
               </motion.div>
 
@@ -568,7 +535,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <div className="inline-flex mb-4">
                       <Logo3D />
                     </div>
-                    <h1 className="text-2xl font-bold text-white">Bealer Agency</h1>
+                    <h1 className="text-2xl font-bold text-white">Wavezly</h1>
                     <p className="text-sm text-white/50 mt-1">Task Management Platform</p>
                   </motion.div>
 
@@ -840,7 +807,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 1 }}
             >
-              Bealer Agency &copy; {new Date().getFullYear()}
+              Wavezly &copy; {new Date().getFullYear()}
             </motion.p>
           </div>
         </div>

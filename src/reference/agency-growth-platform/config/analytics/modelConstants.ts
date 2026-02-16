@@ -5,7 +5,7 @@
  * throughout the agency growth model. Centralizing these values ensures
  * consistency and makes assumptions explicit and auditable.
  *
- * Data Source: All Purpose Audit (Nov 14, 2025) - Derrick Bealer Agency A0C6581
+ * Data Source: All Purpose Audit (Nov 14, 2025) - Derrick Wavezly A0C6581
  * Last Updated: 2025-11-21
  */
 

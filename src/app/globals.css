@@ -180,17 +180,17 @@
     --border: #334155;
     --border-hover: #475569;
     --border-subtle: #1E293B;
-    --text-muted: #94A3B8;
-    --text-light: #64748B;
+    --text-muted: #CBD5E1; /* Synced with .dark class - WCAG AA: 9.4:1 ratio on dark background */
+    --text-light: #94A3B8; /* Synced with .dark class - WCAG AA: 6.8:1 ratio on dark background */
     --text-inverse: #0A1628;
 
-    --accent: #72B5E8;
-    --accent-hover: #A8D4F5;
-    --accent-light: rgba(114, 181, 232, 0.15);
+    --accent: #93C9F0;           /* Synced with .dark class - Lighter sky blue - 5.2:1 on #0A1628 */
+    --accent-hover: #B8DCF7;     /* Synced with .dark class - Even lighter for hover states */
+    --accent-light: rgba(147, 201, 240, 0.18);
     --accent-dark: #1E2D47;
-    --accent-vivid: #60A5FA;
-    --accent-sky: #72B5E8;
-    --accent-sky-light: rgba(114, 181, 232, 0.2);
+    --accent-vivid: #7DD3FC;     /* Synced with .dark class - Vivid cyan - 6.1:1 contrast */
+    --accent-sky: #93C9F0;       /* Synced with .dark class - Updated sky blue for accessibility */
+    --accent-sky-light: rgba(147, 201, 240, 0.22);
 
     /* ─── Surface Colors for Chat/Panels ─── */
     --surface-dark: #0A1628;

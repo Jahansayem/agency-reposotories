@@ -20,7 +20,6 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
         const themeToggle = page.locator('button[aria-label*="theme"], button:has-text("Theme")').first();
         if (await themeToggle.isVisible()) {
           await themeToggle.click();
-          await page.waitForTimeout(300);
         }
       }
 
@@ -48,7 +47,6 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       await page.evaluate(() => {
         document.documentElement.classList.remove('dark');
       });
-      await page.waitForTimeout(200);
 
       // Check text-muted CSS variable
       const textMutedColor = await page.evaluate(() => {
@@ -64,7 +62,6 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       await page.evaluate(() => {
         document.documentElement.classList.remove('dark');
       });
-      await page.waitForTimeout(200);
 
       // Check text-light CSS variable
       const textLightColor = await page.evaluate(() => {
@@ -84,13 +81,12 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Set zoom to 400%
       await page.evaluate(() => {
         document.body.style.zoom = '4';
       });
-      await page.waitForTimeout(200);
 
       // Check that text is still visible and not cut off
       const taskInput = page.locator('input[placeholder*="Add"]').first();
@@ -122,7 +118,6 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
         const themeToggle = page.locator('button[aria-label*="theme"], button:has-text("Theme")').first();
         if (await themeToggle.isVisible()) {
           await themeToggle.click();
-          await page.waitForTimeout(300);
         }
       }
 
@@ -150,7 +145,6 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       await page.evaluate(() => {
         document.documentElement.classList.add('dark');
       });
-      await page.waitForTimeout(200);
 
       // Check text-muted CSS variable
       const textMutedColor = await page.evaluate(() => {
@@ -166,7 +160,6 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       await page.evaluate(() => {
         document.documentElement.classList.add('dark');
       });
-      await page.waitForTimeout(200);
 
       // Check text-light CSS variable
       const textLightColor = await page.evaluate(() => {
@@ -186,13 +179,12 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Set zoom to 400%
       await page.evaluate(() => {
         document.body.style.zoom = '4';
       });
-      await page.waitForTimeout(200);
 
       // Check that text is still visible
       const taskInput = page.locator('input[placeholder*="Add"]').first();
@@ -223,7 +215,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       const activityButton = page.locator('button:has-text("Activity")').first();
       if (await activityButton.isVisible()) {
         await activityButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Check timestamp elements
         const timestamps = page.locator('[class*="text-muted"], time, [class*="timestamp"]');
@@ -247,7 +239,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Check for label/hint text
       const labels = page.locator('label, [class*="label"], [class*="hint"]');
@@ -266,7 +258,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       const chatButton = page.locator('button:has-text("Chat")').first();
       if (await chatButton.isVisible()) {
         await chatButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Check chat timestamp or secondary info
         const chatMeta = page.locator('[class*="chat"] [class*="text-muted"], [class*="chat"] [class*="text-light"]').first();
@@ -292,13 +284,13 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a task with metadata
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Task with metadata');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Check task item secondary info (assignee, due date, etc.)
       const taskMeta = page.locator('[class*="task"] [class*="text-muted"], [class*="task"] [class*="text-light"]').first();
@@ -321,7 +313,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Dashboard
       const dashboardButton = page.locator('button:has-text("Dashboard")').first();
       await dashboardButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check secondary text in stats cards
       const statsMeta = page.locator('[class*="stat"] [class*="text-muted"], [class*="card"] [class*="text-light"]').first();
@@ -343,18 +335,17 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks and try to edit a task (opens modal with form fields)
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create and click on a task to open editor
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Form test task');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       const taskItem = page.locator('text=Form test task').first();
       if (await taskItem.isVisible()) {
         await taskItem.click();
-        await page.waitForTimeout(300);
 
         // Check form labels/hints
         const formLabel = page.locator('label, [class*="label"]').first();
@@ -425,7 +416,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Dashboard for consistent snapshot
       const dashboardButton = page.locator('button:has-text("Dashboard")').first();
       await dashboardButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Take screenshot for visual comparison
       // (Optional: compare with baseline image)
@@ -442,7 +433,7 @@ test.describe('Accessibility - Color Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Dashboard
       const dashboardButton = page.locator('button:has-text("Dashboard")').first();
       await dashboardButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Take screenshot
       const screenshot = await page.screenshot();

@@ -138,7 +138,7 @@ test.describe('Dashboard (Page Object Model)', () => {
         if (dayCount > 0) {
           // Click first bar (shouldn't throw)
           await dashboard.clickChartBar(0);
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('networkidle');
 
           // Verify interaction worked (implementation-dependent)
           // Could check for tooltip, detail panel, etc.
@@ -196,7 +196,7 @@ test.describe('Dashboard (Page Object Model)', () => {
       try {
         await dashboard.clickAddTask();
         // If successful, should open add task modal or navigate
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       } catch {
         // Button may not be visible on dashboard view
       }
@@ -209,7 +209,7 @@ test.describe('Dashboard (Page Object Model)', () => {
       // Try to click view all
       try {
         await dashboard.clickViewAll();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       } catch {
         // Button may not be present
       }
@@ -248,7 +248,7 @@ test.describe('Dashboard (Page Object Model)', () => {
       if (hasDigest) {
         await dashboard.expandDailyDigest();
         // Should expand (implementation-dependent)
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
     });
   });

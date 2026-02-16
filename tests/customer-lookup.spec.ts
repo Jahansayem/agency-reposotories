@@ -25,20 +25,18 @@ async function login(page: Page) {
 
   // Hide Next.js dev overlay to prevent pointer event interception
   await hideDevOverlay(page);
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click user card
   const userCard = page.locator(`[data-testid="user-card-${TEST_USER}"]`);
   await expect(userCard).toBeVisible({ timeout: 10000 });
   await userCard.click();
-  await page.waitForTimeout(800);
 
   // Enter PIN - each digit in a separate password input
   const pinInputs = page.locator('input[type="password"]');
   await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(TEST_PIN[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for main app
@@ -59,7 +57,7 @@ async function navigateToCustomerLookup(page: Page) {
     const moreTab = page.locator('nav[aria-label="Main navigation"] button:has-text("More")').first();
     if (await moreTab.isVisible({ timeout: 3000 }).catch(() => false)) {
       await moreTab.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
   }
 
@@ -125,7 +123,7 @@ test.describe('Customer Lookup Feature', () => {
       await page.click('text=Need Home');
 
       // Wait for update
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify count may have changed (filter applied)
       const statsSection = page.locator('text=Customers').first();
@@ -135,7 +133,6 @@ test.describe('Customer Lookup Feature', () => {
     test('should clear filter when clicking All Opps', async ({ page }) => {
       // Apply a filter first
       await page.click('text=Need Home');
-      await page.waitForTimeout(300);
 
       // Click All Opps to clear
       await page.click('text=All Opps');
@@ -240,7 +237,7 @@ test.describe('Customer Lookup Feature', () => {
 
       // Apply filter
       await page.click('text=Need Home');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Stats should still be visible (may have same or different values)
       const statsSection = page.locator('text=Potential Add');
@@ -317,8 +314,6 @@ test.describe('Customer Lookup Feature', () => {
         }
       });
 
-      await page.waitForTimeout(300);
-
       // The list should still have cards visible
       const cardsAfterScroll = page.locator('h3');
       await expect(cardsAfterScroll.first()).toBeVisible();
@@ -333,8 +328,6 @@ test.describe('Customer Lookup Feature', () => {
           list.scrollTo(0, list.scrollHeight);
         }
       });
-
-      await page.waitForTimeout(300);
 
       // Load More button should be visible at bottom
       const loadMoreBtn = page.locator('text=Load More Customers');
@@ -364,7 +357,7 @@ test.describe('Customer Lookup Feature', () => {
         await loadMoreBtn.click();
 
         // Wait for more cards to load
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
 
         // Should have same or more cards (depending on if more data exists)
         const newCount = await page.locator('h3').count();
@@ -395,7 +388,6 @@ test.describe('Customer Lookup Feature', () => {
 
       // Focus on list and use arrow keys
       await page.keyboard.press('ArrowDown');
-      await page.waitForTimeout(200);
 
       // Verify navigation works (card may be selected/focused)
       const customerList = page.locator('[data-testid="customer-list"], .overflow-y-auto').first();
@@ -410,7 +402,6 @@ test.describe('Customer Lookup Feature', () => {
 
       // Simulate scroll
       await page.mouse.wheel(0, 300);
-      await page.waitForTimeout(300);
 
       // List should still be usable
       await expect(list).toBeVisible();
@@ -424,21 +415,17 @@ test.describe('Customer Lookup Feature', () => {
         if (list) list.scrollTo(0, 400);
       });
 
-      await page.waitForTimeout(200);
-
       // Get a card name from middle of list
       const cardNames = await page.locator('h3').allTextContents();
       const middleCardName = cardNames[Math.floor(cardNames.length / 2)];
 
       // Click that card
       await page.locator(`text=${middleCardName}`).first().click();
-      await page.waitForTimeout(300);
 
       // Close detail panel
       const closeBtn = page.locator('[aria-label="Close"], button:has-text("Back")').first();
       if (await closeBtn.isVisible()) {
         await closeBtn.click();
-        await page.waitForTimeout(300);
       }
 
       // The middle card should still be visible (scroll maintained)
@@ -463,7 +450,7 @@ test.describe('Customer Lookup Feature', () => {
     test('should show contact information (phone, email)', async ({ page }) => {
       // Open detail panel
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Look for contact buttons
       const phoneBtn = page.locator('text=Call, a[href^="tel:"]').first();
@@ -478,7 +465,7 @@ test.describe('Customer Lookup Feature', () => {
     test('should display cross-sell opportunity details', async ({ page }) => {
       // Open detail panel
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Look for opportunity section
       const opportunitySection = page.locator('text=Opportunity, text=Cross-Sell').first();
@@ -488,7 +475,7 @@ test.describe('Customer Lookup Feature', () => {
     test('should show talking points', async ({ page }) => {
       // Open detail panel
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Look for talking points
       const talkingPoints = page.locator('text=Talking Points, text=talking point').first();
@@ -499,14 +486,12 @@ test.describe('Customer Lookup Feature', () => {
     test('should close detail panel with close button', async ({ page }) => {
       // Open detail panel
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(300);
 
       // Click close button
       const closeBtn = page.locator('[aria-label="Close"], button:has-text("×")').first();
       await closeBtn.click();
 
       // Detail panel should close, list should be visible
-      await page.waitForTimeout(300);
       const customerList = page.locator('h3').first();
       await expect(customerList).toBeVisible();
     });
@@ -514,13 +499,11 @@ test.describe('Customer Lookup Feature', () => {
     test('should close detail panel with Escape key', async ({ page }) => {
       // Open detail panel
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(300);
 
       // Press Escape
       await page.keyboard.press('Escape');
 
       // Detail panel should close
-      await page.waitForTimeout(300);
       const customerList = page.locator('h3').first();
       await expect(customerList).toBeVisible();
     });
@@ -533,7 +516,7 @@ test.describe('Customer Lookup Feature', () => {
       await searchInput.fill('Aaron');
 
       // Wait for search results
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Results should show matching customers
       const results = page.locator('h3:has-text("AARON")');
@@ -544,13 +527,12 @@ test.describe('Customer Lookup Feature', () => {
       // Type in search box
       const searchInput = page.locator('input[placeholder*="Search"]').first();
       await searchInput.fill('test');
-      await page.waitForTimeout(300);
 
       // Clear the search
       await searchInput.clear();
 
       // Full list should be restored
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       const allCards = page.locator('h3');
       const count = await allCards.count();
       expect(count).toBeGreaterThan(1);
@@ -562,7 +544,7 @@ test.describe('Customer Lookup Feature', () => {
       await searchInput.fill('xyznonexistent123');
 
       // Wait for search
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Should show no results or empty state
       const noResults = page.locator('text=/no (results|customers|matches)/i');
@@ -586,7 +568,7 @@ test.describe('Customer Lookup Feature', () => {
     test('should show back button when customer selected', async ({ page }) => {
       // Click a customer card
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Back button should appear
       const backBtn = page.locator('text=Back, button:has-text("Back")').first();
@@ -596,14 +578,13 @@ test.describe('Customer Lookup Feature', () => {
     test('should return to list when back button clicked', async ({ page }) => {
       // Click a customer card
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Click back button
       const backBtn = page.locator('text=Back, button:has-text("Back")').first();
       await backBtn.click();
 
       // Should return to customer list
-      await page.waitForTimeout(300);
       const customerList = page.locator('h3').first();
       await expect(customerList).toBeVisible();
     });
@@ -611,7 +592,7 @@ test.describe('Customer Lookup Feature', () => {
     test('should show customer count in back button', async ({ page }) => {
       // Click a customer card
       await page.locator('[class*="cursor-pointer"]').first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Back button should show count
       const backBtn = page.locator('button:has-text("Back")');
@@ -644,7 +625,7 @@ test.describe('Customer Lookup Feature', () => {
   test.describe('Customer Segment Tier Filters', () => {
     test('should filter by Elite tier', async ({ page }) => {
       await page.click('text=Elite');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should show elite segment indicator
       const eliteIndicator = page.locator('text=/elite/i').first();
@@ -654,7 +635,7 @@ test.describe('Customer Lookup Feature', () => {
 
     test('should filter by Premium tier', async ({ page }) => {
       await page.click('text=Premium');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const premiumIndicator = page.locator('text=/premium/i').first();
       const hasPremium = await premiumIndicator.isVisible().catch(() => false);
@@ -664,7 +645,7 @@ test.describe('Customer Lookup Feature', () => {
     test('should filter by Standard tier', async ({ page }) => {
       // May need to scroll filter bar to see Standard
       await page.click('text=Standard');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const standardIndicator = page.locator('text=/standard/i').first();
       const hasStandard = await standardIndicator.isVisible().catch(() => false);
@@ -715,7 +696,7 @@ test.describe('Customer Lookup Feature', () => {
       await page.reload();
 
       // Should show error state or fallback
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
       const errorMessage = page.locator('text=/error|failed|try again/i');
       const hasError = await errorMessage.isVisible().catch(() => false);
       expect(hasError).toBeDefined();
@@ -737,7 +718,6 @@ test.describe('Customer Lookup - Scrolling Stress Tests', () => {
                      document.querySelector('.overflow-y-auto');
         if (list) list.scrollTo(0, scrollY);
       }, i * 200);
-      await page.waitForTimeout(100);
     }
 
     // Scroll back to top
@@ -760,14 +740,12 @@ test.describe('Customer Lookup - Scrolling Stress Tests', () => {
       if (list) list.scrollTo(0, 300);
     });
 
-    await page.waitForTimeout(300);
-
     // Click a card after scrolling
     const visibleCard = page.locator('[class*="cursor-pointer"]').first();
     await visibleCard.click();
 
     // Detail panel should still open
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     const detailContent = page.locator('text=Contact, text=Opportunity').first();
     await expect(detailContent).toBeVisible({ timeout: 5000 });
   });
@@ -781,7 +759,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
   test('should display "Load More" button when there are more customers', async ({ page }) => {
     // Wait for initial load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Scroll to bottom of list
     await page.evaluate(() => {
@@ -789,7 +767,7 @@ test.describe('Customer Lookup - Load More Button', () => {
       if (list) list.scrollTo(0, list.scrollHeight);
     });
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Load More button should be visible
     const loadMoreBtn = page.locator('button:has-text("Load More Customers")');
@@ -801,7 +779,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
   test('should show loading state when "Load More" is clicked', async ({ page }) => {
     // Wait for initial load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Scroll to bottom
     await page.evaluate(() => {
@@ -809,7 +787,7 @@ test.describe('Customer Lookup - Load More Button', () => {
       if (list) list.scrollTo(0, list.scrollHeight);
     });
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const loadMoreBtn = page.locator('button:has-text("Load More Customers")');
     const isVisible = await loadMoreBtn.isVisible().catch(() => false);
@@ -826,7 +804,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
   test('should load more customers when button is clicked', async ({ page }) => {
     // Wait for initial load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Count initial customers
     const initialCards = page.locator('[class*="cursor-pointer"]');
@@ -838,7 +816,7 @@ test.describe('Customer Lookup - Load More Button', () => {
       if (list) list.scrollTo(0, list.scrollHeight);
     });
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const loadMoreBtn = page.locator('button:has-text("Load More Customers")');
     const isVisible = await loadMoreBtn.isVisible().catch(() => false);
@@ -848,7 +826,7 @@ test.describe('Customer Lookup - Load More Button', () => {
       await loadMoreBtn.click();
 
       // Wait for new customers to load
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
 
       // Should have more customers now
       const newCount = await initialCards.count();
@@ -864,7 +842,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
     test('should be clickable and not obscured by bottom navigation on mobile', async ({ page }) => {
       // Wait for initial load
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Scroll to bottom
       await page.evaluate(() => {
@@ -872,7 +850,7 @@ test.describe('Customer Lookup - Load More Button', () => {
         if (list) list.scrollTo(0, list.scrollHeight);
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const loadMoreBtn = page.locator('button:has-text("Load More Customers")');
       const isVisible = await loadMoreBtn.isVisible().catch(() => false);
@@ -897,7 +875,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
     test('should maintain proper spacing on mobile after fix', async ({ page }) => {
       // Wait for initial load
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Scroll to bottom
       await page.evaluate(() => {
@@ -905,7 +883,7 @@ test.describe('Customer Lookup - Load More Button', () => {
         if (list) list.scrollTo(0, list.scrollHeight);
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const loadMoreBtn = page.locator('button:has-text("Load More Customers")');
       const isVisible = await loadMoreBtn.isVisible().catch(() => false);
@@ -926,7 +904,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
     test('should be fully visible when scrolled to bottom on mobile', async ({ page }) => {
       // Wait for initial load
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Scroll to bottom
       await page.evaluate(() => {
@@ -934,7 +912,7 @@ test.describe('Customer Lookup - Load More Button', () => {
         if (list) list.scrollTo(0, list.scrollHeight);
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const loadMoreBtn = page.locator('button:has-text("Load More Customers")');
       const isVisible = await loadMoreBtn.isVisible().catch(() => false);
@@ -970,7 +948,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
     test('should have normal padding on desktop', async ({ page }) => {
       // Wait for initial load
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Get container element
       const container = page.locator('.overflow-y-auto').first();
@@ -992,7 +970,7 @@ test.describe('Customer Lookup - Load More Button', () => {
     const maxAttempts = 5;
 
     while (attempts < maxAttempts) {
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Scroll to bottom
       await page.evaluate(() => {
@@ -1000,7 +978,7 @@ test.describe('Customer Lookup - Load More Button', () => {
         if (list) list.scrollTo(0, list.scrollHeight);
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const loadMoreBtn = page.locator('button:has-text("Load More Customers")');
       const isVisible = await loadMoreBtn.isVisible().catch(() => false);
@@ -1012,7 +990,7 @@ test.describe('Customer Lookup - Load More Button', () => {
 
       // Click to load more
       await loadMoreBtn.click();
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
 
       attempts++;
     }
@@ -1031,7 +1009,7 @@ test.describe('Customer Lookup - Load More Button', () => {
     await searchInput.fill('Aaron');
 
     // Wait for search results
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Scroll to bottom
     await page.evaluate(() => {
@@ -1039,7 +1017,7 @@ test.describe('Customer Lookup - Load More Button', () => {
       if (list) list.scrollTo(0, list.scrollHeight);
     });
 
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Load More button should NOT be visible during search
     const loadMoreBtn = page.locator('button:has-text("Load More Customers")');

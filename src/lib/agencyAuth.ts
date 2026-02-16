@@ -138,15 +138,16 @@ export async function verifyAgencyAccess(
   if (!isFeatureEnabled('multi_tenancy')) {
     // Return a minimal context for backward compatibility.
     // NOTE: agencyId is empty string (falsy) in single-tenant mode.
-    // Consumers MUST check with `if (ctx.agencyId)` before using in queries
-    // like `.eq('agency_id', ctx.agencyId)` to avoid matching empty strings.
+    // All query builders already guard with `if (ctx.agencyId)` before using
+    // `.eq('agency_id', ctx.agencyId)`, so empty string is safe here.
+    // Using empty string (not null) to satisfy the AgencyAuthContext type contract.
     return {
       success: true,
       context: {
         userId: session.userId,
         userName: session.userName,
         userRole: session.userRole || 'staff',
-        agencyId: '', // Empty string is intentional - checked with `if (ctx.agencyId)` before use
+        agencyId: '',
         agencySlug: '',
         agencyName: '',
         agencyRole: (session.userRole as AgencyRole) || 'staff',

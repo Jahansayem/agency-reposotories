@@ -396,6 +396,32 @@ export default function TodoList({
     }
   }, [state.todos, state.updateTodoInStore, userName]);
 
+  const setPrivacy = useCallback(async (id: string, isPrivate: boolean) => {
+    const oldTodo = state.todos.find(t => t.id === id);
+    if (!oldTodo) return;
+
+    state.updateTodoInStore(id, { is_private: isPrivate });
+
+    const { error: updateError } = await supabase
+      .from('todos')
+      .update({ is_private: isPrivate })
+      .eq('id', id);
+
+    if (updateError) {
+      logger.error('Error updating task privacy', updateError, { component: 'TodoList' });
+      state.updateTodoInStore(id, { is_private: oldTodo.is_private });
+    } else if (oldTodo.is_private !== isPrivate) {
+      logActivity({
+        action: 'task_privacy_changed',
+        userName,
+        todoId: id,
+        todoText: oldTodo.text,
+        details: { from: !!oldTodo.is_private, to: isPrivate },
+      });
+      state.announce(`Task is now ${isPrivate ? 'private' : 'public'}: ${oldTodo.text}`);
+    }
+  }, [state.todos, state.updateTodoInStore, state.announce, userName]);
+
   const updateText = useCallback(async (id: string, text: string) => {
     const oldTodo = state.todos.find(t => t.id === id);
     if (!oldTodo) return;
@@ -851,6 +877,7 @@ export default function TodoList({
               onUpdateAttachments={updateAttachments}
               onSaveAsTemplate={canManageTemplates ? (t) => state.modalState.openTemplateModal(t) : undefined}
               onEmailCustomer={(todo) => state.modalState.openEmailModal([todo])}
+              onSetPrivacy={setPrivacy}
               onOpenDetail={handleOpenDetail}
               onClearSearch={() => state.setSearchQuery('')}
               onAddTask={() => {

@@ -11,7 +11,7 @@
 
 -- 🔧 CONFIGURE THESE VALUES:
 \set user_name 'Sefra'                    -- ← Change this to the user's name
-\set agency_slug 'bealer-agency'          -- ← Change this to the agency slug
+\set agency_slug 'wavezly'          -- ← Change this to the agency slug
 \set user_role 'member'                   -- ← Can be: 'owner', 'admin', or 'member'
 \set is_default false                     -- ← Set to true if this should be default agency
 

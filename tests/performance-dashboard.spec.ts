@@ -12,12 +12,10 @@ test.describe('Performance Dashboard', () => {
     // Login as Derrick
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for app to load
@@ -111,7 +109,6 @@ test.describe('Performance Dashboard', () => {
       await expandButton.click();
 
       // Wait for collapse animation
-      await page.waitForTimeout(300);
 
       // Expand
       await expandButton.click();
@@ -139,7 +136,7 @@ test.describe('Performance Dashboard', () => {
     const initialFps = await fpsElement.textContent();
 
     // Wait 2 seconds for metrics to update
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // FPS should have updated (or at least still be visible)
     await expect(fpsElement).toBeVisible();
@@ -177,7 +174,7 @@ test.describe('Performance Dashboard', () => {
       await chartsButton.click();
 
       // Wait for data to be collected (at least 2-3 seconds)
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // FPS chart should be visible
       await expect(page.locator('text=FPS Over Time')).toBeVisible();
@@ -195,7 +192,7 @@ test.describe('Performance Dashboard', () => {
     if (await chartsButton.isVisible()) {
       await chartsButton.click();
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Latency chart should be visible
       await expect(page.locator('text=API Latency Over Time')).toBeVisible();
@@ -208,7 +205,7 @@ test.describe('Performance Dashboard', () => {
     if (await chartsButton.isVisible()) {
       await chartsButton.click();
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Charts should contain SVG elements
       const svg = page.locator('svg').first();
@@ -235,7 +232,7 @@ test.describe('Performance Dashboard', () => {
 
   test('should show trend indicators', async ({ page }) => {
     // Wait for enough data to calculate trends
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Trend indicators (up/down/stable) should be visible on some metrics
     const trendIcon = page.locator('svg').filter({ has: page.locator('path') }).first();
@@ -248,7 +245,7 @@ test.describe('Performance Dashboard', () => {
 
     if (await chartsButton.isVisible()) {
       // Wait for several data points to be collected
-      await page.waitForTimeout(5000);
+      await page.waitForLoadState('networkidle');
 
       await chartsButton.click();
 
@@ -266,7 +263,7 @@ test.describe('Performance Dashboard', () => {
 
     if (await chartsButton.isVisible()) {
       // Collect some data
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       await chartsButton.click();
 
@@ -296,12 +293,10 @@ test.describe('Performance Badge', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
@@ -322,7 +317,7 @@ test.describe('Performance Badge', () => {
 
     if (await badge.isVisible()) {
       // Wait for update
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Badge should still be visible
       await expect(badge).toBeVisible();
@@ -339,12 +334,10 @@ test.describe('useRenderMonitor Hook', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
@@ -358,7 +351,7 @@ test.describe('useRenderMonitor Hook', () => {
 
     // Trigger some renders by interacting with the app
     await page.click('text=Tasks');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // App should still be functional
     await expect(page.locator('text=Tasks')).toBeVisible();

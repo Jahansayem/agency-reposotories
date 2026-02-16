@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifyAgencyAccess, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -49,7 +50,14 @@ interface DismissResponse {
 export async function POST(
   request: NextRequest,
   { params }: RouteParams
-): Promise<NextResponse<DismissResponse | { error: string }>> {
+): Promise<NextResponse> {
+  // Verify agency authentication
+  const auth = await verifyAgencyAccess(request);
+  if (!auth.success || !auth.context) {
+    return auth.response || NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const ctx = auth.context;
+
   try {
     const supabase = getSupabaseClient();
     const { id: opportunityId } = await params;
@@ -70,12 +78,17 @@ export async function POST(
       // Body is optional, ignore parse errors
     }
 
-    // Verify opportunity exists
-    const { data: opportunity, error: oppError } = await supabase
+    // Verify opportunity exists (scoped to agency)
+    let oppQuery = supabase
       .from('cross_sell_opportunities')
       .select('id, customer_name, recommended_product')
-      .eq('id', opportunityId)
-      .single();
+      .eq('id', opportunityId);
+
+    if (ctx.agencyId) {
+      oppQuery = oppQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data: opportunity, error: oppError } = await oppQuery.single();
 
     if (oppError || !opportunity) {
       return NextResponse.json(
@@ -90,18 +103,22 @@ export async function POST(
       dismissed_at: new Date().toISOString(),
     };
 
-    if (body.dismissed_by) {
-      updateData.dismissed_by = body.dismissed_by;
-    }
+    updateData.dismissed_by = body.dismissed_by || ctx.userName;
 
     if (body.reason) {
       updateData.dismiss_reason = body.reason;
     }
 
-    const { error: updateError } = await supabase
+    let updateQuery = supabase
       .from('cross_sell_opportunities')
       .update(updateData)
       .eq('id', opportunityId);
+
+    if (ctx.agencyId) {
+      updateQuery = updateQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       console.error('Failed to dismiss opportunity:', updateError);

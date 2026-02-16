@@ -9,6 +9,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { VALIDATION_LIMITS, escapeLikePattern } from '@/lib/constants';
 import type {
   CrossSellOpportunity,
   CrossSellPriorityTier,
@@ -27,13 +29,13 @@ function getSupabaseClient() {
  * GET /api/analytics/cross-sell
  * List cross-sell opportunities with filters
  */
-export async function GET(request: NextRequest) {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
 
-    // Parse query parameters
-    const agencyId = searchParams.get('agency_id');
+    // Parse query parameters - use ctx.agencyId from auth context instead of query param
+    const agencyId = ctx.agencyId;
     const tier = searchParams.get('tier')?.split(',') as CrossSellPriorityTier[] | undefined;
     const segment = searchParams.get('segment')?.split(',');
     const daysUntilRenewalMax = parseInt(searchParams.get('days_until_renewal_max') || '', 10);
@@ -42,7 +44,7 @@ export async function GET(request: NextRequest) {
     const converted = searchParams.get('converted');
     const dismissed = searchParams.get('dismissed');
     const assignedTo = searchParams.get('assigned_to');
-    const search = searchParams.get('search');
+    const search = searchParams.get('search')?.slice(0, VALIDATION_LIMITS.MAX_SEARCH_QUERY_LENGTH) || null;
     const sortBy = searchParams.get('sort_by') || 'priority_rank';
     const sortOrder = (searchParams.get('sort_order') || 'asc') as 'asc' | 'desc';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
@@ -98,7 +100,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.ilike('customer_name', `%${search}%`);
+      query = query.ilike('customer_name', `%${escapeLikePattern(search)}%`);
     }
 
     // Apply sorting
@@ -124,20 +126,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Guard: agencyId must be present for summary queries
+    if (!agencyId) {
+      return NextResponse.json(
+        { error: 'agency_id is required' },
+        { status: 400 }
+      );
+    }
+
     // Get summary counts using database-side aggregation (fixes N+1 query)
     // This is much more efficient than fetching all records and counting in JS
     const { data: summaryData } = await supabase
       .from('cross_sell_opportunities')
       .select('priority_tier')
       .eq('dismissed', false)
-      .eq('agency_id', agencyId || '');
+      .eq('agency_id', agencyId);
 
     // Aggregate premium sum separately - Supabase doesn't support multiple aggregates in one query
     const { data: premiumData } = await supabase
       .from('cross_sell_opportunities')
       .select('potential_premium_add')
       .eq('dismissed', false)
-      .eq('agency_id', agencyId || '')
+      .eq('agency_id', agencyId)
       .not('potential_premium_add', 'is', null);
 
     // Calculate tier counts using reduce (single pass, no N+1)
@@ -182,13 +192,13 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/analytics/cross-sell
  * Create a new opportunity manually
  */
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const body = await request.json();
@@ -201,9 +211,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set defaults
+    // Set defaults - use ctx.agencyId from auth context instead of body
     const opportunity: Partial<CrossSellOpportunity> = {
-      agency_id: body.agency_id,
+      agency_id: ctx.agencyId,
       customer_name: body.customer_name,
       phone: body.phone || '',
       email: body.email || '',
@@ -257,23 +267,37 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * PATCH /api/analytics/cross-sell
  * Update an opportunity (contact tracking, notes, etc.)
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id, ...rawUpdates } = body;
 
     if (!id) {
       return NextResponse.json(
         { error: 'id is required' },
         { status: 400 }
       );
+    }
+
+    // Whitelist allowed fields to prevent arbitrary column updates (e.g., agency_id)
+    const ALLOWED_FIELDS = new Set([
+      'notes', 'contacted_at', 'converted_at', 'converted_premium',
+      'dismissed', 'contact_method', 'next_action', 'next_action_date',
+      'mark_contacted', 'mark_converted', 'dismiss',
+    ]);
+
+    const updates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawUpdates)) {
+      if (ALLOWED_FIELDS.has(key)) {
+        updates[key] = value;
+      }
     }
 
     // Handle special update types
@@ -292,12 +316,24 @@ export async function PATCH(request: NextRequest) {
       delete updates.dismiss;
     }
 
-    const { data, error } = await supabase
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
+    }
+
+    let query = supabase
       .from('cross_sell_opportunities')
       .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+      .eq('id', id);
+
+    // Scope update to agency
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { data, error } = await query.select().single();
 
     if (error) {
       console.error('Failed to update opportunity:', error);
@@ -318,13 +354,13 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/analytics/cross-sell
  * Dismiss an opportunity (soft delete)
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
@@ -338,13 +374,20 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { error } = await supabase
+    let query = supabase
       .from('cross_sell_opportunities')
       .update({
         dismissed: true,
         dismissed_reason: reason || 'Manually dismissed',
       })
       .eq('id', id);
+
+    // Scope dismiss to agency
+    if (ctx.agencyId) {
+      query = query.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Failed to dismiss opportunity:', error);
@@ -365,4 +408,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

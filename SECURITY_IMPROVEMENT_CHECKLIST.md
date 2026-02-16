@@ -2,7 +2,7 @@
 
 ## Allstate Insurance Agency Application - Security Remediation Plan
 
-**Application:** Bealer Agency Todo List
+**Application:** Wavezly Todo List
 **Risk Classification:** HIGH (Handles PII, Insurance Policy Data, Customer Communications)
 **Compliance Requirements:** Allstate Information Security Standards, NAIC Model Laws, State Insurance Regulations
 **Assessment Date:** 2026-01-14
@@ -12,7 +12,7 @@
 
 ## Executive Summary
 
-This checklist addresses security vulnerabilities identified in the Bealer Agency Todo List application. As an Allstate affiliate handling Protected Personal Information (PPI) and insurance policy data, this application must meet enterprise-grade security standards.
+This checklist addresses security vulnerabilities identified in the Wavezly Todo List application. As an Allstate affiliate handling Protected Personal Information (PPI) and insurance policy data, this application must meet enterprise-grade security standards.
 
 **Current Risk Level:** MEDIUM-HIGH
 **Post-Remediation Target:** LOW

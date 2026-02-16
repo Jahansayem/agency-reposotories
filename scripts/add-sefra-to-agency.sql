@@ -1,7 +1,7 @@
 -- ============================================
--- Add Sefra to Bealer Agency
+-- Add Sefra to Wavezly
 -- ============================================
--- Simple script to add Sefra as a member of Bealer Agency
+-- Simple script to add Sefra as a member of Wavezly
 -- Just copy and paste into Supabase SQL Editor and run!
 
 -- First, show what agencies exist (to verify the slug)
@@ -13,7 +13,7 @@ SELECT
 FROM agencies
 WHERE is_active = true;
 
--- Add Sefra to Bealer Agency
+-- Add Sefra to Wavezly
 INSERT INTO agency_members (
   user_id,
   agency_id,
@@ -38,7 +38,7 @@ SELECT
 FROM users u
 CROSS JOIN agencies a
 WHERE u.name = 'Sefra'
-  AND a.slug = 'bealer-agency'
+  AND a.slug = 'wavezly'
 ON CONFLICT (user_id, agency_id) DO UPDATE SET
   role = EXCLUDED.role,
   permissions = EXCLUDED.permissions,
@@ -57,4 +57,4 @@ FROM agency_members am
 JOIN users u ON am.user_id = u.id
 JOIN agencies a ON am.agency_id = a.id
 WHERE u.name = 'Sefra'
-  AND a.slug = 'bealer-agency';
+  AND a.slug = 'wavezly';

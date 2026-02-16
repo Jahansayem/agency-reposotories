@@ -16,23 +16,21 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     // Login as Derrick
     await page.goto('/');
     await page.getByTestId('user-card-Derrick').click();
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await page.waitForURL('/');
 
     // Close welcome dashboard modal with Escape
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // App should now be on tasks view by default
     // Click "Add Task" button to open the AddTodo modal
     await page.click('button:has-text("Add Task")');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // The AddTodo modal textarea should now be visible
     // Note: InlineAddTask is not used in the app - AddTodo modal is the task creation interface
@@ -83,7 +81,7 @@ test.describe('Phase 2.1: Smart Defaults', () => {
       await page.selectOption('[data-testid="priority-select"]', task.priority);
       await page.selectOption('[data-testid="assigned-to-select"]', task.assignedTo);
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500); // Wait for task creation
+      await page.waitForLoadState('networkidle'); // Wait for task creation
     }
 
     // Reload page to fetch fresh smart defaults
@@ -118,7 +116,7 @@ test.describe('Phase 2.1: Smart Defaults', () => {
   test('should display suggestion metadata tooltip on hover', async ({ page }) => {
 
     // Wait for smart defaults to load
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Look for suggestion indicator/tooltip trigger
     const suggestionIndicator = page.locator('[data-testid="smart-defaults-indicator"]');
@@ -143,13 +141,12 @@ test.describe('Phase 2.1: Smart Defaults', () => {
       }
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     const firstCallCount = apiCallCount;
 
     // Reload within 5 minutes - should use cached data
     await page.reload();
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // SWR should return cached data without new API call
     expect(apiCallCount).toBe(firstCallCount);
@@ -172,7 +169,7 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     await page.keyboard.press('Enter');
 
     // Wait for task creation and potential refresh
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // A refresh call may or may not be made depending on implementation
     // This test documents the expected behavior
@@ -225,7 +222,7 @@ test.describe('Phase 2.1: Smart Defaults', () => {
   test('should show loading state while fetching suggestions', async ({ page }) => {
     // Slow down the API response to see loading state
     await page.route('**/api/ai/suggest-defaults', async route => {
-      await page.waitForTimeout(2000); // 2 second delay
+      await page.waitForLoadState('networkidle'); // 2 second delay
       return route.continue();
     });
 
@@ -236,7 +233,7 @@ test.describe('Phase 2.1: Smart Defaults', () => {
     }
 
     // Wait for loading to complete
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Loading should disappear
     if (await loadingIndicator.isVisible()) {

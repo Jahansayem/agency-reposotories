@@ -63,12 +63,16 @@ export async function validateDualAuth(request: NextRequest): Promise<DualAuthRe
     }
 
     if (sessionToken) {
-      // Session token exists - the actual validation happens in sessionValidator
-      // Here we just confirm a token is present
+      // This detects auth METHOD only — it does NOT validate the token.
+      // Callers MUST still run sessionValidator (via withSessionAuth / withAgencyAuth)
+      // before trusting the identity. The `authenticated` flag here means
+      // "a token was found", not "the token is cryptographically valid".
+      //
+      // All API route wrappers (withAgencyAuth, withSessionAuth) call
+      // sessionValidator internally, so this is safe in practice.
       return {
         authenticated: true,
         authMethod: 'pin',
-        // Actual user details come from sessionValidator in the API route
       };
     }
   }

@@ -128,6 +128,8 @@ export function sanitizePromptInput(
   // Check for sensitive data
   if (opts.checkSensitiveData) {
     for (const [type, pattern] of Object.entries(SENSITIVE_PATTERNS)) {
+      // Reset lastIndex before test to avoid stateful /g flag bug
+      pattern.lastIndex = 0;
       if (pattern.test(sanitized)) {
         warnings.push({
           type: 'sensitive_data',
@@ -191,7 +193,14 @@ export function quickSanitize(input: string, maxLength = 10000): string {
  */
 export function isInputSafe(input: string): boolean {
   for (const pattern of INJECTION_PATTERNS) {
+    // Reset lastIndex before each test to avoid the stateful regex /g flag bug.
+    // Without this, subsequent calls to isInputSafe would intermittently fail
+    // to detect injection patterns because RegExp.prototype.test() advances
+    // lastIndex on global regexes.
+    pattern.lastIndex = 0;
     if (pattern.test(input)) {
+      // Reset again after match to leave the regex in a clean state
+      pattern.lastIndex = 0;
       return false;
     }
   }

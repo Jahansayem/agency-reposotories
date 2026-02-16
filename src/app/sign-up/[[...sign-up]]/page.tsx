@@ -16,7 +16,7 @@ export default function SignUpPage() {
       {/* Logo/Header */}
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold text-white mb-2">
-          Join Bealer Agency
+          Join Wavezly
         </h1>
         <p className="text-white/80">
           Create your account to get started
@@ -48,7 +48,7 @@ export default function SignUpPage() {
 
       {/* Footer */}
       <div className="mt-8 text-center text-white/60 text-xs">
-        <p>&copy; 2026 Bealer Agency. All rights reserved.</p>
+        <p>&copy; 2026 Wavezly. All rights reserved.</p>
         <p className="mt-1">You&apos;re in good hands.</p>
       </div>
     </div>

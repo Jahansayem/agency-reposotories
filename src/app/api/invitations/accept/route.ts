@@ -6,6 +6,7 @@ import { createServiceRoleClient } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { apiErrorResponse } from '@/lib/apiResponse';
 import { safeLogActivity } from '@/lib/safeActivityLog';
+import { USER_COLORS } from '@/lib/constants';
 
 /**
  * Hash PIN using SHA-256 (matching existing format)
@@ -20,12 +21,6 @@ function hashPin(pin: string): string {
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
-
-// Allstate brand user colors
-const USER_COLORS = [
-  '#0033A0', '#72B5E8', '#C9A227', '#003D7A',
-  '#6E8AA7', '#5BA8A0', '#E87722', '#98579B',
-];
 
 /**
  * POST /api/invitations/accept
@@ -95,6 +90,14 @@ export async function POST(request: NextRequest) {
 
     if (!agency || !agency.is_active) {
       return apiErrorResponse('AGENCY_INACTIVE', 'The agency associated with this invitation is no longer active');
+    }
+
+    // SECURITY: Verify agency_id exists BEFORE creating user account to avoid orphaned users
+    if (!invitation.agency_id) {
+      logger.error('Invitation has null agency_id', null, {
+        invitationId: invitation.id,
+      });
+      return apiErrorResponse('INVALID_STATE', 'Invalid invitation: missing agency association', 500);
     }
 
     let userId: string;
@@ -167,16 +170,6 @@ export async function POST(request: NextRequest) {
     }
 
     // ---- Check if user is already a member ----
-    // SECURITY: Verify agency_id is present to prevent duplicate memberships
-    // when invitation has null agency_id (data integrity issue)
-    if (!invitation.agency_id) {
-      logger.error('Invitation has null agency_id', null, {
-        invitationId: invitation.id,
-        userId,
-      });
-      return apiErrorResponse('INVALID_STATE', 'Invalid invitation: missing agency association', 500);
-    }
-
     const { data: existingMember } = await supabase
       .from('agency_members')
       .select('id, status')
@@ -230,6 +223,12 @@ export async function POST(request: NextRequest) {
           });
 
         if (memberError) {
+          // Mark invitation as failed to prevent re-acceptance attempts
+          await supabase
+            .from('agency_invitations')
+            .update({ status: 'failed' })
+            .eq('id', invitation.id);
+
           logger.error('Fallback: failed to create membership', memberError, {
             userId,
             agencyId: invitation.agency_id,
@@ -274,7 +273,7 @@ export async function POST(request: NextRequest) {
 
     // Log activity (safe - will not break operation if it fails)
     await safeLogActivity(supabase, {
-      action: 'task_created', // Reuse existing action type
+      action: 'invitation_accepted',
       user_name: userName,
       agency_id: agency.id,
       details: {

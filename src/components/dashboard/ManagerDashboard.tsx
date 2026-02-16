@@ -21,6 +21,7 @@ import {
   AlertCircle,
   UserCheck,
   X,
+  BarChart3,
 } from 'lucide-react';
 import { Todo, AuthUser, ActivityLogEntry, User, QuickFilter } from '@/types/todo';
 import { useAppShell } from '../layout';
@@ -58,6 +59,8 @@ interface ManagerDashboardProps {
   onFilterByCategory?: (category: string) => void;
   onFilterByUser?: (userName: string) => void;
   onRefreshTodos?: () => void;
+  onNavigateToAnalytics?: () => void;
+  onNavigateToCustomers?: () => void;
 }
 
 export default function ManagerDashboard({
@@ -73,6 +76,8 @@ export default function ManagerDashboard({
   onFilterByCategory,
   onFilterByUser,
   onRefreshTodos,
+  onNavigateToAnalytics,
+  onNavigateToCustomers,
 }: ManagerDashboardProps) {
   const { setActiveView } = useAppShell();
   const [showAllTeamMembers, setShowAllTeamMembers] = useState(false);
@@ -416,6 +421,30 @@ export default function ManagerDashboard({
           todos={todos}
           onSaleLogged={handleSaleLogged}
         />
+
+        {/* Book of Business Quick Actions */}
+        {(onNavigateToAnalytics || onNavigateToCustomers) && (
+          <div className="flex items-center gap-3">
+            {onNavigateToAnalytics && (
+              <button
+                onClick={onNavigateToAnalytics}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/20 transition-colors text-sm font-medium"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Book of Business
+              </button>
+            )}
+            {onNavigateToCustomers && (
+              <button
+                onClick={onNavigateToCustomers}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/20 transition-colors text-sm font-medium"
+              >
+                <Users className="w-4 h-4" />
+                Customers
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Pipeline Health & Renewals Calendar - 2 column grid */}
         <div className="grid md:grid-cols-2 gap-6">

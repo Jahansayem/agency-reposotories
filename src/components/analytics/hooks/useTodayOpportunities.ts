@@ -6,9 +6,12 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 export interface TodayOpportunity {
   id: string;
+  taskId: string | null;
+  customerInsightId: string | null;
   customerName: string;
   phone: string;
   email: string;
@@ -75,6 +78,8 @@ export function useTodayOpportunities(limit: number = 10) {
       // Map API response to component format
       const mapped = (data.opportunities || []).map((opp: Record<string, unknown>) => ({
         id: opp.id,
+        taskId: (opp.task_id as string) || null,
+        customerInsightId: (opp.customer_insight_id as string) || null,
         customerName: opp.customer_name,
         phone: opp.phone || '',
         email: opp.email || '',
@@ -117,7 +122,7 @@ export function useTodayOpportunities(limit: number = 10) {
     request: ContactRequest,
     userId: string
   ) => {
-    const response = await fetch(`/api/opportunities/${opportunityId}/contact`, {
+    const response = await fetchWithCsrf(`/api/opportunities/${opportunityId}/contact`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

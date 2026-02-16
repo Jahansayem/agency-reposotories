@@ -13,7 +13,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Check primary button (Add Task)
       const addButton = page.locator('button:has-text("Add"), button[aria-label*="Add"]').first();
@@ -59,12 +59,11 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       await page.evaluate(() => {
         document.documentElement.classList.remove('dark');
       });
-      await page.waitForTimeout(200);
 
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Find a disabled button (or create a scenario with one)
       // Check Add Task button when input is empty (should be disabled)
@@ -101,12 +100,11 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       await page.evaluate(() => {
         document.documentElement.classList.add('dark');
       });
-      await page.waitForTimeout(200);
 
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Clear input to disable submit button
       const taskInput = page.locator('input[placeholder*="Add"]').first();
@@ -141,7 +139,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Check disabled button CSS
       const disabledButtonOpacity = await page.evaluate(() => {
@@ -164,7 +162,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Clear input to get disabled button
       const taskInput = page.locator('input[placeholder*="Add"]').first();
@@ -194,7 +192,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Find a primary button
       const addButton = page.locator('button:has-text("Add"), button[aria-label*="Add"]').first();
@@ -210,7 +208,6 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
 
         // Hover over button
         await addButton.hover();
-        await page.waitForTimeout(100);
 
         // Get hover state
         const hoverStyles = await addButton.evaluate(el => {
@@ -235,14 +232,13 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Find a button
       const button = page.locator('button').first();
 
       if (await button.isVisible()) {
         await button.hover();
-        await page.waitForTimeout(100);
 
         const hoverStyles = await button.evaluate(el => {
           return {
@@ -260,7 +256,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Find secondary/ghost buttons
       const secondaryButtons = page.locator('button[class*="ghost"], button[class*="secondary"]');
@@ -268,7 +264,6 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       if (await secondaryButtons.first().isVisible()) {
         const button = secondaryButtons.first();
         await button.hover();
-        await page.waitForTimeout(100);
 
         const styles = await button.evaluate(el => {
           return window.getComputedStyle(el).color;
@@ -284,7 +279,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Find a button to click
       const button = page.locator('button').first();
@@ -293,7 +288,6 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
         // Mouse down (active state)
         await button.hover();
         await page.mouse.down();
-        await page.waitForTimeout(50);
 
         const activeStyles = await button.evaluate(el => {
           return {
@@ -315,11 +309,10 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Tab to focus a button
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       // Check focused element has visible outline
       const focusStyles = await page.evaluate(() => {
@@ -352,7 +345,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Tab to a button
       await page.keyboard.press('Tab');
@@ -388,7 +381,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Tab to focus
       await page.keyboard.press('Tab');
@@ -422,7 +415,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Check primary action button
       const primaryButton = page.locator('button[class*="bg-"][class*="blue"], button[class*="bg-gradient"]').first();
@@ -445,7 +438,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Secondary buttons usually have lighter background
       const secondaryButton = page.locator('button[class*="bg-gray"], button[class*="bg-slate"]').first();
@@ -463,13 +456,13 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a task to get delete button
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Test task for danger button');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Find delete/danger button
       const dangerButton = page.locator('button[class*="red"], button[aria-label*="Delete"]').first();
@@ -494,7 +487,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Find icon-only buttons (usually have aria-label)
       const iconButton = page.locator('button[aria-label]').first();
@@ -512,7 +505,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Check icon buttons have aria-label
       const iconButtons = page.locator('button svg').locator('..');
@@ -536,7 +529,7 @@ test.describe('Accessibility - Button State Contrast (WCAG 2.1 AA)', () => {
       // Navigate to Tasks
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Clear input to get disabled button
       const taskInput = page.locator('input[placeholder*="Add"]').first();

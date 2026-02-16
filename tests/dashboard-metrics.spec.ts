@@ -6,13 +6,10 @@ test.describe('Dashboard Metrics - Completed Today', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for app to load
@@ -54,24 +51,23 @@ test.describe('Dashboard Metrics - Completed Today', () => {
 
     // Navigate to tasks
     await page.click('button:has-text("Tasks")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Create a new task
     const taskText = `Test task ${Date.now()}`;
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     await page.fill('[data-testid="add-task-input"]', taskText);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Find and complete the task
     const taskCheckbox = page.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
     await taskCheckbox.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Go back to dashboard
     await page.click('button:has-text("Dashboard")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Count should have increased by 1
     const newCount = parseInt(await doneToday.textContent() || '0');
@@ -86,7 +82,7 @@ test.describe('Dashboard Metrics - Completed Today', () => {
 
     // Navigate to tasks to see total completed
     await page.click('button:has-text("Tasks")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Count all completed tasks
     const completedTasks = await page.locator('[data-testid="task-item"][data-completed="true"]').count();
@@ -103,13 +99,10 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     // Login in first tab
     await page1.goto('http://localhost:3000');
     await page1.click('[data-testid="user-card-Derrick"]');
-    await page1.waitForTimeout(600);
-    await page1.waitForTimeout(600);
     const pinInputs1 = page1.locator('input[type="password"]');
     await expect(pinInputs1.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs1.nth(i).fill('8008'[i]);
-      await page1.waitForTimeout(100);
     }
     await expect(page1.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
@@ -120,13 +113,10 @@ test.describe('Dashboard Metrics - Completed Today', () => {
     // Login in second tab
     await page2.goto('http://localhost:3000');
     await page2.click('[data-testid="user-card-Derrick"]');
-    await page2.waitForTimeout(600);
-    await page2.waitForTimeout(600);
     const pinInputs2 = page2.locator('input[type="password"]');
     await expect(pinInputs2.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs2.nth(i).fill('8008'[i]);
-      await page2.waitForTimeout(100);
     }
     await expect(page2.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
@@ -141,20 +131,19 @@ test.describe('Dashboard Metrics - Completed Today', () => {
 
     // Complete a task in tab 1
     await page1.click('button:has-text("Tasks")');
-    await page1.waitForTimeout(500);
+    await page1.waitForLoadState('networkidle');
     const taskText = `Real-time test ${Date.now()}`;
     await page1.click('button:has-text("New Task")');
-    await page1.waitForTimeout(300);
     await page1.fill('[data-testid="add-task-input"]', taskText);
     await page1.keyboard.press('Enter');
-    await page1.waitForTimeout(500);
+    await page1.waitForLoadState('networkidle');
     const taskCheckbox = page1.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
     await taskCheckbox.click();
-    await page1.waitForTimeout(1000); // Wait for real-time sync
+    await page1.waitForLoadState('networkidle'); // Wait for real-time sync
 
     // Go to dashboard in tab 1
     await page1.click('button:has-text("Dashboard")');
-    await page1.waitForTimeout(500);
+    await page1.waitForLoadState('networkidle');
 
     // Check both tabs - should both show updated count
     const newCount1 = parseInt(await doneToday1.textContent() || '0');
@@ -181,22 +170,21 @@ test.describe('Dashboard Metrics - Completed Today', () => {
   test('should visually highlight when tasks are completed today', async ({ page }) => {
     // Navigate to tasks and complete one
     await page.click('button:has-text("Tasks")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const taskText = `Highlight test ${Date.now()}`;
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     await page.fill('[data-testid="add-task-input"]', taskText);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const taskCheckbox = page.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
     await taskCheckbox.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Go to dashboard
     await page.click('button:has-text("Dashboard")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // The "Done Today" card should have emerald/green highlighting
     const doneToday = page.locator('text=Done Today').locator('..');
@@ -211,13 +199,10 @@ test.describe('Dashboard Metrics - Filtering by Date', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
@@ -232,22 +217,21 @@ test.describe('Dashboard Metrics - Filtering by Date', () => {
 
     // Create and immediately complete a task
     await page.click('button:has-text("Tasks")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const taskText = `Timestamp test ${Date.now()}`;
     await page.click('button:has-text("New Task")');
-    await page.waitForTimeout(300);
     await page.fill('[data-testid="add-task-input"]', taskText);
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const taskCheckbox = page.locator(`[data-testid="task-checkbox"]:near(:text("${taskText}"))`).first();
     await taskCheckbox.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Return to dashboard
     await page.click('button:has-text("Dashboard")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should have incremented
     const count2 = parseInt(await doneToday.textContent() || '0');

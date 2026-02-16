@@ -62,15 +62,15 @@ async function loginAsDerrick(page: Page) {
 // Helper to navigate to Customer Segmentation Dashboard
 async function navigateToCustomerSegmentation(page: Page) {
   // Wait for page to stabilize
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on Analytics in the navigation
   await page.click('text=Analytics');
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Click on Customer Insights tab
   await page.click('text=Customer Insights');
-  await page.waitForTimeout(2000);
+  await expect(page.locator('text=Customer Segmentation').first()).toBeVisible({ timeout: 10000 });
 
   // Verify we're on the Customer Segmentation dashboard
   await expect(page.locator('text=Customer Segmentation').first()).toBeVisible();
@@ -229,7 +229,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for segmentation to complete
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     const endTime = Date.now();
     const totalLoadTime = endTime - startTime;
@@ -311,7 +311,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
     }
 
     // Wait for data to finish loading
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Dashboard should be fully loaded
     await expect(page.locator('text=Customer Segmentation').first()).toBeVisible();
@@ -363,7 +363,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
     await navigateToCustomerSegmentation(page);
 
     // Wait for initial load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Measure initial memory
     const initialMemory = await page.evaluate(() => {
@@ -385,7 +385,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
 
     for (let i = 0; i < 10; i++) {
       await refreshButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       const memory = await page.evaluate(() => {
         if ('memory' in performance) {
@@ -492,7 +492,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
     // Navigate and measure
     const startTime = Date.now();
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
     const endTime = Date.now();
 
     const totalTime = endTime - startTime;
@@ -544,7 +544,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
     });
 
     await navigateToCustomerSegmentation(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Count initial DOM nodes
     const initialDomNodes = await page.evaluate(() => {
@@ -556,7 +556,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
     // Refresh
     const refreshButton = page.locator('button[title="Refresh data"]');
     await refreshButton.click();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Count DOM nodes after refresh
     const finalDomNodes = await page.evaluate(() => {
@@ -629,7 +629,7 @@ test.describe('Customer Segmentation Dashboard - Performance Tests', () => {
     }
 
     // Wait for APIs to complete
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Verify dashboard loaded correctly
     await expect(page.locator('text=Live Data')).toBeVisible();

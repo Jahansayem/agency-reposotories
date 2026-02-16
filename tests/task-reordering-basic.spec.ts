@@ -23,12 +23,10 @@ test.beforeEach(async ({ page }) => {
   await page.click('[data-testid="user-card-Derrick"]');
 
   // Enter PIN
-  await page.waitForTimeout(600);
   const pinInputs = page.locator('input[type="password"]');
   await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(TEST_USER.pin[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for main app to load
@@ -72,7 +70,6 @@ test.describe('Basic Task Reordering', () => {
     await taskElement.hover();
 
     // Wait for opacity transition
-    await page.waitForTimeout(300);
 
     // Check if drag handle is visible
     const dragHandle = taskElement.locator('.drag-handle');
@@ -115,7 +112,7 @@ test.describe('Basic Task Reordering', () => {
     });
 
     // Wait for reorder to complete
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Verify new order
     const allTasksAfter = await page.locator('[id^="todo-"]').all();
@@ -146,7 +143,7 @@ test.describe('Basic Task Reordering', () => {
     });
 
     // Wait for API call to complete
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Get order before reload
     const tasksBefore = await page.locator('[id^="todo-"]').all();
@@ -163,12 +160,10 @@ test.describe('Basic Task Reordering', () => {
     // Login again
     await page.waitForSelector('[data-testid="user-card-Derrick"]', { timeout: 10000 });
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill(TEST_USER.pin[i]);
-      await page.waitForTimeout(100);
     }
     await page.waitForSelector('[role="complementary"][aria-label="Main navigation"]', { timeout: 15000 });
 
@@ -227,7 +222,7 @@ test.describe('Basic Task Reordering', () => {
     });
 
     // Wait for API call
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify API was called
     expect(apiCallMade).toBe(true);
@@ -271,7 +266,6 @@ test.describe('Visual Regression', () => {
     await task.hover();
 
     // Wait for transition
-    await page.waitForTimeout(300);
 
     // Take screenshot
     await task.screenshot({ path: 'tests/screenshots/drag-handle.png' });

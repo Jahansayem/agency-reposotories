@@ -1,12 +1,21 @@
 import { expect, afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
 
-expect.extend(matchers);
+// Only import jsdom-dependent modules when running in a browser-like environment
+// API route tests run in 'node' environment and don't need these
+const isNodeEnv = typeof window === 'undefined' &&
+  typeof document === 'undefined';
 
-afterEach(() => {
-  cleanup();
-});
+if (!isNodeEnv) {
+  // Dynamic imports to avoid failing in Node environment
+  const { cleanup } = await import('@testing-library/react');
+  const matchers = await import('@testing-library/jest-dom/matchers');
+
+  expect.extend(matchers);
+
+  afterEach(() => {
+    cleanup();
+  });
+}
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({

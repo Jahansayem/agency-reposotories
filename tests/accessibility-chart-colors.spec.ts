@@ -313,7 +313,7 @@ test.describe('Chart Colors Accessibility', () => {
   test.describe('Visual Regression', () => {
     test('should match baseline screenshot with legend and patterns', async ({ page }) => {
       // Wait for chart animation to complete
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Take screenshot of modal
       const modal = page.locator('text=Weekly Progress').locator('..');

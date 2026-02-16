@@ -42,7 +42,7 @@ async function main() {
 
   console.log('\n✅ LOGGED IN!');
   console.log('👀 Look at the top-left of the sidebar');
-  console.log('📍 You should see "Bealer Agency" button');
+  console.log('📍 You should see "Wavezly" button');
   console.log('🖱️  Click it to see the dropdown with both agencies\n');
   console.log('Press Ctrl+C when done...');
 

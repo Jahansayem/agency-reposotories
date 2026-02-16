@@ -390,7 +390,7 @@ Subject: New Login Method Available - Sign in with Allstate
 
 Hi [User Name],
 
-We've upgraded Bealer Agency Todo with Allstate Single Sign-On (SSO)!
+We've upgraded Wavezly Todo with Allstate Single Sign-On (SSO)!
 
 What's New:
 • Sign in with your Allstate credentials
@@ -407,7 +407,7 @@ to SSO for better security.
 
 Questions? Reply to this email or contact your agency admin.
 
-– The Bealer Agency Team
+– The Wavezly Team
 ```
 
 #### In-App Migration Prompt

@@ -394,7 +394,7 @@ DROP POLICY IF EXISTS "todos_delete_policy" ON todos;
 CREATE POLICY "todos_select_agency"
   ON todos FOR SELECT
   USING (
-    -- Legacy: No agency_id means old data (Bealer Agency)
+    -- Legacy: No agency_id means old data (Wavezly)
     agency_id IS NULL OR
     -- New: Check agency membership
     (agency_id IN (SELECT public.user_agency_ids()) AND (
@@ -702,12 +702,12 @@ COMMENT ON FUNCTION create_agency_with_owner(TEXT, TEXT, UUID) IS 'Create agency
 COMMENT ON FUNCTION accept_agency_invitation(TEXT, UUID) IS 'Accept invitation and create membership';
 
 -- ============================================
--- STEP 13: CREATE BEALER AGENCY MIGRATION
--- Backfill existing data to Bealer Agency
+-- STEP 13: CREATE WAVEZLY MIGRATION
+-- Backfill existing data to Wavezly
 -- Run this AFTER initial deployment
 -- ============================================
 
--- This creates the Bealer Agency and migrates existing data
+-- This creates the Wavezly and migrates existing data
 -- Should be run separately after verifying schema changes work
 CREATE OR REPLACE FUNCTION migrate_to_bealer_agency()
 RETURNS void AS $$
@@ -716,18 +716,18 @@ DECLARE
   v_derrick_user_id UUID;
 BEGIN
   -- Check if already migrated
-  SELECT id INTO v_bealer_agency_id FROM agencies WHERE slug = 'bealer-agency';
+  SELECT id INTO v_bealer_agency_id FROM agencies WHERE slug = 'wavezly';
   IF FOUND THEN
-    RAISE NOTICE 'Bealer Agency already exists, skipping migration';
+    RAISE NOTICE 'Wavezly already exists, skipping migration';
     RETURN;
   END IF;
 
-  -- Create Bealer Agency
+  -- Create Wavezly
   INSERT INTO agencies (name, slug, primary_color, secondary_color, subscription_tier, max_users, max_storage_mb)
-  VALUES ('Bealer Agency', 'bealer-agency', '#0033A0', '#72B5E8', 'professional', 50, 5120)
+  VALUES ('Wavezly', 'wavezly', '#0033A0', '#72B5E8', 'professional', 50, 5120)
   RETURNING id INTO v_bealer_agency_id;
 
-  RAISE NOTICE 'Created Bealer Agency with ID: %', v_bealer_agency_id;
+  RAISE NOTICE 'Created Wavezly with ID: %', v_bealer_agency_id;
 
   -- Get Derrick's user ID
   SELECT id INTO v_derrick_user_id FROM users WHERE name = 'Derrick';
@@ -775,7 +775,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION migrate_to_bealer_agency() IS 'One-time migration to create Bealer Agency and assign existing data';
+COMMENT ON FUNCTION migrate_to_bealer_agency() IS 'One-time migration to create Wavezly and assign existing data';
 
 -- ============================================
 -- COMMENTS

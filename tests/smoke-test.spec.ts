@@ -53,7 +53,7 @@ test.describe('Smoke Test - App Loads Successfully', () => {
     await hideDevOverlay(page);
 
     // Wait for login screen
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Find Derrick's user card using data-testid (most reliable)
     const userCard = page.locator('[data-testid="user-card-Derrick"]');
@@ -61,7 +61,6 @@ test.describe('Smoke Test - App Loads Successfully', () => {
     // Wait for user cards to load
     await expect(userCard).toBeVisible({ timeout: 10000 });
     await userCard.click();
-    await page.waitForTimeout(800);
 
     // Enter PIN - each digit in a separate password input
     const pinInputs = page.locator('input[type="password"]');
@@ -69,7 +68,6 @@ test.describe('Smoke Test - App Loads Successfully', () => {
     const pin = '8008';
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill(pin[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for main app - check for either sidebar (desktop) or bottom nav (mobile)

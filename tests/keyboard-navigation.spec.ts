@@ -42,8 +42,7 @@ test.describe('Keyboard Navigation - Login Screen', () => {
     await page.click('[data-testid="user-card-Derrick"]');
 
     // Wait for animation and focus delay (550ms)
-    await page.waitForTimeout(600);
-
+  
     // First PIN input should be focused
     const firstPinInput = page.locator('input[type="tel"]').first();
     await expect(firstPinInput).toBeFocused();
@@ -56,15 +55,12 @@ test.describe('Keyboard Navigation - Login Screen', () => {
   test('PIN inputs should advance on keyboard input', async ({ page }) => {
     // Select user
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Type PIN using keyboard
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // All inputs should be filled
@@ -78,8 +74,7 @@ test.describe('Keyboard Navigation - Login Screen', () => {
   test('Backspace should navigate between PIN inputs', async ({ page }) => {
     // Select user
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Type partial PIN
     await page.keyboard.type('80');
 
@@ -95,15 +90,12 @@ test.describe('Keyboard Navigation - Login Screen', () => {
   test('Enter key should submit PIN when all digits entered', async ({ page }) => {
     // Select user
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Type correct PIN
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Press Enter
@@ -135,8 +127,7 @@ test.describe('Keyboard Navigation - Login Screen', () => {
   test('Escape key should return to user selection from PIN screen', async ({ page }) => {
     // Select user
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Press Escape
     await page.keyboard.press('Escape');
 
@@ -151,13 +142,10 @@ test.describe('Keyboard Navigation - Main App', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for app to load

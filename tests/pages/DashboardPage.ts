@@ -55,7 +55,7 @@ export class DashboardPage {
       const dashboardButton = this.page.locator(this.selectors.dashboardTab).first();
       await dashboardButton.waitFor({ state: 'visible', timeout: 10000 });
       await dashboardButton.click();
-      await this.page.waitForTimeout(500);
+      await this.page.waitForLoadState('networkidle');
 
       // Verify dashboard loaded
       await this.waitForDashboardLoad();
@@ -138,7 +138,7 @@ export class DashboardPage {
     const bars = await this.getWeeklyChartBars();
     const bar = bars.nth(dayIndex);
     await bar.click();
-    await this.page.waitForTimeout(300);
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -166,14 +166,14 @@ export class DashboardPage {
     const addButton = this.page.locator(this.selectors.addTaskButton).first();
     await addButton.waitFor({ state: 'visible', timeout: 5000 });
     await addButton.click();
-    await this.page.waitForTimeout(500);
+    await this.page.waitForLoadState('networkidle');
   }
 
   async clickViewAll(): Promise<void> {
     const viewAllButton = this.page.locator(this.selectors.viewAllButton).first();
     await viewAllButton.waitFor({ state: 'visible', timeout: 5000 });
     await viewAllButton.click();
-    await this.page.waitForTimeout(500);
+    await this.page.waitForLoadState('networkidle');
   }
 
   /**
@@ -199,7 +199,6 @@ export class DashboardPage {
 
     if (await expandButton.isVisible({ timeout: 2000 }).catch(() => false)) {
       await expandButton.click();
-      await this.page.waitForTimeout(300);
     }
   }
 
@@ -254,7 +253,6 @@ export class DashboardPage {
 
   async waitForStatsUpdate(): Promise<void> {
     // Wait for stats to potentially update after an action
-    await this.page.waitForTimeout(1000);
     await this.page.waitForLoadState('networkidle').catch(() => {});
   }
 

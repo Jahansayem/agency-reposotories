@@ -131,7 +131,7 @@ function buildPrompt(
 ): string {
   const now = new Date();
 
-  return `You are generating a personalized daily briefing for ${userName} at Bealer Agency (an Allstate insurance agency).
+  return `You are generating a personalized daily briefing for ${userName} at Wavezly (an Allstate insurance agency).
 
 Today is ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 

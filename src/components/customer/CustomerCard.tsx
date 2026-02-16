@@ -21,7 +21,6 @@ import {
   Flame,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
-import { SegmentIndicator } from './CustomerBadge';
 import type { Customer, CustomerDetail } from '@/types/customer';
 
 interface CustomerCardProps {
@@ -108,8 +107,6 @@ export function CustomerCard({
       <div className={compact ? 'p-3' : 'p-4'}>
         {/* Header */}
         <div className="flex items-start gap-3">
-          <SegmentIndicator segment={customer.segment} size={compact ? 'sm' : 'md'} />
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className={`font-semibold text-[var(--foreground)] truncate ${compact ? 'text-sm' : 'text-base'}`}>
@@ -261,7 +258,6 @@ export function CustomerMiniCard({
         transition-colors
       `}
     >
-      <SegmentIndicator segment={customer.segment as Customer['segment']} size="sm" />
       <span className="text-sm font-medium text-[var(--foreground)] truncate max-w-[150px]">
         {customer.name}
       </span>

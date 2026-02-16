@@ -112,6 +112,7 @@ export function useTodoData(currentUser: AuthUser) {
       // Normalize todos to ensure subtasks and attachments are always arrays
       const fetchedTodos = (todosResult.data || []).map((todo: any) => ({
         ...todo,
+        is_private: typeof todo.is_private === 'boolean' ? todo.is_private : false,
         subtasks: Array.isArray(todo.subtasks) ? todo.subtasks : [],
         attachments: Array.isArray(todo.attachments) ? todo.attachments : [],
       }));
@@ -185,8 +186,12 @@ export function useTodoData(currentUser: AuthUser) {
 
           // Staff data scoping (M6 fix): when user lacks can_view_all_tasks,
           // only allow todos they created or are assigned to into the store.
-          const isVisibleToUser = (todo: Todo) =>
-            canViewAllTasks || todo.created_by === userName || todo.assigned_to === userName;
+          const isVisibleToUser = (todo: Todo) => {
+            if (todo.is_private) {
+              return canViewAllTasks || todo.created_by === userName || todo.assigned_to === userName;
+            }
+            return canViewAllTasks || todo.created_by === userName || todo.assigned_to === userName;
+          };
 
           if (payload.eventType === 'INSERT') {
             // BUGFIX TYPE-001: Validate payload instead of dangerous cast
@@ -222,7 +227,8 @@ export function useTodoData(currentUser: AuthUser) {
                   existing.status === updatedTodo.status &&
                   existing.priority === updatedTodo.priority &&
                   existing.assigned_to === updatedTodo.assigned_to &&
-                  existing.notes === updatedTodo.notes;
+                  existing.notes === updatedTodo.notes &&
+                  existing.is_private === updatedTodo.is_private;
                 if (isReorderOnly) return;
               }
             }

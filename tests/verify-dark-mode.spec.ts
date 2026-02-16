@@ -17,13 +17,13 @@ test.describe('Dashboard Dark Mode Verification', () => {
     }
 
     // Wait for dashboard to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Navigate to dashboard view if not already there
     const dashboardButton = page.locator('button:has-text("Dashboard")');
     if (await dashboardButton.isVisible()) {
       await dashboardButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
     }
 
     // Get the main dashboard container
@@ -44,7 +44,7 @@ test.describe('Dashboard Dark Mode Verification', () => {
     const themeToggle = page.locator('button[aria-label*="theme"]').or(page.locator('button:has-text("☀")'));
     if (await themeToggle.isVisible()) {
       await themeToggle.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check background in light mode
       const lightBackground = await dashboardContainer.evaluate((el) => {
@@ -58,7 +58,7 @@ test.describe('Dashboard Dark Mode Verification', () => {
 
       // Toggle back to dark mode
       await themeToggle.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify it goes back to dark
       const darkBackground = await dashboardContainer.evaluate((el) => {
@@ -80,14 +80,14 @@ test.describe('Dashboard Dark Mode Verification', () => {
       await derrickCard.click();
       await page.fill('input[type="text"]', '8008');
       await page.click('button:has-text("Login")');
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
     }
 
     // Navigate to dashboard
     const dashboardButton = page.locator('button:has-text("Dashboard")');
     if (await dashboardButton.isVisible()) {
       await dashboardButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
     }
 
     // Find the Daily Digest panel

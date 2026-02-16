@@ -1,7 +1,7 @@
 // Service Worker for Web Push Notifications
-// Bealer Agency Task Management
+// Wavezly Task Management
 
-const CACHE_NAME = 'bealer-tasks-v1';
+const CACHE_NAME = 'wavezly-tasks-v1';
 
 // Handle push notifications
 self.addEventListener('push', function(event) {

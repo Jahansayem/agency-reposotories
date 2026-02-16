@@ -87,6 +87,11 @@ export function DockedChatPanel({
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showPinnedMessages, setShowPinnedMessages] = useState(false);
+  // TODO: notificationsEnabled and isDndMode are local-only toggles. They are not
+  // wired to the parent ChatPanel's notification/DND state because DockedChatPanel
+  // does not receive these as props. To fully wire them, add callback props
+  // (e.g. onToggleNotifications, onToggleDnd) and state props from the parent.
+  // For now these toggles only affect the visual indicator within this panel.
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [isDndMode, setIsDndMode] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);

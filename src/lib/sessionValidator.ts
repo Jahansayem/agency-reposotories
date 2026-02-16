@@ -204,13 +204,16 @@ export async function validateSession(
 
         if (idleTime > idleTimeoutMs) {
           // Invalidate the session due to idle timeout
-          // Use atomic update with condition to prevent race with concurrent requests
-          await supabaseAdmin
+          // Use atomic update with condition to prevent race with concurrent requests.
+          // The .eq('is_valid', true) ensures only one concurrent request "wins" the invalidation.
+          const { data: invalidated } = await supabaseAdmin
             .from('user_sessions')
             .update({ is_valid: false })
             .eq('token_hash', tokenHash)
-            .eq('is_valid', true); // Atomic: only update if still valid
+            .eq('is_valid', true)
+            .select('id');
 
+          // Only return expired if WE actually invalidated (or session was already invalid)
           return {
             valid: false,
             error: 'Session expired due to inactivity',

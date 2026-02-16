@@ -36,6 +36,18 @@ export interface TaskDetailModalProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
 }
 
+// Placeholder todo used when the real todo is null so hooks can be called unconditionally
+const PLACEHOLDER_TODO: Todo = {
+  id: '',
+  text: '',
+  completed: false,
+  created_by: '',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  status: 'todo',
+  priority: 'medium',
+};
+
 const sectionStagger = {
   hidden: { opacity: 0, y: 4 },
   visible: (i: number) => ({
@@ -45,12 +57,7 @@ const sectionStagger = {
   }),
 };
 
-export default function TaskDetailModal(props: TaskDetailModalProps) {
-  if (!props.todo) return null;
-  return <TaskDetailModalInner {...props} todo={props.todo} />;
-}
-
-function TaskDetailModalInner({
+export default function TaskDetailModal({
   todo,
   isOpen,
   onClose,
@@ -66,7 +73,7 @@ function TaskDetailModalInner({
   onSaveAsTemplate,
   onEmailCustomer,
   onUpdateAttachments,
-}: Omit<TaskDetailModalProps, 'todo'> & { todo: Todo }) {
+}: TaskDetailModalProps) {
   const [overflowOpen, setOverflowOpen] = useState(false);
 
   // Permission checks
@@ -81,18 +88,15 @@ function TaskDetailModalInner({
   const isOwnTask = useMemo(() => {
     return todo ? (todo.created_by === currentUser?.name || todo.assigned_to === currentUser?.name) : false;
   }, [todo, currentUser?.name]);
-  const isAssignee = useMemo(() => {
-    return todo ? todo.assigned_to === currentUser?.name : false;
-  }, [todo, currentUser?.name]);
 
   // Derived permissions combining permission flags with ownership
   // Can delete if: has can_delete_tasks, OR (has can_delete_own_tasks AND it's their task)
   const canDelete = canDeleteTasksPerm || (canDeleteOwnTasks && isOwnTask);
-  // Preserve local behavior: assignees can always edit task content/subtasks.
-  const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask) || isAssignee;
+  // Can edit if: has can_edit_any_task, OR (has can_edit_own_tasks AND it's their task)
+  const canEdit = canEditAnyTask || (canEditOwnTasks && isOwnTask);
 
   const detail = useTaskDetail({
-    todo,
+    todo: todo ?? PLACEHOLDER_TODO,
     currentUser,
     onUpdate,
     onDelete,
@@ -105,6 +109,11 @@ function TaskDetailModalInner({
     onEmailCustomer,
     onUpdateAttachments,
   });
+
+  // Guard against null todo after hooks
+  if (!todo) {
+    return null;
+  }
 
   const handleDelete = useCallback(() => {
     detail.deleteTodo();
@@ -145,8 +154,8 @@ function TaskDetailModalInner({
           onTitleChange={detail.setTitle}
           onSaveTitle={detail.saveTitle}
           onStartEditTitle={() => detail.setEditingTitle(true)}
-          onCancelEditTitle={() => {
-            detail.setTitle(todo.text);
+          onCancelEditTitle={(originalTitle) => {
+            detail.setTitle(originalTitle);
             detail.setEditingTitle(false);
           }}
           onClose={handleClose}

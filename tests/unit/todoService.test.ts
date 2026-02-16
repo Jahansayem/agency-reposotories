@@ -24,16 +24,10 @@ describe('TodoService', () => {
   });
 
   describe('createTodo', () => {
-    it('should create todo in old schema (JSONB)', async () => {
+    it('should create todo via RPC', async () => {
       const mockTodo = createMockTodo({ text: 'Test task' });
 
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: mockTodo, error: null }),
-          }),
-        }),
-      } as any);
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: mockTodo, error: null } as any);
 
       const result = await todoService.createTodo({
         text: 'Test task',
@@ -41,19 +35,16 @@ describe('TodoService', () => {
       });
 
       expect(result.text).toBe('Test task');
-      expect(supabase.from).toHaveBeenCalledWith('todos');
+      expect(supabase.rpc).toHaveBeenCalledWith('todo_create_with_sync', expect.objectContaining({
+        p_text: 'Test task',
+        p_created_by: 'TestUser',
+      }));
     });
 
     it('should handle creation errors gracefully', async () => {
       const error = new Error('Database error');
 
-      vi.mocked(supabase.from).mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: null, error }),
-          }),
-        }),
-      } as any);
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error } as any);
 
       await expect(
         todoService.createTodo({ text: 'Test', created_by: 'User' })
@@ -62,22 +53,17 @@ describe('TodoService', () => {
   });
 
   describe('updateTodo', () => {
-    it('should update todo successfully', async () => {
+    it('should update todo successfully via RPC', async () => {
       const updatedTodo = createMockTodo({ text: 'Updated text' });
 
-      vi.mocked(supabase.from).mockReturnValue({
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({ data: updatedTodo, error: null }),
-            }),
-          }),
-        }),
-      } as any);
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: updatedTodo, error: null } as any);
 
       const result = await todoService.updateTodo('todo-id', { text: 'Updated text' });
 
       expect(result.text).toBe('Updated text');
+      expect(supabase.rpc).toHaveBeenCalledWith('todo_update_with_sync', expect.objectContaining({
+        p_todo_id: 'todo-id',
+      }));
     });
   });
 
@@ -114,76 +100,140 @@ describe('TodoService', () => {
   });
 
   describe('getTodos', () => {
-    it('should fetch all todos', async () => {
-      const mockTodos = [createMockTodo(), createMockTodo()];
+    /**
+     * Helper to mock supabase.from('todos') for paginated getTodos.
+     * getTodos now issues two parallel queries:
+     *   1. Count query: select('*', { count: 'exact', head: true }) + filters
+     *   2. Data query: select('*').order(...).range(...) + filters
+     *
+     * This helper returns a mockImplementation that routes the first call
+     * to the count mock and the second call to the data mock.
+     */
+    function mockPaginatedFrom(mockTodos: any[], totalCount?: number, filters?: Record<string, any>) {
+      const count = totalCount ?? mockTodos.length;
 
-      vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: mockTodos, error: null }),
-        }),
-      } as any);
+      // Count query mock chain: select -> [eq...] -> resolves { count, error: null }
+      const countChainable: any = {
+        eq: vi.fn().mockReturnThis(),
+      };
+      countChainable.then = (resolve: (value: any) => void) => {
+        resolve({ count, error: null });
+        return countChainable;
+      };
+      const countSelect = vi.fn().mockReturnValue(countChainable);
+
+      // Data query mock chain: select -> order -> [eq...] -> range -> resolves { data, error: null }
+      const dataChainable: any = {
+        eq: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+      };
+      dataChainable.then = (resolve: (value: any) => void) => {
+        resolve({ data: mockTodos, error: null });
+        return dataChainable;
+      };
+      const dataOrder = vi.fn().mockReturnValue(dataChainable);
+      const dataSelect = vi.fn().mockReturnValue({ order: dataOrder });
+
+      let callIdx = 0;
+      vi.mocked(supabase.from).mockImplementation((() => {
+        callIdx++;
+        if (callIdx === 1) {
+          // Count query
+          return { select: countSelect } as any;
+        }
+        // Data query
+        return { select: dataSelect } as any;
+      }) as any);
+
+      return { countChainable, dataChainable };
+    }
+
+    it('should fetch todos with default pagination', async () => {
+      const mockTodos = [createMockTodo(), createMockTodo()];
+      mockPaginatedFrom(mockTodos);
 
       const result = await todoService.getTodos();
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination.page).toBe(1);
+      expect(result.pagination.pageSize).toBe(50);
+      expect(result.pagination.totalCount).toBe(2);
+      expect(result.pagination.totalPages).toBe(1);
+      expect(result.pagination.hasNextPage).toBe(false);
+      expect(result.pagination.hasPrevPage).toBe(false);
+    });
+
+    it('should support explicit pagination params', async () => {
+      const mockTodos = [createMockTodo()];
+      mockPaginatedFrom(mockTodos, 25);
+
+      const result = await todoService.getTodos(undefined, { page: 2, pageSize: 10 });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.pagination.page).toBe(2);
+      expect(result.pagination.pageSize).toBe(10);
+      expect(result.pagination.totalCount).toBe(25);
+      expect(result.pagination.totalPages).toBe(3);
+      expect(result.pagination.hasNextPage).toBe(true);
+      expect(result.pagination.hasPrevPage).toBe(true);
     });
 
     it('should filter todos by assignedTo', async () => {
       const mockTodos = [createMockTodo({ assigned_to: 'Derrick' })];
-
-      // The query chain is: select -> order -> eq (filter applied after order)
-      // But the implementation builds: select().order() then query.eq()
-      // So order returns object with eq method that resolves final result
-      const mockQuery = {
-        eq: vi.fn().mockReturnThis(),
-      };
-      // Add the final resolution when awaited
-      (mockQuery as any).then = (resolve: (value: any) => void) => {
-        resolve({ data: mockTodos, error: null });
-        return mockQuery;
-      };
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          order: vi.fn().mockReturnValue(mockQuery),
-        }),
-      } as any);
+      const { countChainable, dataChainable } = mockPaginatedFrom(mockTodos);
 
       const result = await todoService.getTodos({ assignedTo: 'Derrick' });
 
-      expect(result[0].assigned_to).toBe('Derrick');
+      expect(result.data[0].assigned_to).toBe('Derrick');
+      expect(countChainable.eq).toHaveBeenCalledWith('assigned_to', 'Derrick');
+      expect(dataChainable.eq).toHaveBeenCalledWith('assigned_to', 'Derrick');
     });
 
-    it('should return empty array on error', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: null, error: new Error('DB error') }),
-        }),
-      } as any);
+    it('should return empty result with pagination metadata on error', async () => {
+      // Mock count query to fail
+      const countChainable: any = {
+        eq: vi.fn().mockReturnThis(),
+      };
+      countChainable.then = (resolve: (value: any) => void) => {
+        resolve({ count: null, error: new Error('DB error') });
+        return countChainable;
+      };
+
+      let callIdx = 0;
+      vi.mocked(supabase.from).mockImplementation((() => {
+        callIdx++;
+        if (callIdx === 1) {
+          return { select: vi.fn().mockReturnValue(countChainable) } as any;
+        }
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              range: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
+          }),
+        } as any;
+      }) as any);
 
       const result = await todoService.getTodos();
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+      expect(result.pagination.totalCount).toBe(0);
+      expect(result.pagination.hasNextPage).toBe(false);
     });
   });
 
   describe('deleteTodo', () => {
-    it('should delete todo successfully', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
-        delete: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: null }),
-        }),
-      } as any);
+    it('should delete todo successfully via RPC', async () => {
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error: null } as any);
 
       await expect(todoService.deleteTodo('todo-id')).resolves.not.toThrow();
+      expect(supabase.rpc).toHaveBeenCalledWith('todo_delete_with_sync', expect.objectContaining({
+        p_todo_id: 'todo-id',
+      }));
     });
 
     it('should throw on delete error', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
-        delete: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: new Error('Delete failed') }),
-        }),
-      } as any);
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error: new Error('Delete failed') } as any);
 
       await expect(todoService.deleteTodo('todo-id')).rejects.toThrow('Delete failed');
     });
@@ -191,15 +241,7 @@ describe('TodoService', () => {
 
   describe('updateTodo error handling', () => {
     it('should throw on update error', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-              single: vi.fn().mockResolvedValue({ data: null, error: new Error('Update failed') }),
-            }),
-          }),
-        }),
-      } as any);
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error: new Error('Update failed') } as any);
 
       await expect(todoService.updateTodo('todo-id', { text: 'updated' })).rejects.toThrow('Update failed');
     });
@@ -222,82 +264,107 @@ describe('TodoService', () => {
   });
 
   describe('getTodos with filters', () => {
-    it('should filter by createdBy', async () => {
-      const mockTodos = [createMockTodo({ created_by: 'TestUser' })];
-      const mockQuery = {
+    /**
+     * Helper to mock supabase.from('todos') for paginated getTodos with filters.
+     * See the helper in the 'getTodos' describe block for full documentation.
+     */
+    function mockPaginatedFrom(mockTodos: any[], totalCount?: number) {
+      const count = totalCount ?? mockTodos.length;
+
+      const countChainable: any = {
         eq: vi.fn().mockReturnThis(),
       };
-      (mockQuery as any).then = (resolve: (value: any) => void) => {
-        resolve({ data: mockTodos, error: null });
-        return mockQuery;
+      countChainable.then = (resolve: (value: any) => void) => {
+        resolve({ count, error: null });
+        return countChainable;
       };
 
-      vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          order: vi.fn().mockReturnValue(mockQuery),
-        }),
-      } as any);
+      const dataChainable: any = {
+        eq: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+      };
+      dataChainable.then = (resolve: (value: any) => void) => {
+        resolve({ data: mockTodos, error: null });
+        return dataChainable;
+      };
+
+      let callIdx = 0;
+      vi.mocked(supabase.from).mockImplementation((() => {
+        callIdx++;
+        if (callIdx === 1) {
+          return { select: vi.fn().mockReturnValue(countChainable) } as any;
+        }
+        return { select: vi.fn().mockReturnValue({ order: vi.fn().mockReturnValue(dataChainable) }) } as any;
+      }) as any);
+
+      return { countChainable, dataChainable };
+    }
+
+    it('should filter by createdBy', async () => {
+      const mockTodos = [createMockTodo({ created_by: 'TestUser' })];
+      const { countChainable, dataChainable } = mockPaginatedFrom(mockTodos);
 
       const result = await todoService.getTodos({ createdBy: 'TestUser' });
 
-      expect(mockQuery.eq).toHaveBeenCalledWith('created_by', 'TestUser');
-      expect(result).toHaveLength(1);
+      expect(countChainable.eq).toHaveBeenCalledWith('created_by', 'TestUser');
+      expect(dataChainable.eq).toHaveBeenCalledWith('created_by', 'TestUser');
+      expect(result.data).toHaveLength(1);
     });
 
     it('should filter by status', async () => {
       const mockTodos = [createMockTodo({ status: 'in_progress' })];
-      const mockQuery = {
-        eq: vi.fn().mockReturnThis(),
-      };
-      (mockQuery as any).then = (resolve: (value: any) => void) => {
-        resolve({ data: mockTodos, error: null });
-        return mockQuery;
-      };
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          order: vi.fn().mockReturnValue(mockQuery),
-        }),
-      } as any);
+      const { countChainable, dataChainable } = mockPaginatedFrom(mockTodos);
 
       const result = await todoService.getTodos({ status: 'in_progress' });
 
-      expect(mockQuery.eq).toHaveBeenCalledWith('status', 'in_progress');
-      expect(result).toHaveLength(1);
+      expect(countChainable.eq).toHaveBeenCalledWith('status', 'in_progress');
+      expect(dataChainable.eq).toHaveBeenCalledWith('status', 'in_progress');
+      expect(result.data).toHaveLength(1);
     });
 
     it('should filter by completed', async () => {
       const mockTodos = [createMockTodo({ completed: true })];
-      const mockQuery = {
-        eq: vi.fn().mockReturnThis(),
-      };
-      (mockQuery as any).then = (resolve: (value: any) => void) => {
-        resolve({ data: mockTodos, error: null });
-        return mockQuery;
-      };
-
-      vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          order: vi.fn().mockReturnValue(mockQuery),
-        }),
-      } as any);
+      const { countChainable, dataChainable } = mockPaginatedFrom(mockTodos);
 
       const result = await todoService.getTodos({ completed: true });
 
-      expect(mockQuery.eq).toHaveBeenCalledWith('completed', true);
-      expect(result).toHaveLength(1);
+      expect(countChainable.eq).toHaveBeenCalledWith('completed', true);
+      expect(dataChainable.eq).toHaveBeenCalledWith('completed', true);
+      expect(result.data).toHaveLength(1);
     });
 
-    it('should return empty array when data is null', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          order: vi.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-      } as any);
+    it('should return empty data with pagination metadata when data is null', async () => {
+      const countChainable: any = {
+        eq: vi.fn().mockReturnThis(),
+      };
+      countChainable.then = (resolve: (value: any) => void) => {
+        resolve({ count: 0, error: null });
+        return countChainable;
+      };
+
+      const dataChainable: any = {
+        eq: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+      };
+      dataChainable.then = (resolve: (value: any) => void) => {
+        resolve({ data: null, error: null });
+        return dataChainable;
+      };
+
+      let callIdx = 0;
+      vi.mocked(supabase.from).mockImplementation((() => {
+        callIdx++;
+        if (callIdx === 1) {
+          return { select: vi.fn().mockReturnValue(countChainable) } as any;
+        }
+        return { select: vi.fn().mockReturnValue({ order: vi.fn().mockReturnValue(dataChainable) }) } as any;
+      }) as any);
 
       const result = await todoService.getTodos();
 
-      expect(result).toEqual([]);
+      expect(result.data).toEqual([]);
+      expect(result.pagination.totalCount).toBe(0);
+      expect(result.pagination.hasNextPage).toBe(false);
     });
   });
 });
@@ -313,7 +380,7 @@ describe('TodoService with Normalized Schema', () => {
   });
 
   describe('createTodo with dual-write', () => {
-    it('should sync to normalized schema when enabled', async () => {
+    it('should call RPC with sync_normalized=true when enabled', async () => {
       const mockTodo = createMockTodo({
         text: 'Test task',
         subtasks: [{ id: 'sub-1', text: 'Subtask 1', completed: false, priority: 'medium' }],
@@ -330,75 +397,30 @@ describe('TodoService with Normalized Schema', () => {
         assigned_to: 'Derrick',
       });
 
-      // Mock for main insert
-      const mockInsert = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: mockTodo, error: null }),
-        }),
-      });
-      // Mock for subtasks delete and insert
-      const mockSubtasksDelete = vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-      const mockSubtasksInsert = vi.fn().mockResolvedValue({ error: null });
-      // Mock for attachments delete and insert
-      const mockAttachmentsDelete = vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-      const mockAttachmentsInsert = vi.fn().mockResolvedValue({ error: null });
-      // Mock for user lookup
-      const mockUserSelect = vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: { id: 'user-id' }, error: null }),
-        }),
-      });
-      // Mock for upsert
-      const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'todos') return { insert: mockInsert } as any;
-        if (table === 'subtasks_v2') return { delete: mockSubtasksDelete, insert: mockSubtasksInsert } as any;
-        if (table === 'attachments_v2') return { delete: mockAttachmentsDelete, insert: mockAttachmentsInsert } as any;
-        if (table === 'users') return { select: mockUserSelect } as any;
-        if (table === 'user_assignments') return { upsert: mockUpsert } as any;
-        return {} as any;
-      });
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: mockTodo, error: null } as any);
 
       const result = await todoService.createTodo(mockTodo);
 
       expect(result.text).toBe('Test task');
-      // Verify sync was called
-      expect(supabase.from).toHaveBeenCalledWith('subtasks_v2');
-      expect(supabase.from).toHaveBeenCalledWith('attachments_v2');
-      expect(supabase.from).toHaveBeenCalledWith('users');
+      expect(supabase.rpc).toHaveBeenCalledWith('todo_create_with_sync', expect.objectContaining({
+        p_sync_normalized: true,
+      }));
     });
   });
 
   describe('updateTodo with dual-write', () => {
-    it('should sync updates to normalized schema', async () => {
+    it('should call RPC with sync_normalized=true when enabled', async () => {
       const updatedTodo = createMockTodo({ text: 'Updated' });
 
-      const mockUpdate = vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: updatedTodo, error: null }),
-          }),
-        }),
-      });
-      const mockDelete = vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'todos') return { update: mockUpdate } as any;
-        if (table === 'subtasks_v2') return { delete: mockDelete, insert: vi.fn().mockResolvedValue({ error: null }) } as any;
-        if (table === 'attachments_v2') return { delete: mockDelete, insert: vi.fn().mockResolvedValue({ error: null }) } as any;
-        return {} as any;
-      });
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: updatedTodo, error: null } as any);
 
       const result = await todoService.updateTodo('todo-id', { text: 'Updated' });
 
       expect(result.text).toBe('Updated');
+      expect(supabase.rpc).toHaveBeenCalledWith('todo_update_with_sync', expect.objectContaining({
+        p_todo_id: 'todo-id',
+        p_sync_normalized: true,
+      }));
     });
   });
 
@@ -490,12 +512,30 @@ describe('TodoService with Normalized Schema', () => {
         createMockTodo({ id: 'todo-2', text: 'Todo 2' }),
       ];
 
-      const callCount = 0;
+      // getTodos calls supabase.from('todos') twice (count + data),
+      // then enrichTodoFromNormalizedSchema calls from('subtasks_v2') and from('attachments_v2')
+      // for each todo. We need to handle all of these.
+      let todosCallCount = 0;
       vi.mocked(supabase.from).mockImplementation((table: string) => {
         if (table === 'todos') {
+          todosCallCount++;
+          if (todosCallCount === 1) {
+            // Count query
+            return {
+              select: vi.fn().mockResolvedValue({ count: baseTodos.length, error: null }),
+            } as any;
+          }
+          // Data query
+          const dataChainable: any = {
+            range: vi.fn().mockReturnThis(),
+          };
+          dataChainable.then = (resolve: (value: any) => void) => {
+            resolve({ data: baseTodos, error: null });
+            return dataChainable;
+          };
           return {
             select: vi.fn().mockReturnValue({
-              order: vi.fn().mockResolvedValue({ data: baseTodos, error: null }),
+              order: vi.fn().mockReturnValue(dataChainable),
             }),
           } as any;
         }
@@ -520,65 +560,39 @@ describe('TodoService with Normalized Schema', () => {
 
       const result = await todoService.getTodos();
 
-      expect(result).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination.totalCount).toBe(2);
     });
   });
 
   describe('deleteTodo with normalized schema', () => {
-    it('should delete from both schemas', async () => {
-      const mockUserAssignmentsDelete = vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-      const mockTodosDelete = vi.fn().mockReturnValue({
-        eq: vi.fn().mockResolvedValue({ error: null }),
-      });
-
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'user_assignments') return { delete: mockUserAssignmentsDelete } as any;
-        if (table === 'todos') return { delete: mockTodosDelete } as any;
-        return {} as any;
-      });
+    it('should call RPC with sync_normalized=true when enabled', async () => {
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error: null } as any);
 
       await todoService.deleteTodo('todo-id');
 
-      expect(supabase.from).toHaveBeenCalledWith('user_assignments');
-      expect(supabase.from).toHaveBeenCalledWith('todos');
+      expect(supabase.rpc).toHaveBeenCalledWith('todo_delete_with_sync', expect.objectContaining({
+        p_todo_id: 'todo-id',
+        p_sync_normalized: true,
+      }));
     });
   });
 
-  describe('syncToNormalizedSchema error handling', () => {
-    it('should handle sync errors gracefully (not throw)', async () => {
-      const mockTodo = createMockTodo({
-        text: 'Test task',
-        subtasks: [{ id: 'sub-1', text: 'Subtask 1', completed: false, priority: 'medium' }],
-      });
+  describe('RPC error handling', () => {
+    it('should handle RPC result with error flag gracefully', async () => {
+      const rpcError = { error: true, message: 'Sync failed' };
 
-      // Mock for main insert
-      const mockInsert = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: mockTodo, error: null }),
-        }),
-      });
-      // Mock for subtasks that errors
-      const mockSubtasksDelete = vi.fn().mockReturnValue({
-        eq: vi.fn().mockRejectedValue(new Error('Sync failed')),
-      });
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: rpcError, error: null } as any);
 
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'todos') return { insert: mockInsert } as any;
-        if (table === 'subtasks_v2') return { delete: mockSubtasksDelete } as any;
-        return {} as any;
-      });
-
-      // Should not throw - sync errors are logged but don't prevent the main operation
-      const result = await todoService.createTodo(mockTodo);
-
-      expect(result.text).toBe('Test task');
+      // RPC result with error flag should throw
+      await expect(
+        todoService.createTodo({ text: 'Test task', created_by: 'TestUser' })
+      ).rejects.toThrow('Sync failed');
     });
   });
 
-  describe('syncToNormalizedSchema without user found', () => {
-    it('should handle missing user for assignment', async () => {
+  describe('createTodo with missing user', () => {
+    it('should handle missing user for assignment via RPC', async () => {
       const mockTodo = createMockTodo({
         text: 'Test task',
         assigned_to: 'NonExistentUser',
@@ -586,30 +600,16 @@ describe('TodoService with Normalized Schema', () => {
         attachments: [],
       });
 
-      const mockInsert = vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: mockTodo, error: null }),
-        }),
-      });
-      const mockUserSelect = vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-      });
-
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'todos') return { insert: mockInsert } as any;
-        if (table === 'users') return { select: mockUserSelect } as any;
-        if (table === 'subtasks_v2') return { delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }), insert: vi.fn().mockResolvedValue({ error: null }) } as any;
-        if (table === 'attachments_v2') return { delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }), insert: vi.fn().mockResolvedValue({ error: null }) } as any;
-        return {} as any;
-      });
+      // RPC handles the user lookup internally; it should succeed even if user not found
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: mockTodo, error: null } as any);
 
       const result = await todoService.createTodo(mockTodo);
 
       expect(result.text).toBe('Test task');
-      // Should not call upsert when user not found
-      expect(supabase.from).not.toHaveBeenCalledWith('user_assignments');
+      expect(supabase.rpc).toHaveBeenCalledWith('todo_create_with_sync', expect.objectContaining({
+        p_assigned_to: 'NonExistentUser',
+        p_sync_normalized: true,
+      }));
     });
   });
 });

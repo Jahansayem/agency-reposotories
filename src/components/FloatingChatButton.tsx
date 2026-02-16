@@ -152,6 +152,11 @@ export default function FloatingChatButton({
     fetchUnreadCount();
 
     // Subscribe to new messages
+    // TODO: This subscription listens to ALL messages across all agencies.
+    // There is no agencyId available in this component's props or context.
+    // To filter by agency, either pass agencyId as a prop from the parent,
+    // or use the AgencyContext here and add a filter like:
+    //   { event: '*', schema: 'public', table: 'messages', filter: `agency_id=eq.${agencyId}` }
     const channel = supabase
       .channel('floating-chat-messages')
       .on(

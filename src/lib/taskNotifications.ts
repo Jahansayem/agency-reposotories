@@ -49,12 +49,7 @@ export async function sendTaskAssignmentNotification(
 ): Promise<{ success: boolean; error?: string }> {
   const { taskId, taskText, assignedTo, assignedBy, dueDate, priority, subtasks, notes } = options;
 
-  console.log('[TaskNotification] sendTaskAssignmentNotification called:', {
-    taskId,
-    taskText: taskText?.substring(0, 50),
-    assignedTo,
-    assignedBy,
-  });
+  logger.debug('sendTaskAssignmentNotification called', { component: 'taskNotifications', action: 'sendTaskAssignmentNotification', metadata: { taskId, assignedTo, assignedBy } });
 
   // Input validation
   if (!taskId || !taskId.trim()) {
@@ -88,11 +83,11 @@ export async function sendTaskAssignmentNotification(
 
   // Don't notify if self-assigned
   if (assignedTo === assignedBy) {
-    console.log('[TaskNotification] Skipping - self-assigned (assignedTo === assignedBy)');
+    logger.debug('Skipping notification - self-assigned', { component: 'taskNotifications', action: 'sendTaskAssignmentNotification' });
     return { success: true };
   }
 
-  console.log('[TaskNotification] Proceeding to send notification');
+  logger.debug('Proceeding to send notification', { component: 'taskNotifications', action: 'sendTaskAssignmentNotification' });
 
   // Build the rich task card notification message
   const message = buildTaskCardMessage({
@@ -106,12 +101,7 @@ export async function sendTaskAssignmentNotification(
   });
 
   try {
-    console.log('[TaskNotification] Inserting message into database:', {
-      created_by: SYSTEM_SENDER,
-      related_todo_id: taskId,
-      recipient: assignedTo,
-      messageLength: message.length,
-    });
+    logger.debug('Inserting notification message into database', { component: 'taskNotifications', action: 'sendTaskAssignmentNotification', metadata: { taskId, assignedTo } });
 
     const { data, error } = await supabase.from('messages').insert({
       id: uuidv4(),
@@ -128,7 +118,7 @@ export async function sendTaskAssignmentNotification(
       return { success: false, error: error.message };
     }
 
-    console.log('[TaskNotification] Message inserted successfully:', data);
+    logger.debug('Notification message inserted successfully', { component: 'taskNotifications', action: 'sendTaskAssignmentNotification', metadata: { taskId } });
     return { success: true };
   } catch (err) {
     logger.error('TaskNotification: Exception occurred', err as Error, { component: 'taskNotifications', action: 'sendTaskAssignmentNotification', taskId, assignedTo });

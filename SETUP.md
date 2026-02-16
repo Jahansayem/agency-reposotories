@@ -171,7 +171,7 @@ The easiest way to install is via the in-app setup page at `/outlook-setup`.
 ### Using the Add-in
 
 1. Open an email in Outlook
-2. Click the "Add to Todo" button in the ribbon (or find "Bealer Todo" in the add-ins panel)
+2. Click the "Add to Todo" button in the ribbon (or find "Wavezly Todo" in the add-ins panel)
 3. Click "Analyze Email with AI" to extract task details
 4. Review and edit the suggested task, assignee, priority, and due date
 5. Click "Add Task" to create the task in your todo list

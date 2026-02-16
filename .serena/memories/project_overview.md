@@ -1,7 +1,7 @@
 # Shared Todo List - Project Overview
 
 ## Purpose
-The Bealer Agency Todo List is a comprehensive real-time collaborative task management platform built for a small insurance agency (Allstate). It combines:
+The Wavezly Todo List is a comprehensive real-time collaborative task management platform built for a small insurance agency (Allstate). It combines:
 - Task Management with full CRUD, subtasks, attachments, notes, recurrence
 - Team Collaboration via real-time chat, DMs, message reactions, presence tracking
 - Strategic Planning (owner-only goals dashboard)

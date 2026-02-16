@@ -5,11 +5,10 @@ test.describe('Verify Agency Switcher', () => {
     console.log('\n=== 1. Navigate and Login ===');
     await page.goto('http://localhost:3000');
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     // Login as Derrick
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Fill PIN
     const pinInputs = page.locator('input[type="password"], input[inputmode="numeric"]');
@@ -19,7 +18,7 @@ test.describe('Verify Agency Switcher', () => {
     await pinInputs.nth(3).fill('8');
 
     console.log('\n=== 2. Wait for login to complete ===');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Wait for sidebar to appear
     const sidebar = page.locator('aside[aria-label="Main navigation"]');
@@ -30,7 +29,7 @@ test.describe('Verify Agency Switcher', () => {
     // Take a screenshot before checking
     await page.screenshot({ path: '/tmp/before-agency-switcher-check.png', fullPage: true });
 
-    // Look for the agency switcher button (should show "Bealer Agency" or agency name)
+    // Look for the agency switcher button (should show "Wavezly" or agency name)
     const agencySwitcher = page.locator('button:has-text("Bealer"), button:has-text("Agency")').first();
     const agencySwitcherExists = await agencySwitcher.count() > 0;
 
@@ -45,7 +44,7 @@ test.describe('Verify Agency Switcher', () => {
       // Try clicking it to open dropdown
       console.log('\n=== 4. Click Agency Switcher ===');
       await agencySwitcher.click();
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Look for dropdown menu
       const dropdown = page.locator('[role="menu"], .dropdown-menu, [data-radix-popper-content-wrapper]');

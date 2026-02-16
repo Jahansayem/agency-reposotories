@@ -53,39 +53,6 @@ export function useTodoOperations({
 }: UseTodoOperationsProps) {
 
   /**
-   * Add a new todo with duplicate detection
-   */
-  const addTodo = useCallback((
-    text: string,
-    priority: TodoPriority,
-    dueDate?: string,
-    assignedTo?: string,
-    subtasks?: Subtask[],
-    transcription?: string,
-    sourceFile?: File,
-    reminderAt?: string,
-    notes?: string,
-    recurrence?: 'daily' | 'weekly' | 'monthly' | null,
-    customer?: LinkedCustomer
-  ) => {
-    // Check for duplicates
-    const combinedText = `${text} ${transcription || ''}`;
-    if (shouldCheckForDuplicates(combinedText)) {
-      const duplicates = findPotentialDuplicates(combinedText, todos);
-      if (duplicates.length > 0) {
-        // Store pending task and show modal
-        openDuplicateModal(
-          { text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile },
-          duplicates
-        );
-        return;
-      }
-    }
-    // No duplicates found, create directly
-    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
-  }, [todos, openDuplicateModal]);
-
-  /**
    * Actually create the todo (called after duplicate check or when user confirms)
    */
   const createTodoDirectly = useCallback(async (
@@ -232,6 +199,39 @@ export function useTodoOperations({
       }
     }
   }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore, updateTodoInStore, announce, todos]);
+
+  /**
+   * Add a new todo with duplicate detection
+   */
+  const addTodo = useCallback((
+    text: string,
+    priority: TodoPriority,
+    dueDate?: string,
+    assignedTo?: string,
+    subtasks?: Subtask[],
+    transcription?: string,
+    sourceFile?: File,
+    reminderAt?: string,
+    notes?: string,
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null,
+    customer?: LinkedCustomer
+  ) => {
+    // Check for duplicates
+    const combinedText = `${text} ${transcription || ''}`;
+    if (shouldCheckForDuplicates(combinedText)) {
+      const duplicates = findPotentialDuplicates(combinedText, todos);
+      if (duplicates.length > 0) {
+        // Store pending task and show modal
+        openDuplicateModal(
+          { text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile },
+          duplicates
+        );
+        return;
+      }
+    }
+    // No duplicates found, create directly
+    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
+  }, [todos, openDuplicateModal, createTodoDirectly]);
 
   /**
    * Duplicate an existing todo

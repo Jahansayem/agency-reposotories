@@ -20,12 +20,10 @@ test.describe('Image Optimization (Issue #30)', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
@@ -91,7 +89,7 @@ test.describe('Image Optimization (Issue #30)', () => {
 
       // Load a page with images
       await page.reload();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Verify at least some image requests were made
       // (This test might not always pass if there are no image attachments)
@@ -137,12 +135,12 @@ test.describe('Image Optimization (Issue #30)', () => {
       });
 
       // Wait for initial load
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
       const initial = initialImageRequests;
 
       // Scroll down to load more images
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
       scrollImageRequests = 1; // Mark that we've scrolled
 
       // If there were images to lazy load, we should see more requests after scroll
@@ -172,7 +170,7 @@ test.describe('Image Optimization (Issue #30)', () => {
       });
 
       await page.reload();
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
     });
 
     test('should use appropriate quality setting', async ({ page }) => {
@@ -210,7 +208,7 @@ test.describe('Image Optimization (Issue #30)', () => {
       });
 
       await page.reload();
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Desktop viewport
       await page.setViewportSize({ width: 1920, height: 1080 });
@@ -228,7 +226,7 @@ test.describe('Image Optimization (Issue #30)', () => {
       });
 
       await page.reload();
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Mobile images should generally be smaller than desktop
       // (This is best-effort - depends on actual image content)
@@ -398,7 +396,7 @@ test.describe('Image Optimization (Issue #30)', () => {
         const initialBox = await imageThumbnail.boundingBox();
 
         // Wait for image to fully load
-        await page.waitForTimeout(2000);
+        await page.waitForLoadState('networkidle');
 
         // Get final position
         const finalBox = await imageThumbnail.boundingBox();

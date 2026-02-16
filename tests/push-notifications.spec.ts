@@ -19,12 +19,10 @@ test.describe('Push Notifications', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     // Wait for app to load - main navigation sidebar appears after successful login
@@ -38,7 +36,7 @@ test.describe('Push Notifications', () => {
 
     if (await settingsButton.count() > 0) {
       await settingsButton.first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Look for push notification section
       const pushSection = page.locator('text=/Push Notifications?/i');
@@ -69,7 +67,7 @@ test.describe('Push Notifications', () => {
 
   test('should register service worker on load', async ({ page }) => {
     // Wait a bit for service worker to register
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Check if service worker is registered
     const swRegistered = await page.evaluate(async () => {
@@ -99,7 +97,7 @@ test.describe('Push Notifications', () => {
       await button.click();
 
       // Wait for state change
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Verify state changed
       const newState = await button.getAttribute('aria-checked');
@@ -123,7 +121,7 @@ test.describe('Push Notifications', () => {
 
     if (await bellButton.count() > 0) {
       await bellButton.click();
-      await page.waitForTimeout(3000);
+      await page.waitForLoadState('networkidle');
 
       // Verify subscription was created
       // This would require database access or API call
@@ -140,11 +138,11 @@ test.describe('Push Notifications', () => {
     if (await bellButton.count() > 0) {
       // Enable
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Disable
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Should show as disabled
       const ariaChecked = await bellButton.getAttribute('aria-checked');
@@ -177,7 +175,7 @@ test.describe('Push Notifications', () => {
 
     // Reload page
     await page.reload();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Should show blocked message
     const blockedMessage = page.locator('text=/blocked|denied|disable/i');
@@ -192,7 +190,7 @@ test.describe('Push Notifications', () => {
     });
 
     await page.reload();
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Toggle should not appear or should show unsupported message
     const unsupportedMessage = page.locator('text=/not supported|unsupported/i');
@@ -205,14 +203,14 @@ test.describe('Push Notifications', () => {
 
     if (await bellButton.count() > 0) {
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if enabled
       let enabled = await bellButton.getAttribute('aria-checked');
 
       // Reload page
       await page.reload();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Wait for bell button to appear again
       await bellButton.waitFor({ state: 'visible', timeout: 5000 });
@@ -236,7 +234,7 @@ test.describe('Push Notifications', () => {
       // Loader might appear briefly
 
       await clickPromise;
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Loader should disappear
       await expect(loader).not.toBeVisible({ timeout: 5000 });
@@ -256,7 +254,7 @@ test.describe('Push Notifications', () => {
 
     if (await bellButton.count() > 0) {
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Should show error message
       const errorMessage = page.locator('text=/failed|error/i');
@@ -269,7 +267,7 @@ test.describe('Push Notifications', () => {
 
     if (await bellButton.count() > 0) {
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Look for success message
       const successMessage = page.locator('text=/enabled|success|subscribed/i');
@@ -284,7 +282,7 @@ test.describe('Push Notifications', () => {
       const initialClass = await bellButton.getAttribute('class');
 
       await bellButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const newClass = await bellButton.getAttribute('class');
 
@@ -295,7 +293,7 @@ test.describe('Push Notifications', () => {
 
   test('should work with service worker lifecycle', async ({ page }) => {
     // Service worker should handle updates
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     const swStatus = await page.evaluate(async () => {
       if ('serviceWorker' in navigator) {
@@ -322,7 +320,7 @@ test.describe('Push Notifications', () => {
 
     if (await bellButton.count() > 0) {
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Subscription should be created
       // In real scenario, opening in new context would create another subscription
@@ -335,11 +333,11 @@ test.describe('Push Notifications', () => {
     if (await bellButton.count() > 0) {
       // Enable
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Disable
       await bellButton.click();
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Subscription should be removed from database
       // Verify through API or database check
@@ -354,12 +352,10 @@ test.describe('Push Notification Settings Panel', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     // Wait for app to load - main navigation sidebar appears after successful login
     await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
@@ -371,7 +367,7 @@ test.describe('Push Notification Settings Panel', () => {
 
     if (await settingsButton.count() > 0) {
       await settingsButton.first().click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Should show push notification section
       const pushSection = page.locator('[data-testid="push-settings"], text=/push notification/i');

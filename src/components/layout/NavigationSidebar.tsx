@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { logger } from '@/lib/logger';
 import {
   LayoutDashboard,
   CheckSquare,
+  Calendar,
   Target,
   Archive,
   ChevronLeft,
@@ -15,6 +17,7 @@ import {
   BarChart2,
   Keyboard,
   Users,
+  Flame,
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
@@ -24,6 +27,7 @@ import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 import { CreateAgencyModal } from '@/components/CreateAgencyModal';
 import { AgencyMembersModal } from '@/components/AgencyMembersModal';
+import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -49,6 +53,8 @@ interface NavItem {
 
 const primaryNavItems: NavItem[] = [
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
+  { id: 'opportunities', label: 'Opportunities', icon: Flame },
   { id: 'ai_inbox', label: 'AI Inbox', icon: Inbox },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'analytics', label: 'Analytics', icon: BarChart2 },
@@ -185,7 +191,7 @@ export default function NavigationSidebar({
                   </div>
                   <div className="overflow-hidden">
                     <h1 className="font-semibold text-sm truncate text-[var(--foreground)]">
-                      {currentAgency?.name || 'Bealer Agency'}
+                      {currentAgency?.name || 'Wavezly'}
                     </h1>
                     <p className="text-xs truncate text-[var(--text-muted)]">
                       Task Manager
@@ -210,22 +216,25 @@ export default function NavigationSidebar({
           )}
         </AnimatePresence>
 
-        {/* Collapse toggle - only visible when expanded */}
+        {/* Sync status + Collapse toggle */}
         {isExpanded && (
-          <button
-            onClick={toggleSidebar}
-            className={`
-              p-1.5 rounded-[var(--radius-lg)] transition-colors
-              text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-            `}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
+          <div className="flex items-center gap-1">
+            <SyncStatusIndicator showLabel />
+            <button
+              onClick={toggleSidebar}
+              className={`
+                p-1.5 rounded-[var(--radius-lg)] transition-colors
+                text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
+              `}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
             )}
-          </button>
+            </button>
+          </div>
         )}
       </div>
 
@@ -365,7 +374,7 @@ export default function NavigationSidebar({
         onClose={() => setShowCreateAgencyModal(false)}
         onSuccess={(agency) => {
           // Successfully created agency - the AgencyContext will auto-refresh
-          console.log('Agency created:', agency);
+          logger.info('Agency created successfully', { component: 'NavigationSidebar', action: 'onCreateAgency' });
           setShowCreateAgencyModal(false);
           // Optional: Show success toast notification here
         }}

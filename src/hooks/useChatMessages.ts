@@ -359,14 +359,17 @@ export function useChatMessages({
     if (messageIds.length === 0) return;
 
     // Filter to only unread messages not created by current user
-    // BUGFIX REACT-004: Read from ref at filter time, but use ref again in fallback loop
-    // to get fresh read_by values and avoid race conditions
-    const unreadIds = messageIds.filter(id => {
+    // Capture read_by arrays at filter time to avoid race conditions in fallback loop
+    const unreadEntries = messageIds.map(id => {
       const msg = messagesRef.current.find(m => m.id === id);
-      return msg && msg.created_by !== currentUser.name && !(msg.read_by || []).includes(currentUser.name);
-    });
+      if (!msg || msg.created_by === currentUser.name || (msg.read_by || []).includes(currentUser.name)) {
+        return null;
+      }
+      return { id, readBy: msg.read_by || [] };
+    }).filter((entry): entry is { id: string; readBy: string[] } => entry !== null);
 
-    if (unreadIds.length === 0) return;
+    if (unreadEntries.length === 0) return;
+    const unreadIds = unreadEntries.map(e => e.id);
 
     // Optimistic update
     setMessages(prev => prev.map(m => {
@@ -389,17 +392,14 @@ export function useChatMessages({
 
       if (rpcError) {
         // RPC not available - use batched fallback for all messages at once
-        // BUGFIX REACT-004: Read fresh from messagesRef.current inside loop to avoid stale closure
-        // PERFORMANCE FIX: Parallelize database updates instead of sequential awaits (N+1 -> O(1))
+        // Use read_by captured at filter time to avoid race conditions
         await Promise.all(
-          unreadIds.map(id => {
-            const msg = messagesRef.current.find(m => m.id === id);
-            const currentReadBy = msg?.read_by || [];
-            return supabase
+          unreadEntries.map(({ id, readBy }) =>
+            supabase
               .from('messages')
-              .update({ read_by: [...currentReadBy, currentUser.name] })
-              .eq('id', id);
-          })
+              .update({ read_by: [...readBy, currentUser.name] })
+              .eq('id', id)
+          )
         );
       } else if (unreadIds.length > 1) {
         // RPC works - use it for remaining messages

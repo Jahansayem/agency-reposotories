@@ -82,7 +82,6 @@ test.describe('Accessibility - Semantic Landmarks', () => {
     test('should have mobile bottom navigation on small screens', async ({ page }) => {
       // Set mobile viewport
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.waitForTimeout(300);
 
       // Mobile bottom nav should be visible
       const bottomNav = page.locator('nav[aria-label*="navigation"]').last();
@@ -127,7 +126,7 @@ test.describe('Accessibility - Semantic Landmarks', () => {
       const chatButton = page.locator('button:has-text("Chat")').first();
       if (await chatButton.isVisible()) {
         await chatButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Right panel aside should appear (on desktop)
         const asides = await page.locator('aside').count();
@@ -249,7 +248,7 @@ test.describe('Accessibility - Semantic Landmarks', () => {
   test.describe('Responsive Landmarks', () => {
     test('should hide desktop nav and show mobile nav on small screens', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Mobile bottom nav should be visible
       const mobileNav = page.locator('nav.md\\:hidden, nav[class*="fixed bottom"]');
@@ -262,7 +261,7 @@ test.describe('Accessibility - Semantic Landmarks', () => {
 
     test('should maintain landmark structure on desktop', async ({ page }) => {
       await page.setViewportSize({ width: 1920, height: 1080 });
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Desktop sidebar should be visible
       const sidebar = page.locator('aside[aria-label="Main navigation"]');
@@ -278,19 +277,17 @@ test.describe('Accessibility - Semantic Landmarks', () => {
       const chatButton = page.locator('button:has-text("Chat")').first();
       if (await chatButton.isVisible()) {
         await chatButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
 
       // Desktop (xl): right panel should be visible
       await page.setViewportSize({ width: 1920, height: 1080 });
-      await page.waitForTimeout(300);
 
       const rightPanel = page.locator('aside').last();
       const desktopVisible = await rightPanel.isVisible();
 
       // Mobile: right panel should be hidden (chat in modal/sheet)
       await page.setViewportSize({ width: 375, height: 667 });
-      await page.waitForTimeout(300);
 
       const mobileVisible = await rightPanel.isVisible();
 

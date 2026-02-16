@@ -10,7 +10,7 @@ import { Resend } from 'resend';
 import { logger } from '@/lib/logger';
 
 const DEFAULT_BASE_URL = 'https://shared-todo-list-production.up.railway.app';
-const FROM_ADDRESS = 'Bealer Agency <noreply@bealertodo.com>';
+const FROM_ADDRESS = 'Wavezly <noreply@bealertodo.com>';
 
 /**
  * Lazily initialised Resend client (returns null when no API key is configured).
@@ -76,7 +76,7 @@ export async function sendInvitationEmail(
         <!-- Header -->
         <tr>
           <td style="background:#0033A0;padding:24px 32px;">
-            <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Bealer Agency Todo</h1>
+            <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Wavezly Todo</h1>
           </td>
         </tr>
         <!-- Body -->
@@ -106,7 +106,7 @@ export async function sendInvitationEmail(
         <tr>
           <td style="padding:16px 32px;background:#f9fafb;border-top:1px solid #eee;">
             <p style="margin:0;color:#999;font-size:12px;">
-              &copy; ${new Date().getFullYear()} Bealer Agency &middot;
+              &copy; ${new Date().getFullYear()} Wavezly &middot;
               <a href="${escapeHtml(baseUrl)}" style="color:#999;">Visit app</a>
             </p>
           </td>
@@ -165,7 +165,7 @@ export async function sendPasswordResetEmail(
     await resend.emails.send({
       from: FROM_ADDRESS,
       to,
-      subject: 'Reset Your PIN - Bealer Agency Todo',
+      subject: 'Reset Your PIN - Wavezly Todo',
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -177,7 +177,7 @@ export async function sendPasswordResetEmail(
         <!-- Header -->
         <tr>
           <td style="background:#0033A0;padding:24px 32px;">
-            <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Bealer Agency Todo</h1>
+            <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Wavezly Todo</h1>
           </td>
         </tr>
         <!-- Body -->
@@ -213,7 +213,7 @@ export async function sendPasswordResetEmail(
         <tr>
           <td style="padding:16px 32px;background:#f9fafb;border-top:1px solid #eee;">
             <p style="margin:0;color:#999;font-size:12px;">
-              &copy; ${new Date().getFullYear()} Bealer Agency &middot;
+              &copy; ${new Date().getFullYear()} Wavezly &middot;
               <a href="${escapeHtml(baseUrl)}" style="color:#999;">Visit app</a>
             </p>
           </td>

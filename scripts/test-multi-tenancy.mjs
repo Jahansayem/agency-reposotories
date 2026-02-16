@@ -95,22 +95,22 @@ async function runTests() {
   test('messages table has agency_id column', !messagesErr, messagesErr?.message);
 
   // ============================================
-  // 2. BEALER AGENCY DATA TESTS
+  // 2. WAVEZLY DATA TESTS
   // ============================================
-  console.log('\n🏢 BEALER AGENCY DATA TESTS\n');
+  console.log('\n🏢 WAVEZLY DATA TESTS\n');
 
-  // Test Bealer Agency exists
+  // Test Wavezly exists
   const { data: bealerAgency, error: bealerErr } = await supabase
     .from('agencies')
     .select('*')
-    .eq('slug', 'bealer-agency')
+    .eq('slug', 'wavezly')
     .single();
-  test('Bealer Agency exists', !!bealerAgency, bealerErr?.message);
+  test('Wavezly exists', !!bealerAgency, bealerErr?.message);
 
   if (bealerAgency) {
-    test('Bealer Agency has correct name', bealerAgency.name === 'Bealer Agency');
-    test('Bealer Agency is active', bealerAgency.is_active === true);
-    test('Bealer Agency has professional tier', bealerAgency.subscription_tier === 'professional');
+    test('Wavezly has correct name', bealerAgency.name === 'Wavezly');
+    test('Wavezly is active', bealerAgency.is_active === true);
+    test('Wavezly has professional tier', bealerAgency.subscription_tier === 'professional');
 
     // Test Derrick is owner
     const { data: derrickMembership } = await supabase
@@ -141,7 +141,7 @@ async function runTests() {
       .select('*', { count: 'exact', head: true })
       .is('agency_id', null);
 
-    test('All todos assigned to Bealer Agency', todosWithoutAgency === 0,
+    test('All todos assigned to Wavezly', todosWithoutAgency === 0,
       `${todosWithoutAgency} todos without agency_id`);
   }
 

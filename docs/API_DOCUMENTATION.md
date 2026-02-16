@@ -3,7 +3,7 @@
 **Last Updated:** February 2026
 **Version:** 3.0 (Sprint 3 Complete)
 
-This document provides comprehensive API documentation for all endpoints in the Bealer Agency Todo List application.
+This document provides comprehensive API documentation for all endpoints in the Wavezly Todo List application.
 
 ---
 
@@ -1397,7 +1397,7 @@ X-RateLimit-Reset: 1643760000
 API version is specified in Accept header:
 
 ```
-Accept: application/vnd.bealer-todo.v1+json
+Accept: application/vnd.wavezly-todo.v1+json
 ```
 
 Current version: `v1`

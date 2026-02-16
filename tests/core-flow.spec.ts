@@ -21,13 +21,13 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await expect(userCard).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to fully load
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card to select them
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN - look for 4 password inputs
   const pinInputs = page.locator('input[type="password"]');
@@ -36,11 +36,10 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   // Enter each digit of the PIN
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill(pin[i]);
-    await page.waitForTimeout(100); // Small delay between digits
   }
 
   // Wait for automatic login after PIN entry
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Dismiss any modals that appear after login (welcome modal, dashboard modal, etc.)
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -51,17 +50,16 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
 
     if (await viewTasksBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
       await viewTasksBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     } else if (await dismissBtn.isVisible({ timeout: 500 }).catch(() => false)) {
       await dismissBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     } else if (await closeModalBtn.isVisible({ timeout: 500 }).catch(() => false)) {
       await closeModalBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     } else if (await modalBackdrop.isVisible({ timeout: 500 }).catch(() => false)) {
       // Press Escape to close any modal
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(500);
     } else {
       break; // No modals found
     }
@@ -102,7 +100,7 @@ test.describe('Core Functionality Tests', () => {
       const backdrop = page.locator('.fixed.inset-0.z-50');
       if (await backdrop.isVisible({ timeout: 500 }).catch(() => false)) {
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       } else {
         break;
       }
@@ -120,7 +118,7 @@ test.describe('Core Functionality Tests', () => {
 
       if (await tasksTab.isVisible({ timeout: 2000 }).catch(() => false)) {
         await tasksTab.click({ force: true });
-        await page.waitForTimeout(1000);
+        await page.waitForLoadState('networkidle');
       }
 
       // On mobile, use the floating "+" button or the "+ Add" button
@@ -129,14 +127,14 @@ test.describe('Core Functionality Tests', () => {
 
       if (await addBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
         await addBtn.click({ force: true });
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
     } else {
       // Click the "New Task" button to open the add task modal/form (desktop)
       const newTaskBtn = page.locator('button').filter({ hasText: 'New Task' }).first();
       await expect(newTaskBtn).toBeVisible({ timeout: 5000 });
       await newTaskBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Find the task input textarea
@@ -154,7 +152,7 @@ test.describe('Core Functionality Tests', () => {
     await page.keyboard.press('Enter');
 
     // Wait for task to appear in the list
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Take screenshot for debugging
     await page.screenshot({ path: 'test-results/core-add-task.png', fullPage: true });
@@ -176,7 +174,7 @@ test.describe('Core Functionality Tests', () => {
     // Click the "New Task" button to open the add task form
     const newTaskBtn = page.locator('button').filter({ hasText: 'New Task' }).first();
     await newTaskBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const todoInput = page.locator('textarea[placeholder*="What needs to be done"]').first()
       .or(page.locator('[data-testid="add-task-input"]'));
@@ -190,7 +188,7 @@ test.describe('Core Functionality Tests', () => {
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 10000 });
 
     // Wait for Supabase to persist
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Reload page
     await page.reload();
@@ -204,7 +202,7 @@ test.describe('Core Functionality Tests', () => {
     }
 
     // Wait for data to load
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     // Scroll down to find the task (it may be below the fold)
     const taskLocator = page.locator(`text=${taskName}`);
@@ -213,7 +211,7 @@ test.describe('Core Functionality Tests', () => {
     for (let i = 0; i < 5; i++) {
       if (await taskLocator.isVisible().catch(() => false)) break;
       await page.mouse.wheel(0, 500);
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Take screenshot
@@ -237,7 +235,7 @@ test.describe('Core Functionality Tests', () => {
       const moreTab = page.locator('nav[aria-label="Main navigation"] button[aria-label="More"]');
       if (await moreTab.isVisible({ timeout: 2000 }).catch(() => false)) {
         await moreTab.click({ force: true });
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
 
       // Check for settings or logout option
@@ -252,7 +250,7 @@ test.describe('Core Functionality Tests', () => {
 
       await expect(userBtn).toBeVisible({ timeout: 5000 });
       await userBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Take screenshot of dropdown
       await page.screenshot({ path: 'test-results/core-user-dropdown.png', fullPage: true });
@@ -282,7 +280,7 @@ test.describe('Core Functionality Tests', () => {
       const moreTab = page.locator('nav[aria-label="Main navigation"] button[aria-label="More"]');
       if (await moreTab.isVisible({ timeout: 2000 }).catch(() => false)) {
         await moreTab.click({ force: true });
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
 
       // Find and click logout button
@@ -299,10 +297,9 @@ test.describe('Core Functionality Tests', () => {
       } else {
         // Fallback: dismiss overlays and use dropdown
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
         const userBtn = page.locator('button').filter({ hasText: 'Derrick' }).last();
         await userBtn.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
         const logoutBtn = page.locator('[role="menuitem"]').filter({ hasText: 'Logout' });
         await expect(logoutBtn).toBeVisible({ timeout: 5000 });
         await logoutBtn.click({ force: true });

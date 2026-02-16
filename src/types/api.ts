@@ -333,6 +333,7 @@ export interface TodoCreateRequest {
   text: string;
   priority?: string;
   assigned_to?: string;
+  is_private?: boolean;
   due_date?: string;
   notes?: string;
   subtasks?: Array<{
@@ -350,6 +351,7 @@ export interface TodoUpdateRequest {
   status?: string;
   priority?: string;
   assigned_to?: string | null;
+  is_private?: boolean;
   due_date?: string | null;
   notes?: string | null;
   subtasks?: Array<{

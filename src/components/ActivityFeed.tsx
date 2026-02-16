@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
-import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield } from 'lucide-react';
+import { Activity, Clock, User, FileText, CheckCircle2, Circle, ArrowRight, Flag, Calendar, StickyNote, ListTodo, Trash2, RefreshCw, Bell, BellOff, BellRing, Volume2, VolumeX, Settings, Paperclip, GitMerge, ChevronDown, Filter, Building, UserPlus, UserMinus, Shield, Mail, Lock } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG, ActivityNotificationSettings, DEFAULT_NOTIFICATION_SETTINGS } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
@@ -82,6 +82,7 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   task_deleted: { icon: Trash2, label: 'deleted task', color: 'var(--danger)' },
   task_completed: { icon: CheckCircle2, label: 'completed task', color: 'var(--success-vivid)' },
   task_reopened: { icon: Circle, label: 'reopened task', color: 'var(--warning)' },
+  task_privacy_changed: { icon: Lock, label: 'changed task privacy', color: 'var(--state-info)' },
   status_changed: { icon: ArrowRight, label: 'changed status', color: 'var(--state-info)' },
   priority_changed: { icon: Flag, label: 'changed priority', color: 'var(--warning)' },
   assigned_to_changed: { icon: User, label: 'reassigned task', color: 'var(--accent-vivid)' },
@@ -102,6 +103,8 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   customer_responded: { icon: CheckCircle2, label: 'customer responded', color: 'var(--success-vivid)' },
   follow_up_overdue: { icon: Bell, label: 'follow-up overdue', color: 'var(--danger)' },
   task_reordered: { icon: ArrowRight, label: 'reordered task', color: 'var(--accent-vivid)' },
+  invitation_sent: { icon: Mail, label: 'sent invitation', color: 'var(--accent-vivid)' },
+  invitation_accepted: { icon: UserPlus, label: 'accepted invitation', color: 'var(--success-vivid)' },
   agency_created: { icon: Building, label: 'created agency', color: 'var(--success-vivid)' },
   member_added: { icon: UserPlus, label: 'added member', color: 'var(--success-vivid)' },
   member_removed: { icon: UserMinus, label: 'removed member', color: 'var(--danger)' },
@@ -116,7 +119,7 @@ type ActivityFilterType = 'all' | 'tasks' | 'subtasks' | 'assignments' | 'templa
 
 const FILTER_OPTIONS: { value: ActivityFilterType; label: string; actions: ActivityAction[] }[] = [
   { value: 'all', label: 'All Activity', actions: [] },
-  { value: 'tasks', label: 'Task Changes', actions: ['task_created', 'task_updated', 'task_deleted', 'task_completed', 'task_reopened', 'status_changed', 'priority_changed', 'due_date_changed', 'notes_updated', 'tasks_merged'] },
+  { value: 'tasks', label: 'Task Changes', actions: ['task_created', 'task_updated', 'task_deleted', 'task_completed', 'task_reopened', 'task_privacy_changed', 'status_changed', 'priority_changed', 'due_date_changed', 'notes_updated', 'tasks_merged'] },
   { value: 'subtasks', label: 'Subtasks', actions: ['subtask_added', 'subtask_completed', 'subtask_deleted'] },
   { value: 'assignments', label: 'Assignments', actions: ['assigned_to_changed'] },
   { value: 'templates', label: 'Templates', actions: ['template_created', 'template_used'] },

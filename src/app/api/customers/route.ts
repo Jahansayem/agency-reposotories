@@ -20,6 +20,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { decryptField } from '@/lib/fieldEncryption';
 import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { VALIDATION_LIMITS, escapeLikePattern } from '@/lib/constants';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -42,12 +44,12 @@ function normalizeProducts(products: string[] | string | null | undefined): stri
   return [];
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q')?.trim() || '';
-    const agencyId = searchParams.get('agency_id');
+    const query = (searchParams.get('q')?.trim() || '').slice(0, VALIDATION_LIMITS.MAX_SEARCH_QUERY_LENGTH);
+    const agencyId = ctx.agencyId;
     const segmentFilter = searchParams.get('segment');
     const opportunityTypeFilter = searchParams.get('opportunity_type');
     const sortBy = searchParams.get('sort') || 'premium_high';
@@ -55,45 +57,40 @@ export async function GET(request: NextRequest) {
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
 
     // First, try customer_insights table
-    // NOTE: No limit here - we need ALL customers for proper pagination after merge/dedupe
+    // Cap at 1000 rows to prevent OOM on large agencies
     let insightsQuery = supabase
       .from('customer_insights')
       .select('*')
-      .order('total_premium', { ascending: false });
+      .order('total_premium', { ascending: false })
+      .limit(1000);
 
     if (agencyId) {
-      // Include customers with matching agency_id OR null agency_id (legacy/demo data)
-      insightsQuery = insightsQuery.or(`agency_id.eq.${agencyId},agency_id.is.null`);
+      insightsQuery = insightsQuery.eq('agency_id', agencyId);
     }
 
     if (query) {
       // Search by name only - email and phone are encrypted and cannot be searched with ILIKE
-      insightsQuery = insightsQuery.ilike('customer_name', `%${query}%`);
+      insightsQuery = insightsQuery.ilike('customer_name', `%${escapeLikePattern(query)}%`);
     }
 
     const { data: insights, error: insightsError } = await insightsQuery;
-    console.log('[Customers API] customer_insights results:', {
-      count: insights?.length || 0,
-      error: insightsError?.message,
-      sampleAgencyIds: insights?.slice(0, 3).map(i => i.agency_id)
-    });
 
     // Also search cross_sell_opportunities for customers not in insights
-    // NOTE: No limit here - we need ALL opportunities for proper pagination after merge/dedupe
+    // Cap at 1000 rows to prevent OOM on large agencies
     let opportunitiesQuery = supabase
       .from('cross_sell_opportunities')
       .select('*')
       .eq('dismissed', false)
-      .order('priority_score', { ascending: false });
+      .order('priority_score', { ascending: false })
+      .limit(1000);
 
     if (agencyId) {
-      // Include opportunities with matching agency_id OR null agency_id (legacy/demo data)
-      opportunitiesQuery = opportunitiesQuery.or(`agency_id.eq.${agencyId},agency_id.is.null`);
+      opportunitiesQuery = opportunitiesQuery.eq('agency_id', agencyId);
     }
 
     if (query) {
       // Search by name only - email and phone may be encrypted
-      opportunitiesQuery = opportunitiesQuery.ilike('customer_name', `%${query}%`);
+      opportunitiesQuery = opportunitiesQuery.ilike('customer_name', `%${escapeLikePattern(query)}%`);
     }
 
     // Filter by opportunity type (segment_type in database)
@@ -102,11 +99,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: opportunities, error: oppError } = await opportunitiesQuery;
-    console.log('[Customers API] cross_sell_opportunities results:', {
-      count: opportunities?.length || 0,
-      error: oppError?.message,
-      sampleAgencyIds: opportunities?.slice(0, 3).map(o => o.agency_id)
-    });
 
     // Merge and deduplicate by customer name
     const customerMap = new Map<string, {
@@ -323,4 +315,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

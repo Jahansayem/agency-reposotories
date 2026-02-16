@@ -18,14 +18,14 @@ test.describe('Dashboard Colors - Light Mode', () => {
     if (currentMode === 'dark') {
       // Toggle to light mode
       await page.click('[data-testid="theme-toggle"]');
-      await page.waitForTimeout(500); // Wait for theme transition
+      await page.waitForLoadState('networkidle'); // Wait for theme transition
     }
 
     // Navigate to dashboard
     const dashboardButton = page.locator('button:has-text("Dashboard")');
     if (await dashboardButton.isVisible().catch(() => false)) {
       await dashboardButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
   });
 
@@ -45,7 +45,7 @@ test.describe('Dashboard Colors - Light Mode', () => {
     const weeklyButton = page.locator('button:has-text("This Week")');
     if (await weeklyButton.isVisible().catch(() => false)) {
       await weeklyButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Check header border uses CSS variable
@@ -90,14 +90,14 @@ test.describe('Dashboard Colors - Dark Mode', () => {
     if (currentMode !== 'dark') {
       // Toggle to dark mode
       await page.click('[data-testid="theme-toggle"]');
-      await page.waitForTimeout(500); // Wait for theme transition
+      await page.waitForLoadState('networkidle'); // Wait for theme transition
     }
 
     // Navigate to dashboard
     const dashboardButton = page.locator('button:has-text("Dashboard")');
     if (await dashboardButton.isVisible().catch(() => false)) {
       await dashboardButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
   });
 
@@ -116,7 +116,7 @@ test.describe('Dashboard Colors - Dark Mode', () => {
     const weeklyButton = page.locator('button:has-text("This Week")');
     if (await weeklyButton.isVisible().catch(() => false)) {
       await weeklyButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Check title is visible (not dark text on dark background)
@@ -142,14 +142,13 @@ test.describe('Dashboard Colors - Dark Mode', () => {
     const weeklyButton = page.locator('button:has-text("This Week")');
     if (await weeklyButton.isVisible().catch(() => false)) {
       await weeklyButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Hover over a bar to show tooltip
     const bar = page.locator('[role="graphics-symbol"]').first();
     if (await bar.isVisible().catch(() => false)) {
       await bar.hover();
-      await page.waitForTimeout(300);
 
       // Check tooltip background doesn't use hardcoded dark color
       const tooltipBg = await page.evaluate(() => {

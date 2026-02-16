@@ -8,7 +8,7 @@
  * and access to customer details.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -31,29 +31,16 @@ import {
 import { useCustomerSearch, useCustomerList } from '@/hooks/useCustomers';
 import { CustomerCard } from '../customer/CustomerCard';
 import { CustomerDetailPanel } from '../customer/CustomerDetailPanel';
-import type { Customer, CustomerSegment, OpportunityType, CustomerSortOption } from '@/types/customer';
-import { SEGMENT_CONFIGS } from '@/constants/customerSegments';
+import type { Customer, OpportunityType, CustomerSortOption } from '@/types/customer';
 
 interface CustomerLookupViewProps {
   agencyId?: string;
   currentUser: string;
   onClose?: () => void;
-  initialSegment?: CustomerSegment | 'all'; // For navigation from segmentation dashboard
   initialSort?: CustomerSortOption; // For navigation from TodayOpportunitiesPanel
+  onTaskClick?: (taskId: string) => void;  // Navigate to task in tasks view
+  onNavigateBack?: () => void;  // Go back to previous view (analytics)
 }
-
-// Customer value tier filters - dynamically generated from SEGMENT_CONFIGS
-const SEGMENT_FILTERS: { value: CustomerSegment | 'all'; label: string; icon: React.ReactNode }[] = [
-  { value: 'all', label: 'All Tiers', icon: <Users className="w-4 h-4" /> },
-  ...Object.values(SEGMENT_CONFIGS).map(config => {
-    const IconComponent = config.icon;
-    return {
-      value: config.segment,
-      label: config.label,
-      icon: <IconComponent className={`w-4 h-4 ${config.text}`} />
-    };
-  })
-];
 
 // Cross-sell opportunity type filters
 const OPPORTUNITY_TYPE_FILTERS: { value: OpportunityType | 'all'; label: string; icon: React.ReactNode; color: string }[] = [
@@ -90,12 +77,16 @@ export function CustomerLookupView({
   agencyId,
   currentUser,
   onClose,
-  initialSegment = 'all',
   initialSort = 'priority',
+  onTaskClick,
+  onNavigateBack,
 }: CustomerLookupViewProps) {
-  const [selectedSegment, setSelectedSegment] = useState<CustomerSegment | 'all'>(initialSegment);
   const [selectedOpportunityType, setSelectedOpportunityType] = useState<OpportunityType | 'all'>('all');
   const [sortBy, setSortBy] = useState<CustomerSortOption>(initialSort);
+
+  useEffect(() => {
+    setSortBy(initialSort);
+  }, [initialSort]);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showDueTodayOnly, setShowDueTodayOnly] = useState(false);
@@ -119,18 +110,14 @@ export function CustomerLookupView({
     loadMore,
   } = useCustomerList({
     agencyId,
-    segment: selectedSegment === 'all' ? undefined : selectedSegment,
     opportunityType: selectedOpportunityType,
     sortBy,
     limit: 50,
   });
 
   // Determine which customers to show
-  // Filter search results by segment and opportunity type
+  // Filter search results by opportunity type
   let filteredSearchResults = searchResults;
-  if (selectedSegment !== 'all') {
-    filteredSearchResults = filteredSearchResults.filter(c => c.segment === selectedSegment);
-  }
   if (selectedOpportunityType !== 'all') {
     filteredSearchResults = filteredSearchResults.filter(c => c.opportunityType === selectedOpportunityType);
   }
@@ -188,9 +175,9 @@ export function CustomerLookupView({
               Browse your book of business
             </p>
           </div>
-          {onClose && (
+          {(onNavigateBack || onClose) && (
             <button
-              onClick={onClose}
+              onClick={onNavigateBack || onClose}
               className="p-2 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-muted)] transition-colors"
             >
               <X className="w-5 h-5" />
@@ -254,24 +241,6 @@ export function CustomerLookupView({
               </>
             )}
           </div>
-        </div>
-
-        {/* Customer tier filter chips */}
-        <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 -mx-1 px-1">
-          {SEGMENT_FILTERS.map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setSelectedSegment(filter.value)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex-shrink-0 whitespace-nowrap ${
-                selectedSegment === filter.value
-                  ? 'bg-[var(--accent)] text-white'
-                  : 'bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--foreground)]'
-              }`}
-            >
-              {filter.icon}
-              {filter.label}
-            </button>
-          ))}
         </div>
 
         {/* Opportunity type filter chips */}
@@ -409,24 +378,23 @@ export function CustomerLookupView({
                     Clear search
                   </button>
                 </>
-              ) : selectedSegment !== 'all' || selectedOpportunityType !== 'all' ? (
-                // Segment or opportunity filter with no results
+              ) : selectedOpportunityType !== 'all' ? (
+                // Opportunity filter with no results
                 <>
                   <p className="text-[var(--foreground)] font-medium mb-1">
                     No customers match your filters
                   </p>
                   <p className="text-sm text-[var(--text-muted)] mb-4">
-                    Try different filter combinations or clear all filters
+                    Try a different cross-sell filter or clear filters
                   </p>
                   <button
                     onClick={() => {
-                      setSelectedSegment('all');
                       setSelectedOpportunityType('all');
                     }}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--foreground)] transition-colors"
                   >
                     <Users className="w-4 h-4" />
-                    Clear all filters
+                    Clear filters
                   </button>
                 </>
               ) : (
@@ -535,12 +503,10 @@ export function CustomerLookupView({
                   customerId={selectedCustomerId}
                   currentUser={currentUser}
                   onViewTask={(taskId) => {
-                    // Could navigate to task detail
-                    console.log('View task:', taskId);
+                    onTaskClick?.(taskId);
                   }}
                   onCreateTask={(taskId) => {
-                    // Could navigate to newly created task
-                    console.log('Created task:', taskId);
+                    onTaskClick?.(taskId);
                   }}
                 />
               </div>

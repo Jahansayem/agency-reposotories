@@ -29,7 +29,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
     const teamConv = page.locator('text=Team Chat');
     if (await teamConv.count() > 0) {
       await teamConv.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
     }
 
     // Ensure at least one message exists
@@ -41,7 +41,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
       const input = page.locator('[placeholder*="message"]').or(page.locator('textarea'));
       await input.fill('Test message for swipe-to-reply');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
     }
   });
 
@@ -97,7 +97,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
       );
 
       // Give time for reply action
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check if reply state is active (implementation varies)
       // May show as focused input, reply banner, or other UI
@@ -120,7 +120,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
 
       // Message should snap back to original position
       // Reply should NOT trigger
-      await page.waitForTimeout(300);
 
       const replyBanner = page.locator('text=/Replying to/');
       expect(await replyBanner.count()).toBe(0);
@@ -144,8 +143,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.down();
       await page.mouse.move(boundingBox.x - 50, boundingBox.y + boundingBox.height / 2);
       await page.mouse.up();
-
-      await page.waitForTimeout(200);
 
       // Message should not have moved significantly left
       // (dragConstraints.left = 0 prevents leftward movement)
@@ -171,8 +168,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.down();
       await page.mouse.move(boundingBox.x + 200, boundingBox.y + boundingBox.height / 2); // 150px attempt
       await page.mouse.up();
-
-      await page.waitForTimeout(300);
 
       // Message should snap back after release
       // dragConstraints.right = 100 limits max offset
@@ -201,7 +196,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
 
       // Small swipe (20px) - icon should be faint
       await page.mouse.move(boundingBox.x + 70, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(100);
 
       // Check for reply icon container
       const iconContainer = page.locator('.rounded-full.bg-\\[var\\(--accent\\)\\]\\/20');
@@ -212,7 +206,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
 
       // Larger swipe (50px) - icon should be more opaque
       await page.mouse.move(boundingBox.x + 100, boundingBox.y + boundingBox.height / 2);
-      await page.waitForTimeout(100);
 
       // Release
       await page.mouse.up();
@@ -234,15 +227,12 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.down();
       await page.mouse.move(boundingBox.x + 80, boundingBox.y + boundingBox.height / 2);
 
-      await page.waitForTimeout(100);
-
       // Check if shadow class is applied during swipe
       const duringSwipeClass = await message.getAttribute('class');
       // Should include 'shadow-2xl' or similar during swipe
       // (swipingMessageId === msg.id adds this class)
 
       await page.mouse.up();
-      await page.waitForTimeout(200);
 
       // After release, should return to normal
       const afterSwipeClass = await message.getAttribute('class');
@@ -281,7 +271,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.move(boundingBox.x + 130, boundingBox.y + boundingBox.height / 2, { steps: 5 }); // Fast
       await page.mouse.up();
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check if vibrate was called with pattern [30, 20, 30]
       const vibrateCallCount = await page.evaluate(() => (window as any).__vibrateCallCount);
@@ -308,7 +298,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
       const input = page.locator('[placeholder*="message"]').or(page.locator('textarea'));
       await input.fill('Original message to reply to');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Get the message we just sent
       const message = page.locator('text=Original message to reply to').locator('..').locator('..');
@@ -324,7 +314,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.move(boundingBox.x + 130, boundingBox.y + boundingBox.height / 2, { steps: 3 }); // Fast
       await page.mouse.up();
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Reply composer should show context
       const replyContext = page.locator('text=/Original message to reply to/').or(
@@ -332,7 +322,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
       );
 
       // Give time for UI to update
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check if reply state is visible
       // (Implementation may vary - could be banner, focused input, etc.)
@@ -345,7 +335,7 @@ test.describe('Swipe-to-Reply Gesture', () => {
       const input = page.locator('[placeholder*="message"]').or(page.locator('textarea'));
       await input.fill('My own message');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Get own message (should be on right side)
       const ownMessage = page.locator('text=My own message').locator('..').locator('..');
@@ -361,8 +351,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.move(boundingBox.x + 100, boundingBox.y + boundingBox.height / 2);
       await page.mouse.up();
 
-      await page.waitForTimeout(300);
-
       // Should work (users can reply to their own messages)
       expect(true).toBeTruthy(); // Gesture completed without error
     });
@@ -373,19 +361,19 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await loginAsUser(page, 'Sefra', '8008');
 
       await page.click('[aria-label*="Open chat"]');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const input = page.locator('[placeholder*="message"]').or(page.locator('textarea'));
       await input.fill('Message from another user');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Switch back to Derrick
       await page.goto('http://localhost:3000');
       await loginAsUser(page, 'Derrick', '8008');
 
       await page.click('[aria-label*="Open chat"]');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Find other user's message
       const otherMessage = page.locator('text=Message from another user').locator('..').locator('..');
@@ -397,8 +385,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
         await page.mouse.down();
         await page.mouse.move(boundingBox.x + 100, boundingBox.y + boundingBox.height / 2);
         await page.mouse.up();
-
-        await page.waitForTimeout(300);
 
         expect(true).toBeTruthy();
       }
@@ -422,8 +408,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.move(boundingBox.x + 90, boundingBox.y + boundingBox.height / 2);
       await page.mouse.up();
 
-      await page.waitForTimeout(300);
-
       // Should work without errors
       expect(true).toBeTruthy();
     });
@@ -444,8 +428,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
       await page.mouse.move(boundingBox.x + 90, boundingBox.y + boundingBox.height / 2);
       await page.mouse.up();
 
-      await page.waitForTimeout(300);
-
       expect(true).toBeTruthy();
     });
   });
@@ -457,8 +439,6 @@ test.describe('Swipe-to-Reply Gesture', () => {
       // Message should still be clickable for tapback menu
       const message = page.locator('.rounded-\\[var\\(--radius-2xl\\)\\]').first();
       await message.click();
-
-      await page.waitForTimeout(300);
 
       // Tapback menu should appear (existing functionality)
       const tapbackMenu = page.locator('[title="Add reaction"]').or(

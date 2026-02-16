@@ -21,7 +21,7 @@ async function loginAsExistingUser(page: Page): Promise<boolean> {
   await page.goto('/');
 
   // Wait for login screen to load
-  await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible({ timeout: 15000 });
 
   // Try to click on the test user
   const userButton = page.locator(`button:has-text("${TEST_USER}")`).first();
@@ -45,7 +45,7 @@ async function loginAsExistingUser(page: Page): Promise<boolean> {
   }
 
   // Wait a moment for PIN validation
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Check if we got an error (wrong PIN)
   const errorMessage = page.locator('text=Incorrect PIN');

@@ -38,11 +38,11 @@ async function loginAsExistingUserWebKit(
   await page.goto('/');
 
   // Wait for login screen with extended timeout for WebKit
-  const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+  const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
   await expect(header).toBeVisible({ timeout: 20000 });
 
   // Wait for users list to load - WebKit may be slower
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
 
   // Click on the user card
   const userCard = page.locator('button').filter({ hasText: userName }).first();
@@ -50,7 +50,7 @@ async function loginAsExistingUserWebKit(
   await userCard.click();
 
   // Wait for PIN entry screen
-  await page.waitForTimeout(1000);
+  await page.waitForLoadState('networkidle');
 
   // Enter PIN - WebKit may need extra wait between digits
   const pinInputs = page.locator('input[type="password"]');
@@ -62,7 +62,7 @@ async function loginAsExistingUserWebKit(
   }
 
   // Wait for automatic login - WebKit may need more time
-  await page.waitForTimeout(3000);
+  await page.waitForLoadState('networkidle');
 
   // Close welcome modal if present
   const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
@@ -72,10 +72,10 @@ async function loginAsExistingUserWebKit(
 
   if (await viewTasksBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
     await viewTasksBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   } else if (await closeModalBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
     await closeModalBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   }
 
   // Wait for main app to load - increased timeout for WebKit
@@ -95,7 +95,7 @@ test.describe('WebKit Compatibility - Critical Bugs Fixed', () => {
     // The page should NOT be blank - we should see EITHER:
     // 1. Login screen (if not logged in)
     // 2. Main app (if session persisted)
-    const loginHeader = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const loginHeader = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     const mainAppInput = page.locator('textarea[placeholder*="Add a task"]');
     const configError = page.locator('text=Configuration Required');
 
@@ -173,7 +173,7 @@ test.describe('WebKit Compatibility - Console Errors', () => {
     });
 
     await page.goto('/');
-    await page.waitForTimeout(5000); // Let page fully load
+    await page.waitForLoadState('networkidle'); // Let page fully load
 
     // Take screenshot
     await page.screenshot({ path: 'test-results/webkit-console-check.png', fullPage: true });
@@ -202,7 +202,7 @@ test.describe('WebKit Compatibility - Console Errors', () => {
     });
 
     await page.goto('/');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     expect(storageErrors.length).toBe(0);
     console.log('✓ No localStorage errors in WebKit');
@@ -223,7 +223,7 @@ test.describe('WebKit Compatibility - Console Errors', () => {
     });
 
     await loginAsExistingUserWebKit(page);
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
 
     if (supabaseErrors.length > 0) {
       console.error('Supabase errors:', supabaseErrors);
@@ -254,7 +254,7 @@ test.describe('WebKit Compatibility - Theme System', () => {
     // Toggle theme if button exists
     if (await themeToggle.isVisible({ timeout: 3000 }).catch(() => false)) {
       await themeToggle.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Check theme changed
       const newClasses = await htmlElement.getAttribute('class');
@@ -262,7 +262,7 @@ test.describe('WebKit Compatibility - Theme System', () => {
 
       // Toggle back
       await themeToggle.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       const finalClasses = await htmlElement.getAttribute('class');
       expect(finalClasses).toContain('dark');
@@ -306,7 +306,7 @@ test.describe('WebKit Compatibility - Real-Time Features', () => {
     await loginAsExistingUserWebKit(page);
 
     // Wait for real-time connection
-    await page.waitForTimeout(5000);
+    await page.waitForLoadState('networkidle');
 
     // Should have established WebSocket connection
     expect(websocketConnected).toBe(true);
@@ -373,7 +373,7 @@ test.describe('WebKit Compatibility - Core User Flows', () => {
     }
 
     // Wait for task to appear
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Take screenshot
     await page.screenshot({ path: 'test-results/webkit-task-created.png', fullPage: true });
@@ -412,7 +412,7 @@ test.describe('WebKit Compatibility - Core User Flows', () => {
     await checkbox.click();
 
     // Wait for completion animation
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     console.log('✓ Task completion works in WebKit');
   });
@@ -426,7 +426,7 @@ test.describe('WebKit Compatibility - Core User Flows', () => {
     const kanbanButton = page.locator('button[aria-label="Board view"]');
     await expect(kanbanButton).toBeVisible({ timeout: 5000 });
     await kanbanButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Should see kanban columns
     await expect(page.locator('text=To Do').first()).toBeVisible({ timeout: 5000 });
@@ -448,7 +448,7 @@ test.describe('WebKit Compatibility - Core User Flows', () => {
       .first();
     await expect(userBtn).toBeVisible({ timeout: 5000 });
     await userBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Click sign out
     const signOutBtn = page.locator('button').filter({ hasText: 'Sign Out' });
@@ -456,7 +456,7 @@ test.describe('WebKit Compatibility - Core User Flows', () => {
     await signOutBtn.click();
 
     // Should return to login screen
-    const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     await expect(header).toBeVisible({ timeout: 15000 });
 
     console.log('✓ Sign out works in WebKit');
@@ -491,7 +491,7 @@ test.describe('WebKit Compatibility - Session Persistence', () => {
     await loginAsExistingUserWebKit(page);
 
     // Wait for session to be saved
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Reload page
     await page.reload();
@@ -512,7 +512,7 @@ test.describe('WebKit Compatibility - Session Persistence', () => {
       });
 
       // Check if we're on login screen instead
-      const loginHeader = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+      const loginHeader = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
       const isOnLoginScreen = await loginHeader.isVisible().catch(() => false);
 
       if (isOnLoginScreen) {
@@ -535,13 +535,13 @@ test.describe('WebKit Compatibility - Session Persistence', () => {
       .filter({ hasText: 'DE' })
       .first();
     await userBtn.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const signOutBtn = page.locator('button').filter({ hasText: 'Sign Out' });
     await signOutBtn.click();
 
     // Wait for redirect
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Check localStorage is cleared
     const session = await page.evaluate(() => {
@@ -580,7 +580,7 @@ test.describe('WebKit Compatibility - Mobile Viewport', () => {
     await loginAsExistingUserWebKit(page);
 
     // Header should be visible (responsive design)
-    const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     const isVisible = await header.isVisible().catch(() => false);
 
     // Header might be hidden on mobile, but app should still work

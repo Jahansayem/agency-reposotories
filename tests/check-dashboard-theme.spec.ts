@@ -8,7 +8,7 @@ test.describe('Dashboard Theme Verification', () => {
 
     console.log('\n=== LOGIN AS DERRICK ===');
     await page.getByText('Derrick', { exact: true }).click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     const pinInputs = page.locator('input[inputmode="numeric"]');
     await pinInputs.nth(0).fill('8');
@@ -16,12 +16,12 @@ test.describe('Dashboard Theme Verification', () => {
     await pinInputs.nth(2).fill('0');
     await pinInputs.nth(3).fill('8');
 
-    await page.waitForTimeout(4000);
+    await page.waitForLoadState('networkidle');
 
     // Close any dialogs
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== CHECK INITIAL THEME ===');
     const htmlClasses = await page.locator('html').getAttribute('class');
@@ -34,7 +34,7 @@ test.describe('Dashboard Theme Verification', () => {
     console.log('\n=== NAVIGATE TO DASHBOARD ===');
     const dashboardButton = page.locator('button:has-text("Dashboard"), a:has-text("Dashboard")').first();
     await dashboardButton.click();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     console.log('\n=== CHECK DASHBOARD BACKGROUND COLOR ===');
 
@@ -75,6 +75,6 @@ test.describe('Dashboard Theme Verification', () => {
     await page.screenshot({ path: '/tmp/dashboard-theme-check.png', fullPage: true });
     console.log('\nScreenshot saved: /tmp/dashboard-theme-check.png');
 
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
   });
 });

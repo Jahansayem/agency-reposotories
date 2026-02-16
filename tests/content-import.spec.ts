@@ -5,7 +5,7 @@ async function registerAndLogin(page: Page, userName: string = 'Test User', pin:
   await page.goto('/');
 
   // Wait for login screen to load
-  await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('text=Task Management')).toBeVisible({ timeout: 5000 });
 
   // Click "Add New User" button

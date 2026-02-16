@@ -6,13 +6,10 @@ test.describe('UserSwitcher - Discoverability', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
@@ -65,7 +62,6 @@ test.describe('UserSwitcher - Discoverability', () => {
 
     // Click to open
     await userSwitcher.click();
-    await page.waitForTimeout(200);
 
     // Chevron should rotate
     const openClass = await chevron.getAttribute('class');
@@ -130,7 +126,6 @@ test.describe('UserSwitcher - Discoverability', () => {
 
     // Click outside
     await page.click('body', { position: { x: 10, y: 10 } });
-    await page.waitForTimeout(200);
 
     // Dropdown should close
     await expect(page.locator('text=Signed in')).not.toBeVisible();
@@ -154,13 +149,10 @@ test.describe('UserSwitcher - User Switching Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
@@ -196,7 +188,6 @@ test.describe('UserSwitcher - User Switching Flow', () => {
     await currentUserSection.click();
 
     // Dropdown should close, no modal
-    await page.waitForTimeout(300);
     await expect(page.locator('text=Enter PIN')).not.toBeVisible();
   });
 });
@@ -205,13 +196,10 @@ test.describe('UserSwitcher - Sign Out Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
@@ -222,7 +210,7 @@ test.describe('UserSwitcher - Sign Out Flow', () => {
 
     // Click sign out
     await page.click('button:has-text("Sign Out")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Should return to login screen
     await expect(page.locator('text=Select Your Profile')).toBeVisible({ timeout: 2000 });
@@ -233,7 +221,7 @@ test.describe('UserSwitcher - Sign Out Flow', () => {
     const userSwitcher = page.locator('button[aria-label*="Account menu"]');
     await userSwitcher.click();
     await page.click('button:has-text("Sign Out")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check localStorage is cleared
     const sessionData = await page.evaluate(() => localStorage.getItem('todoSession'));
@@ -247,13 +235,10 @@ test.describe('UserSwitcher - Mobile Responsiveness', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
@@ -316,13 +301,10 @@ test.describe('UserSwitcher - Keyboard Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('http://localhost:3000');
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
   });
@@ -348,7 +330,6 @@ test.describe('UserSwitcher - Keyboard Navigation', () => {
 
     // Press Enter to open
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(200);
 
     // Dropdown should open
     await expect(page.locator('text=Signed in')).toBeVisible();
@@ -360,7 +341,6 @@ test.describe('UserSwitcher - Keyboard Navigation', () => {
 
     // Tab should focus on sign out button
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(100);
 
     const focused = await page.evaluate(() => {
       return document.activeElement?.textContent;

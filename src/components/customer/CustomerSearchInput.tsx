@@ -10,7 +10,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, X, Loader2, User, Phone, DollarSign } from 'lucide-react';
 import { useCustomerSearch } from '@/hooks/useCustomers';
-import { CustomerBadge, SegmentIndicator } from './CustomerBadge';
 import type { Customer, LinkedCustomer } from '@/types/customer';
 
 interface CustomerSearchInputProps {
@@ -93,7 +92,7 @@ export function CustomerSearchInput({
       {/* Selected Customer Display */}
       {value && !focused ? (
         <div className="flex items-center gap-2 p-2 border border-[var(--border)] rounded-lg bg-[var(--surface-2)]">
-          <SegmentIndicator segment={value.segment} />
+          <User className="w-4 h-4 text-[var(--text-muted)]" />
           <span className="flex-1 text-sm font-medium text-[var(--foreground)] truncate">
             {value.name}
           </span>
@@ -170,7 +169,6 @@ export function CustomerSearchInput({
               "
             >
               <div className="flex items-start gap-3">
-                <SegmentIndicator segment={customer.segment} size="md" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-[var(--foreground)] truncate">

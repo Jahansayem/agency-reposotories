@@ -20,12 +20,10 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
 
     // Login
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('[data-testid="add-todo-input"]')).toBeVisible({ timeout: 10000 });
@@ -44,7 +42,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should render virtual containers with proper styles', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Virtual scrolling containers should have specific CSS properties
       const hasVirtualStyles = await page.evaluate(() => {
@@ -62,7 +60,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
   test.describe('Performance with Large Datasets', () => {
     test('should handle scrolling smoothly', async ({ page }) => {
       // Wait for initial load
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Measure scroll performance
       const scrollPerformance = await page.evaluate(async () => {
@@ -115,7 +113,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should not render all items at once', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Count rendered todo items in DOM
       const renderedCount = await page.evaluate(() => {
@@ -142,7 +140,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should maintain performance when scrolling through many items', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Measure scroll responsiveness
       const scrollTest = await page.evaluate(async () => {
@@ -176,7 +174,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
 
   test.describe('Memory Efficiency', () => {
     test('should not create excessive DOM nodes', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Count total DOM nodes
       const domNodeCount = await page.evaluate(() => {
@@ -191,7 +189,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should reuse DOM elements during scroll', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Measure DOM stability during scroll
       const reuseTest = await page.evaluate(async () => {
@@ -240,7 +238,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Virtual scrolling test task');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Task should be visible
       await expect(page.locator('text=Virtual scrolling test task')).toBeVisible();
@@ -251,7 +249,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Interactive test task');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Find and interact with the task
       const checkbox = page
@@ -269,7 +267,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should preserve scroll position', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Scroll down
       await page.evaluate(() => {
@@ -282,7 +280,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
         }
       });
 
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Get scroll position
       const scrollPosition = await page.evaluate(() => {
@@ -300,7 +298,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
 
   test.describe('Edge Cases', () => {
     test('should handle empty list', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Virtual list should handle zero items gracefully
       // App should still render without errors
@@ -309,7 +307,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should handle rapid scrolling', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Rapid scroll test
       const rapidScrollTest = await page.evaluate(async () => {
@@ -335,14 +333,14 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should handle window resize', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Get initial viewport
       const initialViewport = page.viewportSize();
 
       // Resize window
       await page.setViewportSize({ width: 800, height: 600 });
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Virtual list should adapt to new size
       const bodyVisible = await page.locator('body').isVisible();
@@ -357,7 +355,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
 
   test.describe('Integration', () => {
     test('should work with filters', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if filters exist
       const filterButtons = page.locator('button').filter({ hasText: /All|Active|Completed/i });
@@ -366,7 +364,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
       if (count > 0) {
         // Click a filter
         await filterButtons.first().click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Virtual list should re-render with filtered items
         const bodyVisible = await page.locator('body').isVisible();
@@ -379,7 +377,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
       await page.fill('[data-testid="add-todo-input"]', 'Real-time test');
       await page.press('[data-testid="add-todo-input"]', 'Enter');
 
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Task should appear in virtual list
       await expect(page.locator('text=Real-time test')).toBeVisible();
@@ -388,11 +386,10 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
 
   test.describe('Accessibility', () => {
     test('should maintain keyboard navigation', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Tab navigation should work
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       // Should be able to navigate with keyboard
       const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
@@ -400,7 +397,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should support screen readers', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check for ARIA attributes
       const hasAriaAttributes = await page.evaluate(() => {
@@ -428,7 +425,7 @@ test.describe('Virtual Scrolling (Issue #33)', () => {
     });
 
     test('should have low memory footprint', async ({ page }) => {
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Measure memory usage (approximate)
       const memoryMetrics = await page.evaluate(() => {

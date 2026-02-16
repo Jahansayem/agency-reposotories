@@ -95,7 +95,7 @@ test.describe('Accessibility Tests', () => {
       const taskInput = page.locator('[data-testid="task-input"]').first();
       await taskInput.fill('Focus trap test');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Click on a task to expand it
       const taskItem = page.locator('text=Focus trap test').first();

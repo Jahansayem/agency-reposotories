@@ -59,13 +59,13 @@ test.describe('Analytics Page Styling', () => {
   test('should navigate to Analytics page and display correctly', async ({ page }) => {
     // Navigate to Analytics using sidebar (look for text "Analytics" in the nav)
     // Wait a bit for the page to stabilize
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Click on Analytics in the sidebar
     await page.click('text=Analytics');
 
     // Wait for Analytics page content to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Verify the page uses CSS variables (no hardcoded gray-50, gray-900, etc.)
     // Take a screenshot for visual verification
@@ -86,15 +86,15 @@ test.describe('Analytics Page Styling', () => {
 
   test('should display Today\'s Opportunities tab correctly', async ({ page }) => {
     // Navigate to Analytics
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     await page.click('text=Analytics');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Click on Today's Opportunities tab
     await page.click('text=Today\'s Opportunities');
 
     // Wait for the panel to load (might show loading spinner, empty state, or opportunities)
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Take screenshot
     await page.screenshot({
@@ -114,15 +114,15 @@ test.describe('Analytics Page Styling', () => {
 
   test('should display Customer Insights tab correctly', async ({ page }) => {
     // Navigate to Analytics
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     await page.click('text=Analytics');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Click on Customer Insights tab
     await page.click('text=Customer Insights');
 
     // Wait for the panel to load
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Take screenshot
     await page.screenshot({
@@ -136,9 +136,9 @@ test.describe('Analytics Page Styling', () => {
 
   test('should have proper contrast in dark mode', async ({ page }) => {
     // Navigate to Analytics
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     await page.click('text=Analytics');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Enable dark mode (if there's a toggle)
     const darkModeToggle = page.locator('[data-testid="dark-mode-toggle"]').or(
@@ -149,7 +149,7 @@ test.describe('Analytics Page Styling', () => {
 
     if (await darkModeToggle.count() > 0) {
       await darkModeToggle.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Take screenshot in dark mode
       await page.screenshot({

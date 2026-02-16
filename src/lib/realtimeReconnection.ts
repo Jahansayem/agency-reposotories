@@ -88,6 +88,7 @@ export function useRealtimeReconnection(config: ReconnectionConfig) {
   const lastStatusRef = useRef<RealtimeStatus | null>(null);
   const lastSuccessfulConnectionRef = useRef<number>(Date.now());
   const isOnlineRef = useRef(true);
+  const handleStatusChangeRef = useRef<(status: RealtimeStatus) => void>(() => {});
 
   /**
    * Calculate next retry delay using exponential backoff
@@ -167,6 +168,42 @@ export function useRealtimeReconnection(config: ReconnectionConfig) {
   }, [config, fullConfig.maxAttempts, getNextDelay]);
 
   /**
+   * Stop heartbeat monitoring
+   */
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Start heartbeat monitoring
+   * Uses handleStatusChangeRef to avoid circular dependency with handleStatusChange.
+   */
+  const startHeartbeat = useCallback(() => {
+    stopHeartbeat(); // Clear any existing heartbeat
+
+    heartbeatIntervalRef.current = setInterval(() => {
+      const timeSinceLastSuccess = Date.now() - lastSuccessfulConnectionRef.current;
+      const threshold = fullConfig.heartbeatInterval * 2;
+
+      // If we haven't had a successful ping in 2x the heartbeat interval,
+      // assume connection is dead and trigger reconnect
+      if (timeSinceLastSuccess > threshold && lastStatusRef.current === 'SUBSCRIBED') {
+        logger.warn('Heartbeat timeout - connection appears dead', {
+          component: 'RealtimeReconnection',
+          timeSinceLastSuccess,
+          threshold,
+        });
+
+        // Manually trigger disconnect and reconnect via ref to break circular dep
+        handleStatusChangeRef.current('TIMED_OUT');
+      }
+    }, fullConfig.heartbeatInterval);
+  }, [fullConfig.heartbeatInterval, stopHeartbeat]);
+
+  /**
    * Handle connection status changes from Supabase
    */
   const handleStatusChange = useCallback((status: RealtimeStatus) => {
@@ -214,42 +251,10 @@ export function useRealtimeReconnection(config: ReconnectionConfig) {
         attemptReconnect();
       }
     }
-  }, [config, fullConfig.enableHeartbeat, resetReconnectionState, attemptReconnect]);
+  }, [config, fullConfig.enableHeartbeat, resetReconnectionState, attemptReconnect, startHeartbeat, stopHeartbeat]);
 
-  /**
-   * Start heartbeat monitoring
-   */
-  const startHeartbeat = useCallback(() => {
-    stopHeartbeat(); // Clear any existing heartbeat
-
-    heartbeatIntervalRef.current = setInterval(() => {
-      const timeSinceLastSuccess = Date.now() - lastSuccessfulConnectionRef.current;
-      const threshold = fullConfig.heartbeatInterval * 2;
-
-      // If we haven't had a successful ping in 2x the heartbeat interval,
-      // assume connection is dead and trigger reconnect
-      if (timeSinceLastSuccess > threshold && lastStatusRef.current === 'SUBSCRIBED') {
-        logger.warn('Heartbeat timeout - connection appears dead', {
-          component: 'RealtimeReconnection',
-          timeSinceLastSuccess,
-          threshold,
-        });
-
-        // Manually trigger disconnect and reconnect
-        handleStatusChange('TIMED_OUT');
-      }
-    }, fullConfig.heartbeatInterval);
-  }, [fullConfig.heartbeatInterval, handleStatusChange]);
-
-  /**
-   * Stop heartbeat monitoring
-   */
-  const stopHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-  }, []);
+  // Keep the ref in sync so startHeartbeat's interval always calls the latest version
+  handleStatusChangeRef.current = handleStatusChange;
 
   /**
    * Handle browser online/offline events

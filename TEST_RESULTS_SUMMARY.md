@@ -52,7 +52,7 @@ npx next build
 
 **Page Loading** (8/8 passed):
 - ✅ App renders without TypeScript errors
-- ✅ Page title: "Bealer Agency - Task Management"
+- ✅ Page title: "Wavezly - Task Management"
 - ✅ No critical console errors
 
 #### ⚠️ Failing Tests (Login Flow - Test Infrastructure Issue)

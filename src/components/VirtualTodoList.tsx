@@ -2,7 +2,7 @@
 
 import { useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { Todo } from '@/types/todo';
+import type { Todo, TodoPriority, TodoStatus, RecurrencePattern, Subtask, Attachment } from '@/types/todo';
 import TodoItem from './TodoItem';
 
 /**
@@ -26,15 +26,15 @@ interface VirtualTodoListProps {
   onDelete: (id: string) => void;
   onAssign: (id: string, assignedTo: string | null) => void;
   onSetDueDate: (id: string, dueDate: string | null) => void;
-  onSetPriority: (id: string, priority: any) => void;
-  onStatusChange?: (id: string, status: any) => void;
+  onSetPriority: (id: string, priority: TodoPriority) => void;
+  onStatusChange?: (id: string, status: TodoStatus) => void;
   onUpdateText?: (id: string, text: string) => void;
   onDuplicate?: (todo: Todo) => void;
   onUpdateNotes?: (id: string, notes: string) => void;
-  onSetRecurrence?: (id: string, recurrence: any) => void;
-  onUpdateSubtasks?: (id: string, subtasks: any[]) => void;
+  onSetRecurrence?: (id: string, recurrence: RecurrencePattern) => void;
+  onUpdateSubtasks?: (id: string, subtasks: Subtask[]) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
-  onUpdateAttachments?: (id: string, attachments: any[], skipDbUpdate?: boolean) => void;
+  onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   estimatedItemHeight?: number;
   overscan?: number;
 }

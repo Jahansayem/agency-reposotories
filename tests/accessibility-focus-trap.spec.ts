@@ -26,19 +26,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Test task for focus trap');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -48,7 +47,6 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
         const backdrop = page.locator('.backdrop-blur-sm, [class*="backdrop"]').first();
         if (await backdrop.isVisible()) {
           await backdrop.click({ position: { x: 10, y: 10 }, force: true });
-          await page.waitForTimeout(200);
         }
 
         // Focus should still be within the dialog
@@ -71,19 +69,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Tab cycling test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -110,19 +107,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Shift+Tab test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -151,19 +147,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Focus restore test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open and cancel button is focused
         const dialog = page.locator('[role="dialog"]').first();
@@ -180,7 +175,6 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
 
         // Try to click outside (should prevent focus loss)
         await page.mouse.click(10, 10);
-        await page.waitForTimeout(200);
 
         // Focus should be restored to a button in the dialog
         const restoredFocus = await page.evaluate(() => {
@@ -206,14 +200,13 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
 
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(300);
 
         // Verify modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -221,7 +214,6 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
 
         // Try to click outside the modal
         await page.mouse.click(10, 10);
-        await page.waitForTimeout(200);
 
         // Focus should still be within the modal
         const focusedElement = await page.evaluate(() => {
@@ -241,14 +233,13 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
 
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(300);
 
         // Verify modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -277,14 +268,14 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
 
       if (await smartParseButton.isVisible()) {
         await smartParseButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Verify modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -313,18 +304,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Bottom sheet focus trap test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Click on task to open bottom sheet
       const taskItem = page.locator('text=Bottom sheet focus trap test').first();
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify bottom sheet is open
       const bottomSheet = page.locator('[role="dialog"], .bottom-sheet, [aria-modal="true"]').last();
@@ -333,7 +324,6 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       if (isVisible) {
         // Try to click outside the bottom sheet
         await page.mouse.click(10, 10);
-        await page.waitForTimeout(200);
 
         // Focus should still be within the sheet (or sheet closed via backdrop click)
         const focusedElement = await page.evaluate(() => {
@@ -357,18 +347,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Sheet Tab trap test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Click on task to open bottom sheet
       const taskItem = page.locator('text=Sheet Tab trap test').first();
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify bottom sheet is open
       const bottomSheet = page.locator('[role="dialog"], .bottom-sheet, [aria-modal="true"]').last();
@@ -398,18 +388,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Sheet Shift+Tab test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Click on task to open bottom sheet
       const taskItem = page.locator('text=Sheet Shift+Tab test').first();
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Verify bottom sheet is open
       const bottomSheet = page.locator('[role="dialog"], .bottom-sheet, [aria-modal="true"]').last();
@@ -441,20 +431,19 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Focus restoration test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Get and focus the delete button
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         // Click to open dialog
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Verify dialog is open
         const dialog = page.locator('[role="dialog"]').first();
@@ -462,7 +451,6 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
 
         // Close with Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         // Focus should be somewhere in the page (ideally back to delete button, but not required)
         const focusedElement = await page.evaluate(() => {
@@ -481,7 +469,7 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Look for Smart Parse button
       const smartParseButton = page.locator('button:has-text("Smart"), button:has-text("AI"), button[aria-label*="Smart"]').first();
@@ -489,7 +477,6 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       if (await smartParseButton.isVisible()) {
         // Click to open modal
         await smartParseButton.click();
-        await page.waitForTimeout(300);
 
         // Verify modal is open
         const modal = page.locator('[role="dialog"]').first();
@@ -497,7 +484,6 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
 
         // Close with Escape
         await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
 
         // Focus should be restored (useFocusTrap handles this)
         const focusedElement = await page.evaluate(() => {
@@ -519,19 +505,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Minimal dialog test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open a simple dialog (delete confirmation typically has 2-3 buttons)
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Tab should not break with few elements
         await page.keyboard.press('Tab');
@@ -555,7 +540,7 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Ensure no modal is open
       const dialog = page.locator('[role="dialog"]').first();
@@ -580,19 +565,18 @@ test.describe('Accessibility - Enhanced Focus Trap', () => {
       // Navigate to Tasks view
       const tasksButton = page.locator('button:has-text("Tasks")').first();
       await tasksButton.click();
-      await page.waitForTimeout(300);
+      await page.waitForLoadState('networkidle');
 
       // Create a test task
       const taskInput = page.locator('input[placeholder*="Add"]').first();
       await taskInput.fill('Rapid Tab test');
       await taskInput.press('Enter');
-      await page.waitForTimeout(500);
+      await expect(page.locator('[data-testid]').first()).toBeVisible({ timeout: 5000 });
 
       // Open delete dialog
       const deleteButton = page.locator('button[aria-label*="Delete"], button:has-text("Delete")').first();
       if (await deleteButton.isVisible()) {
         await deleteButton.click();
-        await page.waitForTimeout(300);
 
         // Rapidly press Tab many times
         for (let i = 0; i < 20; i++) {

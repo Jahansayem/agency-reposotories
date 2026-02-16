@@ -3,7 +3,7 @@ import { test, expect, Page } from '@playwright/test';
 /**
  * Layout Components Tests
  * 
- * Comprehensive tests for the Bealer Agency Task Manager layout:
+ * Comprehensive tests for the Wavezly Task Manager layout:
  * - Navigation and view switching
  * - Task display and interaction
  * - Responsive behavior
@@ -19,7 +19,7 @@ async function loginAsUser(page: Page, userName: string = 'Derrick', pin: string
   await page.goto('/');
   
   // Wait for app to load
-  await page.waitForTimeout(2000);
+  await page.waitForLoadState('networkidle');
   
   // Check if already logged in - look for sidebar navigation
   const alreadyLoggedIn = await page.getByRole('complementary', { name: 'Main navigation' })
@@ -35,22 +35,21 @@ async function loginAsUser(page: Page, userName: string = 'Derrick', pin: string
   
   if (await userCard.first().isVisible({ timeout: 5000 }).catch(() => false)) {
     await userCard.first().click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     const pinInputs = page.locator('input[type="password"]');
     if (await pinInputs.first().isVisible({ timeout: 3000 }).catch(() => false)) {
       for (let i = 0; i < 4; i++) {
         await pinInputs.nth(i).fill(pin[i]);
-        await page.waitForTimeout(100);
       }
       
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
       
       // Close welcome modal if present
       const viewTasksBtn = page.locator('button').filter({ hasText: 'View Tasks' });
       if (await viewTasksBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
         await viewTasksBtn.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
     }
   }
@@ -65,10 +64,10 @@ async function waitForAppReady(page: Page) {
     await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 15000 });
   } catch {
     // Fallback wait
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle');
   }
   
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -83,7 +82,7 @@ test.describe('AppShell Layout', () => {
 
   test('renders navigation on desktop viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     const hasHeader = await page.locator('h1:has-text("Bealer")')
       .isVisible().catch(() => false);
@@ -98,10 +97,8 @@ test.describe('AppShell Layout', () => {
 
   test('mobile layout differs from desktop', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.waitForTimeout(300);
     
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.waitForTimeout(300);
     
     // App still visible on mobile
     const hasContent = await page.locator('text=active')
@@ -116,9 +113,7 @@ test.describe('AppShell Layout', () => {
     const menuBtn = page.locator('button:has-text("Menu")');
     if (await menuBtn.isVisible().catch(() => false)) {
       await menuBtn.click();
-      await page.waitForTimeout(300);
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
     }
     
     expect(true).toBeTruthy();
@@ -128,9 +123,7 @@ test.describe('AppShell Layout', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     
     await page.keyboard.press('Meta+k');
-    await page.waitForTimeout(300);
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
     
     expect(true).toBeTruthy();
   });
@@ -158,7 +151,6 @@ test.describe('Navigation', () => {
 
       if (boardVisible) {
         await boardBtn.click();
-        await page.waitForTimeout(300);
         return true;
       } else if (listVisible) {
         return true; // Already on List view
@@ -188,7 +180,6 @@ test.describe('Navigation', () => {
 
       if (await menuBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
         await menuBtn.click();
-        await page.waitForTimeout(300);
 
         // Check if menu options appeared
         const hasOptions = await elementExists(page, 'text=/Dashboard|Activity|Settings|Goals/i', 2000);
@@ -210,7 +201,7 @@ test.describe('Navigation', () => {
     
     if (await menuBtn.isVisible().catch(() => false)) {
       await menuBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       
       const goalsOption = page.locator('text=/Strategic Goals/i');
       const hasGoals = await goalsOption.isVisible().catch(() => false);
@@ -235,7 +226,7 @@ test.describe('Mobile Navigation', () => {
     
     // Now switch to mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test('mobile shows app content', async ({ page }) => {
@@ -290,7 +281,7 @@ test.describe('TaskCard', () => {
     
     if (await taskItem.isVisible({ timeout: 3000 }).catch(() => false)) {
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       
       const hasDetails = await page.locator('text=/Notes|Priority|Subtask|Edit|Due/i')
         .first().isVisible().catch(() => false);
@@ -334,14 +325,12 @@ test.describe('TaskDetailPanel', () => {
 
       if (await taskItem.isVisible({ timeout: 3000 }).catch(() => false)) {
         await taskItem.click();
-        await page.waitForTimeout(300);
 
         // Check for detail panel elements with retry
         const detailVisible = await elementExists(page, 'text=/Notes|Priority|Subtask|Due|Edit/i', 2000);
 
         if (detailVisible) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(200);
         }
 
         return detailVisible;
@@ -357,7 +346,7 @@ test.describe('TaskDetailPanel', () => {
     
     if (await taskItem.isVisible({ timeout: 3000 }).catch(() => false)) {
       await taskItem.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       
       const textArea = page.locator('textarea').first();
       const textInput = page.locator('input[type="text"]').first();
@@ -380,14 +369,12 @@ test.describe('TaskDetailPanel', () => {
 
       if (await taskItem.isVisible({ timeout: 3000 }).catch(() => false)) {
         await taskItem.click();
-        await page.waitForTimeout(300);
 
         // Check if detail panel opened
         const detailOpened = await elementExists(page, 'text=/Notes|Priority|Subtask|Due|Edit/i', 2000);
 
         if (detailOpened) {
           await page.keyboard.press('Escape');
-          await page.waitForTimeout(300);
 
           // Verify panel closed
           const detailClosed = !(await elementExists(page, 'text=/Notes|Priority|Subtask|Due|Edit/i', 1000));
@@ -413,7 +400,7 @@ test.describe('Responsive Layout', () => {
 
   test('app works on tablet viewport', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     const hasContent = await page.locator('text=active')
       .or(page.locator('h1:has-text("Bealer")'))
@@ -424,7 +411,7 @@ test.describe('Responsive Layout', () => {
 
   test('app works on desktop viewport', async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     
     const hasContent = await page.locator('text=active')
       .or(page.locator('h1:has-text("Bealer")'))
@@ -448,7 +435,6 @@ test.describe('Keyboard Accessibility', () => {
   test('Tab navigation works', async ({ page }) => {
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(50);
     }
     
     const focusedTag = await page.evaluate(() => document.activeElement?.tagName);
@@ -465,7 +451,6 @@ test.describe('Keyboard Accessibility', () => {
     
     if (focused.tag === 'BUTTON' || focused.tag === 'A') {
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(300);
       await page.keyboard.press('Escape');
     }
     
@@ -524,7 +509,6 @@ test.describe('Command Palette', () => {
 
   test('Cmd+K keyboard shortcut is handled', async ({ page }) => {
     await page.keyboard.press('Meta+k');
-    await page.waitForTimeout(300);
     
     const dialog = page.locator('[role="dialog"]');
     const searchInput = page.locator('input[aria-label*="Search" i]');
@@ -532,7 +516,6 @@ test.describe('Command Palette', () => {
     if (await dialog.isVisible().catch(() => false) || 
         await searchInput.isVisible().catch(() => false)) {
       await page.keyboard.press('Escape');
-      await page.waitForTimeout(300);
     }
     
     expect(true).toBeTruthy();

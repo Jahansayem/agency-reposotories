@@ -31,6 +31,7 @@ interface SortableTodoItemProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onEmailCustomer?: (todo: Todo) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
   onClearWaiting?: (id: string) => Promise<void>;
   onOpenDetail?: (todoId: string) => void;
@@ -58,6 +59,7 @@ function areSortableTodoItemPropsEqual(
     prevTodo.due_date !== nextTodo.due_date ||
     prevTodo.assigned_to !== nextTodo.assigned_to ||
     prevTodo.waiting_for_response !== nextTodo.waiting_for_response ||
+    prevTodo.is_private !== nextTodo.is_private ||
     prevTodo.notes !== nextTodo.notes ||
     prevTodo.recurrence !== nextTodo.recurrence ||
     prevTodo.reminder_at !== nextTodo.reminder_at ||

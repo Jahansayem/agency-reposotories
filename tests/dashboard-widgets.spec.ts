@@ -24,14 +24,12 @@ async function loginAsDerrick(page: Page): Promise<void> {
 
   // Click on Derrick's user card
   await page.click('[data-testid="user-card-Derrick"]');
-  await page.waitForTimeout(600);
 
   // Enter PIN
   const pinInputs = page.locator('input[type="password"]');
   await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
   for (let i = 0; i < 4; i++) {
     await pinInputs.nth(i).fill('8008'[i]);
-    await page.waitForTimeout(100);
   }
 
   // Wait for app to load
@@ -46,7 +44,7 @@ async function navigateToDashboard(page: Page): Promise<void> {
   if (await dashboardButton.isVisible({ timeout: 5000 }).catch(() => false)) {
     await dashboardButton.click({ force: true });
   }
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 }
 
 /**
@@ -57,7 +55,7 @@ async function navigateToTasks(page: Page): Promise<void> {
   if (await tasksButton.isVisible({ timeout: 5000 }).catch(() => false)) {
     await tasksButton.click({ force: true });
   }
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 }
 
 /**
@@ -74,20 +72,19 @@ async function createTestTask(
   }
 ): Promise<string> {
   await navigateToTasks(page);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Click New Task button
   const newTaskButton = page.locator('button:has-text("New Task")').first();
   if (await newTaskButton.isVisible()) {
     await newTaskButton.click();
-    await page.waitForTimeout(300);
   }
 
   // Enter task text
   const taskInput = page.locator('[data-testid="add-task-input"]');
   await taskInput.fill(options.text);
   await page.keyboard.press('Enter');
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Find the created task and open it to set attributes
   const taskItem = page.locator(`text="${options.text}"`).first();
@@ -96,16 +93,14 @@ async function createTestTask(
   // If we need to set additional attributes, click to open task detail
   if (options.priority || options.assignedTo || options.dueDate || options.subtasks) {
     await taskItem.click();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Set priority if specified
     if (options.priority && options.priority !== 'medium') {
       const priorityButton = page.locator('[data-testid="priority-selector"]');
       if (await priorityButton.isVisible()) {
         await priorityButton.click();
-        await page.waitForTimeout(200);
         await page.locator(`text=${options.priority}`).first().click();
-        await page.waitForTimeout(200);
       }
     }
 
@@ -114,9 +109,7 @@ async function createTestTask(
       const assigneeButton = page.locator('[data-testid="assignee-selector"]');
       if (await assigneeButton.isVisible()) {
         await assigneeButton.click();
-        await page.waitForTimeout(200);
         await page.locator(`text=${options.assignedTo}`).first().click();
-        await page.waitForTimeout(200);
       }
     }
 
@@ -125,12 +118,10 @@ async function createTestTask(
       const dueDateButton = page.locator('[data-testid="due-date-picker"]');
       if (await dueDateButton.isVisible()) {
         await dueDateButton.click();
-        await page.waitForTimeout(200);
         // Enter date - format depends on the date picker implementation
         const dateInput = page.locator('input[type="date"]');
         if (await dateInput.isVisible()) {
           await dateInput.fill(options.dueDate);
-          await page.waitForTimeout(200);
         }
       }
     }
@@ -141,12 +132,10 @@ async function createTestTask(
         const addSubtaskButton = page.locator('button:has-text("Add subtask")').first();
         if (await addSubtaskButton.isVisible()) {
           await addSubtaskButton.click();
-          await page.waitForTimeout(200);
           const subtaskInput = page.locator('[data-testid="subtask-input"]');
           if (await subtaskInput.isVisible()) {
             await subtaskInput.fill(subtaskText);
             await page.keyboard.press('Enter');
-            await page.waitForTimeout(200);
           }
         }
       }
@@ -154,7 +143,6 @@ async function createTestTask(
 
     // Close task detail modal
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(300);
   }
 
   return options.text;
@@ -165,18 +153,16 @@ async function createTestTask(
  */
 async function deleteTestTask(page: Page, taskText: string): Promise<void> {
   await navigateToTasks(page);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   const taskItem = page.locator(`text="${taskText}"`).first();
   if (await taskItem.isVisible()) {
     // Right-click or use overflow menu to delete
     await taskItem.click({ button: 'right' });
-    await page.waitForTimeout(200);
 
     const deleteButton = page.locator('button:has-text("Delete")').first();
     if (await deleteButton.isVisible()) {
       await deleteButton.click();
-      await page.waitForTimeout(200);
 
       // Confirm deletion if modal appears
       const confirmButton = page.locator('button:has-text("Confirm")').first();
@@ -185,7 +171,7 @@ async function deleteTestTask(page: Page, taskText: string): Promise<void> {
       }
     }
   }
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 }
 
 /**
@@ -193,7 +179,7 @@ async function deleteTestTask(page: Page, taskText: string): Promise<void> {
  */
 async function cleanupTestTasks(page: Page): Promise<void> {
   await navigateToTasks(page);
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
 
   // Find all tasks with test prefix
   const testTasks = page.locator(`*:has-text("${TEST_TASK_PREFIX}")`);
@@ -204,19 +190,17 @@ async function cleanupTestTasks(page: Page): Promise<void> {
       const task = page.locator(`*:has-text("${TEST_TASK_PREFIX}")`).first();
       if (await task.isVisible()) {
         await task.click({ button: 'right' });
-        await page.waitForTimeout(200);
 
         const deleteButton = page.locator('button:has-text("Delete")').first();
         if (await deleteButton.isVisible()) {
           await deleteButton.click();
-          await page.waitForTimeout(200);
 
           const confirmButton = page.locator('button:has-text("Confirm")').first();
           if (await confirmButton.isVisible()) {
             await confirmButton.click();
           }
         }
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
       }
     } catch {
       // Task might have already been deleted
@@ -236,7 +220,7 @@ test.describe('SubtaskProgressWidget', () => {
   test('should display subtask progress when dashboard loads', async ({ page }) => {
     // Navigate to dashboard (uses existing data)
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for subtask progress widget or any dashboard content
     const subtaskProgressWidget = page.locator('text=Subtask Progress');
@@ -253,7 +237,7 @@ test.describe('SubtaskProgressWidget', () => {
   test('should show completion stats if subtasks exist', async ({ page }) => {
     // This test verifies the widget calculates percentages correctly
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Look for completion stats in the widget
     const subtaskWidget = page.locator('text=Subtask Progress').first();
@@ -282,7 +266,7 @@ test.describe('UnassignedTasksAlert', () => {
 
   test('should display alert if unassigned tasks exist in database', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for unassigned alert (uses existing data)
     const unassignedAlert = page.locator('text=/unassigned task/i');
@@ -300,7 +284,7 @@ test.describe('UnassignedTasksAlert', () => {
 
   test('should render dashboard even if no unassigned tasks', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Dashboard should load regardless of unassigned task state
     const dashboardContent = page.locator('text=/Team|Tasks|Progress|Insurance/i').first();
@@ -319,7 +303,7 @@ test.describe('MissingDueDatesWarning', () => {
 
   test('should display warning if tasks without due dates exist', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for missing due dates warning (uses existing data)
     const missingDatesWarning = page.locator('text=/Missing Due Date|without.*due date/i');
@@ -334,7 +318,7 @@ test.describe('MissingDueDatesWarning', () => {
 
   test('should render dashboard regardless of due date state', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Dashboard should load regardless of missing due date state
     const dashboardContent = page.locator('text=/Team|Tasks|Progress|Insurance/i').first();
@@ -353,7 +337,7 @@ test.describe('FeatureAdoptionPrompts', () => {
 
   test('should render dashboard with or without feature prompts', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Look for feature prompts or just verify dashboard loads
     const reminderPrompt = page.locator('text=Try task reminders');
@@ -373,7 +357,7 @@ test.describe('FeatureAdoptionPrompts', () => {
 
   test('should limit visible prompts to reasonable count', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // If prompts exist, they should be limited
     const prompts = page.locator('text=/Try.*|Set up.*|Track.*/i');
@@ -399,7 +383,7 @@ test.describe('Dashboard Widget Integration', () => {
 
   test('should render all widgets on the manager dashboard', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Verify dashboard loads - check for any visible dashboard content
     const dashboardContent = page.locator('[data-testid="dashboard-view"], [data-view="dashboard"]');
@@ -417,7 +401,7 @@ test.describe('Dashboard Widget Integration', () => {
     // Note: This requires logging in as a non-manager user
     // For now, we test that the dashboard renders without errors
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for any dashboard content that indicates the page loaded
     const dashboardIndicators = [
@@ -441,7 +425,7 @@ test.describe('Dashboard Widget Integration', () => {
     await page.setViewportSize({ width: 390, height: 844 });
 
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for horizontal overflow
     const hasOverflow = await page.evaluate(() => {
@@ -460,7 +444,7 @@ test.describe('Dashboard Widget Integration', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Verify no animation-related console errors
     const consoleErrors: string[] = [];
@@ -474,13 +458,13 @@ test.describe('Dashboard Widget Integration', () => {
     const dashboardContent = page.locator('text=/Team|Tasks|Progress|Insurance|Calendar/i').first();
     await expect(dashboardContent).toBeVisible({ timeout: 10000 });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     expect(consoleErrors.length).toBe(0);
   });
 
   test('should display dashboard header metrics', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for any numeric metrics or stats in the dashboard
     const metricsPatterns = [
@@ -511,7 +495,7 @@ test.describe('Dashboard Widget Integration', () => {
   test('widgets should update after task changes', async ({ page }) => {
     // Get initial state
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Verify dashboard shows content before and after task creation
     const dashboardContent = page.locator('text=/Team|Tasks|Progress|Insurance|Calendar/i').first();
@@ -520,7 +504,7 @@ test.describe('Dashboard Widget Integration', () => {
     // Note: Task creation test is skipped to avoid cleanup issues
     // The dashboard shows real-time data from the database
     // Just verify the dashboard continues to work
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     await expect(dashboardContent).toBeVisible();
   });
 });
@@ -536,7 +520,7 @@ test.describe('Dashboard Widget Accessibility', () => {
 
   test('widgets should have proper ARIA attributes', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check for role attributes on alert components
     const alerts = page.locator('[role="alert"]');
@@ -554,11 +538,10 @@ test.describe('Dashboard Widget Accessibility', () => {
 
   test('widgets should be keyboard navigable', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Tab through the dashboard
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(100);
 
     // Check that focus is visible
     const focusedElement = page.locator(':focus');
@@ -567,7 +550,6 @@ test.describe('Dashboard Widget Accessibility', () => {
     // Continue tabbing
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
     }
 
     // Should still be focused on an element
@@ -577,7 +559,7 @@ test.describe('Dashboard Widget Accessibility', () => {
 
   test('widgets should have sufficient color contrast', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Check that text is visible against background
     const textElements = page.locator('p, span, h2, h3');
@@ -608,7 +590,7 @@ test.describe('Dashboard Widget Error Handling', () => {
 
   test('widgets should handle empty data gracefully', async ({ page }) => {
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Dashboard should render even with no tasks
     const dashboard = page.locator('text=Dashboard');
@@ -620,7 +602,7 @@ test.describe('Dashboard Widget Error Handling', () => {
       errors.push(error.message);
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     expect(errors.length).toBe(0);
   });
 
@@ -634,7 +616,7 @@ test.describe('Dashboard Widget Error Handling', () => {
     });
 
     await navigateToDashboard(page);
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Dashboard should still render
     const dashboard = page.locator('text=Dashboard');

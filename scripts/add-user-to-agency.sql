@@ -90,7 +90,7 @@ INSERT INTO agency_members (
 )
 VALUES (
   (SELECT id FROM users WHERE name = 'Sefra'),           -- ← Replace with actual user name
-  (SELECT id FROM agencies WHERE slug = 'bealer-agency'), -- ← Replace with actual agency slug
+  (SELECT id FROM agencies WHERE slug = 'wavezly'), -- ← Replace with actual agency slug
   'member',
   'active',
   '{

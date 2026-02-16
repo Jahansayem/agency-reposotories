@@ -192,16 +192,19 @@ export async function POST(
     }
 
     // Build invite URL
-    const baseUrl = request.headers.get('origin')
-      || request.headers.get('x-forwarded-host')
-        ? `https://${request.headers.get('x-forwarded-host')}`
+    const origin = request.headers.get('origin');
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const baseUrl = origin
+      ? origin
+      : forwardedHost
+        ? `https://${forwardedHost}`
         : process.env.NEXT_PUBLIC_APP_URL
         || 'https://shared-todo-list-production.up.railway.app';
     const inviteUrl = `${baseUrl}/join/${token}`;
 
     // Log activity (safe - will not break operation if it fails)
     await safeLogActivity(supabase, {
-      action: 'task_created', // Reuse existing action type; ideally 'invitation_created'
+      action: 'invitation_sent',
       user_name: auth.context.userName,
       agency_id: agencyId,
       details: {

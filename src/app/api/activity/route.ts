@@ -139,7 +139,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 
     // Verify that the authenticated user matches the user_name in the body
     // This prevents users from logging activities as other users
-    if (ctx.userName !== user_name) {
+    if (!ctx.userName || ctx.userName !== user_name) {
       return NextResponse.json(
         { error: 'Authenticated user does not match user_name in request body' },
         { status: 403 }

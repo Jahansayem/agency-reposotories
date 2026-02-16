@@ -24,15 +24,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should initialize presence channel on login', async ({ page }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check if Supabase presence channel is created
       const hasPresence = await page.evaluate(() => {
@@ -45,15 +43,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should track user location', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // User should be tracked as online
       // (In real implementation, would check Supabase presence state)
@@ -65,15 +61,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Presence Indicator Component', () => {
     test('should render presence indicator', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Look for presence-related UI elements
       // This could be avatar stacks, online count, etc.
@@ -88,15 +82,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should show online count', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // In single-user test, count would be 0 (current user excluded)
       // In multi-user test, would show other online users
@@ -106,15 +98,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should display user avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Check for avatar elements (rounded images/divs)
       const hasAvatars = await page.evaluate(() => {
@@ -130,15 +120,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should update when user joins', async ({ page, context }) => {
       // Login first user
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // In a real multi-user test, would open second browser/tab
       // and verify presence indicator updates
@@ -149,15 +137,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should update when user leaves', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Presence should cleanup when page closes
       // This is handled by Supabase automatically
@@ -168,15 +154,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should sync across tabs', async ({ page, context }) => {
       // Login
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Open second tab
       const page2 = await context.newPage();
@@ -194,15 +178,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Location Tracking', () => {
     test('should track current view', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Default location is 'tasks'
       // Navigate to different views to test location updates
@@ -212,7 +194,7 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
       if (await dashboardButton.isVisible({ timeout: 2000 })) {
         await dashboardButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Location should update to 'dashboard'
         // (Would need to inspect Supabase presence state to verify)
@@ -221,15 +203,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should update location on navigation', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Navigate between views
       const chatButton = page.locator('button:has-text("Chat")').or(
@@ -238,7 +218,7 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
       if (await chatButton.isVisible({ timeout: 2000 })) {
         await chatButton.click();
-        await page.waitForTimeout(500);
+        await page.waitForLoadState('networkidle');
 
         // Location should update
         const bodyVisible = await page.locator('body').isVisible();
@@ -250,15 +230,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Presence Badge', () => {
     test('should show online status', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Look for online indicators (green dots, badges, etc.)
       const hasOnlineIndicators = await page.evaluate(() => {
@@ -273,15 +251,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should show offline status for inactive users', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Offline users would not appear in presence indicator
       // Or would be marked as offline/gray
@@ -293,15 +269,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Avatar Stack', () => {
     test('should limit displayed avatars', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Avatar stack should show max 5 avatars by default
       // With "+N more" indicator if more users
@@ -316,15 +290,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should show +N indicator for overflow', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // If more than maxAvatars users online, should show "+N"
       // This requires multiple users to test properly
@@ -336,22 +308,19 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Tooltip', () => {
     test('should show tooltip on hover', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Hover over presence indicator to show tooltip
       const presenceElement = page.locator('[class*="presence"]').first();
 
       if (await presenceElement.isVisible({ timeout: 1000 })) {
         await presenceElement.hover();
-        await page.waitForTimeout(300);
 
         // Tooltip should appear
         // (Would check for tooltip element)
@@ -360,15 +329,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should display user details in tooltip', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Tooltip should show:
       // - User name
@@ -382,15 +349,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Performance', () => {
     test('should handle presence updates efficiently', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Presence updates should not cause lag
       const startTime = Date.now();
@@ -412,15 +377,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should not leak memory', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Navigate multiple times to test cleanup
       for (let i = 0; i < 5; i++) {
@@ -428,7 +391,6 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
         if (await button.isVisible({ timeout: 1000 })) {
           await button.click();
-          await page.waitForTimeout(200);
         }
       }
 
@@ -441,15 +403,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Edge Cases', () => {
     test('should handle network disconnection', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Presence should handle offline gracefully
       // (Supabase automatically cleans up on disconnect)
@@ -459,15 +419,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should handle rapid location changes', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Rapidly navigate between views
       for (let i = 0; i < 3; i++) {
@@ -475,7 +433,6 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
         if (await button.isVisible({ timeout: 1000 })) {
           await button.click();
-          await page.waitForTimeout(100);
         }
       }
 
@@ -487,29 +444,25 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
     test('should handle duplicate presence tracking', async ({ page, context }) => {
       // Login in first tab
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Open second tab with same user
       const page2 = await context.newPage();
       await page2.goto('http://localhost:3000');
       await page2.click('[data-testid="user-card-Derrick"]');
-      await page2.waitForTimeout(600);
     const pinInputs2 = page2.locator('input[type="password"]');
     await expect(pinInputs2.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs2.nth(i).fill('8008'[i]);
-      await page2.waitForTimeout(100);
     }
 
-      await page2.waitForTimeout(2000);
+      await page2.waitForLoadState('networkidle');
 
       // Should handle multiple tabs gracefully
       // (Supabase uses unique presence keys per connection)
@@ -526,15 +479,13 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
   test.describe('Accessibility', () => {
     test('should have proper ARIA labels', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Presence indicators should have titles/labels
       const hasLabels = await page.evaluate(() => {
@@ -547,19 +498,16 @@ test.describe('Real-Time Presence Indicators (Issue #37)', () => {
 
     test('should support keyboard navigation', async ({ page }) => {
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
-      await page.waitForTimeout(2000);
+      await page.waitForLoadState('networkidle');
 
       // Tab navigation should work
       await page.keyboard.press('Tab');
-      await page.waitForTimeout(100);
 
       const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
       expect(focusedElement).toBeTruthy();

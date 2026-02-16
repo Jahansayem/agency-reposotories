@@ -240,13 +240,13 @@ export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmen
           />
           <SummaryCard
             label="Avg LTV/Customer"
-            value={`$${avgLtv.toLocaleString()}`}
+            value={`$${Math.round(avgLtv).toLocaleString()}`}
             icon={TrendingUp}
             color="purple"
           />
           <SummaryCard
             label="High-Value Customers"
-            value={`${highValueCount} (${((highValueCount / totalCustomers) * 100).toFixed(1)}%)`}
+            value={`${highValueCount} (${totalCustomers > 0 ? ((highValueCount / totalCustomers) * 100).toFixed(1) : '0.0'}%)`}
             icon={Crown}
             color="amber"
           />

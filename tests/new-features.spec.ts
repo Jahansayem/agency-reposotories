@@ -4,8 +4,8 @@ import { test, expect, Page } from '@playwright/test';
 async function registerAndLogin(page: Page, userName: string = 'Test User', pin: string = '1234') {
   await page.goto('/');
 
-  // Wait for login screen to load (shows "Bealer Agency" and "Task Management")
-  await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 10000 });
+  // Wait for login screen to load (shows "Wavezly" and "Task Management")
+  await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('text=Task Management')).toBeVisible({ timeout: 5000 });
 
   // Click "Add New User" button
@@ -31,7 +31,7 @@ async function registerAndLogin(page: Page, userName: string = 'Test User', pin:
   // Click Create Account button
   await page.getByRole('button', { name: 'Create Account' }).click();
 
-  // Wait for app to load (shows main header with Bealer Agency)
+  // Wait for app to load (shows main header with Wavezly)
   await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
 }
 
@@ -40,7 +40,7 @@ async function _loginExistingUser(page: Page, userName: string, pin: string = '1
   await page.goto('/');
 
   // Wait for login screen
-  await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible({ timeout: 10000 });
 
   // Click on user
   await page.locator(`button:has-text("${userName}")`).click();
@@ -61,7 +61,7 @@ async function isAppLoaded(page: Page): Promise<boolean> {
   const configError = page.locator('text=Configuration Required');
 
   try {
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
     if (await configError.isVisible()) {
       return false;
     }
@@ -79,8 +79,8 @@ function uniqueUserName() {
 test.describe('PIN Authentication', () => {
   test('should show login screen on first visit', async ({ page }) => {
     await page.goto('/');
-    // Should show Bealer Agency title on login screen
-    await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 10000 });
+    // Should show Wavezly title on login screen
+    await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=Task Management')).toBeVisible();
   });
 
@@ -118,7 +118,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 10000 });
 
     // Wait for any animations to complete
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Complete the task by clicking the checkbox
     const checkbox = page.locator(`text=${taskName}`).locator('xpath=ancestor::div[contains(@class, "rounded-")]//button[1]');
@@ -146,7 +146,7 @@ test.describe('Micro-Rewards (Celebration Effect)', () => {
 
     // Wait for task to appear
     await expect(page.locator(`text=${taskName}`)).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Complete the task
     const checkbox = page.locator(`text=${taskName}`).locator('xpath=ancestor::div[contains(@class, "rounded-")]//button[1]');
@@ -378,7 +378,7 @@ test.describe('Stats Dashboard', () => {
     await expect(page.locator('text=Stats test task')).toBeVisible({ timeout: 5000 });
 
     // Check count increased
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
     const newCount = parseInt(await totalStat.textContent() || '0');
     expect(newCount).toBe(initialCount + 1);
   });
@@ -454,6 +454,7 @@ test.describe('Task Filters', () => {
     // Complete one
     const taskItem = page.locator(`text=${taskToComplete}`).locator('..').locator('..');
     await taskItem.locator('button').first().click();
+    // Genuine timing wait: tooltip auto-hides after 2s
     await page.waitForTimeout(2500); // Wait for celebration
 
     // Click Active filter
@@ -482,6 +483,7 @@ test.describe('Task Filters', () => {
 
     const taskItem = page.locator(`text=${taskName}`).locator('..').locator('..');
     await taskItem.locator('button').first().click();
+    // Genuine timing wait: tooltip auto-hides after 2s
     await page.waitForTimeout(2500);
 
     // Click Completed filter

@@ -8,11 +8,10 @@ test.describe('Server-Side Lockout - Login Flow', () => {
   test('should use server-side lockout (5 attempts, 5 minutes)', async ({ page }) => {
     // Select Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Attempt 1: Wrong PIN
     await page.keyboard.type('0000');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Should show error with attempts remaining
     const error1 = await page.locator('text=/attempts left|Incorrect PIN/i').textContent();
@@ -26,7 +25,7 @@ test.describe('Server-Side Lockout - Login Flow', () => {
 
     // Attempt 2: Wrong PIN
     await page.keyboard.type('1111');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     const error2 = await page.locator('text=/attempts left|Incorrect PIN/i').textContent();
     expect(error2).toBeTruthy();
@@ -38,14 +37,12 @@ test.describe('Server-Side Lockout - Login Flow', () => {
     await page.keyboard.press('Backspace');
 
     // Attempt 3: Correct PIN
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Should login successfully
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
@@ -54,12 +51,11 @@ test.describe('Server-Side Lockout - Login Flow', () => {
   test('should NOT have client-side localStorage lockout', async ({ page }) => {
     // Select user
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Try wrong PIN 3 times (old client-side lockout threshold)
     for (let i = 0; i < 3; i++) {
       await page.keyboard.type('0000');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Clear
       for (let j = 0; j < 4; j++) {
@@ -75,14 +71,12 @@ test.describe('Server-Side Lockout - Login Flow', () => {
     expect(lockoutData.length).toBe(0);
 
     // After 3 attempts, should still be able to enter PIN (not locked yet)
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     // Should login successfully (server allows up to 5 attempts)
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
@@ -95,13 +89,10 @@ test.describe('Server-Side Lockout - User Switching', () => {
 
     // Login as Derrick
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
@@ -125,7 +116,7 @@ test.describe('Server-Side Lockout - User Switching', () => {
 
       // Try wrong PIN
       await page.keyboard.type('0000');
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle');
 
       // Should show error (server-side validation)
       await expect(page.locator('text=/Incorrect PIN|Invalid credentials/i')).toBeVisible();
@@ -160,7 +151,7 @@ test.describe('Server-Side Lockout - User Switching', () => {
         for (let digit = 0; digit < 4; digit++) {
           await page.keyboard.press('0');
         }
-        await page.waitForTimeout(1500);
+        await page.waitForLoadState('networkidle');
 
         // Check if locked
         const isLocked = await page.locator('text=/Locked|Too many attempts/i').isVisible().catch(() => false);
@@ -183,7 +174,6 @@ test.describe('Server-Side Lockout - User Switching', () => {
         if (i < 4) {
           const closeButton = page.locator('button[aria-label="Close PIN dialog"]');
           await closeButton.click();
-          await page.waitForTimeout(300);
 
           // Reopen
           await userSwitcher.click();
@@ -225,15 +215,12 @@ test.describe('Lockout - No Client-Side Logic', () => {
     // But the app should NOT create these keys during normal operation
     // Verify by logging in successfully
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+        const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle');
 
     await expect(page.locator('text=Dashboard').first()).toBeVisible({ timeout: 3000 });
 
@@ -252,11 +239,10 @@ test.describe('Lockout - No Client-Side Logic', () => {
 
     // Select user
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Try wrong PIN
     await page.keyboard.type('0000');
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Error should reference server-side attempts (not "2 attempts left" from old client logic)
     const errorText = await page.locator('text=/Incorrect PIN|attempts/i').textContent();
@@ -281,12 +267,11 @@ test.describe('Lockout Security - Redis-based', () => {
 
     // Select user
     await page.click('[data-testid="user-card-Derrick"]');
-    await page.waitForTimeout(600);
-
+  
     // Make 5 failed attempts to trigger server lockout
     for (let i = 0; i < 5; i++) {
       await page.keyboard.type('0000');
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
 
       // Clear PIN inputs
       for (let j = 0; j < 4; j++) {
@@ -300,19 +285,16 @@ test.describe('Lockout Security - Redis-based', () => {
     if (lockedText) {
       // Refresh page
       await page.reload();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
 
       // Try to login again
       await page.click('[data-testid="user-card-Derrick"]');
-      await page.waitForTimeout(600);
-      await page.waitForTimeout(600);
     const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     } // Correct PIN
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('networkidle');
 
       // Should still be locked (lockout persists in Redis, not localStorage)
       const stillLocked = await page.locator('text=/Locked|Too many attempts/i').isVisible().catch(() => false);

@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import {
   simulateScenario,
   generateBenchmarkReport,
@@ -25,7 +26,7 @@ export interface SimulateRequest {
   includeBenchmarks?: boolean;
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const body: SimulateRequest = await request.json();
     const {
@@ -64,13 +65,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/analytics/simulate
  * Get default simulation parameters for reference
  */
-export async function GET() {
+export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   const defaultParams = createDefaultSimulationParameters();
 
   return NextResponse.json({
@@ -83,4 +84,4 @@ export async function GET() {
       'Benchmark comparisons',
     ],
   });
-}
+});

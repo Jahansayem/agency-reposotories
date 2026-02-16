@@ -15,23 +15,21 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
     // Login as Derrick
     await page.goto('/');
     await page.getByTestId('user-card-Derrick').click();
-    await page.waitForTimeout(600);
-    const pinInputs = page.locator('input[type="password"]');
+      const pinInputs = page.locator('input[type="password"]');
     await expect(pinInputs.first()).toBeVisible({ timeout: 5000 });
     for (let i = 0; i < 4; i++) {
       await pinInputs.nth(i).fill('8008'[i]);
-      await page.waitForTimeout(100);
     }
     await page.waitForURL('/');
 
     // Close any welcome dialogs or modals
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
 
     // Navigate to tasks view by clicking "All" tab
     await page.click('button:has-text("All")');
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Wait for add task input to be visible
     await expect(page.locator('[data-testid="add-task-input"]')).toBeVisible({ timeout: 10000 });
@@ -196,7 +194,7 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
     await page.click('[data-testid="smart-parse-button"]');
 
     // Wait for suggested subtasks
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
 
     // Now apply a template (which should override suggestions)
     await page.click('[data-testid="template-picker-button"]');
@@ -217,13 +215,13 @@ test.describe('Phase 2.2: Template Quick-Apply', () => {
     await page.locator('[data-testid="template-item"]').first().click();
 
     // Wait for template to apply
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
 
     // Submit the form
     await page.keyboard.press('Enter');
 
     // Wait for task creation
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
 
     // Subtasks section should be cleared
     const subtaskItems = page.locator('[data-testid="subtask-item"]');
