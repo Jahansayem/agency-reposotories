@@ -36,7 +36,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
       // Check if database was created
       const dbExists = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             resolve(true);
             request.result.close();
@@ -55,7 +55,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
       const hasStore = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             const db = request.result;
             const hasTodos = db.objectStoreNames.contains('todos');
@@ -73,7 +73,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
       const hasStore = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             const db = request.result;
             const hasMessages = db.objectStoreNames.contains('messages');
@@ -91,7 +91,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
       const hasStore = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             const db = request.result;
             const hasQueue = db.objectStoreNames.contains('syncQueue');
@@ -153,7 +153,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
       // Check if task is in IndexedDB
       const cachedTodo = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             const db = request.result;
             const tx = db.transaction('todos', 'readonly');
@@ -216,7 +216,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
 
       const queueLength = await page.evaluate(async () => {
         return new Promise<number>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             const db = request.result;
             const tx = db.transaction('syncQueue', 'readonly');
@@ -305,7 +305,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
         const startTime = Date.now();
 
         // Open database
-        const dbRequest = indexedDB.open('bealer-tasks-db');
+        const dbRequest = indexedDB.open('wavezly-tasks-db');
 
         return new Promise<number>((resolve) => {
           dbRequest.onsuccess = async () => {
@@ -373,7 +373,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
       // Verify data structure in IndexedDB
       const todoStructure = await page.evaluate(async () => {
         return new Promise<boolean>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             const db = request.result;
             const tx = db.transaction('todos', 'readonly');
@@ -421,7 +421,7 @@ test.describe('Offline Mode with IndexedDB (Issue #35)', () => {
     test('should detect IndexedDB version support', async ({ page }) => {
       const version = await page.evaluate(async () => {
         return new Promise<number>((resolve) => {
-          const request = indexedDB.open('bealer-tasks-db');
+          const request = indexedDB.open('wavezly-tasks-db');
           request.onsuccess = () => {
             const version = request.result.version;
             request.result.close();

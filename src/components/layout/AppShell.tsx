@@ -14,7 +14,7 @@ import FloatingChatButton from '../FloatingChatButton';
 // ═══════════════════════════════════════════════════════════════════════════
 // APP SHELL - CORE LAYOUT ARCHITECTURE
 // A sophisticated three-column layout with persistent navigation and panels
-// Designed for the Bealer Agency insurance task management workflow
+// Designed for the Wavezly insurance task management workflow
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type ActiveView =

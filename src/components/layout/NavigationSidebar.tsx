@@ -191,7 +191,7 @@ export default function NavigationSidebar({
                   </div>
                   <div className="overflow-hidden">
                     <h1 className="font-semibold text-sm truncate text-[var(--foreground)]">
-                      {currentAgency?.name || 'Bealer Agency'}
+                      {currentAgency?.name || 'Wavezly'}
                     </h1>
                     <p className="text-xs truncate text-[var(--text-muted)]">
                       Task Manager

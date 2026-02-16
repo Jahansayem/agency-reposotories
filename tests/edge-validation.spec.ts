@@ -31,7 +31,7 @@ test.describe('Edge Compatibility', () => {
     await page.waitForLoadState('networkidle');
 
     // Check for major UI elements
-    const loginHeader = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const loginHeader = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     const mainAppInput = page.locator('textarea[placeholder*="Add a task"]');
 
     const hasLogin = await loginHeader.isVisible().catch(() => false);

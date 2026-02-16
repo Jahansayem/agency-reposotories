@@ -177,7 +177,7 @@ Nombre del Cliente: ${customerName}
 ${customerEmail ? `Email del Cliente: ${customerEmail}` : ''}
 ${customerPhone ? `Teléfono del Cliente: ${customerPhone}` : ''}
 Nombre del Remitente: ${senderName}
-Agencia: Bealer Agency
+Agencia: Wavezly
 
 Resumen de Tareas (${completed} completadas, ${inProgress} en progreso, ${pending} pendientes):
 ${taskSummary}
@@ -210,7 +210,7 @@ Customer Name: ${customerName}
 ${customerEmail ? `Customer Email: ${customerEmail}` : ''}
 ${customerPhone ? `Customer Phone: ${customerPhone}` : ''}
 Sender Name: ${senderName}
-Agency: Bealer Agency
+Agency: Wavezly
 
 Task Summary (${completed} completed, ${inProgress} in progress, ${pending} pending):
 ${taskSummary}

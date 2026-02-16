@@ -97,7 +97,7 @@ test.describe('Summary Generator - Integration Tests', () => {
     await page.goto('/');
 
     // Wait for login screen
-    const header = page.locator('h1').filter({ hasText: 'Bealer Agency' });
+    const header = page.locator('h1').filter({ hasText: 'Wavezly' });
     await expect(header).toBeVisible({ timeout: 15000 });
 
     // Click Add New User button

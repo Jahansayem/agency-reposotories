@@ -5,7 +5,7 @@ This checklist covers security requirements for internal applications based on:
 - Allstate Information Security Standards
 - Industry best practices for insurance applications
 
-**Application:** Bealer Agency Todo List
+**Application:** Wavezly Todo List
 **Last Review:** 2026-02-04
 **Reviewer:** Security Team
 

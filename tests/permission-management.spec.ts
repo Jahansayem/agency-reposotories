@@ -40,10 +40,10 @@ test.describe('Permission Management', () => {
     // Screenshot 4: After clicking agency switcher
     await page.screenshot({ path: 'tests/permission-screenshots/04-agency-dropdown.png', fullPage: true });
 
-    // Look for "Bealer Agency" in the dropdown and click it
-    const bealerAgency = page.locator('button, [role="menuitem"]').filter({ hasText: 'Bealer Agency' }).first();
+    // Look for "Wavezly" in the dropdown and click it
+    const bealerAgency = page.locator('button, [role="menuitem"]').filter({ hasText: 'Wavezly' }).first();
     if (await bealerAgency.isVisible().catch(() => false)) {
-      console.log('Found Bealer Agency, clicking to select...');
+      console.log('Found Wavezly, clicking to select...');
       await bealerAgency.click();
       await page.waitForLoadState('networkidle');
     }

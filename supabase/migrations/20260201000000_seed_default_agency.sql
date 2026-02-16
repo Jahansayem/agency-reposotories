@@ -1,7 +1,7 @@
 /**
- * Migration: Seed Default Agency (Bealer Agency)
+ * Migration: Seed Default Agency (Wavezly)
  *
- * Creates the default "Bealer Agency" and assigns all existing users as members.
+ * Creates the default "Wavezly" and assigns all existing users as members.
  * This is a one-time migration to bootstrap the multi-agency system.
  *
  * Date: 2026-02-01
@@ -12,7 +12,7 @@
 -- 1. Create Default Agency
 -- ============================================
 
--- Insert Bealer Agency (if not exists)
+-- Insert Wavezly (if not exists)
 INSERT INTO agencies (
   id,
   name,
@@ -24,8 +24,8 @@ INSERT INTO agencies (
 )
 VALUES (
   gen_random_uuid(),
-  'Bealer Agency',
-  'bealer-agency',
+  'Wavezly',
+  'wavezly',
   true,
   '#0033A0', -- Allstate brand blue
   NOW(),
@@ -39,17 +39,17 @@ DECLARE
   bealer_agency_id UUID;
   user_record RECORD;
 BEGIN
-  -- Get Bealer Agency ID
+  -- Get Wavezly ID
   SELECT id INTO bealer_agency_id
   FROM agencies
-  WHERE slug = 'bealer-agency';
+  WHERE slug = 'wavezly';
 
   -- If agency doesn't exist, raise error
   IF bealer_agency_id IS NULL THEN
-    RAISE EXCEPTION 'Bealer Agency not found - migration failed';
+    RAISE EXCEPTION 'Wavezly not found - migration failed';
   END IF;
 
-  -- Assign all existing users to Bealer Agency
+  -- Assign all existing users to Wavezly
   FOR user_record IN SELECT id, name, role FROM users LOOP
     -- Insert membership (skip if already exists)
     INSERT INTO agency_members (
@@ -112,10 +112,10 @@ BEGIN
     )
     ON CONFLICT (user_id, agency_id) DO NOTHING;
 
-    RAISE NOTICE 'Assigned user % (%) to Bealer Agency', user_record.name, user_record.role;
+    RAISE NOTICE 'Assigned user % (%) to Wavezly', user_record.name, user_record.role;
   END LOOP;
 
-  RAISE NOTICE 'Successfully seeded Bealer Agency with % members', (SELECT COUNT(*) FROM users);
+  RAISE NOTICE 'Successfully seeded Wavezly with % members', (SELECT COUNT(*) FROM users);
 END $$;
 
 -- ============================================
@@ -127,13 +127,13 @@ DO $$
 DECLARE
   bealer_agency_id UUID;
 BEGIN
-  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'bealer-agency';
+  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'wavezly';
 
   UPDATE todos
   SET agency_id = bealer_agency_id
   WHERE agency_id IS NULL;
 
-  RAISE NOTICE 'Migrated % todos to Bealer Agency', (SELECT COUNT(*) FROM todos WHERE agency_id = bealer_agency_id);
+  RAISE NOTICE 'Migrated % todos to Wavezly', (SELECT COUNT(*) FROM todos WHERE agency_id = bealer_agency_id);
 END $$;
 
 -- Add agency_id to existing messages (if NULL)
@@ -141,13 +141,13 @@ DO $$
 DECLARE
   bealer_agency_id UUID;
 BEGIN
-  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'bealer-agency';
+  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'wavezly';
 
   UPDATE messages
   SET agency_id = bealer_agency_id
   WHERE agency_id IS NULL;
 
-  RAISE NOTICE 'Migrated % messages to Bealer Agency', (SELECT COUNT(*) FROM messages WHERE agency_id = bealer_agency_id);
+  RAISE NOTICE 'Migrated % messages to Wavezly', (SELECT COUNT(*) FROM messages WHERE agency_id = bealer_agency_id);
 END $$;
 
 -- Add agency_id to existing activity_log (if NULL)
@@ -155,13 +155,13 @@ DO $$
 DECLARE
   bealer_agency_id UUID;
 BEGIN
-  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'bealer-agency';
+  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'wavezly';
 
   UPDATE activity_log
   SET agency_id = bealer_agency_id
   WHERE agency_id IS NULL;
 
-  RAISE NOTICE 'Migrated % activity log entries to Bealer Agency', (SELECT COUNT(*) FROM activity_log WHERE agency_id = bealer_agency_id);
+  RAISE NOTICE 'Migrated % activity log entries to Wavezly', (SELECT COUNT(*) FROM activity_log WHERE agency_id = bealer_agency_id);
 END $$;
 
 -- Add agency_id to existing task_templates (if NULL)
@@ -169,13 +169,13 @@ DO $$
 DECLARE
   bealer_agency_id UUID;
 BEGIN
-  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'bealer-agency';
+  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'wavezly';
 
   UPDATE task_templates
   SET agency_id = bealer_agency_id
   WHERE agency_id IS NULL;
 
-  RAISE NOTICE 'Migrated % task templates to Bealer Agency', (SELECT COUNT(*) FROM task_templates WHERE agency_id = bealer_agency_id);
+  RAISE NOTICE 'Migrated % task templates to Wavezly', (SELECT COUNT(*) FROM task_templates WHERE agency_id = bealer_agency_id);
 END $$;
 
 -- Add agency_id to existing strategic_goals (if NULL)
@@ -183,13 +183,13 @@ DO $$
 DECLARE
   bealer_agency_id UUID;
 BEGIN
-  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'bealer-agency';
+  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'wavezly';
 
   UPDATE strategic_goals
   SET agency_id = bealer_agency_id
   WHERE agency_id IS NULL;
 
-  RAISE NOTICE 'Migrated % strategic goals to Bealer Agency', (SELECT COUNT(*) FROM strategic_goals WHERE agency_id = bealer_agency_id);
+  RAISE NOTICE 'Migrated % strategic goals to Wavezly', (SELECT COUNT(*) FROM strategic_goals WHERE agency_id = bealer_agency_id);
 END $$;
 
 -- ============================================
@@ -204,13 +204,13 @@ DECLARE
   todo_count INT;
   message_count INT;
 BEGIN
-  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'bealer-agency';
+  SELECT id INTO bealer_agency_id FROM agencies WHERE slug = 'wavezly';
   SELECT COUNT(*) INTO member_count FROM agency_members WHERE agency_id = bealer_agency_id;
   SELECT COUNT(*) INTO todo_count FROM todos WHERE agency_id = bealer_agency_id;
   SELECT COUNT(*) INTO message_count FROM messages WHERE agency_id = bealer_agency_id;
 
   RAISE NOTICE '✅ Migration Complete!';
-  RAISE NOTICE '   Agency: Bealer Agency (%))', bealer_agency_id;
+  RAISE NOTICE '   Agency: Wavezly (%))', bealer_agency_id;
   RAISE NOTICE '   Members: %', member_count;
   RAISE NOTICE '   Todos: %', todo_count;
   RAISE NOTICE '   Messages: %', message_count;

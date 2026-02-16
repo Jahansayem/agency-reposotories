@@ -9,7 +9,7 @@
 ## Prerequisites
 
 - [ ] Dev server running: `npm run dev`
-- [ ] Database seeded with Bealer Agency (see QUICK_START_MULTI_AGENCY.md)
+- [ ] Database seeded with Wavezly (see QUICK_START_MULTI_AGENCY.md)
 - [ ] At least 2 users exist: Derrick (owner) and Sefra
 - [ ] `NEXT_PUBLIC_ENABLE_MULTI_TENANCY=true` in `.env.local`
 
@@ -74,8 +74,8 @@
 
 **Steps**:
 1. Open "Create New Agency" modal
-2. Enter Agency Name: "Bealer Agency" (already exists)
-3. Slug will be: `bealer-agency`
+2. Enter Agency Name: "Wavezly" (already exists)
+3. Slug will be: `wavezly`
 4. Click "Create Agency"
 
 **Expected Result**:
@@ -350,14 +350,14 @@
 **Login**: Derrick
 
 **Steps**:
-1. Switch to "Bealer Agency"
-2. Create task: "Bealer Agency Task"
+1. Switch to "Wavezly"
+2. Create task: "Wavezly Task"
 3. Switch to "Test Insurance Agency"
 4. Create task: "Test Agency Task"
-5. Switch back to "Bealer Agency"
+5. Switch back to "Wavezly"
 
 **Expected Result**:
-- ✅ Only "Bealer Agency Task" visible
+- ✅ Only "Wavezly Task" visible
 - ✅ "Test Agency Task" hidden
 - ✅ Switch back to Test Agency shows opposite
 
@@ -368,8 +368,8 @@
 ### Test 3.3: Real-Time Sync Across Agencies
 **Setup**: Open 2 browser tabs, login as different users in same agency
 
-**Tab 1**: Derrick in Bealer Agency
-**Tab 2**: Sefra in Bealer Agency
+**Tab 1**: Derrick in Wavezly
+**Tab 2**: Sefra in Wavezly
 
 **Steps**:
 1. In Tab 1 (Derrick), create a task
@@ -382,7 +382,7 @@
 **Now Test Cross-Agency**:
 1. In Tab 1, switch Derrick to "Test Insurance Agency"
 2. Create a task
-3. Check Tab 2 (Sefra still in Bealer Agency)
+3. Check Tab 2 (Sefra still in Wavezly)
 
 **Expected Result**:
 - ❌ Task does NOT appear in Tab 2
@@ -601,7 +601,7 @@ SELECT
   am.created_at
 FROM agency_members am
 JOIN users u ON am.user_id = u.id
-WHERE am.agency_id = (SELECT id FROM agencies WHERE slug = 'bealer-agency')
+WHERE am.agency_id = (SELECT id FROM agencies WHERE slug = 'wavezly')
   AND u.name = 'Sefra';
 ```
 

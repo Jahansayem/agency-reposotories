@@ -13,17 +13,17 @@ test.describe('Loading States Consistency (Issue #27)', () => {
       // This test verifies the component exists and can be imported
       // The component is tested via its usage in actual pages
       await page.goto('http://localhost:3000');
-      await expect(page).toHaveTitle(/Bealer Agency Todo/);
+      await expect(page).toHaveTitle(/Wavezly Todo/);
     });
 
     test('should have SkeletonChatPanel component', async ({ page }) => {
       await page.goto('http://localhost:3000');
-      await expect(page).toHaveTitle(/Bealer Agency Todo/);
+      await expect(page).toHaveTitle(/Wavezly Todo/);
     });
 
     test('should have SkeletonDashboard component', async ({ page }) => {
       await page.goto('http://localhost:3000');
-      await expect(page).toHaveTitle(/Bealer Agency Todo/);
+      await expect(page).toHaveTitle(/Wavezly Todo/);
     });
   });
 

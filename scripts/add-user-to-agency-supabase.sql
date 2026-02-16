@@ -10,7 +10,7 @@ DO $$
 DECLARE
   -- 🔧 CONFIGURE THESE VALUES:
   v_user_name text := 'Sefra';           -- ← Change this to the user's name
-  v_agency_slug text := 'bealer-agency'; -- ← Change this to the agency slug
+  v_agency_slug text := 'wavezly'; -- ← Change this to the agency slug
   v_user_role text := 'member';          -- ← Can be: 'owner', 'admin', or 'member'
   v_is_default boolean := false;         -- ← Set to true if this should be default agency
 
@@ -88,4 +88,4 @@ FROM agency_members am
 JOIN users u ON am.user_id = u.id
 JOIN agencies a ON am.agency_id = a.id
 WHERE u.name = 'Sefra'  -- ← Change to match your user name above
-  AND a.slug = 'bealer-agency';  -- ← Change to match your agency slug above
+  AND a.slug = 'wavezly';  -- ← Change to match your agency slug above

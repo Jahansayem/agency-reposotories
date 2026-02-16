@@ -26,8 +26,8 @@ test.describe('Agency Management - Complete Test Suite', () => {
     console.log('\n=== TEST 1.1: Access Control - Owner Can Create Agencies ===');
 
     // Click AgencySwitcher - wait for it to be visible with longer timeout
-    // The button contains "B Bealer Agency" where B is the avatar letter
-    const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
+    // The button contains "B Wavezly" where B is the avatar letter
+    const agencySwitcher = page.locator('button:has-text("Wavezly")').first();
     await expect(agencySwitcher).toBeVisible({ timeout: 15000 });
 
     await agencySwitcher.click();
@@ -45,7 +45,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     console.log('\n=== TEST 1.2: Create Agency - Valid Input ===');
 
     // Open AgencySwitcher
-    const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
+    const agencySwitcher = page.locator('button:has-text("Wavezly")').first();
     await agencySwitcher.click();
     await page.waitForLoadState('networkidle');
 
@@ -65,7 +65,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     const uniqueAgencyName = `Test Agency ${timestamp}`;
 
     // Fill agency name - use the placeholder text as selector
-    const nameInput = page.locator('input[placeholder*="Bealer Agency"]');
+    const nameInput = page.locator('input[placeholder*="Wavezly"]');
     await nameInput.fill(uniqueAgencyName);
     console.log(`✅ Filled agency name: ${uniqueAgencyName}`);
 
@@ -127,7 +127,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     console.log('\n=== TEST 2.1: Access Control - Owner Can Manage Members ===');
 
     // Open AgencySwitcher
-    const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
+    const agencySwitcher = page.locator('button:has-text("Wavezly")').first();
     await agencySwitcher.click();
     await page.waitForLoadState('networkidle');
 
@@ -154,7 +154,7 @@ test.describe('Agency Management - Complete Test Suite', () => {
     console.log('\n=== TEST 2.3: Add Member - Valid User ===');
 
     // Open Manage Members
-    const agencySwitcher = page.locator('button:has-text("Bealer Agency")').first();
+    const agencySwitcher = page.locator('button:has-text("Wavezly")').first();
     await agencySwitcher.click();
     await page.waitForLoadState('networkidle');
 

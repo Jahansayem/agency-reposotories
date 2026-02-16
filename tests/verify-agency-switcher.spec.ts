@@ -29,7 +29,7 @@ test.describe('Verify Agency Switcher', () => {
     // Take a screenshot before checking
     await page.screenshot({ path: '/tmp/before-agency-switcher-check.png', fullPage: true });
 
-    // Look for the agency switcher button (should show "Bealer Agency" or agency name)
+    // Look for the agency switcher button (should show "Wavezly" or agency name)
     const agencySwitcher = page.locator('button:has-text("Bealer"), button:has-text("Agency")').first();
     const agencySwitcherExists = await agencySwitcher.count() > 0;
 

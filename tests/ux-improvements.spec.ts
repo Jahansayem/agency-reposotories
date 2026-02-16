@@ -8,8 +8,8 @@ test.describe('UX/UI Transformation Tests', () => {
       await page.evaluate(() => localStorage.clear());
       await page.reload();
 
-      // Check for animated welcome card with Bealer Agency branding
-      await expect(page.locator('text=Bealer Agency')).toBeVisible();
+      // Check for animated welcome card with Wavezly branding
+      await expect(page.locator('text=Wavezly')).toBeVisible();
       await expect(page.locator('text=Task Management System')).toBeVisible();
 
       // Check for feature icons (use exact match to avoid "Task Management System" conflict)
@@ -93,8 +93,8 @@ test.describe('UX/UI Transformation Tests', () => {
       await page.fill('input[type="text"]', 'Test User');
       await page.click('button:has-text("Get Started")');
 
-      // Should either see Bealer Agency header (if Supabase configured) or Configuration Required
-      const bealerAgency = page.locator('h1:has-text("Bealer Agency")');
+      // Should either see Wavezly header (if Supabase configured) or Configuration Required
+      const bealerAgency = page.locator('h1:has-text("Wavezly")');
       const configRequired = page.locator('text=Configuration Required');
 
       // Wait for either outcome
@@ -181,7 +181,7 @@ test.describe('UX/UI Transformation Tests', () => {
       await page.reload();
 
       // Onboarding should still be visible
-      await expect(page.locator('text=Bealer Agency')).toBeVisible();
+      await expect(page.locator('text=Wavezly')).toBeVisible();
       await expect(page.locator('button:has-text("Get Started")')).toBeVisible();
     });
 
@@ -191,7 +191,7 @@ test.describe('UX/UI Transformation Tests', () => {
       await page.evaluate(() => localStorage.clear());
       await page.reload();
 
-      await expect(page.locator('text=Bealer Agency')).toBeVisible();
+      await expect(page.locator('text=Wavezly')).toBeVisible();
     });
 
     test('should work on desktop viewport', async ({ page }) => {
@@ -200,7 +200,7 @@ test.describe('UX/UI Transformation Tests', () => {
       await page.evaluate(() => localStorage.clear());
       await page.reload();
 
-      await expect(page.locator('text=Bealer Agency')).toBeVisible();
+      await expect(page.locator('text=Wavezly')).toBeVisible();
       await expect(page.locator('text=Secure & Reliable')).toBeVisible();
     });
   });
@@ -239,7 +239,7 @@ test.describe('UX/UI Transformation Tests', () => {
       await page.keyboard.press('Enter');
 
       // Should navigate (either to app or config screen)
-      const bealerAgency = page.locator('h1:has-text("Bealer Agency")');
+      const bealerAgency = page.locator('h1:has-text("Wavezly")');
       const configRequired = page.locator('text=Configuration Required');
       await expect(bealerAgency.or(configRequired)).toBeVisible({ timeout: 10000 });
     });
@@ -262,7 +262,7 @@ test.describe('UX/UI Transformation Tests', () => {
         await expect(page.locator('text=SETUP.md')).toBeVisible();
       } else {
         // Supabase is configured, we should see the app
-        await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible();
+        await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible();
       }
     });
 

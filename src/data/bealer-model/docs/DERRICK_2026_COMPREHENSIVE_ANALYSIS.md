@@ -1,4 +1,4 @@
-# Derrick Bealer Agency: Comprehensive 2026 Compensation Analysis
+# Derrick Wavezly: Comprehensive 2026 Compensation Analysis
 
 **Agency:** Derrick Bealer - Allstate Santa Barbara & Goleta (A0C6581)
 **State:** California (Restricted State)

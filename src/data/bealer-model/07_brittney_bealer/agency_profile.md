@@ -1,4 +1,4 @@
-# Brittney Bealer Agency Profile
+# Brittney Wavezly Profile
 
 ## Agency Information
 - **Agent Name:** Brittany Bealer (Elite Prime)

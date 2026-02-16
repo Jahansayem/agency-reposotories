@@ -573,13 +573,13 @@ export const GET = withAgencyAuth(
 **Verification**:
 ```bash
 # Test unauthenticated request
-curl -X POST https://api.bealeragency.com/api/analytics/segmentation \
+curl -X POST https://api.wavezly.com/api/analytics/segmentation \
   -H "Content-Type: application/json" \
   -d '{"customers": []}'
 # Expected: 401 Unauthorized
 
 # Test with valid session
-curl -X POST https://api.bealeragency.com/api/analytics/segmentation \
+curl -X POST https://api.wavezly.com/api/analytics/segmentation \
   -H "Content-Type: application/json" \
   -H "Cookie: session=<valid_token>" \
   -d '{"customers": []}'
@@ -781,7 +781,7 @@ module.exports = {
       {
         source: '/api/analytics/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: 'https://bealeragency.com' },
+          { key: 'Access-Control-Allow-Origin', value: 'https://wavezly.com' },
           { key: 'Access-Control-Allow-Methods', value: 'GET,POST' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
         ],

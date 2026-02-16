@@ -71,7 +71,7 @@ ORDER BY conrelid, conname;
 ### Step 1: Open Supabase SQL Editor
 
 1. Log in to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Navigate to your project: **Bealer Agency Todo List**
+2. Navigate to your project: **Wavezly Todo List**
 3. Click **SQL Editor** in left sidebar
 4. Create a new query
 

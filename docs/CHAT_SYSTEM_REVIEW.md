@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-A comprehensive security and accessibility audit was conducted on the chat functionality of the Bealer Agency Todo List application. The review identified **4 critical security vulnerabilities**, **6 high-priority architectural issues**, and multiple accessibility gaps. This report documents the findings and the improvements that were implemented.
+A comprehensive security and accessibility audit was conducted on the chat functionality of the Wavezly Todo List application. The review identified **4 critical security vulnerabilities**, **6 high-priority architectural issues**, and multiple accessibility gaps. This report documents the findings and the improvements that were implemented.
 
 ---
 

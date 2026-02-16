@@ -129,7 +129,7 @@ export default function ErrorToast({
       buttons.push(
         <a
           key="contact"
-          href="mailto:admin@bealeragency.com?subject=Permission Request"
+          href="mailto:admin@wavezly.com?subject=Permission Request"
           className="px-3 py-1.5 rounded-[var(--radius-lg)] bg-white/20 hover:bg-white/30 text-white text-sm font-medium transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-red-600"
           aria-label="Contact administrator for help"
         >

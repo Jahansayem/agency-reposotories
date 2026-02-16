@@ -102,14 +102,14 @@
 
 5. **Test:**
    ```bash
-   # Create template in Bealer Agency
+   # Create template in Wavezly
    curl http://localhost:3000/api/templates \
      -X POST \
      -H "Content-Type: application/json" \
      -H "Cookie: current_agency_id=893577db-4271-4a70-88ba-a93121f22e0e" \
      -d '{"name":"Test Template","description":"Test"}'
 
-   # Verify only visible to Bealer Agency
+   # Verify only visible to Wavezly
    curl http://localhost:3000/api/templates \
      -H "Cookie: current_agency_id=893577db-4271-4a70-88ba-a93121f22e0e"
    ```
@@ -191,11 +191,11 @@
 
 5. **Test:**
    ```bash
-   # Fetch activity for Bealer Agency
+   # Fetch activity for Wavezly
    curl http://localhost:3000/api/activity \
      -H "Cookie: current_agency_id=893577db-4271-4a70-88ba-a93121f22e0e"
 
-   # Should only return Bealer Agency logs
+   # Should only return Wavezly logs
    ```
 
 **Acceptance Criteria:**

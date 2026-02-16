@@ -24,7 +24,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Bealer Agency - Task Management",
+  title: "Wavezly - Task Management",
   description: "You're in good hands with our task management system",
   manifest: "/manifest.json",
   appleWebApp: {

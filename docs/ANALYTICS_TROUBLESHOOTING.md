@@ -736,7 +736,7 @@ Before escalating an issue, run through this checklist:
 5. Review recent code changes
 
 ### For Critical Issues
-- Email: support@bealeragency.com
+- Email: support@wavezly.com
 - Slack: #analytics-support
 - GitHub: File issue with [Analytics] tag
 

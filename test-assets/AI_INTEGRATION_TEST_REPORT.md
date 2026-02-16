@@ -11,7 +11,7 @@ Comprehensive testing was performed on all 9 AI-powered endpoints. The request s
 
 **Key Findings:**
 - All 9 endpoint schemas are correctly implemented and validated
-- Insurance-specific context is well-integrated (Allstate/Bealer Agency)
+- Insurance-specific context is well-integrated (Allstate/Wavezly)
 - Multi-language support (English/Spanish) is production-ready
 - Safety features (review flags) protect against sensitive info disclosure
 
@@ -279,7 +279,7 @@ with homeowners, can someone call me back before Friday? My number is 555-1234.
 {
   "success": true,
   "subject": "Maria is now covered on your auto policy!",
-  "body": "Hi John,\n\nGreat news! I've added Maria to your auto policy and she's all set to drive. I was also able to apply the Good Student discount since she qualifies, which helps offset the premium increase.\n\nYour updated ID cards are available in your online account, or I can mail them to you. Her coverage is effective immediately.\n\nAs a next step, you might want to review Maria's coverage limits. Just give me a call if you'd like to discuss options.\n\nTake care,\nSarah\nBealer Agency",
+  "body": "Hi John,\n\nGreat news! I've added Maria to your auto policy and she's all set to drive. I was also able to apply the Good Student discount since she qualifies, which helps offset the premium increase.\n\nYour updated ID cards are available in your online account, or I can mail them to you. Her coverage is effective immediately.\n\nAs a next step, you might want to review Maria's coverage limits. Just give me a call if you'd like to discuss options.\n\nTake care,\nSarah\nWavezly",
   "suggestedFollowUp": "in 30 days",
   "warnings": []
 }

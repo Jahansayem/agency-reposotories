@@ -1,10 +1,10 @@
 /**
- * Bealer Agency Growth Simulator Configuration
+ * Wavezly Growth Simulator Configuration
  *
  * TypeScript port of bealer-lead-model/src/config.py
  * Stores default parameters and allows easy customization for growth simulations.
  *
- * Data Source: All Purpose Audit (Nov 14, 2025) - Derrick Bealer Agency A0C6581
+ * Data Source: All Purpose Audit (Nov 14, 2025) - Derrick Wavezly A0C6581
  * Last Updated: 2025-12-05
  *
  * Source: /Users/adrianstier/bealer-lead-model/src/config.py

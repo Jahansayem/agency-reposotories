@@ -1,6 +1,6 @@
 # UX/UI Review: Authentication & Onboarding
 
-**Comprehensive analysis of the Bealer Agency Todo List login experience**
+**Comprehensive analysis of the Wavezly Todo List login experience**
 
 ---
 

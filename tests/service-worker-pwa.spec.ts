@@ -30,7 +30,7 @@ test.describe('Service Worker & PWA (Issue #34)', () => {
       const manifest = JSON.parse(manifestText || '{}');
 
       // Verify required fields
-      expect(manifest.name).toBe('Bealer Agency - Task Management');
+      expect(manifest.name).toBe('Wavezly - Task Management');
       expect(manifest.short_name).toBe('BA Tasks');
       expect(manifest.theme_color).toBe('#0033A0');
       expect(manifest.background_color).toBe('#ffffff');

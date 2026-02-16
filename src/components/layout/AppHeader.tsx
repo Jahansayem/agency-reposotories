@@ -76,7 +76,7 @@ export default function AppHeader({
                 className={`text-base font-bold truncate tracking-tight ${
                   'text-[var(--brand-navy)]'}`}
               >
-                Bealer Agency
+                Wavezly
               </h1>
               {!focusMode && (
                 <p

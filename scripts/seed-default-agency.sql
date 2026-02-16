@@ -1,8 +1,8 @@
 /**
- * Quick Seed Script: Bealer Agency Setup
+ * Quick Seed Script: Wavezly Setup
  *
  * Run this in Supabase SQL Editor to bootstrap the multi-agency system.
- * Creates Bealer Agency and assigns all existing users.
+ * Creates Wavezly and assigns all existing users.
  *
  * Usage:
  * 1. Go to Supabase Dashboard → SQL Editor
@@ -10,16 +10,16 @@
  * 3. Click "Run"
  */
 
--- Create Bealer Agency
+-- Create Wavezly
 INSERT INTO agencies (name, slug, is_active, primary_color)
-VALUES ('Bealer Agency', 'bealer-agency', true, '#0033A0')
+VALUES ('Wavezly', 'wavezly', true, '#0033A0')
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   primary_color = EXCLUDED.primary_color;
 
--- Assign all users to Bealer Agency
+-- Assign all users to Wavezly
 WITH bealer AS (
-  SELECT id FROM agencies WHERE slug = 'bealer-agency'
+  SELECT id FROM agencies WHERE slug = 'wavezly'
 )
 INSERT INTO agency_members (user_id, agency_id, role, status, permissions, is_default_agency)
 SELECT
@@ -38,23 +38,23 @@ CROSS JOIN bealer b
 ON CONFLICT (user_id, agency_id) DO NOTHING;
 
 -- Migrate existing todos
-WITH bealer AS (SELECT id FROM agencies WHERE slug = 'bealer-agency')
+WITH bealer AS (SELECT id FROM agencies WHERE slug = 'wavezly')
 UPDATE todos SET agency_id = (SELECT id FROM bealer) WHERE agency_id IS NULL;
 
 -- Migrate existing messages
-WITH bealer AS (SELECT id FROM agencies WHERE slug = 'bealer-agency')
+WITH bealer AS (SELECT id FROM agencies WHERE slug = 'wavezly')
 UPDATE messages SET agency_id = (SELECT id FROM bealer) WHERE agency_id IS NULL;
 
 -- Migrate existing activity_log
-WITH bealer AS (SELECT id FROM agencies WHERE slug = 'bealer-agency')
+WITH bealer AS (SELECT id FROM agencies WHERE slug = 'wavezly')
 UPDATE activity_log SET agency_id = (SELECT id FROM bealer) WHERE agency_id IS NULL;
 
 -- Migrate existing task_templates
-WITH bealer AS (SELECT id FROM agencies WHERE slug = 'bealer-agency')
+WITH bealer AS (SELECT id FROM agencies WHERE slug = 'wavezly')
 UPDATE task_templates SET agency_id = (SELECT id FROM bealer) WHERE agency_id IS NULL;
 
 -- Migrate existing strategic_goals
-WITH bealer AS (SELECT id FROM agencies WHERE slug = 'bealer-agency')
+WITH bealer AS (SELECT id FROM agencies WHERE slug = 'wavezly')
 UPDATE strategic_goals SET agency_id = (SELECT id FROM bealer) WHERE agency_id IS NULL;
 
 -- Verify results
@@ -63,4 +63,4 @@ SELECT
   name,
   slug,
   (SELECT COUNT(*) FROM agency_members WHERE agency_id = agencies.id) as members
-FROM agencies WHERE slug = 'bealer-agency';
+FROM agencies WHERE slug = 'wavezly';

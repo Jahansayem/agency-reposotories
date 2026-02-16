@@ -4,7 +4,7 @@
 **Date Completed:** February 2026
 **Status:** ✅ Complete
 
-This document provides comprehensive documentation for all features implemented during Sprint 3 of the Bealer Agency Todo List project.
+This document provides comprehensive documentation for all features implemented during Sprint 3 of the Wavezly Todo List project.
 
 ---
 
@@ -291,7 +291,7 @@ Enables browser push notifications for task reminders, mentions, assignments, an
 # Generate VAPID keys with: npx web-push generate-vapid-keys
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=your_public_key_here
 VAPID_PRIVATE_KEY=your_private_key_here
-VAPID_SUBJECT=mailto:support@bealeragency.com
+VAPID_SUBJECT=mailto:support@wavezly.com
 ```
 
 **Usage Example (Client):**

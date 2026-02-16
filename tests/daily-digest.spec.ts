@@ -11,7 +11,7 @@ async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin
   await page.goto('/');
 
   // Wait for login screen
-  const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+  const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
   await expect(header).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load

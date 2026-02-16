@@ -411,7 +411,7 @@ NEXT_PUBLIC_USE_ZUSTAND=true
    - Go to "APIs & Services" → "Credentials"
    - Click "Create Credentials" → "OAuth 2.0 Client ID"
    - Application type: **Web application**
-   - Name: "Bealer Agency Todo App"
+   - Name: "Wavezly Todo App"
    - Authorized JavaScript origins:
      ```
      https://your-domain.com
@@ -432,8 +432,8 @@ NEXT_PUBLIC_USE_ZUSTAND=true
 2. Create a **Service ID**:
    - Navigate to "Certificates, Identifiers & Profiles"
    - Click "Identifiers" → "+" → "Service IDs"
-   - Description: "Bealer Agency Todo"
-   - Identifier: `com.bealeragency.todo.signin`
+   - Description: "Wavezly Todo"
+   - Identifier: `com.wavezly.todo.signin`
 
 3. Configure Sign in with Apple:
    - Check "Sign in with Apple" → Click "Configure"
@@ -442,7 +442,7 @@ NEXT_PUBLIC_USE_ZUSTAND=true
 
 4. Create a **Key**:
    - Go to "Keys" → "+"
-   - Key Name: "Bealer Todo Sign in with Apple"
+   - Key Name: "Wavezly Todo Sign in with Apple"
    - Check "Sign in with Apple"
    - Save and download the `.p8` file
 
@@ -458,7 +458,7 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # Apple OAuth (optional)
-APPLE_ID=com.bealeragency.todo.signin
+APPLE_ID=com.wavezly.todo.signin
 APPLE_TEAM_ID=YOUR_TEAM_ID
 APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 APPLE_KEY_ID=YOUR_KEY_ID
@@ -473,7 +473,7 @@ Control who can sign up via OAuth by setting allowed emails:
 
 ```bash
 # In Railway/production environment
-ALLOWED_OAUTH_EMAILS=derrick@bealeragency.com,sefra@bealeragency.com
+ALLOWED_OAUTH_EMAILS=derrick@wavezly.com,sefra@wavezly.com
 ```
 
 **Behavior:**

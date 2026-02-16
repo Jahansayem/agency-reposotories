@@ -3,7 +3,7 @@ import { test, expect, Page } from '@playwright/test';
 /**
  * Layout Components Tests
  * 
- * Comprehensive tests for the Bealer Agency Task Manager layout:
+ * Comprehensive tests for the Wavezly Task Manager layout:
  * - Navigation and view switching
  * - Task display and interaction
  * - Responsive behavior

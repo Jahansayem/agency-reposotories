@@ -1,4 +1,4 @@
-# Zero-Downtime Refactoring Plan: Bealer Agency Todo List
+# Zero-Downtime Refactoring Plan: Wavezly Todo List
 
 **Version:** 1.0
 **Created:** 2026-01-08

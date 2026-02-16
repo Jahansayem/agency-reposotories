@@ -25,7 +25,7 @@ This repository contains all critical agency performance data, strategic researc
 | `invoice_details.md` | Complete vendor invoice breakdown |
 | `vendor_spend_summary.csv` | Structured spend data by vendor/period |
 
-**Brittney Bealer Agency Summary:**
+**Brittney Wavezly Summary:**
 - **Location:** Woodland Hills, CA (17203 Ventura Blvd)
 - **Team:** 2 Telemarketers (Layne, Maicah) + 4 LSPs (Karina, Amanda, Brandon, Samantha)
 - **Commission:** 9% base + up to 11% bonus

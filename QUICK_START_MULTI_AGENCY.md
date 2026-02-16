@@ -15,7 +15,7 @@
    ```
    status         | name          | slug          | members
    --------------|---------------|---------------|--------
-   Agency Created | Bealer Agency | bealer-agency | 2
+   Agency Created | Wavezly | wavezly | 2
    ```
 
 ### Option B: psql Command Line
@@ -31,10 +31,10 @@ psql $DATABASE_URL -f scripts/seed-default-agency.sql
 1. Open app: http://localhost:3000
 2. Login as Derrick (PIN: 8008)
 3. Dismiss welcome modal
-4. **Look for "Bealer Agency" button** at top of sidebar (instead of "Select Agency")
+4. **Look for "Wavezly" button** at top of sidebar (instead of "Select Agency")
 5. Click it to open dropdown
 
-✅ **Expected**: Dropdown shows "Bealer Agency" with Derrick as Owner
+✅ **Expected**: Dropdown shows "Wavezly" with Derrick as Owner
 
 ### Test 2: Onboarding Tooltip Shows (First Time Only)
 1. Login as a fresh user (or clear localStorage)
@@ -50,7 +50,7 @@ psql $DATABASE_URL -f scripts/seed-default-agency.sql
 4. Open Supabase Dashboard → Table Editor → todos
 5. Verify `agency_id` column is populated
 
-✅ **Expected**: All new todos have `agency_id` matching Bealer Agency
+✅ **Expected**: All new todos have `agency_id` matching Wavezly
 
 ### Test 4: Real-time Filtering
 1. Open two browser tabs side-by-side
@@ -74,7 +74,7 @@ npm run dev
 
 ## 4. Troubleshooting
 
-### Problem: "Select Agency" instead of "Bealer Agency"
+### Problem: "Select Agency" instead of "Wavezly"
 **Solution**: Database not seeded yet. Run Step 1 above.
 
 ### Problem: Dropdown is empty
@@ -129,7 +129,7 @@ After successful testing:
    - Click AgencySwitcher dropdown
    - Select "Test Agency 2"
    - Verify tasks filter to new agency
-   - Switch back to "Bealer Agency"
+   - Switch back to "Wavezly"
    - Verify tasks update
 
 ---

@@ -1,5 +1,5 @@
 # Comprehensive Testing Strategy
-## Bealer Agency Todo List - Full Test Coverage Plan
+## Wavezly Todo List - Full Test Coverage Plan
 
 **Created:** January 31, 2026
 **Target Coverage:** 80%+ (currently ~40%)

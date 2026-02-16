@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// LAYOUT COMPONENTS - Bealer Agency Task Manager
+// LAYOUT COMPONENTS - Wavezly Task Manager
 // A comprehensive, redesigned layout system for optimal UX
 // ═══════════════════════════════════════════════════════════════════════════
 

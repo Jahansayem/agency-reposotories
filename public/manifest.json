@@ -1,7 +1,7 @@
 {
-  "name": "Bealer Agency Tasks",
+  "name": "Wavezly Tasks",
   "short_name": "BA Tasks",
-  "description": "Task management and collaboration for Bealer Agency",
+  "description": "Task management and collaboration for Wavezly",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0A1628",

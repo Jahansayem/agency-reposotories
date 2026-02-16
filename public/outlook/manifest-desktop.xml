@@ -8,9 +8,9 @@
 
   <Id>a44deb28-92f5-4974-98bb-123447daeb33</Id>
   <Version>1.0.0.2</Version>
-  <ProviderName>Bealer Agency</ProviderName>
+  <ProviderName>Wavezly</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Bealer Todo"/>
+  <DisplayName DefaultValue="Wavezly Todo"/>
   <Description DefaultValue="Convert emails to todo items for your team using AI"/>
 
   <IconUrl DefaultValue="https://shared-todo-list-production.up.railway.app/outlook/icon-64.png"/>
@@ -97,7 +97,7 @@
         <bt:Url id="taskpaneUrl" DefaultValue="https://shared-todo-list-production.up.railway.app/outlook/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="groupLabel" DefaultValue="Bealer Todo"/>
+        <bt:String id="groupLabel" DefaultValue="Wavezly Todo"/>
         <bt:String id="paneReadButtonLabel" DefaultValue="Create Task"/>
         <bt:String id="paneReadSuperTipTitle" DefaultValue="Create Task from Email"/>
       </bt:ShortStrings>

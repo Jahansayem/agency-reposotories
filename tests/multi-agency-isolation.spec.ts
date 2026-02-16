@@ -79,7 +79,7 @@ async function _legacyLoginAsUser(page: Page, userName: string, pin: string = '8
   // Wait for login screen to load - try multiple selectors
   try {
     await Promise.race([
-      page.waitForSelector('h1:has-text("Bealer Agency")', { timeout: 10000 }),
+      page.waitForSelector('h1:has-text("Wavezly")', { timeout: 10000 }),
       page.waitForSelector(`[data-testid="user-card-${userName}"]`, { timeout: 10000 }),
       page.waitForSelector('button:has-text("' + userName + '")', { timeout: 10000 }),
     ]);

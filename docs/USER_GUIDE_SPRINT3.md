@@ -1,7 +1,7 @@
 # User Guide: Sprint 3 New Features
 
 **Last Updated:** February 2026
-**For:** Bealer Agency Team Members
+**For:** Wavezly Team Members
 
 Welcome to the Sprint 3 update! This guide will walk you through all the new features we've added to make your workflow even better.
 
@@ -188,7 +188,7 @@ Get browser notifications for important updates even when the app isn't open.
 ```
 Browser Notification
 ────────────────────────────────
-🔔 Bealer Agency Todo List
+🔔 Wavezly Todo List
 
 Task Reminder
 Your task "Call John about renewal"
@@ -694,7 +694,7 @@ The segmentation algorithm evaluates two dimensions:
 1. Check this guide first
 2. Ask your team members
 3. Contact Derrick (admin)
-4. Email: support@bealeragency.com
+4. Email: support@wavezly.com
 
 ### Reporting Issues
 
@@ -732,4 +732,4 @@ Stay tuned for updates!
 ---
 
 **Last Updated:** February 2026
-**Questions?** Contact your team admin or support@bealeragency.com
+**Questions?** Contact your team admin or support@wavezly.com

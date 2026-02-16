@@ -179,9 +179,9 @@ async function runMigrationViaRest() {
   return true;
 }
 
-// Run the Bealer Agency migration function
+// Run the Wavezly migration function
 async function runBealerMigration() {
-  console.log('\n=== Running Bealer Agency Migration ===\n');
+  console.log('\n=== Running Wavezly Migration ===\n');
 
   const { data, error } = await supabase.rpc('migrate_to_bealer_agency');
 
@@ -190,7 +190,7 @@ async function runBealerMigration() {
     return false;
   }
 
-  console.log('Bealer Agency migration completed!');
+  console.log('Wavezly migration completed!');
   return true;
 }
 
@@ -223,15 +223,15 @@ async function main() {
     } else {
       console.log('✅ agencies table exists');
 
-      // Check if Bealer Agency already exists
+      // Check if Wavezly already exists
       const { data: bealer } = await supabase
         .from('agencies')
         .select('id, name')
-        .eq('slug', 'bealer-agency')
+        .eq('slug', 'wavezly')
         .single();
 
       if (bealer) {
-        console.log(`✅ Bealer Agency already exists: ${bealer.name} (${bealer.id})`);
+        console.log(`✅ Wavezly already exists: ${bealer.name} (${bealer.id})`);
       } else {
         console.log('Running migrate_to_bealer_agency()...');
         await runBealerMigration();

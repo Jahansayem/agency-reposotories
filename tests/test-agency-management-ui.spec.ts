@@ -26,7 +26,7 @@ test.describe('Agency Management UI - Full Workflow', () => {
     await expect(sidebar).toBeVisible({ timeout: 10000 });
 
     // Find and click AgencySwitcher
-    const agencySwitcher = page.locator('button', { hasText: 'Bealer Agency' }).or(
+    const agencySwitcher = page.locator('button', { hasText: 'Wavezly' }).or(
       page.locator('button', { hasText: 'Agency' })
     ).first();
 

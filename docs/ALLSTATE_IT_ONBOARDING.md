@@ -1,8 +1,8 @@
-# Allstate IT Onboarding Guide: Bealer Agency Todo List
+# Allstate IT Onboarding Guide: Wavezly Todo List
 
 **Document Type:** Vendor Integration Checklist
 **For:** Allstate IT / Vendor Integration Team
-**Application:** Bealer Agency Todo List
+**Application:** Wavezly Todo List
 **Version:** 1.0
 **Date:** 2026-02-04
 **Classification:** Internal Use Only
@@ -26,7 +26,7 @@
 
 ### 1.1 Description
 
-**Bealer Agency Todo List** is a collaborative task management platform designed specifically for Allstate insurance agencies. The application enables agency staff to:
+**Wavezly Todo List** is a collaborative task management platform designed specifically for Allstate insurance agencies. The application enables agency staff to:
 
 - Manage tasks and assignments across team members
 - Collaborate via real-time team chat
@@ -38,8 +38,8 @@
 
 | Field | Value |
 |-------|-------|
-| **Vendor** | Bealer Agency |
-| **Application Name** | Bealer Agency Todo List |
+| **Vendor** | Wavezly |
+| **Application Name** | Wavezly Todo List |
 | **Application Type** | Web Application (SaaS) |
 | **Deployment Model** | Multi-tenant Cloud |
 | **User Base** | Allstate Exclusive Agents (Captive) |
@@ -60,7 +60,7 @@ PingFederate (IdP)
 Clerk (Auth Broker / SP)
     |
     v
-Bealer Agency Todo List
+Wavezly Todo List
 ```
 
 The application uses **Clerk** as an authentication broker (Service Provider). Clerk accepts SAML assertions from PingFederate and manages user sessions within the application.
@@ -85,16 +85,16 @@ The following endpoints are provided by Clerk (our authentication broker):
 
 | Configuration | Value |
 |---------------|-------|
-| **ACS URL (Assertion Consumer Service)** | `https://clerk.bealeragency.com/v1/saml/acs` |
-| **Entity ID (SP Issuer)** | `https://clerk.bealeragency.com` |
-| **SP Metadata URL** | `https://clerk.bealeragency.com/v1/saml/metadata` |
+| **ACS URL (Assertion Consumer Service)** | `https://clerk.wavezly.com/v1/saml/acs` |
+| **Entity ID (SP Issuer)** | `https://clerk.wavezly.com` |
+| **SP Metadata URL** | `https://clerk.wavezly.com/v1/saml/metadata` |
 | **Name ID Format** | `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` |
 | **Binding** | HTTP-POST |
 | **Signature Algorithm** | RSA-SHA256 |
 | **Signed Assertions** | Required |
 | **Encrypted Assertions** | Supported (Optional) |
 
-> **Note:** Replace `clerk.bealeragency.com` with the actual Clerk instance URL provided during onboarding.
+> **Note:** Replace `clerk.wavezly.com` with the actual Clerk instance URL provided during onboarding.
 
 ### 2.3 SP Metadata
 
@@ -103,14 +103,14 @@ Our SP metadata is available at the URL above. For convenience, key elements are
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
-                     entityID="https://clerk.bealeragency.com">
+                     entityID="https://clerk.wavezly.com">
   <md:SPSSODescriptor
       AuthnRequestsSigned="true"
       WantAssertionsSigned="true"
       protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
     <md:AssertionConsumerService
         Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
-        Location="https://clerk.bealeragency.com/v1/saml/acs"
+        Location="https://clerk.wavezly.com/v1/saml/acs"
         index="0"
         isDefault="true"/>
   </md:SPSSODescriptor>
@@ -121,7 +121,7 @@ Our SP metadata is available at the URL above. For convenience, key elements are
 
 | Requirement | Details |
 |-------------|---------|
-| **Outbound from Allstate** | HTTPS (443) to `*.bealeragency.com` |
+| **Outbound from Allstate** | HTTPS (443) to `*.wavezly.com` |
 | **TLS Version** | TLS 1.2 or higher required |
 | **IP Allowlisting** | Not required (cloud-hosted) |
 | **Certificate** | Valid public CA certificate |
@@ -172,7 +172,7 @@ If sourcing attributes from Azure AD (via PingFederate pass-through), use the fo
 | `extension_AgencyCode` | `agency_code` | Custom attribute (see note below) |
 | `extension_AgencyRole` | `role` | Custom attribute (see note below) |
 
-> **Note:** `agency_code` and `role` may require custom attribute configuration in Azure AD or attribute transformation in PingFederate. Contact Bealer Agency support if these attributes are not available in your directory schema.
+> **Note:** `agency_code` and `role` may require custom attribute configuration in Azure AD or attribute transformation in PingFederate. Contact Wavezly support if these attributes are not available in your directory schema.
 
 ### 3.4 Attribute Contract (PingFederate)
 
@@ -198,7 +198,7 @@ Attribute Contract:
 
 Before creating the SP connection, ensure the following:
 
-- [ ] Received SP metadata URL from Bealer Agency
+- [ ] Received SP metadata URL from Wavezly
 - [ ] Verified `agency_code` attribute is available in directory or can be derived
 - [ ] Verified `role` attribute is available in directory or can be derived
 - [ ] Identified pilot user(s) for testing
@@ -214,12 +214,12 @@ Before creating the SP connection, ensure the following:
 
 | Field | Value |
 |-------|-------|
-| Connection Name | `Bealer Agency Todo List` |
-| Partner Entity ID | `https://clerk.bealeragency.com` |
+| Connection Name | `Wavezly Todo List` |
+| Partner Entity ID | `https://clerk.wavezly.com` |
 | Connection Type | Browser SSO |
 | Protocol | SAML 2.0 |
 
-- [ ] Import SP metadata from URL: `https://clerk.bealeragency.com/v1/saml/metadata`
+- [ ] Import SP metadata from URL: `https://clerk.wavezly.com/v1/saml/metadata`
 
 ### 4.3 Configure Browser SSO
 
@@ -283,13 +283,13 @@ To enable the application as a tile in MyConnection:
 - [ ] Enable **POST** binding
 - [ ] Navigate to **IdP-Initiated SSO**
 - [ ] Enable IdP-Initiated SSO
-- [ ] Set **Target Application URL**: `https://app.bealeragency.com/dashboard`
+- [ ] Set **Target Application URL**: `https://app.wavezly.com/dashboard`
 
 **MyConnection Portal Configuration:**
 
 - [ ] Add tile to MyConnection portal
-- [ ] Set tile icon (provided by Bealer Agency)
-- [ ] Set tile label: `Bealer Todo List`
+- [ ] Set tile icon (provided by Wavezly)
+- [ ] Set tile label: `Wavezly Todo List`
 - [ ] Configure IdP-initiated flow to SP connection
 
 ### 4.7 Configure Signature Settings
@@ -318,8 +318,8 @@ To enable the application as a tile in MyConnection:
 
 | Environment | URL | Purpose |
 |-------------|-----|---------|
-| Staging | `https://staging.bealeragency.com` | Initial integration testing |
-| Production | `https://app.bealeragency.com` | Production deployment |
+| Staging | `https://staging.wavezly.com` | Initial integration testing |
+| Production | `https://app.wavezly.com` | Production deployment |
 
 > **Recommendation:** Perform all testing in staging environment before enabling production access.
 
@@ -329,7 +329,7 @@ To enable the application as a tile in MyConnection:
 
 **Steps:**
 1. Open browser in incognito/private mode
-2. Navigate to `https://staging.bealeragency.com`
+2. Navigate to `https://staging.wavezly.com`
 3. Click "Log in with Allstate"
 4. Authenticate at Allstate IdP (Azure AD)
 5. Verify redirect back to application
@@ -344,7 +344,7 @@ To enable the application as a tile in MyConnection:
 
 **Steps:**
 1. Log in to MyConnection portal
-2. Click "Bealer Todo List" tile
+2. Click "Wavezly Todo List" tile
 3. Verify landing page
 
 **Expected Results:**
@@ -423,13 +423,13 @@ If testing fails, capture the SAML assertion for debugging:
 
 ## 6. Contact Information
 
-### 6.1 Bealer Agency Support
+### 6.1 Wavezly Support
 
 | Contact Type | Details |
 |--------------|---------|
-| **Technical Support** | support@bealeragency.com |
-| **Integration Support** | integrations@bealeragency.com |
-| **Security Team** | security@bealeragency.com |
+| **Technical Support** | support@wavezly.com |
+| **Integration Support** | integrations@wavezly.com |
+| **Security Team** | security@wavezly.com |
 | **Emergency Contact** | +1 (555) 123-4567 (24/7 for P0/P1 issues) |
 
 ### 6.2 Escalation Path
@@ -437,21 +437,21 @@ If testing fails, capture the SAML assertion for debugging:
 | Severity | Response Time | Contact |
 |----------|---------------|---------|
 | **P0 - Critical** (Production down) | 1 hour | Emergency hotline |
-| **P1 - High** (Major feature broken) | 4 hours | support@bealeragency.com |
-| **P2 - Medium** (Feature degraded) | 1 business day | support@bealeragency.com |
-| **P3 - Low** (Question/Enhancement) | 3 business days | support@bealeragency.com |
+| **P1 - High** (Major feature broken) | 4 hours | support@wavezly.com |
+| **P2 - Medium** (Feature degraded) | 1 business day | support@wavezly.com |
+| **P3 - Low** (Question/Enhancement) | 3 business days | support@wavezly.com |
 
-### 6.3 Key Contacts at Bealer Agency
+### 6.3 Key Contacts at Wavezly
 
 | Role | Name | Email |
 |------|------|-------|
-| Technical Account Manager | [To be assigned] | tam@bealeragency.com |
-| Security Officer | [To be assigned] | security@bealeragency.com |
-| Engineering Lead | [To be assigned] | engineering@bealeragency.com |
+| Technical Account Manager | [To be assigned] | tam@wavezly.com |
+| Security Officer | [To be assigned] | security@wavezly.com |
+| Engineering Lead | [To be assigned] | engineering@wavezly.com |
 
 ### 6.4 Information Required from Allstate
 
-Please provide the following to Bealer Agency during onboarding:
+Please provide the following to Wavezly during onboarding:
 
 | Item | Description | Status |
 |------|-------------|--------|
@@ -525,8 +525,8 @@ All infrastructure vendors maintain SOC 2 Type II certification:
 |------|---------|
 | **Incident Response Plan** | Documented and tested |
 | **Breach Notification** | Within 72 hours per NAIC requirements |
-| **Security Contact** | security@bealeragency.com |
-| **Status Page** | https://status.bealeragency.com |
+| **Security Contact** | security@wavezly.com |
+| **Status Page** | https://status.wavezly.com |
 
 ### 7.7 Compliance Documentation
 
@@ -555,7 +555,7 @@ The following documents are available upon request:
 **Resolution:**
 - Verify SAML assertion contains `agency_code` and `role`
 - Check attribute mapping in PingFederate
-- Contact Bealer Agency support with SAML trace
+- Contact Wavezly support with SAML trace
 
 #### Issue: User sees wrong agency data
 
@@ -587,7 +587,7 @@ The following documents are available upon request:
 
 **Resolution:**
 - Configure default target URL in PingFederate
-- Set RelayState to `https://app.bealeragency.com/dashboard`
+- Set RelayState to `https://app.wavezly.com/dashboard`
 
 ### Debug Information to Collect
 
@@ -612,7 +612,7 @@ When contacting support, please provide:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2026-02-04 | Bealer Agency | Initial release |
+| 1.0 | 2026-02-04 | Wavezly | Initial release |
 
 ---
 

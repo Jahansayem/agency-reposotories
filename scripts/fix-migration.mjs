@@ -17,21 +17,21 @@ const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE
 async function fixMigration() {
   console.log('🔍 Checking migration status...\n');
   
-  // Get Bealer Agency
+  // Get Wavezly
   const { data: agency } = await supabase
     .from('agencies')
     .select('id, name, slug')
-    .eq('slug', 'bealer-agency')
+    .eq('slug', 'wavezly')
     .single();
   
   if (!agency) {
-    console.log('❌ Bealer Agency not found!');
+    console.log('❌ Wavezly not found!');
     console.log('   Need to run full migration in Supabase SQL Editor:');
     console.log('   SELECT migrate_to_bealer_agency();\n');
     return;
   }
   
-  console.log('✅ Bealer Agency found:', agency.name);
+  console.log('✅ Wavezly found:', agency.name);
   console.log('   ID:', agency.id, '\n');
   
   // Check todos
@@ -41,7 +41,7 @@ async function fixMigration() {
     .is('agency_id', null);
   
   if (nullTodos === 0) {
-    console.log('✅ All todos already assigned to Bealer Agency\n');
+    console.log('✅ All todos already assigned to Wavezly\n');
     return;
   }
   

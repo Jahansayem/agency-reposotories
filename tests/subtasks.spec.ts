@@ -4,8 +4,8 @@ import { test, expect, Page } from '@playwright/test';
 async function registerAndLogin(page: Page, userName: string = 'Test User', pin: string = '1234') {
   await page.goto('/');
 
-  // Wait for login screen to load (shows "Bealer Agency" and "Task Management")
-  await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 10000 });
+  // Wait for login screen to load (shows "Wavezly" and "Task Management")
+  await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('text=Task Management')).toBeVisible({ timeout: 5000 });
 
   // Click "Add New User" button
@@ -31,7 +31,7 @@ async function registerAndLogin(page: Page, userName: string = 'Test User', pin:
   // Click Create Account button
   await page.getByRole('button', { name: 'Create Account' }).click();
 
-  // Wait for app to load (shows main header with Bealer Agency)
+  // Wait for app to load (shows main header with Wavezly)
   await expect(page.getByRole('complementary', { name: 'Main navigation' })).toBeVisible({ timeout: 10000 });
 }
 

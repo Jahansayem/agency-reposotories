@@ -7,9 +7,9 @@ import { test, expect, Page } from '@playwright/test';
 async function loginAsExistingUser(page: Page, userName: string = 'Derrick', pin: string = '8008') {
   await page.goto('/');
 
-  // Wait for login screen - look for any visible text containing "Bealer Agency"
+  // Wait for login screen - look for any visible text containing "Wavezly"
   // This text appears in multiple elements; use :visible filter to skip hidden ones
-  const bealerText = page.locator('text=Bealer Agency >> visible=true').first();
+  const bealerText = page.locator('text=Wavezly >> visible=true').first();
   await expect(bealerText).toBeVisible({ timeout: 15000 });
 
   // Wait for users list to load
@@ -62,7 +62,7 @@ async function setupUser(page: Page, _userName?: string) {
 
 // Helper to wait for app to load (either app or config screen)
 async function waitForAppLoad(page: Page) {
-  const bealerAgency = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+  const bealerAgency = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
   const configRequired = page.locator('text=Configuration Required');
   await expect(bealerAgency.or(configRequired)).toBeVisible({ timeout: 10000 });
 }
@@ -747,7 +747,7 @@ test.describe('Comprehensive Feature Tests', () => {
   });
 
   test.describe('Header and Navigation', () => {
-    test('should display Bealer Agency header', async ({ page }) => {
+    test('should display Wavezly header', async ({ page }) => {
       await setupUser(page);
       await waitForAppLoad(page);
 
@@ -757,7 +757,7 @@ test.describe('Comprehensive Feature Tests', () => {
       }
 
       // Header shows in h1 (mobile/hidden on lg) or h2 (large screens)
-      const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+      const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
       await expect(header).toBeVisible();
     });
 
@@ -829,8 +829,8 @@ test.describe('Comprehensive Feature Tests', () => {
       const signOutBtn = page.locator('button').filter({ hasText: 'Logout' });
       await signOutBtn.click();
 
-      // Should return to login screen (shows "Bealer Agency" in header)
-      const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+      // Should return to login screen (shows "Wavezly" in header)
+      const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
       await expect(header).toBeVisible({ timeout: 15000 });
     });
   });
@@ -1080,7 +1080,7 @@ test.describe('Error Handling', () => {
 
     // Either see app login screen or config error
     const configRequired = page.locator('text=Configuration Required');
-    const bealerAgency = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const bealerAgency = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
 
     await expect(configRequired.or(bealerAgency)).toBeVisible({ timeout: 15000 });
 
@@ -1093,7 +1093,7 @@ test.describe('Error Handling', () => {
   test('should show loading state while fetching data', async ({ page }) => {
     await page.goto('/');
     // Page should eventually load to either login screen or app
-    const bealerAgency = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const bealerAgency = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     const configRequired = page.locator('text=Configuration Required');
     await expect(bealerAgency.or(configRequired)).toBeVisible({ timeout: 15000 });
   });
@@ -1105,11 +1105,11 @@ test.describe('Responsive Design', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/');
 
-    // Wait for login screen - on mobile we should see "Bealer Agency" somewhere
+    // Wait for login screen - on mobile we should see "Wavezly" somewhere
     await page.waitForLoadState('networkidle');
 
     // Either see login screen elements (visible ones) or the config required message
-    const loginElement = page.locator('text=Bealer Agency >> visible=true').first();
+    const loginElement = page.locator('text=Wavezly >> visible=true').first();
     const configRequired = page.locator('text=Configuration Required');
     await expect(loginElement.or(configRequired)).toBeVisible({ timeout: 15000 });
   });
@@ -1123,7 +1123,7 @@ test.describe('Responsive Design', () => {
     await page.waitForLoadState('networkidle');
 
     // Either see login screen elements (visible ones) or the config required message
-    const loginElement = page.locator('text=Bealer Agency >> visible=true').first();
+    const loginElement = page.locator('text=Wavezly >> visible=true').first();
     const configRequired = page.locator('text=Configuration Required');
     await expect(loginElement.or(configRequired)).toBeVisible({ timeout: 15000 });
   });

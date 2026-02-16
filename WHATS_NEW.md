@@ -90,7 +90,7 @@ You now have **two big improvements** ready to deploy:
 **What it looks like:**
 ```
 ┌─────────────────────────────────┐
-│   Bealer Agency Task Management │
+│   Wavezly Task Management │
 │                                 │
 │  ┌───────────────────────────┐ │
 │  │  Sign in with Google   🟢 │ │

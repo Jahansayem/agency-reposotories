@@ -420,7 +420,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     Team Workspace
                   </motion.div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Bealer Agency</h2>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Wavezly</h2>
                 </div>
               </motion.div>
 
@@ -535,7 +535,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
                     <div className="inline-flex mb-4">
                       <Logo3D />
                     </div>
-                    <h1 className="text-2xl font-bold text-white">Bealer Agency</h1>
+                    <h1 className="text-2xl font-bold text-white">Wavezly</h1>
                     <p className="text-sm text-white/50 mt-1">Task Management Platform</p>
                   </motion.div>
 
@@ -807,7 +807,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
               animate={{ opacity: 1 }}
               transition={{ delay: 1 }}
             >
-              Bealer Agency &copy; {new Date().getFullYear()}
+              Wavezly &copy; {new Date().getFullYear()}
             </motion.p>
           </div>
         </div>

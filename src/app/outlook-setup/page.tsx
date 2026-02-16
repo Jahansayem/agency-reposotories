@@ -21,7 +21,7 @@ export default function OutlookSetupPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'bealer-todo-manifest.xml';
+      a.download = 'wavezly-todo-manifest.xml';
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -41,7 +41,7 @@ export default function OutlookSetupPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'bealer-todo-manifest-desktop.xml';
+      a.download = 'wavezly-todo-manifest-desktop.xml';
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -298,7 +298,7 @@ export default function OutlookSetupPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { step: '1', text: 'Open an email and click "Bealer Todo" in the toolbar' },
+                { step: '1', text: 'Open an email and click "Wavezly Todo" in the toolbar' },
                 { step: '2', text: 'Click "Analyze Email" to extract task details' },
                 { step: '3', text: 'Review, edit if needed, and click "Add Task"' },
               ].map((item) => (
@@ -357,7 +357,7 @@ export default function OutlookSetupPage() {
         {/* Footer */}
         <div className="text-center">
           <p className="text-[var(--text-muted)] text-sm">
-            Questions? Contact the Bealer Agency team for help.
+            Questions? Contact the Wavezly team for help.
           </p>
         </div>
       </div>

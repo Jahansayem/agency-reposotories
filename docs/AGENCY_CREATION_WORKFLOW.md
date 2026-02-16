@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document describes the complete workflow for creating and managing new agencies in the Bealer Agency Todo List platform. The system supports multi-agency management, allowing multiple Allstate agencies to use the platform with complete data isolation.
+This document describes the complete workflow for creating and managing new agencies in the Wavezly Todo List platform. The system supports multi-agency management, allowing multiple Allstate agencies to use the platform with complete data isolation.
 
 ---
 
@@ -33,7 +33,7 @@ This document describes the complete workflow for creating and managing new agen
 2. Click on the **AgencySwitcher** button in the top-left sidebar
 3. Click **"Create New Agency"** at the bottom of the dropdown
 4. Fill out the form:
-   - **Agency Name**: e.g., "Bealer Agency Chicago"
+   - **Agency Name**: e.g., "Wavezly Chicago"
    - **URL Slug**: Auto-generated (can customize)
    - **Primary Color**: Choose from Allstate brand colors
 5. Click **"Create Agency"**
@@ -60,8 +60,8 @@ This document describes the complete workflow for creating and managing new agen
 #### **Agency Name** (Required)
 - **Format**: Any text, 3-100 characters
 - **Examples**:
-  - "Bealer Agency Chicago"
-  - "Bealer Agency - Downtown"
+  - "Wavezly Chicago"
+  - "Wavezly - Downtown"
   - "North Side Allstate Agency"
 - **Validation**:
   - Minimum 3 characters
@@ -70,7 +70,7 @@ This document describes the complete workflow for creating and managing new agen
 
 #### **URL Slug** (Auto-generated, customizable)
 - **Format**: Lowercase letters, numbers, hyphens only
-- **Auto-generated from name**: "Bealer Agency Chicago" → `bealer-agency-chicago`
+- **Auto-generated from name**: "Wavezly Chicago" → `wavezly-chicago`
 - **Can customize**: Click in the field to manually edit
 - **Validation**:
   - Must be unique across all agencies
@@ -194,8 +194,8 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Bealer Agency Chicago",
-  "slug": "bealer-agency-chicago",  // Optional, auto-generated if omitted
+  "name": "Wavezly Chicago",
+  "slug": "wavezly-chicago",  // Optional, auto-generated if omitted
   "logo_url": "https://...",  // Optional
   "primary_color": "#0033A0",  // Optional, defaults to Allstate Blue
   "secondary_color": "#72B5E8",  // Optional, defaults to Sky Blue
@@ -210,8 +210,8 @@ Content-Type: application/json
   "success": true,
   "agency": {
     "id": "uuid",
-    "name": "Bealer Agency Chicago",
-    "slug": "bealer-agency-chicago",
+    "name": "Wavezly Chicago",
+    "slug": "wavezly-chicago",
     "logo_url": null,
     "primary_color": "#0033A0",
     "secondary_color": "#72B5E8",
@@ -222,7 +222,7 @@ Content-Type: application/json
     "created_at": "2026-02-01T12:00:00Z",
     "updated_at": "2026-02-01T12:00:00Z"
   },
-  "message": "Agency \"Bealer Agency Chicago\" created successfully. You are now the owner."
+  "message": "Agency \"Wavezly Chicago\" created successfully. You are now the owner."
 }
 ```
 
@@ -262,7 +262,7 @@ Content-Type: application/json
 curl -X POST https://your-domain.com/api/agencies \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Bealer Agency Chicago",
+    "name": "Wavezly Chicago",
     "primary_color": "#0033A0",
     "created_by": "Derrick"
   }'
@@ -277,7 +277,7 @@ const response = await fetch('/api/agencies', {
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    name: 'Bealer Agency Chicago',
+    name: 'Wavezly Chicago',
     primary_color: '#0033A0',
     created_by: 'Derrick',
   }),
@@ -308,7 +308,7 @@ After creating a new agency, you'll typically want to:
 INSERT INTO agency_members (user_id, agency_id, role, status, permissions, is_default_agency)
 VALUES (
   (SELECT id FROM users WHERE name = 'Sefra'),
-  (SELECT id FROM agencies WHERE slug = 'bealer-agency-chicago'),
+  (SELECT id FROM agencies WHERE slug = 'wavezly-chicago'),
   'member',  -- or 'admin'
   'active',
   '{
@@ -329,19 +329,19 @@ If you have existing tasks/messages to migrate:
 ```sql
 -- Migrate todos to new agency
 UPDATE todos
-SET agency_id = (SELECT id FROM agencies WHERE slug = 'bealer-agency-chicago')
+SET agency_id = (SELECT id FROM agencies WHERE slug = 'wavezly-chicago')
 WHERE created_by = 'Derrick'
   AND agency_id IS NULL;
 
 -- Migrate messages
 UPDATE messages
-SET agency_id = (SELECT id FROM agencies WHERE slug = 'bealer-agency-chicago')
+SET agency_id = (SELECT id FROM agencies WHERE slug = 'wavezly-chicago')
 WHERE created_by = 'Derrick'
   AND agency_id IS NULL;
 
 -- Migrate activity log
 UPDATE activity_log
-SET agency_id = (SELECT id FROM agencies WHERE slug = 'bealer-agency-chicago')
+SET agency_id = (SELECT id FROM agencies WHERE slug = 'wavezly-chicago')
 WHERE user_name = 'Derrick'
   AND agency_id IS NULL;
 ```
@@ -359,7 +359,7 @@ WHERE user_id = (SELECT id FROM users WHERE name = 'Derrick');
 UPDATE agency_members
 SET is_default_agency = true
 WHERE user_id = (SELECT id FROM users WHERE name = 'Derrick')
-  AND agency_id = (SELECT id FROM agencies WHERE slug = 'bealer-agency-chicago');
+  AND agency_id = (SELECT id FROM agencies WHERE slug = 'wavezly-chicago');
 ```
 
 ### 4. Configure Agency Settings
@@ -452,7 +452,7 @@ WHERE user_id = (SELECT id FROM users WHERE name = 'Derrick')
 
 #### Option A: Owner-Only (Current)
 - Only Derrick can create agencies
-- Use case: Bealer Agency managing multiple office locations
+- Use case: Wavezly managing multiple office locations
 
 #### Option B: Admin+ Only
 - Owners and admins can create agencies
@@ -489,8 +489,8 @@ Example entry:
   "user_name": "Derrick",
   "details": {
     "agency_id": "uuid",
-    "agency_name": "Bealer Agency Chicago",
-    "agency_slug": "bealer-agency-chicago"
+    "agency_name": "Wavezly Chicago",
+    "agency_slug": "wavezly-chicago"
   },
   "created_at": "2026-02-01T12:00:00Z"
 }

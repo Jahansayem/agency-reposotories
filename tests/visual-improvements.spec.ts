@@ -276,7 +276,7 @@ test.describe('Visual Improvements Tests', () => {
     await loginAsExistingUser(page, 'Derrick', '8008');
 
     // Check that the main UI is visible
-    const header = page.locator('text=Bealer Agency');
+    const header = page.locator('text=Wavezly');
     await expect(header).toBeVisible({ timeout: 5000 });
 
     // Check for task input

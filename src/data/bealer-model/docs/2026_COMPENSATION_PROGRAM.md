@@ -247,7 +247,7 @@ To unlock quarterly advances, you must meet stricter requirements:
 | 4 - Larger | 7,500 - 8,999 | Larger |
 | 4B | 9,000+ | N/A |
 
-### Bealer Agency Classification
+### Wavezly Classification
 
 Based on current PIF of ~1,424:
 - **Tier:** 1 - Larger (750-1,499 PIF range)
@@ -339,7 +339,7 @@ calculateQuarterlyAdvance(
 
 ## Quick Reference Tables
 
-### Bealer Agency Quick Reference (California)
+### Wavezly Quick Reference (California)
 
 | Metric | Value | Implication |
 |--------|-------|-------------|

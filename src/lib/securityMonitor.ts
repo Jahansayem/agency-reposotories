@@ -209,7 +209,7 @@ async function sendWebhookAlert(event: SecurityEvent, message: string): Promise<
             { title: 'IP Address', value: event.ip || 'Unknown', short: true },
             { title: 'Endpoint', value: event.endpoint || 'N/A', short: true },
           ],
-          footer: 'Bealer Agency Security Monitor',
+          footer: 'Wavezly Security Monitor',
           ts: Math.floor(Date.now() / 1000),
         },
       ],

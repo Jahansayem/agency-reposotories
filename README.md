@@ -1,4 +1,4 @@
-# Bealer Agency Todo List
+# Wavezly Todo List
 
 A comprehensive real-time collaborative task management platform built for insurance agencies, featuring AI-powered workflows, team chat, strategic planning, multi-agency support, and native iOS app.
 
@@ -522,4 +522,4 @@ See `DEPLOYMENT_GUIDE.md` for detailed instructions.
 
 ## License
 
-Private - Bealer Agency
+Private - Wavezly

@@ -21,7 +21,7 @@ async function loginAsExistingUser(page: Page): Promise<boolean> {
   await page.goto('/');
 
   // Wait for login screen to load
-  await expect(page.locator('h1:has-text("Bealer Agency")')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('h1:has-text("Wavezly")')).toBeVisible({ timeout: 15000 });
 
   // Try to click on the test user
   const userButton = page.locator(`button:has-text("${TEST_USER}")`).first();

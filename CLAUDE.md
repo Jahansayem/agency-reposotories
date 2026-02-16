@@ -1,4 +1,4 @@
-# Shared Todo List — Bealer Agency
+# Shared Todo List — Wavezly
 
 Multi-agency todo list and operations platform for Allstate agencies. Full-stack Next.js app with real-time collaboration, AI features, analytics, and an iOS companion app.
 

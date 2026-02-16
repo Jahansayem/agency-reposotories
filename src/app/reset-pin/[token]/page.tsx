@@ -291,7 +291,7 @@ export default function ResetPinPage() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-white/20 text-xs">
-          Bealer Agency &copy; {new Date().getFullYear()}
+          Wavezly &copy; {new Date().getFullYear()}
         </p>
       </motion.div>
     </div>

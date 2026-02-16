@@ -38,7 +38,7 @@ async function loginAsExistingUserWebKit(
   await page.goto('/');
 
   // Wait for login screen with extended timeout for WebKit
-  const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+  const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
   await expect(header).toBeVisible({ timeout: 20000 });
 
   // Wait for users list to load - WebKit may be slower
@@ -95,7 +95,7 @@ test.describe('WebKit Compatibility - Critical Bugs Fixed', () => {
     // The page should NOT be blank - we should see EITHER:
     // 1. Login screen (if not logged in)
     // 2. Main app (if session persisted)
-    const loginHeader = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const loginHeader = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     const mainAppInput = page.locator('textarea[placeholder*="Add a task"]');
     const configError = page.locator('text=Configuration Required');
 
@@ -456,7 +456,7 @@ test.describe('WebKit Compatibility - Core User Flows', () => {
     await signOutBtn.click();
 
     // Should return to login screen
-    const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     await expect(header).toBeVisible({ timeout: 15000 });
 
     console.log('✓ Sign out works in WebKit');
@@ -512,7 +512,7 @@ test.describe('WebKit Compatibility - Session Persistence', () => {
       });
 
       // Check if we're on login screen instead
-      const loginHeader = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+      const loginHeader = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
       const isOnLoginScreen = await loginHeader.isVisible().catch(() => false);
 
       if (isOnLoginScreen) {
@@ -580,7 +580,7 @@ test.describe('WebKit Compatibility - Mobile Viewport', () => {
     await loginAsExistingUserWebKit(page);
 
     // Header should be visible (responsive design)
-    const header = page.locator('h1, h2').filter({ hasText: 'Bealer Agency' }).first();
+    const header = page.locator('h1, h2').filter({ hasText: 'Wavezly' }).first();
     const isVisible = await header.isVisible().catch(() => false);
 
     // Header might be hidden on mobile, but app should still work

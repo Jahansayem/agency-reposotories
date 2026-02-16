@@ -2,7 +2,7 @@
  * Allstate Insurance Agency Test Personas
  *
  * Realistic user personas based on actual Allstate agency structures
- * for comprehensive UX testing of the Bealer Agency Todo List.
+ * for comprehensive UX testing of the Wavezly Todo List.
  *
  * Persona Categories:
  * - Tier 1: Agency Leadership (Owner, Office Manager)
@@ -157,7 +157,7 @@ export const STAFF_PERMISSIONS = {
 export const MARCUS_BEALER: AllstatePersona = {
   id: 'marcus-bealer',
   name: 'Marcus Bealer',
-  email: 'marcus@bealeragency.com',
+  email: 'marcus@wavezly.com',
   pin: '1234',
   color: '#0033A0', // Allstate blue
   role: 'owner',
@@ -208,7 +208,7 @@ export const MARCUS_BEALER: AllstatePersona = {
 export const PAT_NGUYEN: AllstatePersona = {
   id: 'pat-nguyen',
   name: 'Patricia Nguyen',
-  email: 'pat@bealeragency.com',
+  email: 'pat@wavezly.com',
   pin: '2345',
   color: '#7B68EE', // Medium slate blue
   role: 'manager',
@@ -264,7 +264,7 @@ export const PAT_NGUYEN: AllstatePersona = {
 export const DAVE_THOMPSON: AllstatePersona = {
   id: 'dave-thompson',
   name: 'David Thompson',
-  email: 'dave@bealeragency.com',
+  email: 'dave@wavezly.com',
   pin: '3456',
   color: '#228B22', // Forest green
   role: 'staff',
@@ -315,7 +315,7 @@ export const DAVE_THOMPSON: AllstatePersona = {
 export const JASMINE_RODRIGUEZ: AllstatePersona = {
   id: 'jasmine-rodriguez',
   name: 'Jasmine Rodriguez',
-  email: 'jasmine@bealeragency.com',
+  email: 'jasmine@wavezly.com',
   pin: '4567',
   color: '#FF69B4', // Hot pink
   role: 'staff',
@@ -367,7 +367,7 @@ export const JASMINE_RODRIGUEZ: AllstatePersona = {
 export const CARLOS_MENDEZ: AllstatePersona = {
   id: 'carlos-mendez',
   name: 'Carlos Mendez',
-  email: 'carlos@bealeragency.com',
+  email: 'carlos@wavezly.com',
   pin: '5678',
   color: '#FF8C00', // Dark orange
   role: 'staff',
@@ -422,7 +422,7 @@ export const CARLOS_MENDEZ: AllstatePersona = {
 export const SHELLY_CARTER: AllstatePersona = {
   id: 'shelly-carter',
   name: 'Michelle Carter',
-  email: 'shelly@bealeragency.com',
+  email: 'shelly@wavezly.com',
   pin: '6789',
   color: '#4169E1', // Royal blue
   role: 'staff',
@@ -474,7 +474,7 @@ export const SHELLY_CARTER: AllstatePersona = {
 export const TAYLOR_KIM: AllstatePersona = {
   id: 'taylor-kim',
   name: 'Taylor Kim',
-  email: 'taylor@bealeragency.com',
+  email: 'taylor@wavezly.com',
   pin: '7890',
   color: '#9370DB', // Medium purple
   role: 'staff',
@@ -532,7 +532,7 @@ export const TAYLOR_KIM: AllstatePersona = {
 export const ROB_PATTERSON: AllstatePersona = {
   id: 'rob-patterson',
   name: 'Robert Patterson',
-  email: 'rob@bealeragency.com',
+  email: 'rob@wavezly.com',
   pin: '8901',
   color: '#2F4F4F', // Dark slate gray
   role: 'staff',

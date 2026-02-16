@@ -253,7 +253,7 @@ async function generateDigestForUser(
   });
 
   // Build the AI prompt
-  const prompt = `You are generating a personalized ${digestType} briefing for ${userName} at Bealer Agency (an Allstate insurance agency).
+  const prompt = `You are generating a personalized ${digestType} briefing for ${userName} at Wavezly (an Allstate insurance agency).
 
 Today is ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
 

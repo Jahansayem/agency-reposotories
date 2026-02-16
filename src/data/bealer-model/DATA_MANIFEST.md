@@ -50,7 +50,7 @@ Call activity and lead tracking data from the agency CRM. Used by `src/lead_anal
 
 ---
 
-## Brittney Bealer Agency Data (`data/07_brittney_bealer/`)
+## Brittney Wavezly Data (`data/07_brittney_bealer/`)
 
 Invoice data and lead vendor analysis for cousin agency (Woodland Hills, CA).
 **Used to derive vendor CPL values** in `src/lead_analysis_api.py` lines 369-414.
