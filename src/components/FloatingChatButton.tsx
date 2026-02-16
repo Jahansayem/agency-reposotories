@@ -10,6 +10,7 @@ import { ChatPanelSkeleton } from './LoadingSkeletons';
 import { AuthUser, ChatConversation } from '@/types/todo';
 import { logger } from '@/lib/logger';
 import { useAgency } from '@/contexts/AgencyContext';
+import { useTodoStore } from '@/store/todoStore';
 
 const CHAT_STATE_KEY = 'floating_chat_last_conversation';
 
@@ -53,6 +54,7 @@ export default function FloatingChatButton({
 }: FloatingChatButtonProps) {
   const { activeView } = useAppShell();
   const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+  const bulkBarVisible = useTodoStore((s) => s.bulkActions.selectedTodos.size > 0);
 
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -213,12 +215,13 @@ export default function FloatingChatButton({
       <motion.button
         onClick={() => setIsOpen(true)}
         className={`
-          fixed bottom-6 right-6 z-40
+          fixed right-6 z-40
           w-14 h-14 rounded-full
           flex items-center justify-center
           shadow-lg hover:shadow-xl
-          transition-shadow duration-200
-          ${'bg-[var(--accent)] hover:bg-[var(--accent)]/90'}
+          transition-all duration-200
+          bg-[var(--accent)] hover:bg-[var(--accent)]/90
+          ${bulkBarVisible ? 'bottom-20' : 'bottom-6'}
         `}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}

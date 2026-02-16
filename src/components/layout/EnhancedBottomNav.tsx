@@ -16,6 +16,7 @@ import {
 import { useAppShell, ActiveView } from './AppShell';
 import { DURATION, EASE } from '@/lib/animations';
 import { useIsLandscape } from '@/hooks/useIsLandscape';
+import SyncStatusIndicator from '../SyncStatusIndicator';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENHANCED BOTTOM NAVIGATION
@@ -114,6 +115,11 @@ export default function EnhancedBottomNav() {
       role="navigation"
       aria-label="Main navigation"
     >
+      {/* Connection status dot — visible only on mobile (sidebar hidden) */}
+      <div className="absolute top-1.5 right-3">
+        <SyncStatusIndicator />
+      </div>
+
       <div className="flex items-center justify-around max-w-lg mx-auto px-2">
         {tabs.map((tab, index) => {
           const Icon = tab.icon;

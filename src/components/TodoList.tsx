@@ -32,10 +32,10 @@ import { setReorderingFlag } from '@/hooks';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DragEndEvent } from '@dnd-kit/core';
 import PullToRefresh from './PullToRefresh';
-import StatusLine from './StatusLine';
-import BottomTabs from './BottomTabs';
+
+
 import { ExitFocusModeButton } from './FocusModeToggle';
-import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, BulkActionBar } from './todo';
+import { LoadingState, ErrorState, TodoHeader, TodoFiltersBar, TodoListContent, BulkActionBar } from './todo';
 import { TaskDetailModal } from './task-detail';
 import { useShouldUseSections } from './TaskSections';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -770,7 +770,6 @@ export default function TodoList({
           }}
         />
 
-        {!state.focusMode && <ConnectionStatus connected={state.connected} />}
         <ExitFocusModeButton />
 
         <div className="flex transition-all duration-300 ease-out min-h-[calc(100vh-72px)]">
@@ -783,20 +782,6 @@ export default function TodoList({
                 {state.quickFilter === 'overdue' && <span className="font-medium text-[var(--danger)]">Overdue</span>}
                 {state.quickFilter === 'all' && state.highPriorityOnly && <span className="font-medium text-[var(--danger)]">All Tasks</span>}
                 {state.highPriorityOnly && <span className="text-[var(--danger)]">• High Priority Only</span>}
-              </div>
-            )}
-
-            {!state.focusMode && (
-              <div className="mb-4">
-                <StatusLine
-                  stats={state.stats}
-                  quickFilter={state.quickFilter}
-                  highPriorityOnly={state.highPriorityOnly}
-                  showCompleted={state.showCompleted}
-                  onFilterAll={() => { state.setQuickFilter('all'); state.setShowCompleted(false); }}
-                  onFilterDueToday={() => state.setQuickFilter('due_today')}
-                  onFilterOverdue={() => state.setQuickFilter('overdue')}
-                />
               </div>
             )}
 
@@ -1009,17 +994,7 @@ export default function TodoList({
           />
         )}
 
-        {!state.focusMode && (
-          <BottomTabs
-            stats={state.stats}
-            quickFilter={state.quickFilter}
-            showCompleted={state.showCompleted}
-            onFilterChange={state.setQuickFilter}
-            onShowCompletedChange={state.setShowCompleted}
-          />
-        )}
-
-        {!state.focusMode && <div className="h-16 md:hidden" />}
+        {!state.focusMode && <div className="h-16 lg:hidden" />}
       </div>
     </PullToRefresh>
   );
