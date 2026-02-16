@@ -28,10 +28,12 @@
   --surface: #FFFFFF;
   --surface-2: #F1F5F9;
   --surface-3: #E2E8F0;
+  --surface-hover: #E8EDF4;
   --surface-elevated: #FFFFFF;
   --border: #CBD5E1;
   --border-hover: #94A3B8;
   --border-subtle: #E2E8F0;
+  --border-muted: #E2E8F0;
   --text-muted: #475569; /* WCAG AA: 7.2:1 ratio on white for smaller text */
   --text-light: #64748B; /* WCAG AA: 4.5:1 ratio on white for body text */
   --text-inverse: #FFFFFF;
@@ -123,10 +125,12 @@
   --surface: #162236;
   --surface-2: #1E2D47;
   --surface-3: #263852;
+  --surface-hover: #243350;
   --surface-elevated: #1A2840;
   --border: #334155;
   --border-hover: #475569;
   --border-subtle: #1E293B;
+  --border-muted: #1E293B;
   --text-muted: #CBD5E1; /* WCAG AA: 9.4:1 ratio on dark background */
   --text-light: #94A3B8; /* WCAG AA: 6.8:1 ratio on dark background */
   --text-inverse: #0A1628;
@@ -176,10 +180,12 @@
     --surface: #162236;
     --surface-2: #1E2D47;
     --surface-3: #263852;
+    --surface-hover: #243350;
     --surface-elevated: #1A2840;
     --border: #334155;
     --border-hover: #475569;
     --border-subtle: #1E293B;
+    --border-muted: #1E293B;
     --text-muted: #CBD5E1; /* Synced with .dark class - WCAG AA: 9.4:1 ratio on dark background */
     --text-light: #94A3B8; /* Synced with .dark class - WCAG AA: 6.8:1 ratio on dark background */
     --text-inverse: #0A1628;

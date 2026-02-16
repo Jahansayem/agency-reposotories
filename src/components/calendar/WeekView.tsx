@@ -21,7 +21,7 @@ import {
 import { Todo } from '@/types/todo';
 import { DraggableTaskItem } from './CalendarDayCell';
 import { CATEGORY_COLORS, isTaskOverdue, STATUS_BORDER, SEGMENT_COLORS, SEGMENT_LABELS, getSubtaskProgress, isFollowUpOverdue, getInitials, formatPremiumCompact, hasPendingReminders, PREMIUM_DISPLAY_THRESHOLD } from './constants';
-import { Clock, AlertTriangle, Bell } from 'lucide-react';
+import { Clock, AlertTriangle, Bell, Repeat } from 'lucide-react';
 import CalendarDragOverlay from './CalendarDragOverlay';
 
 /** Task count thresholds for badge color coding */
@@ -89,6 +89,8 @@ function DroppableDayColumn({
   return (
     <div
       ref={setNodeRef}
+      role="region"
+      aria-label={format(day, 'EEEE, MMMM d')}
       className={`
         flex flex-col sm:flex-col rounded-lg border overflow-hidden sm:min-h-[200px] transition-all
         ${isOver
@@ -104,6 +106,7 @@ function DroppableDayColumn({
       {/* Day Header */}
       <button
         onClick={() => onDateClick(day)}
+        aria-label={`${format(day, 'EEEE, MMMM d, yyyy')}${today ? ', today' : ''}${dayTodos.length > 0 ? `, ${dayTodos.length} task${dayTodos.length !== 1 ? 's' : ''}` : ''}`}
         className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors"
       >
         {/* Mobile: show full day name; tablet+: abbreviated */}
@@ -158,8 +161,8 @@ function DroppableDayColumn({
                 </span>
               )}
               {/* Wave 1 + Wave 2 indicators */}
-              {(todo.waiting_for_response || todo.renewal_status === 'at-risk' || subtaskProgress || todo.customer_segment === 'elite' || todo.customer_segment === 'premium' || hasPendingReminders(todo.reminders, todo.reminder_at) || (todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD) || todo.assigned_to) && (
-                <div className="flex items-center gap-1 px-2 pb-1 text-[10px]">
+              {(todo.waiting_for_response || todo.renewal_status === 'at-risk' || subtaskProgress || todo.customer_segment === 'elite' || todo.customer_segment === 'premium' || hasPendingReminders(todo.reminders, todo.reminder_at) || todo.recurrence || (todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD) || todo.assigned_to) && (
+                <div className="flex items-center gap-1 px-2 pb-1 text-[10px]" aria-hidden="true">
                   {todo.waiting_for_response && (
                     <span className={`flex items-center gap-0.5 ${isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours) ? 'text-red-500' : 'text-amber-500'}`} title="Waiting for customer">
                       <Clock className="w-3 h-3" />
@@ -183,6 +186,11 @@ function DroppableDayColumn({
                       <Bell className="w-3 h-3" />
                     </span>
                   )}
+                  {todo.recurrence && (
+                    <span className="flex items-center text-[var(--text-muted)]" title={`Repeats ${todo.recurrence}`}>
+                      <Repeat className="w-3 h-3" />
+                    </span>
+                  )}
                   {todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD && (
                     <span className="text-emerald-600 dark:text-emerald-400 font-medium" title="Premium amount">
                       {formatPremiumCompact(todo.premium_amount)}
@@ -201,6 +209,7 @@ function DroppableDayColumn({
         {dayTodos.length === 0 && (
           <button
             onClick={() => (onAddTask || onDateClick)(day)}
+            aria-label={`Add task for ${format(day, 'EEEE, MMMM d')}`}
             className="w-full sm:h-full min-h-[40px] flex items-center justify-center text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] rounded-md transition-colors"
           >
             + Add task
@@ -274,7 +283,7 @@ export default function WeekView({
   const isDragActive = activeTodo !== null;
 
   const content = (
-    <div className="flex-1 p-2 sm:p-4 overflow-auto">
+    <div className="flex-1 p-2 sm:p-4 overflow-auto" role="region" aria-label="Week view">
       <AnimatePresence mode="popLayout" custom={direction}>
         <motion.div
           key={format(startOfWeek(currentDate), 'yyyy-MM-dd')}

@@ -134,7 +134,10 @@ export default function MonthView({
 
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
+        // Stop both React synthetic and native event propagation so the global
+        // CalendarView arrow-key handler (which navigates months) does not also fire.
         e.stopPropagation();
+        e.nativeEvent.stopImmediatePropagation();
         setFocusedCellIndex((prev) => {
           const current = prev || { row: 0, col: 0 };
           let { row, col } = current;
@@ -250,7 +253,7 @@ export default function MonthView({
       </div>
 
       {/* Day Grid */}
-      <AnimatePresence mode="popLayout" custom={direction}>
+      <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={format(currentMonth, 'yyyy-MM')}
           custom={direction}
@@ -281,6 +284,7 @@ export default function MonthView({
                     isDragActive={isDragActive}
                     columnIndex={colIndex}
                     rowIndex={weekRowIndex}
+                    totalRows={calendarWeeks.length}
                     onQuickComplete={onQuickComplete}
                     onToggleWaiting={onToggleWaiting}
                     onQuickAdd={onQuickAdd}

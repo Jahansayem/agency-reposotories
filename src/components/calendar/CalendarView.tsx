@@ -174,6 +174,12 @@ export default function CalendarView({
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if ((e.target as HTMLElement).isContentEditable) return;
 
+      // Skip arrow keys when the month grid has keyboard focus — the grid's own
+      // handler navigates between cells and calls stopImmediatePropagation, but
+      // as a safety net we also check here.
+      const target = e.target as HTMLElement;
+      const isGridFocused = target.getAttribute('role') === 'grid';
+
       switch (e.key) {
         case 'Escape':
           if (showFilterMenu) {
@@ -198,12 +204,16 @@ export default function CalendarView({
           goToToday();
           break;
         case 'ArrowLeft':
-          e.preventDefault();
-          goToPrevious();
+          if (!isGridFocused) {
+            e.preventDefault();
+            goToPrevious();
+          }
           break;
         case 'ArrowRight':
-          e.preventDefault();
-          goToNext();
+          if (!isGridFocused) {
+            e.preventDefault();
+            goToNext();
+          }
           break;
       }
     }
@@ -304,6 +314,7 @@ export default function CalendarView({
     const currentYearMonth = format(currentDate, 'yyyy-MM');
     todos.forEach((todo) => {
       if (!todo.due_date) return;
+      if (todo.completed || todo.status === 'done') return;
       // Extract YYYY-MM directly from the date string to avoid timezone shift
       const dueDateYearMonth = todo.due_date.substring(0, 7);
       if (dueDateYearMonth !== currentYearMonth) return;
@@ -479,7 +490,7 @@ export default function CalendarView({
                   <span className="hidden sm:inline">Filter</span>
                   {filtersActive && (
                     <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-semibold">
-                      {(selectedCategories.size < ALL_CATEGORIES.length ? 1 : 0) + (selectedUsers.size > 0 ? 1 : 0)}
+                      {(ALL_CATEGORIES.length - selectedCategories.size) + selectedUsers.size}
                     </span>
                   )}
                 </button>
@@ -637,7 +648,7 @@ export default function CalendarView({
           <div className="p-3 border-b border-[var(--border)]">
             <MiniCalendar
               currentDate={currentDate}
-              todosByDate={todosByDate}
+              todosByDate={allTodosByDate}
               onDateClick={handleMiniCalendarDateClick}
             />
           </div>
