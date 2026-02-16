@@ -75,6 +75,7 @@ interface TodoListContentProps {
   onUpdateAttachments: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
   onEmailCustomer: (todo: Todo) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   onClearSearch: () => void;
   onAddTask: () => void;
   onOpenDetail?: (todoId: string) => void;
@@ -115,6 +116,7 @@ function TodoListContent({
   onUpdateAttachments,
   onSaveAsTemplate,
   onEmailCustomer,
+  onSetPrivacy,
   onClearSearch,
   onAddTask,
   onOpenDetail,
@@ -207,6 +209,7 @@ function TodoListContent({
         onUpdateAttachments={onUpdateAttachments}
         onSaveAsTemplate={onSaveAsTemplate}
         onEmailCustomer={onEmailCustomer}
+        onSetPrivacy={onSetPrivacy}
         onOpenDetail={onOpenDetail}
         isDragEnabled={isDragEnabled}
       />

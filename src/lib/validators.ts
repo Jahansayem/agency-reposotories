@@ -40,6 +40,7 @@ export function parseTodo(payload: unknown): Todo | null {
     created_by: data.created_by,
     // Optional fields with proper defaults
     assigned_to: typeof data.assigned_to === 'string' ? data.assigned_to : undefined,
+    is_private: typeof data.is_private === 'boolean' ? data.is_private : false,
     due_date: typeof data.due_date === 'string' ? data.due_date : undefined,
     notes: typeof data.notes === 'string' ? data.notes : undefined,
     recurrence: isValidRecurrence(data.recurrence) ? data.recurrence as RecurrencePattern : undefined,

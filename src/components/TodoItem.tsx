@@ -44,6 +44,7 @@ function TodoItemComponent({
   onUpdateAttachments,
   onEmailCustomer,
   onSetReminder,
+  onSetPrivacy,
   onMarkWaiting,
   onClearWaiting,
   onOpenDetail,
@@ -424,6 +425,7 @@ function TodoItemComponent({
             onSetDueDate={onSetDueDate}
             onSaveAsTemplate={onSaveAsTemplate}
             onEmailCustomer={onEmailCustomer}
+            onSetPrivacy={onSetPrivacy}
             menuRef={menuRef}
           />
         </div>

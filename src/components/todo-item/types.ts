@@ -23,6 +23,7 @@ export interface TodoItemProps {
   onUpdateAttachments?: (id: string, attachments: Attachment[], skipDbUpdate?: boolean) => void;
   onEmailCustomer?: (todo: Todo) => void;
   onSetReminder?: (id: string, reminderAt: string | null) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   onMarkWaiting?: (id: string, contactType: WaitingContactType, followUpHours?: number) => Promise<void>;
   onClearWaiting?: (id: string) => Promise<void>;
   onOpenDetail?: (todoId: string) => void;
@@ -50,6 +51,7 @@ export function areTodoItemPropsEqual(
     prevTodo.assigned_to !== nextTodo.assigned_to ||
     prevTodo.customer_name !== nextTodo.customer_name ||
     prevTodo.customer_segment !== nextTodo.customer_segment ||
+    prevTodo.is_private !== nextTodo.is_private ||
     prevTodo.waiting_for_response !== nextTodo.waiting_for_response ||
     prevTodo.notes !== nextTodo.notes ||
     prevTodo.recurrence !== nextTodo.recurrence ||

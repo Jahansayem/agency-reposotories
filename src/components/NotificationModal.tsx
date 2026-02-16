@@ -29,6 +29,7 @@ import {
   UserMinus,
   Shield,
   Mail,
+  Lock,
 } from 'lucide-react';
 import { ActivityLogEntry, ActivityAction, PRIORITY_CONFIG } from '@/types/todo';
 import { formatDistanceToNow } from 'date-fns';
@@ -89,6 +90,7 @@ const ACTION_CONFIG: Record<ActivityAction, { icon: React.ElementType; label: st
   task_deleted: { icon: Trash2, label: 'deleted task', color: 'var(--danger)', verb: 'deleted' },
   task_completed: { icon: CheckCircle2, label: 'completed task', color: 'var(--success-vivid)', verb: 'completed' },
   task_reopened: { icon: Circle, label: 'reopened task', color: 'var(--warning)', verb: 'reopened' },
+  task_privacy_changed: { icon: Lock, label: 'changed task privacy', color: 'var(--state-info)', verb: 'updated privacy for' },
   status_changed: { icon: ArrowRight, label: 'changed status', color: 'var(--state-info)', verb: 'moved' },
   priority_changed: { icon: Flag, label: 'changed priority', color: 'var(--warning)', verb: 'reprioritized' },
   assigned_to_changed: { icon: User, label: 'reassigned task', color: 'var(--accent-vivid)', verb: 'assigned' },

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
 import { createPortal } from 'react-dom';
-import { Pencil, Copy, Clock, ChevronDown, FileText, Mail, Trash2, MoreVertical } from 'lucide-react';
+import { Pencil, Copy, Clock, ChevronDown, FileText, Mail, Trash2, MoreVertical, Lock, Unlock } from 'lucide-react';
 import { Todo } from '@/types/todo';
 import { IconButton } from '@/components/ui';
 import { getSnoozeDate } from './utils';
@@ -21,6 +21,7 @@ export interface ActionsDropdownMenuProps {
   onSetDueDate: (id: string, dueDate: string | null) => void;
   onSaveAsTemplate?: (todo: Todo) => void;
   onEmailCustomer?: (todo: Todo) => void;
+  onSetPrivacy?: (id: string, isPrivate: boolean) => void;
   /** Ref for the menu container (used for click-outside detection) */
   menuRef: RefObject<HTMLDivElement | null>;
 }
@@ -39,6 +40,7 @@ export default function ActionsDropdownMenu({
   onSetDueDate,
   onSaveAsTemplate,
   onEmailCustomer,
+  onSetPrivacy,
   menuRef,
 }: ActionsDropdownMenuProps) {
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
@@ -243,6 +245,27 @@ export default function ActionsDropdownMenu({
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Privacy toggle */}
+              {onSetPrivacy && canEdit && (
+                <button
+                  ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
+                  role="menuitem"
+                  onClick={() => {
+                    onSetPrivacy(todo.id, !todo.is_private);
+                    setShowActionsMenu(false);
+                    setShowSnoozeMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+                >
+                  {todo.is_private ? (
+                    <Lock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                  ) : (
+                    <Unlock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                  )}
+                  {todo.is_private ? 'Make Public' : 'Make Private'}
+                </button>
               )}
 
               <div className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />

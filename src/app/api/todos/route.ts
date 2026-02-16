@@ -172,6 +172,8 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       transcription,
       subtasks = [],
       status = 'todo',
+      is_private: isPrivateRaw,
+      isPrivate,
     } = body;
 
     if (!text || !text.trim()) {
@@ -194,6 +196,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       created_at: now,
       created_by: ctx.userName,
       assigned_to: assignedTo?.trim() || null,
+      is_private: typeof isPrivateRaw === 'boolean' ? isPrivateRaw : typeof isPrivate === 'boolean' ? isPrivate : false,
       due_date: dueDate || null,
       notes: notes || null,
       transcription: transcription || null,
@@ -288,6 +291,7 @@ export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       'text', 'completed', 'status', 'priority',
       'assigned_to', 'due_date', 'notes', 'transcription',
       'subtasks', 'recurrence',
+      'is_private',
     ];
 
     for (const field of allowedFields) {

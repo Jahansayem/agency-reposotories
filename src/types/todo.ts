@@ -94,6 +94,7 @@ export interface Todo {
   created_at: string;
   created_by: string;
   assigned_to?: string;
+  is_private?: boolean;
   due_date?: string;
   notes?: string;
   recurrence?: RecurrencePattern;
@@ -452,6 +453,7 @@ export type ActivityAction =
   | 'task_deleted'
   | 'task_completed'
   | 'task_reopened'
+  | 'task_privacy_changed'
   | 'status_changed'
   | 'priority_changed'
   | 'assigned_to_changed'
@@ -492,6 +494,7 @@ export interface ActivityDetailsMap {
   task_deleted: Record<string, never>;
   task_completed: { was_overdue?: boolean };
   task_reopened: Record<string, never>;
+  task_privacy_changed: { from: boolean; to: boolean };
   status_changed: { from: TodoStatus; to: TodoStatus };
   priority_changed: { from: TodoPriority; to: TodoPriority };
   assigned_to_changed: { from: string | null; to: string | null };

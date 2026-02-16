@@ -98,7 +98,22 @@ export class TodoService {
         throw new Error(result.message ?? 'Unknown error from todo_create_with_sync');
       }
 
-      return result as unknown as Todo;
+      const createdTodo = result as unknown as Todo;
+
+      // Preserve private-task creation while RPC signature is still privacy-agnostic.
+      if (todo.is_private === true && createdTodo.id) {
+        const { error: privacyError } = await supabase
+          .from('todos')
+          .update({ is_private: true })
+          .eq('id', createdTodo.id)
+          .select()
+          .single();
+
+        if (privacyError) throw privacyError;
+        createdTodo.is_private = true;
+      }
+
+      return createdTodo;
     } catch (error) {
       logger.error('Failed to create todo', error as Error, {
         component: 'TodoService',
