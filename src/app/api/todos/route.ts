@@ -273,9 +273,12 @@ export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     }
 
     // Verify the user has access to this todo (creator, assigned, or updater)
+    // Skip per-user access check if user has can_edit_all_tasks permission (managers/owners)
     // Pass agencyId for cross-tenant protection
-    const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
-    if (accessError) return accessError;
+    if (!ctx.permissions?.can_edit_all_tasks) {
+      const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
+      if (accessError) return accessError;
+    }
 
     // Build update object
     const updateData: Record<string, unknown> = {
@@ -378,9 +381,22 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
     }
 
     // Verify the user has access to this todo (creator, assigned, or updater)
+    // Skip per-user access check if user has can_delete_all_tasks permission (managers/owners)
     // Pass agencyId for cross-tenant protection
-    const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
-    if (accessError) return accessError;
+    let todoText = '';
+    if (!ctx.permissions?.can_delete_all_tasks) {
+      const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
+      if (accessError) return accessError;
+      todoText = todo.text;
+    } else {
+      // Fetch todo text for activity log even when skipping access check
+      let fetchQuery = supabase.from('todos').select('text').eq('id', id);
+      if (ctx.agencyId) {
+        fetchQuery = fetchQuery.eq('agency_id', ctx.agencyId);
+      }
+      const { data: fetchedTodo } = await fetchQuery.single();
+      todoText = fetchedTodo?.text || '';
+    }
 
     let query = supabase
       .from('todos')
@@ -402,7 +418,7 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
     await safeLogActivity(supabase, {
       action: 'task_deleted',
       todo_id: id,
-      todo_text: todo.text,
+      todo_text: todoText,
       user_name: ctx.userName,
       agency_id: ctx.agencyId,
     });

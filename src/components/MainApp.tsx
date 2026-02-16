@@ -310,19 +310,46 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const handleRestoreTask = useCallback(async (taskId: string) => {
     if (!isSupabaseConfigured()) return;
 
+    const updated_at = new Date().toISOString();
+
+    // Capture original state for rollback before optimistic update
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === taskId);
+
+    // Optimistic update: immediately mark task as active in the store
+    // so the UI reflects the change without waiting for real-time sync.
+    updateTodoInStore(taskId, {
+      completed: false,
+      status: 'todo' as Todo['status'],
+      updated_at,
+    });
+
     try {
-      // Restore task by marking it as not completed and resetting status
-      const { error } = await supabase
+      // Build query with agency scoping for defense-in-depth
+      let query = supabase
         .from('todos')
         .update({
           completed: false,
           status: 'todo',
-          updated_at: new Date().toISOString(),
+          updated_at,
         })
         .eq('id', taskId);
 
+      if (currentAgencyId) {
+        query = query.eq('agency_id', currentAgencyId);
+      }
+
+      const { error } = await query;
+
       if (error) {
         logger.error('Failed to restore task', error, { component: 'MainApp', taskId });
+        // Rollback optimistic update on failure using original state
+        if (originalTodo) {
+          updateTodoInStore(taskId, {
+            completed: originalTodo.completed,
+            status: originalTodo.status as Todo['status'],
+            updated_at: originalTodo.updated_at,
+          });
+        }
         throw error;
       }
 
@@ -340,27 +367,38 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       logger.error('Failed to restore task', error, { component: 'MainApp', taskId });
       throw error;
     }
-  }, [currentUser.name]);
+  }, [currentUser.name, updateTodoInStore, currentAgencyId]);
 
   // Handle permanently deleting an archived task
   const handleDeleteTask = useCallback(async (taskId: string) => {
     if (!isSupabaseConfigured()) return;
 
-    try {
-      // Get task info for logging before deletion
-      const { data: taskData } = await supabase
-        .from('todos')
-        .select('text')
-        .eq('id', taskId)
-        .single();
+    // Capture current todo for rollback before optimistic delete
+    const currentTodo = useTodoStore.getState().todos.find(t => t.id === taskId);
+    const taskText = currentTodo?.text;
 
-      const { error } = await supabase
+    // Optimistic delete: immediately remove from the store
+    useTodoStore.getState().deleteTodo(taskId);
+
+    try {
+      // Build query with agency scoping for defense-in-depth
+      let query = supabase
         .from('todos')
         .delete()
         .eq('id', taskId);
 
+      if (currentAgencyId) {
+        query = query.eq('agency_id', currentAgencyId);
+      }
+
+      const { error } = await query;
+
       if (error) {
         logger.error('Failed to delete task', error, { component: 'MainApp', taskId });
+        // Rollback optimistic delete on failure
+        if (currentTodo) {
+          useTodoStore.getState().addTodo(currentTodo);
+        }
         throw error;
       }
 
@@ -370,7 +408,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         entity_type: 'todo',
         entity_id: taskId,
         user_name: currentUser.name,
-        details: { task_text: taskData?.text, deleted_from: 'archive' },
+        details: { task_text: taskText, deleted_from: 'archive' },
       });
 
       logger.info('Task permanently deleted from archive', { component: 'MainApp', taskId });
@@ -378,7 +416,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       logger.error('Failed to delete task', error, { component: 'MainApp', taskId });
       throw error;
     }
-  }, [currentUser.name]);
+  }, [currentUser.name, currentAgencyId]);
 
   // Register the new task trigger callback with AppShell
   useEffect(() => {

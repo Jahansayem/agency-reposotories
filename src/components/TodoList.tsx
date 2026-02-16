@@ -201,7 +201,8 @@ export default function TodoList({
 
   // Additional task operations (not in extracted hook)
   const confirmDeleteTodo = useCallback(async (id: string) => {
-    const todo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const todo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!todo) return;
 
     const confirmed = confirm(`Delete task: "${todo.text}"?`);
@@ -228,10 +229,11 @@ export default function TodoList({
       });
       state.announce(`Task deleted: ${todo.text}`);
     }
-  }, [state.todos, state.deleteTodoFromStore, state.addTodoToStore, state.announce, userName]);
+  }, [state.deleteTodoFromStore, state.addTodoToStore, state.announce, userName]);
 
   const assignTodo = useCallback(async (id: string, assignedTo: string | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { assigned_to: assignedTo || undefined });
@@ -266,10 +268,11 @@ export default function TodoList({
         );
       }
     }
-  }, [state.todos, state.updateTodoInStore, state.announce, userName]);
+  }, [state.updateTodoInStore, state.announce, userName]);
 
   const setDueDate = useCallback(async (id: string, dueDate: string | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { due_date: dueDate || undefined });
@@ -291,10 +294,11 @@ export default function TodoList({
         details: { from: oldTodo.due_date, to: dueDate },
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName]);
 
   const setReminder = useCallback(async (id: string, reminderAt: string | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { reminder_at: reminderAt || undefined, reminder_sent: false });
@@ -308,10 +312,11 @@ export default function TodoList({
       logger.error('Error setting reminder', error, { component: 'TodoList' });
       state.updateTodoInStore(id, { reminder_at: oldTodo.reminder_at });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const markWaiting = useCallback(async (id: string, contactType: WaitingContactType, followUpHours?: number) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, {
@@ -340,10 +345,11 @@ export default function TodoList({
         follow_up_after_hours: oldTodo.follow_up_after_hours,
       });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const clearWaiting = useCallback(async (id: string) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, {
@@ -369,10 +375,11 @@ export default function TodoList({
         waiting_contact_type: oldTodo.waiting_contact_type,
       });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const setPriority = useCallback(async (id: string, priority: TodoPriority) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { priority });
@@ -394,10 +401,11 @@ export default function TodoList({
         details: { from: oldTodo.priority, to: priority },
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName]);
 
   const updateText = useCallback(async (id: string, text: string) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { text });
@@ -419,10 +427,11 @@ export default function TodoList({
         details: { field: 'text' },
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName]);
 
   const updateNotes = useCallback(async (id: string, notes: string) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { notes });
@@ -443,10 +452,11 @@ export default function TodoList({
         todoText: oldTodo.text,
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName]);
 
   const setRecurrence = useCallback(async (id: string, recurrence: 'daily' | 'weekly' | 'monthly' | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { recurrence: recurrence || undefined });
@@ -460,10 +470,11 @@ export default function TodoList({
       logger.error('Error setting recurrence', error, { component: 'TodoList' });
       state.updateTodoInStore(id, { recurrence: oldTodo.recurrence });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const updateSubtasks = useCallback(async (id: string, subtasks: Subtask[]) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { subtasks });
@@ -477,10 +488,11 @@ export default function TodoList({
       logger.error('Error updating subtasks', error, { component: 'TodoList' });
       state.updateTodoInStore(id, { subtasks: oldTodo.subtasks });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const updateAttachments = useCallback(async (id: string, attachments: any[]) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { attachments });
@@ -494,14 +506,34 @@ export default function TodoList({
       logger.error('Error updating attachments', error, { component: 'TodoList' });
       state.updateTodoInStore(id, { attachments: oldTodo.attachments });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const handleOpenDetail = useCallback((todoId: string) => {
     setDetailTodoId(todoId);
   }, []);
 
   const handleDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
-    state.updateTodoInStore(id, updates);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
+    if (!oldTodo) return;
+
+    const updated_at = new Date().toISOString();
+    const updatesWithTimestamp = { ...updates, updated_at };
+
+    // Optimistic update
+    state.updateTodoInStore(id, updatesWithTimestamp);
+
+    // Persist to database
+    const { error } = await supabase
+      .from('todos')
+      .update(updatesWithTimestamp)
+      .eq('id', id);
+
+    if (error) {
+      logger.error('Error updating todo from detail modal', error, { component: 'TodoList' });
+      // Rollback optimistic update
+      state.updateTodoInStore(id, oldTodo);
+    }
   }, [state.updateTodoInStore]);
 
   // Save task as template

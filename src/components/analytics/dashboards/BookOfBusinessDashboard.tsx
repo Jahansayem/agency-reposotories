@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { fetchWithCsrf } from '@/lib/csrf';
 import {
   Users,
   MapPin,
@@ -521,7 +522,7 @@ export function BookOfBusinessDashboard() {
 
     try {
       // Create task directly via todos API since these are static targets without opportunity IDs
-      const response = await fetch('/api/todos', {
+      const response = await fetchWithCsrf('/api/todos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

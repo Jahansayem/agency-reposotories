@@ -23,6 +23,7 @@ import { sendTaskAssignmentNotification, sendTaskCompletionNotification } from '
 import { fetchWithCsrf } from '@/lib/csrf';
 import { calculateCompletionStreak, getNextSuggestedTasks, getEncouragementMessage } from '@/lib/taskSuggestions';
 import { ActivityLogEntry } from '@/types/todo';
+import { useTodoStore } from '@/store/todoStore';
 
 interface UseTodoOperationsProps {
   userName: string;
@@ -293,7 +294,9 @@ export function useTodoOperations({
    * Update task status with celebration for completions
    */
   const updateStatus = useCallback(async (id: string, status: TodoStatus) => {
-    const oldTodo = todos.find((t) => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const currentTodos = useTodoStore.getState().todos;
+    const oldTodo = currentTodos.find((t) => t.id === id);
     const completed = status === 'done';
     const updated_at = new Date().toISOString();
 
@@ -303,7 +306,7 @@ export function useTodoOperations({
     if (status === 'done' && oldTodo && !oldTodo.completed) {
       // Calculate streak and get next tasks for enhanced celebration
       const streakCount = calculateCompletionStreak(activityLog, userName) + 1;
-      const nextTasks = getNextSuggestedTasks(todos, userName, id);
+      const nextTasks = getNextSuggestedTasks(currentTodos, userName, id);
       const encouragementMessage = getEncouragementMessage(streakCount);
 
       const updatedTodo = { ...oldTodo, completed: true, status: 'done' as TodoStatus, updated_at };
@@ -371,7 +374,7 @@ export function useTodoOperations({
         announce(`Task status changed to ${status}: ${oldTodo.text}`);
       }
     }
-  }, [todos, activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration]);
+  }, [activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration]);
 
   /**
    * Create next recurring task after completion
@@ -458,7 +461,9 @@ export function useTodoOperations({
    * Toggle todo completion
    */
   const toggleTodo = useCallback(async (id: string, completed: boolean) => {
-    const todoItem = todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const currentTodos = useTodoStore.getState().todos;
+    const todoItem = currentTodos.find(t => t.id === id);
     const updated_at = new Date().toISOString();
     const newStatus: TodoStatus = completed ? 'done' : 'todo';
 
@@ -466,7 +471,7 @@ export function useTodoOperations({
 
     if (completed && todoItem) {
       const streakCount = calculateCompletionStreak(activityLog, userName) + 1;
-      const nextTasks = getNextSuggestedTasks(todos, userName, id);
+      const nextTasks = getNextSuggestedTasks(currentTodos, userName, id);
       const encouragementMessage = getEncouragementMessage(streakCount);
 
       const updatedTodo = { ...todoItem, completed: true, updated_at };
@@ -508,7 +513,7 @@ export function useTodoOperations({
       logActivity({ action, userName, todoId: id, todoText: todoItem.text });
       announce(`Task ${completed ? 'completed' : 'reopened'}: ${todoItem.text}`);
     }
-  }, [todos, activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration, createNextRecurrence]);
+  }, [activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration, createNextRecurrence]);
 
   return {
     addTodo,
