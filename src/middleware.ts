@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { rateLimiters, withRateLimit, createRateLimitResponse } from '@/lib/rateLimit';
 import { AUTH_CONFIG } from '@/lib/featureFlags';
 
@@ -47,6 +48,31 @@ function applyCorsHeaders(response: NextResponse, origin: string | null): NextRe
 function logSecurityEvent(event: string, details: Record<string, unknown>): void {
   const timestamp = new Date().toISOString();
   console.warn(`[SECURITY] ${timestamp} ${event}`, JSON.stringify(details));
+}
+
+/**
+ * Hash a session token using Web Crypto API (Edge Runtime compatible).
+ * Mirrors sessionValidator.hashSessionToken() which uses Node.js crypto.
+ */
+async function hashSessionTokenEdge(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Get a Supabase client for middleware (Edge Runtime).
+ * Uses service role key to bypass RLS for session lookup.
+ */
+function getMiddlewareSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 /**
@@ -198,7 +224,8 @@ const isPublicRoute = createRouteMatcher([
  *
  * SECURITY: Only accepts proper session tokens.
  * The X-User-Name header is NO LONGER accepted as a standalone authentication method.
- * Full session validation happens in individual API routes via sessionValidator.
+ * Validates the token hash against the user_sessions table to ensure it is
+ * a real, non-expired session -- not just any non-empty string.
  */
 async function validateSessionFromRequest(request: NextRequest): Promise<{
   valid: boolean;
@@ -234,12 +261,62 @@ async function validateSessionFromRequest(request: NextRequest): Promise<{
     };
   }
 
-  // Session token is present - basic validation passed
-  // Full validation (including token hash lookup) happens in API routes
-  // via sessionValidator.validateSession()
-  return {
-    valid: true,
-  };
+  // Validate the token against the database
+  const supabase = getMiddlewareSupabase();
+  if (!supabase) {
+    // If Supabase is not configured (e.g. build time), reject
+    return {
+      valid: false,
+      error: 'Session validation unavailable',
+    };
+  }
+
+  try {
+    const tokenHash = await hashSessionTokenEdge(sessionToken);
+
+    const { data: session, error } = await supabase
+      .from('user_sessions')
+      .select('user_id, expires_at, is_valid')
+      .eq('token_hash', tokenHash)
+      .single();
+
+    if (error || !session) {
+      // If the table doesn't exist yet (migration not run), allow through
+      // so that the API route wrappers can handle the fallback path
+      if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+        return { valid: true };
+      }
+      return {
+        valid: false,
+        error: 'Invalid session token',
+      };
+    }
+
+    if (!session.is_valid) {
+      return {
+        valid: false,
+        error: 'Session has been invalidated',
+      };
+    }
+
+    if (new Date(session.expires_at) < new Date()) {
+      return {
+        valid: false,
+        error: 'Session expired',
+      };
+    }
+
+    return {
+      valid: true,
+      userId: session.user_id,
+    };
+  } catch {
+    // On unexpected errors, reject the request rather than allowing through
+    return {
+      valid: false,
+      error: 'Session validation failed',
+    };
+  }
 }
 
 async function handleMiddleware(request: NextRequest) {

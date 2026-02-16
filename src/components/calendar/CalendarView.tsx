@@ -725,10 +725,17 @@ export default function CalendarView({
 
           {/* Person Filter */}
           {uniqueAssignees.length > 0 && (
-            <div className="p-4 border-t border-[var(--border)]">
-              <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-                Team Members
-              </h3>
+            <div className="flex-shrink-0 p-4 border-t border-[var(--border)]">
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                  Assigned To
+                </h3>
+                {selectedUsers.size > 0 && (
+                  <button onClick={clearUserFilter} className="ml-auto text-xs text-[var(--accent)] hover:underline">
+                    Clear
+                  </button>
+                )}
+              </div>
               <div className="space-y-1">
                 {uniqueAssignees.map((user) => {
                   const isSelected = selectedUsers.has(user);
@@ -745,11 +752,6 @@ export default function CalendarView({
                     </button>
                   );
                 })}
-                {selectedUsers.size > 0 && (
-                  <button onClick={clearUserFilter} className="text-xs text-[var(--accent)] hover:underline px-2 py-1">
-                    Show all
-                  </button>
-                )}
               </div>
             </div>
           )}

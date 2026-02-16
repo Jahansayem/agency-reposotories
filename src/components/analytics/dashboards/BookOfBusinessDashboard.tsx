@@ -215,7 +215,7 @@ const PremiumProgressBar = ({
   label: string;
   color?: string;
 }) => {
-  const percentage = Math.min((value / max) * 100, 100);
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   const colorMap: Record<string, string> = {
     sky: 'bg-sky-500',
     blue: 'bg-blue-500',

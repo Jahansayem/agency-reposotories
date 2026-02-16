@@ -5,6 +5,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { ChatMessage, PresenceStatus } from '@/types/todo';
 import { logger } from '@/lib/logger';
 import { parseChatMessage } from '@/lib/validators';
+import { useAgency } from '@/contexts/AgencyContext';
 
 interface UseChatSubscriptionOptions {
   currentUserName: string;
@@ -36,6 +37,8 @@ export function useChatSubscription({
   onTypingUpdate,
   onPresenceUpdate,
 }: UseChatSubscriptionOptions): UseChatSubscriptionReturn {
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+
   const [connected, setConnected] = useState(false);
   const [tableExists, setTableExists] = useState(true);
 
@@ -128,11 +131,30 @@ export function useChatSubscription({
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
+    const messagesChannelName = isMultiTenancyEnabled && currentAgencyId
+      ? `messages-channel-${currentAgencyId}`
+      : 'messages-channel';
+
+    const messagesSubscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'messages';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+    };
+
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      messagesSubscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const messagesChannel = supabase
-      .channel('messages-channel')
+      .channel(messagesChannelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
+        messagesSubscriptionConfig,
         (payload) => {
           if (payload.eventType === 'INSERT') {
             // BUGFIX TYPE-002: Validate payload instead of dangerous cast
@@ -218,7 +240,7 @@ export function useChatSubscription({
       typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
       typingTimeoutsRef.current.clear();
     };
-  }, [currentUserName, isDndMode]);
+  }, [currentUserName, isDndMode, currentAgencyId, isMultiTenancyEnabled]);
 
   return {
     connected,

@@ -9,6 +9,7 @@ import { useAppShell } from './layout/AppShell';
 import { ChatPanelSkeleton } from './LoadingSkeletons';
 import { AuthUser, ChatConversation } from '@/types/todo';
 import { logger } from '@/lib/logger';
+import { useAgency } from '@/contexts/AgencyContext';
 
 const CHAT_STATE_KEY = 'floating_chat_last_conversation';
 
@@ -51,6 +52,7 @@ export default function FloatingChatButton({
   onTaskLinkClick,
 }: FloatingChatButtonProps) {
   const { activeView } = useAppShell();
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
 
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -97,11 +99,17 @@ export default function FloatingChatButton({
       try {
         // Get messages not read by current user
         // We need to fetch recipient and created_by to filter properly
-        const { data, error } = await supabase
+        let query = supabase
           .from('messages')
           .select('id, read_by, recipient, created_by')
           .not('created_by', 'eq', currentUser.name)
           .is('deleted_at', null);
+
+        if (isMultiTenancyEnabled && currentAgencyId) {
+          query = query.eq('agency_id', currentAgencyId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
 
@@ -151,17 +159,30 @@ export default function FloatingChatButton({
 
     fetchUnreadCount();
 
-    // Subscribe to new messages
-    // TODO: This subscription listens to ALL messages across all agencies.
-    // There is no agencyId available in this component's props or context.
-    // To filter by agency, either pass agencyId as a prop from the parent,
-    // or use the AgencyContext here and add a filter like:
-    //   { event: '*', schema: 'public', table: 'messages', filter: `agency_id=eq.${agencyId}` }
+    const channelName = isMultiTenancyEnabled && currentAgencyId
+      ? `floating-chat-messages-${currentAgencyId}`
+      : 'floating-chat-messages';
+
+    const subscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'messages';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+    };
+
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const channel = supabase
-      .channel('floating-chat-messages')
+      .channel(channelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
+        subscriptionConfig,
         () => {
           fetchUnreadCount();
         }
@@ -171,7 +192,7 @@ export default function FloatingChatButton({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser.name, lastConversation]);
+  }, [currentUser.name, lastConversation, currentAgencyId, isMultiTenancyEnabled]);
 
   // Clear unread count when opening chat
   useEffect(() => {

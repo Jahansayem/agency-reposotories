@@ -55,7 +55,7 @@ export default function TaskDetailHeader({
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
-  }, [onTitleChange]);
+  }, [onTitleChange, textareaRef]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

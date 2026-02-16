@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextRequest } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/featureFlags';
+import { validateSession } from '@/lib/sessionValidator';
 
 interface DualAuthResult {
   authenticated: boolean;
@@ -44,35 +45,14 @@ export async function validateDualAuth(request: NextRequest): Promise<DualAuthRe
 
   // Try PIN session authentication
   if (AUTH_CONFIG.pinEnabled) {
-    // Check for session token in various locations
-    let sessionToken = request.cookies.get('session_token')?.value || null;
+    const session = await validateSession(request);
 
-    if (!sessionToken) {
-      sessionToken = request.headers.get('X-Session-Token');
-    }
-
-    if (!sessionToken) {
-      const authHeader = request.headers.get('Authorization');
-      if (authHeader?.startsWith('Bearer ')) {
-        sessionToken = authHeader.substring(7);
-      }
-    }
-
-    if (!sessionToken) {
-      sessionToken = request.cookies.get('session')?.value || null;
-    }
-
-    if (sessionToken) {
-      // This detects auth METHOD only — it does NOT validate the token.
-      // Callers MUST still run sessionValidator (via withSessionAuth / withAgencyAuth)
-      // before trusting the identity. The `authenticated` flag here means
-      // "a token was found", not "the token is cryptographically valid".
-      //
-      // All API route wrappers (withAgencyAuth, withSessionAuth) call
-      // sessionValidator internally, so this is safe in practice.
+    if (session.valid && session.userId) {
       return {
         authenticated: true,
         authMethod: 'pin',
+        userId: session.userId,
+        userName: session.userName,
       };
     }
   }

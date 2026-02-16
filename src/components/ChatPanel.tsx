@@ -454,10 +454,9 @@ export default function ChatPanel({
       reply_to_id: replyingTo?.id || null,
       reply_to_text: replyingTo ? truncateText(sanitizeHTML(replyingTo.text), 100) : null,
       reply_to_user: replyingTo?.created_by || null,
-      // Only include mentions/attachments if they have values to avoid Supabase 400 errors
-      // when these columns may not exist in older database schemas
       ...(mentions.length > 0 && { mentions }),
       ...(attachments && attachments.length > 0 && { attachments }),
+      ...(isMultiTenancyEnabled && currentAgencyId && { agency_id: currentAgencyId }),
     };
 
     setMessages((prev) => [...prev, message]);
@@ -502,7 +501,7 @@ export default function ChatPanel({
         });
       }
     }
-  }, [conversation, currentUser, users, replyingTo, setMessages, scrollToBottom]);
+  }, [conversation, currentUser, users, replyingTo, setMessages, scrollToBottom, isMultiTenancyEnabled, currentAgencyId]);
 
   // Handle save edit
   const handleSaveEdit = useCallback((text: string) => {
