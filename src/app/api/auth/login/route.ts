@@ -51,11 +51,11 @@ interface AgencyMembershipWithAgency {
   agency_id: string;
   role: string;
   is_default_agency?: boolean;
-  agencies: {
+  agencies: Array<{
     id?: string;
-    name: string;
+    name?: string | null;
     slug?: string;
-  };
+  }>;
 }
 
 interface LoginUserRow {
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       const membership = defaultMembership as unknown as AgencyMembershipWithAgency;
       agencyId = membership.agency_id;
       agencyRole = membership.role;
-      agencyName = membership.agencies?.name || null;
+      agencyName = membership.agencies?.[0]?.name || null;
     } else {
       // Fallback: any active agency
       const { data: anyMembership } = await withOperationTimeout<QueryResult<AgencyMembershipWithAgency>>(
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
         const membership = anyMembership as unknown as AgencyMembershipWithAgency;
         agencyId = membership.agency_id;
         agencyRole = membership.role;
-        agencyName = membership.agencies?.name || null;
+        agencyName = membership.agencies?.[0]?.name || null;
       }
     }
 
@@ -269,8 +269,8 @@ export async function POST(request: NextRequest) {
           const membership = row as unknown as AgencyMembershipWithAgency;
           return {
             id: membership.agency_id,
-            name: membership.agencies?.name || '',
-            slug: membership.agencies?.slug || '',
+            name: membership.agencies?.[0]?.name || '',
+            slug: membership.agencies?.[0]?.slug || '',
             role: membership.role,
             is_default: membership.is_default_agency || false,
           };
