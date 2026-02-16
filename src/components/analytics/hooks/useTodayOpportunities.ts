@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { fetchWithCsrf } from '@/lib/csrf';
 
 export interface TodayOpportunity {
   id: string;
@@ -121,7 +122,7 @@ export function useTodayOpportunities(limit: number = 10) {
     request: ContactRequest,
     userId: string
   ) => {
-    const response = await fetch(`/api/opportunities/${opportunityId}/contact`, {
+    const response = await fetchWithCsrf(`/api/opportunities/${opportunityId}/contact`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

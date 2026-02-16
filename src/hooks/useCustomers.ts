@@ -7,6 +7,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { fetchWithCsrf } from '@/lib/csrf';
 import type {
   Customer,
   CustomerDetail,
@@ -217,7 +218,7 @@ export function useCreateTaskFromOpportunity() {
     setError(null);
 
     try {
-      const response = await fetch('/api/opportunities/create-task', {
+      const response = await fetchWithCsrf('/api/opportunities/create-task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
@@ -264,7 +265,7 @@ export function useDismissOpportunity() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/opportunities/${params.opportunityId}/dismiss`, {
+      const response = await fetchWithCsrf(`/api/opportunities/${params.opportunityId}/dismiss`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

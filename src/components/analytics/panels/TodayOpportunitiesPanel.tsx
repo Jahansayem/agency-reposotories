@@ -20,6 +20,7 @@ import { CONTACT_OUTCOME_CONFIG, type ContactOutcome } from '@/types/allstate-an
 import { CustomerDetailPanel } from '@/components/customer/CustomerDetailPanel';
 import { useCurrentUser } from '@/contexts/UserContext';
 import { logger } from '@/lib/logger';
+import { fetchWithCsrf } from '@/lib/csrf';
 import {
   Phone,
   Mail,
@@ -145,7 +146,7 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
         notes: notes || `Contact logged via Today panel: ${CONTACT_OUTCOME_CONFIG[outcome].label}`,
       };
 
-      const response = await fetch(`/api/opportunities/${opportunityId}/contact`, {
+      const response = await fetchWithCsrf(`/api/opportunities/${opportunityId}/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -198,7 +199,7 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
     setCreatingTask(opp.id);
 
     try {
-      const response = await fetch('/api/opportunities/create-task', {
+      const response = await fetchWithCsrf('/api/opportunities/create-task', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
