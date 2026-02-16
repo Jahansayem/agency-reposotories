@@ -2,7 +2,21 @@
 
 import { memo } from 'react';
 
-function LoadingState() {
+interface LoadingStateProps {
+  message?: string;
+  context?: 'initial' | 'refresh' | 'sync' | 'generic';
+}
+
+const contextMessages = {
+  initial: 'Loading your tasks...',
+  refresh: 'Refreshing data...',
+  sync: 'Syncing changes...',
+  generic: 'Loading...',
+};
+
+function LoadingState({ message, context = 'initial' }: LoadingStateProps = {}) {
+  const displayMessage = message || contextMessages[context];
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)] relative overflow-hidden">
       {/* Ambient gradient orbs */}
@@ -25,6 +39,9 @@ function LoadingState() {
           <div className="w-2 h-2 rounded-full bg-[var(--accent-sky)] animate-bounce" style={{ animationDelay: '150ms' }} />
           <div className="w-2 h-2 rounded-full bg-[var(--accent-sky)] animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
+        <p className="text-sm text-[var(--text-muted)] font-medium mt-2" role="status" aria-live="polite">
+          {displayMessage}
+        </p>
       </div>
     </div>
   );

@@ -172,7 +172,8 @@ export default function MonthView({
           }
           return { row, col };
         });
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
         if (focusedCellIndex) {
           const day = calendarWeeks[focusedCellIndex.row]?.[focusedCellIndex.col];
           if (day) {

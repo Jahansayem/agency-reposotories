@@ -47,7 +47,9 @@ export const PRIORITY_ORDER: Record<string, number> = {
  */
 export function isTaskOverdue(dueDate: string | null | undefined): boolean {
   if (!dueDate) return false;
-  const taskDate = new Date(dueDate + 'T00:00:00');
+  // Extract date-only portion to handle both "2026-02-15" and "2026-02-15T08:00:00Z" formats
+  const dateOnly = dueDate.split('T')[0];
+  const taskDate = new Date(dateOnly + 'T00:00:00');
   const today = new Date(new Date().toDateString());
   return taskDate < today;
 }

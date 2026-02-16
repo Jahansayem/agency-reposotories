@@ -9,7 +9,7 @@
 
 import { Todo } from '@/types/todo';
 import { MessageSquare, Paperclip, FileText, Mic } from 'lucide-react';
-import { ICON_SIZE } from '@/lib/design-tokens';
+import { ICON_SIZE, SPACING, RADIUS, TYPOGRAPHY } from '@/lib/design-tokens';
 
 interface TaskCardSecondaryProps {
   todo: Todo;
@@ -66,16 +66,22 @@ export function TaskCardSecondary({ todo, isVisible, onChatClick }: TaskCardSeco
 
   return (
     <div
-      className={`flex items-center gap-2 transition-opacity duration-200 ${
+      className={`flex items-center transition-opacity duration-200 ${
         isVisible ? 'opacity-100' : 'opacity-0'
       }`}
+      style={{ gap: SPACING.sm }}
       aria-hidden={!isVisible}
     >
       {indicators.map(({ key, icon: Icon, label, count, color, onClick }) => (
         <button
           key={key}
           onClick={onClick}
-          className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-[var(--surface-2)] transition-colors"
+          className="flex items-center hover:bg-[var(--surface-2)] transition-colors"
+          style={{
+            gap: SPACING.xs,
+            padding: `${SPACING.xs} ${SPACING.sm}`,
+            borderRadius: RADIUS.md,
+          }}
           aria-label={label}
           type="button"
         >
@@ -86,8 +92,11 @@ export function TaskCardSecondary({ todo, isVisible, onChatClick }: TaskCardSeco
           />
           {count !== undefined && (
             <span
-              className="text-xs font-medium"
-              style={{ color }}
+              className="font-medium"
+              style={{
+                fontSize: TYPOGRAPHY.caption.size,
+                color,
+              }}
             >
               {count}
             </span>

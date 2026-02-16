@@ -203,6 +203,10 @@ export default function CalendarView({
         case 'T':
           goToToday();
           break;
+        case 'n':
+        case 'N':
+          onDateClick(currentDate);
+          break;
         case 'ArrowLeft':
           if (!isGridFocused) {
             e.preventDefault();
@@ -220,7 +224,7 @@ export default function CalendarView({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrevious, goToNext, goToToday, showFilterMenu]);
+  }, [goToPrevious, goToNext, goToToday, showFilterMenu, onDateClick, currentDate]);
 
   // Category filtering
   const toggleCategory = useCallback((category: DashboardTaskCategory) => {
@@ -503,9 +507,12 @@ export default function CalendarView({
                 <>
                   <div
                     className="fixed inset-0 z-40"
+                    aria-hidden="true"
                     onClick={() => setShowFilterMenu(false)}
                   />
                   <motion.div
+                    role="dialog"
+                    aria-label="Filter options"
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -534,6 +541,8 @@ export default function CalendarView({
                         return (
                           <button
                             key={category}
+                            role="checkbox"
+                            aria-checked={isSelected}
                             onClick={() => toggleCategory(category)}
                             className={`
                               w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors
@@ -575,6 +584,8 @@ export default function CalendarView({
                               return (
                                 <button
                                   key={user}
+                                  role="checkbox"
+                                  aria-checked={isSelected}
                                   onClick={() => toggleUser(user)}
                                   className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors ${isSelected ? 'bg-[var(--accent)]/10' : 'hover:bg-[var(--surface-hover)]'}`}
                                 >
@@ -717,6 +728,8 @@ export default function CalendarView({
                 return (
                   <button
                     key={category}
+                    role="checkbox"
+                    aria-checked={isSelected}
                     onClick={() => toggleCategory(category)}
                     className={`
                       w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors
@@ -753,6 +766,8 @@ export default function CalendarView({
                   return (
                     <button
                       key={user}
+                      role="checkbox"
+                      aria-checked={isSelected}
                       onClick={() => toggleUser(user)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${isSelected ? 'bg-[var(--accent)]/10 shadow-sm' : selectedUsers.size > 0 ? 'opacity-50 hover:opacity-75' : 'hover:bg-[var(--surface-hover)]'}`}
                     >

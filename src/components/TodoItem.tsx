@@ -84,6 +84,7 @@ function TodoItemComponent({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
+  const [isSaving, setIsSaving] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -135,12 +136,17 @@ function TodoItemComponent({
     }, 100);
   }, []);
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     if (!todo.completed) {
       setCelebrating(true);
       haptics.success();
     }
-    onToggle(todo.id, !todo.completed);
+    setIsSaving(true);
+    try {
+      await onToggle(todo.id, !todo.completed);
+    } finally {
+      setTimeout(() => setIsSaving(false), 500);
+    }
   };
 
   const handleSaveText = () => {
@@ -214,7 +220,7 @@ function TodoItemComponent({
       return `bg-[var(--surface)] border-[var(--border-subtle)] opacity-75 ${priorityBorder}`;
     }
     if (selected) {
-      return `border-[var(--accent)] bg-[var(--accent-light)] ${priorityBorder}`;
+      return `border-[var(--accent)] bg-[var(--accent-light)] ring-2 ring-[var(--accent)] ring-offset-1 shadow-lg ${priorityBorder}`;
     }
     if (dueDateStatus === 'overdue') {
       const isUrgentPriority = priority === 'urgent';
@@ -238,11 +244,17 @@ function TodoItemComponent({
       id={`todo-${todo.id}`}
       data-testid="todo-item"
       role="listitem"
-      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${longPressTriggered ? 'ring-2 ring-[var(--accent)]/50' : ''}`}
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${longPressTriggered ? 'ring-2 ring-[var(--accent)]/50' : ''} focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:ring-offset-2 ${isSaving ? 'opacity-60 pointer-events-none' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
     >
+      {/* Optimistic saving indicator */}
+      {isSaving && (
+        <div className="absolute top-2 right-2 z-10">
+          <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Selection checkbox (for bulk actions) */}
@@ -307,7 +319,7 @@ function TodoItemComponent({
 
         {/* Content area - clickable to expand/open detail */}
         <div
-          className="flex-1 min-w-0 cursor-pointer text-left"
+          className="flex-1 min-w-0 cursor-pointer text-left rounded-[var(--radius-md)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1"
           onClick={() => {
             if (onOpenDetail) {
               onOpenDetail(todo.id);

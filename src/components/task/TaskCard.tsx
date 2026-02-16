@@ -21,7 +21,7 @@ import { TaskCardHeader } from './TaskCardHeader';
 import { TaskCardMetadata } from './TaskCardMetadata';
 import { TaskCardSecondary } from './TaskCardSecondary';
 import { TaskCardStatusStrip } from './TaskCardStatusStrip';
-import { getTaskStatusStyle, getElevation, getRadius, SPACING } from '@/lib/design-tokens';
+import { getTaskStatusStyle, getElevation, getRadius, SPACING, RADIUS, TYPOGRAPHY } from '@/lib/design-tokens';
 import { useMemo, useState } from 'react';
 
 export interface TaskCardProps {
@@ -61,7 +61,6 @@ export function TaskCard({
     switch (variant) {
       case 'board':
         return {
-          padding: density === 'compact' ? SPACING.md : SPACING.lg,
           elevation: dragging ? getElevation(3) : getElevation(1),
           radius: getRadius('lg'),
           border: '1px solid var(--border-subtle)',
@@ -69,7 +68,6 @@ export function TaskCard({
         };
       case 'archive':
         return {
-          padding: density === 'compact' ? SPACING.sm : SPACING.md,
           elevation: getElevation(0),
           radius: getRadius('md'),
           border: '1px solid var(--border-subtle)',
@@ -79,29 +77,40 @@ export function TaskCard({
       case 'list':
       default:
         return {
-          padding: density === 'compact' ? SPACING.md : SPACING.lg,
           elevation: getElevation(0),
           radius: getRadius('lg'),
           border: '1px solid var(--border-subtle)',
           bg: 'var(--surface)',
         };
     }
-  }, [variant, density, dragging]);
+  }, [variant, dragging]);
 
   const showSecondaryMetadata = isHovered || variant === 'board';
+
+  // Responsive padding classes based on variant and density
+  const getPaddingClasses = () => {
+    if (variant === 'archive') {
+      return density === 'compact' ? 'p-2 sm:p-3' : 'p-3 sm:p-4';
+    }
+    if (variant === 'board') {
+      return density === 'compact' ? 'p-3 sm:p-4' : 'p-4 sm:p-5';
+    }
+    // list variant
+    return density === 'compact' ? 'p-3 sm:p-4' : 'p-4 sm:p-5';
+  };
 
   return (
     <div
       className={`
         relative group
         transition-all duration-200
+        ${getPaddingClasses()}
         ${interactive ? 'hover:shadow-md hover:-translate-y-0.5 cursor-pointer' : ''}
         ${selected ? 'ring-2 ring-[var(--accent)] ring-offset-2' : ''}
         ${dragging ? 'opacity-50 rotate-2' : ''}
         ${className}
       `}
       style={{
-        padding: variantStyles.padding,
         borderRadius: variantStyles.radius,
         border: variantStyles.border,
         backgroundColor: variantStyles.bg,
@@ -126,13 +135,13 @@ export function TaskCard({
       />
 
       {/* Metadata row: Due date • Assignee • Priority */}
-      <div className="mt-2">
+      <div style={{ marginTop: SPACING.sm }}>
         <TaskCardMetadata todo={todo} density={density} />
       </div>
 
       {/* Secondary metadata: Notes, voicemail, attachments, chat */}
       {variant !== 'archive' && (
-        <div className="mt-2">
+        <div style={{ marginTop: SPACING.sm }}>
           <TaskCardSecondary
             todo={todo}
             isVisible={showSecondaryMetadata}
@@ -143,16 +152,30 @@ export function TaskCard({
 
       {/* Subtask progress indicator (compact) */}
       {Array.isArray(todo.subtasks) && todo.subtasks.length > 0 && (
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex-1 h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
+        <div className="flex items-center" style={{ marginTop: SPACING.sm, gap: SPACING.sm }}>
+          <div
+            className="flex-1 overflow-hidden"
+            style={{
+              height: '4px',
+              backgroundColor: 'var(--surface-2)',
+              borderRadius: RADIUS.full,
+            }}
+          >
             <div
-              className="h-full bg-[var(--success)] transition-all"
+              className="h-full transition-all"
               style={{
+                backgroundColor: 'var(--success)',
                 width: `${(todo.subtasks.filter((s) => s.completed).length / todo.subtasks.length) * 100}%`,
               }}
             />
           </div>
-          <span className="text-xs text-[var(--text-muted)] font-medium">
+          <span
+            className="font-medium"
+            style={{
+              fontSize: TYPOGRAPHY.caption.size,
+              color: 'var(--text-muted)',
+            }}
+          >
             {todo.subtasks.filter((s) => s.completed).length}/{todo.subtasks.length}
           </span>
         </div>
@@ -160,7 +183,13 @@ export function TaskCard({
 
       {/* Archive-specific: Completed date */}
       {variant === 'archive' && todo.completed && (
-        <div className="mt-2 text-xs text-[var(--text-muted)]">
+        <div
+          style={{
+            marginTop: SPACING.sm,
+            fontSize: TYPOGRAPHY.caption.size,
+            color: 'var(--text-muted)',
+          }}
+        >
           Completed {new Date(todo.updated_at || '').toLocaleDateString()}
         </div>
       )}
