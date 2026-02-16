@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     if (!storedHash) {
       // User exists but has no PIN set (e.g., created via OAuth or incomplete registration)
-      await recordFailedAttempt(lockoutId, { ip, userAgent, userName: user.name });
+      await recordFailedAttempt(lockoutId, { ip, userAgent, userName: user.name ?? undefined });
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
         recordFailedAttempt(lockoutId, {
           ip,
           userAgent,
-          userName: user.name,
+          userName: user.name ?? undefined,
         })
       );
 
