@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useState, useRef } from 'react';
+import React, { memo, useCallback, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Check, CheckCheck, Reply, MoreHorizontal,
@@ -104,6 +104,129 @@ const ReactionsSummary = memo(function ReactionsSummary({ reactions }: { reactio
           </div>
         </div>
       ))}
+    </div>
+  );
+});
+
+// Extracted from IIFE: renders TaskAssignmentCard or message bubble with swipe-to-reply
+interface MessageContentProps {
+  msg: ChatMessage & { isGrouped: boolean };
+  isOwn: boolean;
+  showTapbackMenu: boolean;
+  longPressMessageId: string | null;
+  swipingMessageId: string | null;
+  swipeOffsets: Map<string, number>;
+  tapbackMessageId: string | null;
+  onTaskLinkClick?: (todoId: string) => void;
+  todosMap?: Map<string, Todo>;
+  setLightboxAttachment: (attachment: ChatAttachment | null) => void;
+  setTapbackMessageId: (id: string | null) => void;
+  handleSwipeDrag: (messageId: string, offsetX: number) => void;
+  handleSwipeDragEnd: (messageId: string, message: ChatMessage, info: { offset: { x: number }; velocity: { x: number } }) => void;
+  handleTouchStart: (messageId: string) => void;
+  handleTouchEnd: () => void;
+  renderMessageText: (text: string) => React.ReactNode;
+}
+
+const MessageContent = memo(function MessageContent({
+  msg,
+  isOwn,
+  showTapbackMenu,
+  longPressMessageId,
+  swipingMessageId,
+  swipeOffsets,
+  tapbackMessageId,
+  onTaskLinkClick,
+  todosMap,
+  setLightboxAttachment,
+  setTapbackMessageId,
+  handleSwipeDrag,
+  handleSwipeDragEnd,
+  handleTouchStart,
+  handleTouchEnd,
+  renderMessageText,
+}: MessageContentProps) {
+  const systemMeta = parseSystemMessage(msg);
+  const linkedTodo = msg.related_todo_id && todosMap?.get(msg.related_todo_id);
+  const currentSwipeOffset = swipeOffsets.get(msg.id) || 0;
+
+  if (systemMeta && linkedTodo && onTaskLinkClick) {
+    return (
+      <TaskAssignmentCard
+        todo={linkedTodo}
+        notificationType={systemMeta.notificationType}
+        actionBy={systemMeta.actionBy}
+        previousAssignee={systemMeta.previousAssignee}
+        onViewTask={() => onTaskLinkClick(msg.related_todo_id!)}
+        isOwnMessage={isOwn}
+      />
+    );
+  }
+
+  return (
+    <div className="relative">
+      {/* Reply icon shown during swipe */}
+      {currentSwipeOffset > 20 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{
+            opacity: Math.min(currentSwipeOffset / 50, 1),
+            scale: Math.min(0.8 + (currentSwipeOffset / 100), 1),
+          }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-10 pointer-events-none"
+        >
+          <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center">
+            <Reply className="w-4 h-4 text-[var(--accent)]" />
+          </div>
+        </motion.div>
+      )}
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 100 }}
+        dragElastic={0.2}
+        onDrag={(e, info) => handleSwipeDrag(msg.id, info.offset.x)}
+        onDragEnd={(e, info) => handleSwipeDragEnd(msg.id, msg, info)}
+        onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
+        onTouchStart={() => handleTouchStart(msg.id)}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        className={`px-4 py-2.5 rounded-[var(--radius-2xl)] break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed overflow-hidden ${
+          isOwn
+            ? 'bg-[var(--accent)] text-white rounded-br-md shadow-lg shadow-[var(--accent)]/20'
+            : 'bg-[var(--chat-border)] text-white rounded-bl-md border border-[var(--chat-surface-hover)]'
+        } ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''} ${longPressMessageId === msg.id ? 'ring-2 ring-yellow-400/50' : ''} ${swipingMessageId === msg.id ? 'shadow-2xl' : ''}`}
+        style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
+        whileHover={{ scale: 1.01 }}
+      >
+        {renderMessageText(msg.text)}
+
+        {/* Attachments */}
+        {msg.attachments && msg.attachments.length > 0 && (
+          <ChatImageGallery
+            attachments={msg.attachments}
+            onImageClick={(attachment) => setLightboxAttachment(attachment)}
+          />
+        )}
+
+        {/* Task link button */}
+        {msg.related_todo_id && onTaskLinkClick && !systemMeta && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTaskLinkClick(msg.related_todo_id!);
+            }}
+            className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-all ${
+              isOwn
+                ? 'bg-white/20 text-white hover:bg-white/30'
+                : 'bg-[var(--chat-border)] text-white/80 hover:bg-white/[0.15]'
+            }`}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            View Task
+          </button>
+        )}
+      </motion.div>
     </div>
   );
 });
@@ -395,91 +518,24 @@ export const ChatMessageList = memo(function ChatMessageList({
 
                   {/* Message bubble with swipe-to-reply (Issue #19) */}
                   <div className="relative">
-                    {(() => {
-                      const systemMeta = parseSystemMessage(msg);
-                      const linkedTodo = msg.related_todo_id && todosMap?.get(msg.related_todo_id);
-                      const currentSwipeOffset = swipeOffsets.get(msg.id) || 0;
-
-                      if (systemMeta && linkedTodo && onTaskLinkClick) {
-                        return (
-                          <TaskAssignmentCard
-                            todo={linkedTodo}
-                            notificationType={systemMeta.notificationType}
-                            actionBy={systemMeta.actionBy}
-                            previousAssignee={systemMeta.previousAssignee}
-                            onViewTask={() => onTaskLinkClick(msg.related_todo_id!)}
-                            isOwnMessage={isOwn}
-                          />
-                        );
-                      }
-
-                      return (
-                        <div className="relative">
-                          {/* Reply icon shown during swipe */}
-                          {currentSwipeOffset > 20 && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{
-                                opacity: Math.min(currentSwipeOffset / 50, 1),
-                                scale: Math.min(0.8 + (currentSwipeOffset / 100), 1),
-                              }}
-                              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-10 pointer-events-none"
-                            >
-                              <div className="w-8 h-8 rounded-full bg-[var(--accent)]/20 flex items-center justify-center">
-                                <Reply className="w-4 h-4 text-[var(--accent)]" />
-                              </div>
-                            </motion.div>
-                          )}
-
-                          <motion.div
-                            drag="x"
-                            dragConstraints={{ left: 0, right: 100 }}
-                            dragElastic={0.2}
-                            onDrag={(e, info) => handleSwipeDrag(msg.id, info.offset.x)}
-                            onDragEnd={(e, info) => handleSwipeDragEnd(msg.id, msg, info)}
-                            onClick={() => setTapbackMessageId(tapbackMessageId === msg.id ? null : msg.id)}
-                            onTouchStart={() => handleTouchStart(msg.id)}
-                            onTouchEnd={handleTouchEnd}
-                            onTouchCancel={handleTouchEnd}
-                            className={`px-4 py-2.5 rounded-[var(--radius-2xl)] break-words whitespace-pre-wrap cursor-pointer transition-all duration-200 text-[15px] leading-relaxed overflow-hidden ${
-                              isOwn
-                                ? 'bg-[var(--accent)] text-white rounded-br-md shadow-lg shadow-[var(--accent)]/20'
-                                : 'bg-[var(--chat-border)] text-white rounded-bl-md border border-[var(--chat-surface-hover)]'
-                            } ${showTapbackMenu ? 'ring-2 ring-[var(--accent)]/50' : ''} ${longPressMessageId === msg.id ? 'ring-2 ring-yellow-400/50' : ''} ${swipingMessageId === msg.id ? 'shadow-2xl' : ''}`}
-                            style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
-                            whileHover={{ scale: 1.01 }}
-                          >
-                            {renderMessageText(msg.text)}
-
-                            {/* Attachments */}
-                            {msg.attachments && msg.attachments.length > 0 && (
-                              <ChatImageGallery
-                                attachments={msg.attachments}
-                                onImageClick={(attachment) => setLightboxAttachment(attachment)}
-                              />
-                            )}
-
-                            {/* Task link button */}
-                            {msg.related_todo_id && onTaskLinkClick && !systemMeta && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onTaskLinkClick(msg.related_todo_id!);
-                                }}
-                                className={`mt-2 flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-lg)] text-xs font-medium transition-all ${
-                                  isOwn
-                                    ? 'bg-white/20 text-white hover:bg-white/30'
-                                    : 'bg-[var(--chat-border)] text-white/80 hover:bg-white/[0.15]'
-                                }`}
-                              >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                View Task
-                              </button>
-                            )}
-                          </motion.div>
-                        </div>
-                      );
-                    })()}
+                    <MessageContent
+                      msg={msg}
+                      isOwn={isOwn}
+                      showTapbackMenu={showTapbackMenu}
+                      longPressMessageId={longPressMessageId}
+                      swipingMessageId={swipingMessageId}
+                      swipeOffsets={swipeOffsets}
+                      tapbackMessageId={tapbackMessageId}
+                      onTaskLinkClick={onTaskLinkClick}
+                      todosMap={todosMap}
+                      setLightboxAttachment={setLightboxAttachment}
+                      setTapbackMessageId={setTapbackMessageId}
+                      handleSwipeDrag={handleSwipeDrag}
+                      handleSwipeDragEnd={handleSwipeDragEnd}
+                      handleTouchStart={handleTouchStart}
+                      handleTouchEnd={handleTouchEnd}
+                      renderMessageText={renderMessageText}
+                    />
 
                     {/* Action buttons on hover */}
                     {isHovered && !showTapbackMenu && (

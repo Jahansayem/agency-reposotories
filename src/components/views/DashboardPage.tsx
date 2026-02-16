@@ -331,6 +331,175 @@ export default function DashboardPage({
   const getUrgencyColor = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyColors[urgency], [urgencyColors]);
   const getUrgencyBg = useMemo(() => (urgency: NeglectedTask['urgencyLevel']) => urgencyBgs[urgency], [urgencyBgs]);
 
+  const upcomingDeadlines = useMemo(() => {
+    const activeTodos = todos.filter(t => !t.completed);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const upcoming = activeTodos
+      .filter(t => {
+        if (!t.due_date) return false;
+        const d = new Date(t.due_date);
+        return d > today && d <= nextWeek;
+      })
+      .sort((a, b) => new Date(a.due_date || '').getTime() - new Date(b.due_date || '').getTime())
+      .slice(0, 3);
+
+    if (upcoming.length === 0) return null;
+
+    return (
+      <div className={`rounded-xl p-4 ${
+        darkMode
+          ? 'bg-[var(--surface-2)] border border-[var(--border)]'
+          : 'bg-white border border-slate-200'
+      }`}>
+        <h3 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${
+          darkMode ? 'text-slate-400' : 'text-slate-500'
+        }`}>
+          Upcoming Deadlines
+        </h3>
+        <div className="space-y-2">
+          {upcoming.map((task) => (
+            <button
+              key={task.id}
+              onClick={() => onTaskClick?.(task.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                darkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                task.priority === 'urgent' ? 'bg-red-500' :
+                task.priority === 'high' ? 'bg-orange-500' :
+                'bg-[var(--brand-blue)]'
+              }`} />
+              <span className={`flex-1 text-sm font-medium truncate ${
+                darkMode ? 'text-white' : 'text-slate-900'
+              }`}>
+                {task.text}
+              </span>
+              <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {formatDueDate(task.due_date!)}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }, [todos, darkMode, onTaskClick, formatDueDate]);
+
+  const priorityBreakdown = useMemo(() => {
+    const activeTodos = todos.filter(t => !t.completed);
+    const urgent = activeTodos.filter(t => t.priority === 'urgent').length;
+    const high = activeTodos.filter(t => t.priority === 'high').length;
+    const medium = activeTodos.filter(t => t.priority === 'medium').length;
+    const low = activeTodos.filter(t => t.priority === 'low').length;
+    const total = activeTodos.length || 1;
+
+    if (activeTodos.length === 0) return null;
+
+    return (
+      <div className={`rounded-xl p-4 ${
+        darkMode
+          ? 'bg-[var(--surface-2)] border border-[var(--border)]'
+          : 'bg-white border border-slate-200'
+      }`}>
+        <div className="flex items-center gap-2 mb-3">
+          <BarChart3 className="w-4 h-4 text-[var(--brand-blue)]" />
+          <h3 className={`text-xs font-semibold uppercase tracking-wide ${
+            darkMode ? 'text-slate-400' : 'text-slate-500'
+          }`}>
+            Priority Breakdown
+          </h3>
+          <span className={`text-xs ml-auto ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            {activeTodos.length} active
+          </span>
+        </div>
+        {/* Stacked bar */}
+        <div className="h-3 rounded-full overflow-hidden flex bg-slate-700/30">
+          {urgent > 0 && <div className="bg-red-500 transition-all" style={{ width: `${(urgent / total) * 100}%` }} />}
+          {high > 0 && <div className="bg-orange-500 transition-all" style={{ width: `${(high / total) * 100}%` }} />}
+          {medium > 0 && <div className="bg-[var(--brand-blue)] transition-all" style={{ width: `${(medium / total) * 100}%` }} />}
+          {low > 0 && <div className="bg-slate-500 transition-all" style={{ width: `${(low / total) * 100}%` }} />}
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+          {urgent > 0 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+              <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Urgent ({urgent})</span>
+            </div>
+          )}
+          {high > 0 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+              <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>High ({high})</span>
+            </div>
+          )}
+          {medium > 0 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-blue)]" />
+              <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Medium ({medium})</span>
+            </div>
+          )}
+          {low > 0 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
+              <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Low ({low})</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }, [todos, darkMode]);
+
+  const productivityTip = useMemo(() => {
+    const activeTodos = todos.filter(t => !t.completed);
+    const overdue = activeTodos.filter(t => {
+      if (!t.due_date) return false;
+      const d = new Date(t.due_date);
+      d.setHours(23, 59, 59, 999);
+      return d < new Date(new Date().setHours(0, 0, 0, 0));
+    });
+    const highPri = activeTodos.filter(t => t.priority === 'urgent' || t.priority === 'high');
+
+    let tip: string;
+    if (overdue.length > 5) {
+      tip = `You have ${overdue.length} overdue tasks. Consider triaging them — resolve quick wins first, then reschedule or delegate the rest.`;
+    } else if (overdue.length > 0) {
+      tip = `${overdue.length} task${overdue.length > 1 ? 's are' : ' is'} overdue. Addressing these first will reduce cognitive load and free up focus for new work.`;
+    } else if (highPri.length > 5) {
+      tip = `${highPri.length} high-priority tasks active. Consider if some can be reprioritized — too many urgent items dilutes focus.`;
+    } else if (activeTodos.length === 0) {
+      tip = 'All clear — no active tasks. Good time to review strategic goals or plan ahead for the week.';
+    } else if (aiData.productivityScore >= 80) {
+      tip = `Productivity score of ${aiData.productivityScore} — strong performance. Maintain momentum by tackling the next high-priority item.`;
+    } else if (aiData.productivityScore < 40) {
+      tip = 'Productivity score is below average. Try the two-minute rule: if a task takes less than two minutes, do it now.';
+    } else {
+      tip = `${activeTodos.length} active tasks in your queue. Focus on completing one at a time rather than multitasking for better throughput.`;
+    }
+
+    return (
+      <div className={`rounded-xl p-4 ${
+        darkMode
+          ? 'bg-gradient-to-br from-[#0033A0]/15 to-[#0047CC]/15 border border-[var(--accent)]/20'
+          : 'bg-gradient-to-br from-[var(--accent)]/5 to-[#0047CC]/5 border border-[var(--accent)]/20'
+      }`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Lightbulb className="w-4 h-4 text-[var(--accent)]" />
+          <h3 className={`text-xs font-semibold uppercase tracking-wide ${
+            darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'
+          }`}>
+            Productivity Tip
+          </h3>
+        </div>
+        <p className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+          {tip}
+        </p>
+      </div>
+    );
+  }, [todos, darkMode, aiData.productivityScore]);
+
   // Use new role-based dashboards (conditional return placed AFTER all hooks per React Rules of Hooks)
   if (useNewDashboards) {
     if (isOwnerOrManager && hasTeam) {
@@ -778,62 +947,7 @@ export default function DashboardPage({
               </div>{/* End 2-col grid */}
 
               {/* Upcoming Deadlines (next 7 days) */}
-              {(() => {
-                const activeTodos = todos.filter(t => !t.completed);
-                const today = new Date();
-                today.setHours(23, 59, 59, 999);
-                const nextWeek = new Date();
-                nextWeek.setDate(nextWeek.getDate() + 7);
-                const upcoming = activeTodos
-                  .filter(t => {
-                    if (!t.due_date) return false;
-                    const d = new Date(t.due_date);
-                    return d > today && d <= nextWeek;
-                  })
-                  .sort((a, b) => new Date(a.due_date || '').getTime() - new Date(b.due_date || '').getTime())
-                  .slice(0, 3);
-
-                if (upcoming.length === 0) return null;
-
-                return (
-                  <div className={`rounded-xl p-4 ${
-                    darkMode
-                      ? 'bg-[var(--surface-2)] border border-[var(--border)]'
-                      : 'bg-white border border-slate-200'
-                  }`}>
-                    <h3 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${
-                      darkMode ? 'text-slate-400' : 'text-slate-500'
-                    }`}>
-                      Upcoming Deadlines
-                    </h3>
-                    <div className="space-y-2">
-                      {upcoming.map((task) => (
-                        <button
-                          key={task.id}
-                          onClick={() => onTaskClick?.(task.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                            darkMode ? 'hover:bg-slate-700/50' : 'hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                            task.priority === 'urgent' ? 'bg-red-500' :
-                            task.priority === 'high' ? 'bg-orange-500' :
-                            'bg-[var(--brand-blue)]'
-                          }`} />
-                          <span className={`flex-1 text-sm font-medium truncate ${
-                            darkMode ? 'text-white' : 'text-slate-900'
-                          }`}>
-                            {task.text}
-                          </span>
-                          <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {formatDueDate(task.due_date!)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              {upcomingDeadlines}
             </motion.div>
           ) : activeTab === 'insights' ? (
             <motion.div
@@ -960,69 +1074,7 @@ export default function DashboardPage({
               {/* Priority + Suggested Focus */}
 
               {/* Task Priority Breakdown */}
-              {(() => {
-                const activeTodos = todos.filter(t => !t.completed);
-                const urgent = activeTodos.filter(t => t.priority === 'urgent').length;
-                const high = activeTodos.filter(t => t.priority === 'high').length;
-                const medium = activeTodos.filter(t => t.priority === 'medium').length;
-                const low = activeTodos.filter(t => t.priority === 'low').length;
-                const total = activeTodos.length || 1;
-
-                if (activeTodos.length === 0) return null;
-
-                return (
-                  <div className={`rounded-xl p-4 ${
-                    darkMode
-                      ? 'bg-[var(--surface-2)] border border-[var(--border)]'
-                      : 'bg-white border border-slate-200'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <BarChart3 className="w-4 h-4 text-[var(--brand-blue)]" />
-                      <h3 className={`text-xs font-semibold uppercase tracking-wide ${
-                        darkMode ? 'text-slate-400' : 'text-slate-500'
-                      }`}>
-                        Priority Breakdown
-                      </h3>
-                      <span className={`text-xs ml-auto ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {activeTodos.length} active
-                      </span>
-                    </div>
-                    {/* Stacked bar */}
-                    <div className="h-3 rounded-full overflow-hidden flex bg-slate-700/30">
-                      {urgent > 0 && <div className="bg-red-500 transition-all" style={{ width: `${(urgent / total) * 100}%` }} />}
-                      {high > 0 && <div className="bg-orange-500 transition-all" style={{ width: `${(high / total) * 100}%` }} />}
-                      {medium > 0 && <div className="bg-[var(--brand-blue)] transition-all" style={{ width: `${(medium / total) * 100}%` }} />}
-                      {low > 0 && <div className="bg-slate-500 transition-all" style={{ width: `${(low / total) * 100}%` }} />}
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
-                      {urgent > 0 && (
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                          <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Urgent ({urgent})</span>
-                        </div>
-                      )}
-                      {high > 0 && (
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-                          <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>High ({high})</span>
-                        </div>
-                      )}
-                      {medium > 0 && (
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[var(--brand-blue)]" />
-                          <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Medium ({medium})</span>
-                        </div>
-                      )}
-                      {low > 0 && (
-                        <div className="flex items-center gap-1.5 text-xs">
-                          <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-                          <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>Low ({low})</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+              {priorityBreakdown}
 
               {/* End Priority Breakdown */}
 
@@ -1050,53 +1102,7 @@ export default function DashboardPage({
               )}
 
               {/* Contextual Productivity Tip */}
-              {(() => {
-                const activeTodos = todos.filter(t => !t.completed);
-                const overdue = activeTodos.filter(t => {
-                  if (!t.due_date) return false;
-                  const d = new Date(t.due_date);
-                  d.setHours(23, 59, 59, 999);
-                  return d < new Date(new Date().setHours(0, 0, 0, 0));
-                });
-                const highPri = activeTodos.filter(t => t.priority === 'urgent' || t.priority === 'high');
-
-                let tip: string;
-                if (overdue.length > 5) {
-                  tip = `You have ${overdue.length} overdue tasks. Consider triaging them — resolve quick wins first, then reschedule or delegate the rest.`;
-                } else if (overdue.length > 0) {
-                  tip = `${overdue.length} task${overdue.length > 1 ? 's are' : ' is'} overdue. Addressing these first will reduce cognitive load and free up focus for new work.`;
-                } else if (highPri.length > 5) {
-                  tip = `${highPri.length} high-priority tasks active. Consider if some can be reprioritized — too many urgent items dilutes focus.`;
-                } else if (activeTodos.length === 0) {
-                  tip = 'All clear — no active tasks. Good time to review strategic goals or plan ahead for the week.';
-                } else if (aiData.productivityScore >= 80) {
-                  tip = `Productivity score of ${aiData.productivityScore} — strong performance. Maintain momentum by tackling the next high-priority item.`;
-                } else if (aiData.productivityScore < 40) {
-                  tip = 'Productivity score is below average. Try the two-minute rule: if a task takes less than two minutes, do it now.';
-                } else {
-                  tip = `${activeTodos.length} active tasks in your queue. Focus on completing one at a time rather than multitasking for better throughput.`;
-                }
-
-                return (
-                  <div className={`rounded-xl p-4 ${
-                    darkMode
-                      ? 'bg-gradient-to-br from-[#0033A0]/15 to-[#0047CC]/15 border border-[var(--accent)]/20'
-                      : 'bg-gradient-to-br from-[var(--accent)]/5 to-[#0047CC]/5 border border-[var(--accent)]/20'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Lightbulb className="w-4 h-4 text-[var(--accent)]" />
-                      <h3 className={`text-xs font-semibold uppercase tracking-wide ${
-                        darkMode ? 'text-[#72B5E8]' : 'text-[var(--accent)]'
-                      }`}>
-                        Productivity Tip
-                      </h3>
-                    </div>
-                    <p className={`text-sm ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-                      {tip}
-                    </p>
-                  </div>
-                );
-              })()}
+              {productivityTip}
             </motion.div>
           ) : activeTab === 'team' && managerData ? (
             <motion.div

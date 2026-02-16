@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -129,6 +129,15 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show]);
+
+  const motivationIcon = useMemo(() => {
+    const { Icon, color } = getMotivationIcon();
+    return (
+      <div className="w-10 h-10 rounded-[var(--radius-xl)] mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+        <Icon className="w-6 h-6" style={{ color }} />
+      </div>
+    );
+  }, [stats.completedToday]);
 
   const getMessage = () => {
     if (stats.completedToday === 0) {
@@ -330,14 +339,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                 transition={{ delay: 0.5 }}
                 className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 text-center border border-[var(--border-subtle)]"
               >
-                {(() => {
-                  const { Icon, color } = getMotivationIcon();
-                  return (
-                    <div className="w-10 h-10 rounded-[var(--radius-xl)] mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
-                      <Icon className="w-6 h-6" style={{ color }} />
-                    </div>
-                  );
-                })()}
+                {motivationIcon}
                 <p className="text-[var(--foreground)] font-medium">
                   {getMessage()}
                 </p>
