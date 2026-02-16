@@ -26,6 +26,7 @@ import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 import { CreateAgencyModal } from '@/components/CreateAgencyModal';
 import { AgencyMembersModal } from '@/components/AgencyMembersModal';
+import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -213,22 +214,25 @@ export default function NavigationSidebar({
           )}
         </AnimatePresence>
 
-        {/* Collapse toggle - only visible when expanded */}
+        {/* Sync status + Collapse toggle */}
         {isExpanded && (
-          <button
-            onClick={toggleSidebar}
-            className={`
-              p-1.5 rounded-[var(--radius-lg)] transition-colors
-              text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-            `}
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
+          <div className="flex items-center gap-1">
+            <SyncStatusIndicator showLabel />
+            <button
+              onClick={toggleSidebar}
+              className={`
+                p-1.5 rounded-[var(--radius-lg)] transition-colors
+                text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
+              `}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
             )}
-          </button>
+            </button>
+          </div>
         )}
       </div>
 

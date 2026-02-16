@@ -13,7 +13,7 @@
  * Matches BookOfBusinessDashboard and CustomerSegmentationDashboard styling
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTodayOpportunities, type ContactRequest, type TodayOpportunity } from '../hooks/useTodayOpportunities';
 import { CONTACT_OUTCOME_CONFIG, type ContactOutcome } from '@/types/allstate-analytics';
@@ -90,7 +90,28 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
   const [loggingContact, setLoggingContact] = useState<string | null>(null);
   const [creatingTask, setCreatingTask] = useState<string | null>(null);
   const [createdTaskIds, setCreatedTaskIds] = useState<Set<string>>(new Set());
+  const [createdTaskIdMap, setCreatedTaskIdMap] = useState<Record<string, string>>({});
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Pre-populate createdTaskIds from opportunities that already have a linked task
+  useEffect(() => {
+    const linked = new Set<string>();
+    const idMap: Record<string, string> = {};
+    for (const opp of opportunities) {
+      if (opp.taskId) {
+        linked.add(opp.id);
+        idMap[opp.id] = opp.taskId;
+      }
+    }
+    if (linked.size > 0) {
+      setCreatedTaskIds(prev => {
+        const next = new Set(prev);
+        linked.forEach(id => next.add(id));
+        return next;
+      });
+      setCreatedTaskIdMap(prev => ({ ...prev, ...idMap }));
+    }
+  }, [opportunities]);
   // Track which opportunities have the outcome selector expanded
   const [expandedOutcomes, setExpandedOutcomes] = useState<Set<string>>(new Set());
   // Track selected customer for detail panel
@@ -193,22 +214,21 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
 
       if (!response.ok) {
         if (response.status === 409) {
-          // Task already exists — navigate to it
+          // Task already exists — mark as created and store taskId
           setCreatedTaskIds(prev => new Set(prev).add(opp.id));
-          setToastMessage({ type: 'success', message: 'Task already exists — opening it now' });
-          if (data.taskId && onTaskClick) {
-            onTaskClick(data.taskId);
+          if (data.taskId) {
+            setCreatedTaskIdMap(prev => ({ ...prev, [opp.id]: data.taskId }));
           }
+          setToastMessage({ type: 'success', message: 'Task already exists — click "View Task" to open it' });
         } else {
           throw new Error(data.error || 'Failed to create task');
         }
       } else {
         setCreatedTaskIds(prev => new Set(prev).add(opp.id));
-        setToastMessage({ type: 'success', message: `Task created for ${opp.customerName}` });
-        // Navigate to the newly created task
-        if (data.taskId && onTaskClick) {
-          onTaskClick(data.taskId);
+        if (data.taskId) {
+          setCreatedTaskIdMap(prev => ({ ...prev, [opp.id]: data.taskId }));
         }
+        setToastMessage({ type: 'success', message: `Task created for ${opp.customerName}` });
       }
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err) {
@@ -475,9 +495,18 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              {/* Primary Action: Create Task - Always visible inline */}
+              {/* Primary Action: Create Task / View Task */}
               <button
-                onClick={() => handleQuickCreateTask(opp)}
+                onClick={() => {
+                  if (createdTaskIds.has(opp.id)) {
+                    const taskId = createdTaskIdMap[opp.id];
+                    if (taskId && onTaskClick) {
+                      onTaskClick(taskId);
+                    }
+                  } else {
+                    handleQuickCreateTask(opp);
+                  }
+                }}
                 disabled={creatingTask === opp.id}
                 className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
                   createdTaskIds.has(opp.id)

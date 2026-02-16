@@ -16,7 +16,6 @@ import { usePermission } from '@/hooks/usePermission';
 import { ErrorBoundary } from './ErrorBoundary';
 import { useAgency } from '@/contexts/AgencyContext';
 import NotificationPermissionBanner from './NotificationPermissionBanner';
-import SyncStatusIndicator from './SyncStatusIndicator';
 import SkipLink from './SkipLink';
 import { OnboardingModal } from './AIOnboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -932,10 +931,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         onClose={closeShortcuts}
       />
 
-      {/* Sync status indicator - shows real-time connection state */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <SyncStatusIndicator showLabel />
-      </div>
 
       {/* AI Onboarding Tutorial */}
       <OnboardingModal
