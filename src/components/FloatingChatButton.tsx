@@ -194,7 +194,7 @@ export default function FloatingChatButton({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser.name, lastConversation, currentAgencyId, isMultiTenancyEnabled]);
+  }, [currentUser.name, lastConversation, currentAgencyId, isMultiTenancyEnabled, users]);
 
   // Clear unread count when opening chat
   useEffect(() => {
@@ -219,7 +219,7 @@ export default function FloatingChatButton({
           w-14 h-14 rounded-full
           flex items-center justify-center
           shadow-lg hover:shadow-xl
-          transition-all duration-200
+          transition-[bottom] duration-200
           bg-[var(--accent)] hover:bg-[var(--accent)]/90
           ${bulkBarVisible ? 'bottom-20' : 'bottom-6'}
         `}
@@ -251,7 +251,7 @@ export default function FloatingChatButton({
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 400 }}
               className={`
-                fixed bottom-24 right-6 z-50
+                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6 z-50
                 w-[360px] sm:w-[400px] h-[500px] max-h-[70vh]
                 flex flex-col
                 rounded-[var(--radius-xl)] overflow-hidden
