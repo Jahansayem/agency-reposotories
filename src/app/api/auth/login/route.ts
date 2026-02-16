@@ -58,6 +58,19 @@ interface AgencyMembershipWithAgency {
   };
 }
 
+interface LoginUserRow {
+  id: string;
+  name: string | null;
+  color: string | null;
+  pin_hash: string | null;
+  role: string | null;
+}
+
+type QueryResult<T> = {
+  data: T | null;
+  error: unknown;
+};
+
 // Lazy initialization - only validate at runtime, not build time
 // TYPE-012 Fix: Use SupabaseClient type instead of any
 let supabase: SupabaseClient | null = null;
@@ -118,12 +131,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch user from database (server-side only - never expose pin_hash to client)
-    const { data: user, error: userError } = await withOperationTimeout('fetch_user', () =>
-      getSupabase()
-        .from('users')
-        .select('id, name, color, pin_hash, role')
-        .eq('id', userId)
-        .single()
+    const { data: user, error: userError } = await withOperationTimeout<QueryResult<LoginUserRow>>(
+      'fetch_user',
+      async () =>
+        await getSupabase()
+          .from('users')
+          .select('id, name, color, pin_hash, role')
+          .eq('id', userId)
+          .single()
     );
 
     if (userError || !user) {
@@ -194,15 +209,17 @@ export async function POST(request: NextRequest) {
     let agencyRole: string | null = null;
 
     // First try: default agency
-    const { data: defaultMembership } = await withOperationTimeout('fetch_default_membership', () =>
-      getSupabase()
-        .from('agency_members')
-        .select('agency_id, role, agencies!inner(name)')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .eq('is_default_agency', true)
-        .limit(1)
-        .maybeSingle()
+    const { data: defaultMembership } = await withOperationTimeout<QueryResult<AgencyMembershipWithAgency>>(
+      'fetch_default_membership',
+      async () =>
+        await getSupabase()
+          .from('agency_members')
+          .select('agency_id, role, agencies!inner(name)')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .eq('is_default_agency', true)
+          .limit(1)
+          .maybeSingle()
     );
 
     if (defaultMembership?.agency_id) {
@@ -212,14 +229,16 @@ export async function POST(request: NextRequest) {
       agencyName = membership.agencies?.name || null;
     } else {
       // Fallback: any active agency
-      const { data: anyMembership } = await withOperationTimeout('fetch_any_membership', () =>
-        getSupabase()
-          .from('agency_members')
-          .select('agency_id, role, agencies!inner(name)')
-          .eq('user_id', userId)
-          .eq('status', 'active')
-          .limit(1)
-          .maybeSingle()
+      const { data: anyMembership } = await withOperationTimeout<QueryResult<AgencyMembershipWithAgency>>(
+        'fetch_any_membership',
+        async () =>
+          await getSupabase()
+            .from('agency_members')
+            .select('agency_id, role, agencies!inner(name)')
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .limit(1)
+            .maybeSingle()
       );
 
       if (anyMembership?.agency_id) {
@@ -233,12 +252,14 @@ export async function POST(request: NextRequest) {
     // Fetch all agencies the user belongs to
     let agencies: Array<{ id: string; name: string; slug: string; role: string; is_default: boolean }> = [];
     {
-      const { data: membershipRows } = await withOperationTimeout('fetch_all_memberships', () =>
-        getSupabase()
-          .from('agency_members')
-          .select('agency_id, role, is_default_agency, agencies!inner(id, name, slug)')
-          .eq('user_id', userId)
-          .eq('status', 'active')
+      const { data: membershipRows } = await withOperationTimeout<QueryResult<AgencyMembershipWithAgency[]>>(
+        'fetch_all_memberships',
+        async () =>
+          await getSupabase()
+            .from('agency_members')
+            .select('agency_id, role, is_default_agency, agencies!inner(id, name, slug)')
+            .eq('user_id', userId)
+            .eq('status', 'active')
       );
 
       if (membershipRows && Array.isArray(membershipRows)) {
