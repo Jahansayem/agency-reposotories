@@ -393,6 +393,42 @@ export default function CalendarView({
   // Accessible navigation announcement
   const headerLabel = getHeaderLabel(viewMode, currentDate);
 
+  // Memoize filter button to avoid IIFE pattern
+  const filterButton = useMemo(() => {
+    const filtersActive = selectedCategories.size < ALL_CATEGORIES.length || selectedUsers.size > 0;
+    const menuOpen = showFilterMenu;
+    let btnClass = 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)] border-transparent';
+    if (menuOpen && filtersActive) {
+      // Both: accent background + prominent border
+      btnClass = 'bg-[var(--accent)]/15 text-[var(--accent)] border-2 border-[var(--accent)]';
+    } else if (menuOpen) {
+      // Menu open only: border highlight, no accent fill
+      btnClass = 'bg-[var(--surface)] text-[var(--foreground)] border-2 border-[var(--accent)]';
+    } else if (filtersActive) {
+      // Filters active, menu closed: subtle accent tint
+      btnClass = 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30';
+    }
+    return (
+      <button
+        onClick={() => setShowFilterMenu(!showFilterMenu)}
+        aria-expanded={showFilterMenu}
+        aria-haspopup="true"
+        className={`
+          flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border
+          ${btnClass}
+        `}
+      >
+        <Filter className="w-4 h-4" />
+        <span className="hidden sm:inline">Filter</span>
+        {filtersActive && (
+          <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-semibold">
+            {(ALL_CATEGORIES.length - selectedCategories.size) + selectedUsers.size}
+          </span>
+        )}
+      </button>
+    );
+  }, [selectedCategories, selectedUsers, showFilterMenu, setShowFilterMenu]);
+
   return (
     <div ref={containerRef} className="flex flex-col h-full bg-[var(--surface-2)] rounded-xl border border-[var(--border)] overflow-hidden print:border-0 print:shadow-none print:rounded-none">
       {/* Screen reader announcement for navigation changes */}
@@ -466,40 +502,7 @@ export default function CalendarView({
 
           {/* Filter Button */}
           <div className="relative print:hidden">
-            {(() => {
-              const filtersActive = selectedCategories.size < ALL_CATEGORIES.length || selectedUsers.size > 0;
-              const menuOpen = showFilterMenu;
-              let btnClass = 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)] border-transparent';
-              if (menuOpen && filtersActive) {
-                // Both: accent background + prominent border
-                btnClass = 'bg-[var(--accent)]/15 text-[var(--accent)] border-2 border-[var(--accent)]';
-              } else if (menuOpen) {
-                // Menu open only: border highlight, no accent fill
-                btnClass = 'bg-[var(--surface)] text-[var(--foreground)] border-2 border-[var(--accent)]';
-              } else if (filtersActive) {
-                // Filters active, menu closed: subtle accent tint
-                btnClass = 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30';
-              }
-              return (
-                <button
-                  onClick={() => setShowFilterMenu(!showFilterMenu)}
-                  aria-expanded={showFilterMenu}
-                  aria-haspopup="true"
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border
-                    ${btnClass}
-                  `}
-                >
-                  <Filter className="w-4 h-4" />
-                  <span className="hidden sm:inline">Filter</span>
-                  {filtersActive && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-semibold">
-                      {(ALL_CATEGORIES.length - selectedCategories.size) + selectedUsers.size}
-                    </span>
-                  )}
-                </button>
-              );
-            })()}
+            {filterButton}
 
             {/* Filter Dropdown */}
             <AnimatePresence>

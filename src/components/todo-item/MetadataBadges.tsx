@@ -7,6 +7,25 @@ import { WaitingBadge } from '../WaitingStatusBadge';
 import { CustomerBadge } from '../customer/CustomerBadge';
 import { PRIORITY_TO_BADGE_VARIANT, formatDueDate, getDaysOverdue } from './utils';
 
+// Helper function to format reminder text
+function formatReminderText(reminderAt: string): string {
+  const reminderDate = new Date(reminderAt);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const reminderDay = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
+  const diffDays = Math.round((reminderDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return `Today ${reminderDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+  } else if (diffDays === 1) {
+    return 'Tomorrow';
+  } else if (diffDays < 0) {
+    return 'Past';
+  } else {
+    return reminderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+}
+
 export interface MetadataBadgesProps {
   todo: Todo;
   priority: string;
@@ -168,23 +187,7 @@ export default function MetadataBadges({
                 size="sm"
                 icon={<Bell className="w-3 h-3" />}
               >
-                {(() => {
-                  const reminderDate = new Date(todo.reminder_at);
-                  const now = new Date();
-                  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                  const reminderDay = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
-                  const diffDays = Math.round((reminderDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-                  if (diffDays === 0) {
-                    return `Today ${reminderDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
-                  } else if (diffDays === 1) {
-                    return `Tomorrow`;
-                  } else if (diffDays < 0) {
-                    return 'Past';
-                  } else {
-                    return reminderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                  }
-                })()}
+                {formatReminderText(todo.reminder_at)}
               </Badge>
             )}
 
