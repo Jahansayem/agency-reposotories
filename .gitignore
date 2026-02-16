@@ -72,3 +72,4 @@ DerivedData/
 *.dSYM
 *.p8
 .mcp.json
+.worktrees/
