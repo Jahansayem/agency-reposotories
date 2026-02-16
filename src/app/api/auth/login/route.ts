@@ -196,12 +196,14 @@ export async function POST(request: NextRequest) {
     await withOperationTimeout('clear_lockout', () => clearLockout(lockoutId));
 
     // Update last_login timestamp
-    await withOperationTimeout('update_last_login', () =>
-      getSupabase()
+    await withOperationTimeout<void>('update_last_login', async () => {
+      const { error } = await getSupabase()
         .from('users')
         .update({ last_login: new Date().toISOString() })
-        .eq('id', userId)
-    );
+        .eq('id', userId);
+
+      if (error) throw error;
+    });
 
     // Look up user's default agency membership (including role and agency name)
     let agencyId: string | null = null;
