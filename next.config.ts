@@ -12,11 +12,10 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const cspDirectives: Record<string, string[]> = {
   "default-src": ["'self'"],
-  // In production, we try to avoid unsafe-eval
-  // unsafe-inline is still needed for Next.js hydration scripts
-  "script-src": isProduction
-    ? ["'self'", "'unsafe-inline'"] // No unsafe-eval in production
-    : ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Dev needs eval for hot reload
+  // Turbopack's chunk loading on Vercel requires 'unsafe-eval' — without it,
+  // dynamically injected script chunks fail CSP checks causing registerChunk errors.
+  // TODO: Replace with nonce-based CSP + 'strict-dynamic' for stronger security.
+  "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
   "style-src": ["'self'", "'unsafe-inline'"], // Tailwind requires unsafe-inline
   "img-src": ["'self'", "data:", "https:", "blob:"],
   "font-src": ["'self'", "data:"],
