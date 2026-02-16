@@ -45,6 +45,12 @@ const DashboardPage = dynamic(() => import('./views/DashboardPage'), {
   loading: () => <DashboardModalSkeleton />,
 });
 
+// Lazy load TodayOpportunitiesPanel for the standalone opportunities view
+const TodayOpportunitiesPanel = dynamic(() => import('./analytics').then(mod => ({ default: mod.TodayOpportunitiesPanel })), {
+  ssr: false,
+  loading: () => <DashboardModalSkeleton />,
+});
+
 // Lazy load AnalyticsPage for the book of business analytics view
 const AnalyticsPage = dynamic(() => import('./views/AnalyticsPage'), {
   ssr: false,
@@ -754,6 +760,20 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
           </ErrorBoundary>
         );
 
+      case 'opportunities':
+        // Today's cross-sell opportunities — daily action panel
+        return (
+          <ErrorBoundary>
+            <div className="h-full overflow-y-auto bg-[#0a0f1e] p-6">
+              <TodayOpportunitiesPanel
+                key={agencyKey}
+                onNavigateToAllOpportunities={handleNavigateToAllOpportunities}
+                onTaskClick={handleTaskLinkClick}
+              />
+            </div>
+          </ErrorBoundary>
+        );
+
       case 'analytics':
         // Analytics dashboard with book of business insights
         return (
@@ -761,8 +781,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             <AnalyticsPage
               key={agencyKey}
               onNavigateToSegment={handleNavigateToCustomerSegment}
-              onNavigateToAllOpportunities={handleNavigateToAllOpportunities}
-              onTaskClick={handleTaskLinkClick}
             />
           </ErrorBoundary>
         );

@@ -129,6 +129,15 @@ export default function CommandPalette({
       permission: 'can_view_strategic_goals',
     },
     {
+      id: 'nav-opportunities',
+      label: "Go to Today's Opportunities",
+      description: 'View cross-sell opportunities',
+      icon: Target,
+      category: 'navigation',
+      shortcut: 'G O',
+      action: () => { setActiveView('opportunities'); onClose(); },
+    },
+    {
       id: 'nav-archive',
       label: 'Go to Archive',
       description: 'View archived tasks',

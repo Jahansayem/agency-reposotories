@@ -17,6 +17,7 @@ import {
   BarChart2,
   Keyboard,
   Users,
+  Flame,
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
@@ -53,6 +54,7 @@ interface NavItem {
 const primaryNavItems: NavItem[] = [
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
+  { id: 'opportunities', label: 'Opportunities', icon: Flame },
   { id: 'ai_inbox', label: 'AI Inbox', icon: Inbox },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'analytics', label: 'Analytics', icon: BarChart2 },

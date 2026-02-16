@@ -27,6 +27,7 @@ export type ActiveView =
   | 'archive'
   | 'ai_inbox'
   | 'analytics'
+  | 'opportunities'
   | 'customers'
   | 'settings';
 

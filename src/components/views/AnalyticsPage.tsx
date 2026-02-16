@@ -12,24 +12,21 @@ import { motion } from 'framer-motion';
 import { logger } from '@/lib/logger';
 import {
   ConnectedBookOfBusinessDashboard,
-  TodayOpportunitiesPanel,
   CustomerSegmentationDashboard,
   CsvUploadModal,
   DataFlowBanner,
 } from '@/components/analytics';
-import { BarChart2, Calendar, Users, Upload } from 'lucide-react';
+import { BarChart2, Users, Upload } from 'lucide-react';
 import { useCurrentUser } from '@/contexts/UserContext';
 import { useCustomerList } from '@/hooks/useCustomers';
 
-type AnalyticsTab = 'overview' | 'opportunities' | 'customers';
+type AnalyticsTab = 'overview' | 'customers';
 
 interface AnalyticsPageProps {
   onNavigateToSegment?: (segment: 'elite' | 'premium' | 'standard' | 'entry') => void;
-  onNavigateToAllOpportunities?: () => void;
-  onTaskClick?: (taskId: string) => void;
 }
 
-export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunities, onTaskClick }: AnalyticsPageProps = {}) {
+export function AnalyticsPage({ onNavigateToSegment }: AnalyticsPageProps = {}) {
   const [activeTab, setActiveTab] = useState<AnalyticsTab>('overview');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const currentUser = useCurrentUser();
@@ -73,12 +70,6 @@ export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunitie
             label="Portfolio Overview"
           />
           <TabButton
-            active={activeTab === 'opportunities'}
-            onClick={() => setActiveTab('opportunities')}
-            icon={Calendar}
-            label="Today's Opportunities"
-          />
-          <TabButton
             active={activeTab === 'customers'}
             onClick={() => setActiveTab('customers')}
             icon={Users}
@@ -105,16 +96,6 @@ export function AnalyticsPage({ onNavigateToSegment, onNavigateToAllOpportunitie
             transition={{ duration: 0.3 }}
           >
             <ConnectedBookOfBusinessDashboard />
-          </motion.div>
-        )}
-
-        {activeTab === 'opportunities' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <TodayOpportunitiesPanel onNavigateToAllOpportunities={onNavigateToAllOpportunities} onTaskClick={onTaskClick} />
           </motion.div>
         )}
 
