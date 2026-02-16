@@ -130,6 +130,13 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show]);
 
+  const getMotivationIcon = (): { Icon: LucideIcon; color: string } => {
+    if (stats.completedToday === 0) return { Icon: Dumbbell, color: 'var(--accent)' };
+    if (stats.completedToday < 3) return { Icon: Star, color: 'var(--warning)' };
+    if (stats.completedToday < 5) return { Icon: Flame, color: '#EF4444' };
+    return { Icon: Trophy, color: 'var(--success)' };
+  };
+
   const motivationIcon = useMemo(() => {
     const { Icon, color } = getMotivationIcon();
     return (
@@ -149,13 +156,6 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
     } else {
       return "Incredible productivity! You're a task-crushing machine!";
     }
-  };
-
-  const getMotivationIcon = (): { Icon: LucideIcon; color: string } => {
-    if (stats.completedToday === 0) return { Icon: Dumbbell, color: 'var(--accent)' };
-    if (stats.completedToday < 3) return { Icon: Star, color: 'var(--warning)' };
-    if (stats.completedToday < 5) return { Icon: Flame, color: '#EF4444' };
-    return { Icon: Trophy, color: 'var(--success)' };
   };
 
   return (
