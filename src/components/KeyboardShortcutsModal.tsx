@@ -55,6 +55,8 @@ const getShortcutGroups = (): ShortcutGroup[] => [
     shortcuts: [
       { keys: ['Enter'], description: 'Submit new task' },
       { keys: [getModifierKey(), 'Enter'], description: 'Submit with AI enhancement' },
+      { keys: [getModifierKey(), getShiftKey(), 'C'], description: 'Complete focused task' },
+      { keys: [getModifierKey(), 'Z'], description: 'Undo last completion' },
     ],
   },
   {

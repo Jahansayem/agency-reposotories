@@ -160,6 +160,7 @@ export default function TodoList({
     clearSelection: state.clearSelection,
     selectAll: state.selectAll,
     openShortcuts: state.modalState.openShortcuts,
+    onToggleComplete: operations.toggleTodo,
   });
 
   // Determine if sections should be used

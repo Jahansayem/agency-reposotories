@@ -7,13 +7,15 @@
  * - Escape: Clear selection / exit focus mode
  * - Cmd/Ctrl+A: Select all visible todos
  * - Cmd/Ctrl+Shift+F: Toggle focus mode
+ * - Cmd/Ctrl+Shift+C: Complete focused task
+ * - Cmd/Ctrl+Z: Undo last completion
  * - 1-4: Quick filter shortcuts
  * - ?: Show keyboard shortcuts help
  *
  * This hook provides reusable, testable keyboard shortcut management.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Todo, QuickFilter } from '@/types/todo';
 import { useTodoStore } from '@/store/todoStore';
 
@@ -29,6 +31,7 @@ interface UseTodoKeyboardShortcutsProps {
   clearSelection: () => void;
   selectAll: (ids: string[]) => void;
   openShortcuts: () => void;
+  onToggleComplete?: (id: string, completed: boolean) => void;
 }
 
 export function useTodoKeyboardShortcuts({
@@ -43,14 +46,60 @@ export function useTodoKeyboardShortcuts({
   clearSelection,
   selectAll,
   openShortcuts,
+  onToggleComplete,
 }: UseTodoKeyboardShortcutsProps) {
+
+  // Track last completed task for undo
+  const lastCompletedRef = useRef<{ id: string; text: string } | null>(null);
+
+  // Get the focused task ID from the DOM
+  const getFocusedTaskId = useCallback((): string | null => {
+    const activeEl = document.activeElement;
+    if (!activeEl) return null;
+    const taskCard = activeEl.closest('[data-task-id]');
+    return taskCard?.getAttribute('data-task-id') ?? null;
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if typing in input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) {
+      // Don't trigger if typing in input (except for Cmd/Ctrl shortcuts)
+      const isInInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+      if (isInInput && !e.metaKey && !e.ctrlKey) {
         return;
       }
+
+      // Cmd/Ctrl + Shift + C - complete focused task
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        if (!onToggleComplete) return;
+
+        const taskId = getFocusedTaskId();
+        if (!taskId) return;
+
+        const todo = visibleTodos.find(t => t.id === taskId);
+        if (!todo || todo.completed) return;
+
+        lastCompletedRef.current = { id: todo.id, text: todo.text };
+        onToggleComplete(taskId, true);
+        return;
+      }
+
+      // Cmd/Ctrl + Z - undo last completion
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        if (!onToggleComplete || !lastCompletedRef.current) return;
+
+        // Only handle undo if not in an input field
+        if (isInInput) return;
+
+        e.preventDefault();
+        const { id } = lastCompletedRef.current;
+        onToggleComplete(id, false);
+        lastCompletedRef.current = null;
+        return;
+      }
+
+      // Don't process remaining shortcuts if in input
+      if (isInInput) return;
 
       // 'n' - focus new task input
       if (e.key === 'n' && !e.metaKey && !e.ctrlKey) {
@@ -122,7 +171,7 @@ export function useTodoKeyboardShortcuts({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTodos.length, showBulkActions, selectedTodos.size]);
+  }, [visibleTodos.length, showBulkActions, selectedTodos.size, onToggleComplete, getFocusedTaskId]);
 
   // No return value - this hook only sets up keyboard listeners
 }
