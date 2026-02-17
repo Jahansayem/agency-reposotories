@@ -1,15 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Bell } from 'lucide-react';
+import { Plus, Bell, ClipboardList } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AuthUser, ActivityLogEntry } from '@/types/todo';
 import { useAppBar } from './AppBarContext';
 import { useAppShell } from './AppShell';
 import { UserMenu } from '@/components/UserMenu';
 import NotificationModal from '@/components/NotificationModal';
+import { EAgentExportPanel } from '@/components/eAgent/EAgentExportPanel';
 import { supabase } from '@/lib/supabaseClient';
 import { useTodoStore } from '@/store/todoStore';
+import { useEAgentQueueStore, selectPendingCount } from '@/store/eAgentQueueStore';
 
 interface UnifiedAppBarProps {
   currentUser: AuthUser;
@@ -30,6 +32,10 @@ export default function UnifiedAppBar({
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
+
+  // eAgent queue state
+  const [eAgentPanelOpen, setEAgentPanelOpen] = useState(false);
+  const eAgentPendingCount = useEAgentQueueStore(selectPendingCount);
 
   // Calculate unread notifications count
   const updateUnreadCount = useCallback(() => {
@@ -141,6 +147,33 @@ export default function UnifiedAppBar({
               <span className="hidden sm:inline">New Task</span>
             </button>
 
+            {/* eAgent queue badge */}
+            <button
+              onClick={() => setEAgentPanelOpen(!eAgentPanelOpen)}
+              className={`
+                relative p-2.5 rounded-lg transition-colors
+                focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2
+                ${eAgentPanelOpen
+                  ? 'bg-[var(--accent-light)] text-[var(--accent)]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
+              `}
+              aria-label={`Log to eAgent${eAgentPendingCount > 0 ? ` (${eAgentPendingCount} pending)` : ''}`}
+              aria-haspopup="dialog"
+              aria-expanded={eAgentPanelOpen}
+            >
+              <ClipboardList className="w-5 h-5" aria-hidden="true" />
+              {eAgentPendingCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-badge bg-[var(--accent)] text-white"
+                  aria-label={`${eAgentPendingCount} tasks to log`}
+                >
+                  {eAgentPendingCount > 99 ? '99+' : eAgentPendingCount}
+                </motion.span>
+              )}
+            </button>
+
             {/* Notifications bell */}
             <div className="relative">
               <button
@@ -189,6 +222,12 @@ export default function UnifiedAppBar({
           </div>
         </div>
       </header>
+
+      {/* eAgent Export Panel */}
+      <EAgentExportPanel
+        isOpen={eAgentPanelOpen}
+        onClose={() => setEAgentPanelOpen(false)}
+      />
     </>
   );
 }

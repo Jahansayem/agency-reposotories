@@ -25,6 +25,7 @@ import { retryWithBackoff } from '@/lib/retryWithBackoff';
 import { calculateCompletionStreak, getNextSuggestedTasks, getEncouragementMessage } from '@/lib/taskSuggestions';
 import { ActivityLogEntry } from '@/types/todo';
 import { useTodoStore } from '@/store/todoStore';
+import { useEAgentQueueStore } from '@/store/eAgentQueueStore';
 import { useToast } from '@/components/ui/Toast';
 import { isToday } from 'date-fns';
 
@@ -466,6 +467,10 @@ export function useTodoOperations({
           lastCelebrationRef.current = now;
         }
 
+        // Queue for eAgent if customer-linked
+        const { addToQueue } = useEAgentQueueStore.getState();
+        addToQueue(oldTodo, userName);
+
         // Handle recurring tasks
         if (oldTodo.recurrence) {
           createNextRecurrence(oldTodo);
@@ -554,6 +559,10 @@ export function useTodoOperations({
           triggerCelebration(todoItem.text);
           lastCelebrationRef.current = now;
         }
+
+        // Queue for eAgent if customer-linked
+        const { addToQueue } = useEAgentQueueStore.getState();
+        addToQueue(todoItem, userName);
 
         if (todoItem.recurrence) {
           createNextRecurrence(todoItem);

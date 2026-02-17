@@ -54,6 +54,16 @@ vi.mock('@/components/NotificationModal', () => ({
   default: () => <div data-testid="notification-modal" />,
 }));
 
+vi.mock('@/components/eAgent/EAgentExportPanel', () => ({
+  EAgentExportPanel: () => <div data-testid="eagent-panel" />,
+}));
+
+vi.mock('@/store/eAgentQueueStore', () => ({
+  useEAgentQueueStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ items: [] }),
+  selectPendingCount: (state: { items: unknown[] }) => state.items.length,
+}));
+
 const mockUser: AuthUser = {
   id: '1',
   name: 'Test User',
