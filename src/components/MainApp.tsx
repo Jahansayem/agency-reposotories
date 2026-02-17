@@ -45,6 +45,8 @@ const DashboardPage = dynamic(() => import('./views/DashboardPage'), {
   loading: () => <DashboardModalSkeleton />,
 });
 
+import { prefetchTodayOpportunities } from '@/components/analytics/hooks/useTodayOpportunities';
+
 // Lazy load TodayOpportunitiesPanel for the standalone opportunities view
 const TodayOpportunitiesPanel = dynamic(() => import('./analytics').then(mod => ({ default: mod.TodayOpportunitiesPanel })), {
   ssr: false,
@@ -237,6 +239,18 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
     };
   }, []);
+
+  // Prefetch opportunities in the background so the tab renders instantly
+  useEffect(() => {
+    const run = () => prefetchTodayOpportunities(10);
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = (window as Window & typeof globalThis & { requestIdleCallback: (cb: () => void, opts?: object) => number }).requestIdleCallback(run, { timeout: 3000 });
+      return () => (window as Window & typeof globalThis & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(id);
+    } else {
+      const t = setTimeout(run, 2000);
+      return () => clearTimeout(t);
+    }
+  }, []); // run once on mount
 
   // Handle task link click from chat/dashboard/notifications (navigate to tasks view and open task)
   const handleTaskLinkClick = useCallback((taskId: string) => {

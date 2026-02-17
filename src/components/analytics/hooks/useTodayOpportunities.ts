@@ -16,6 +16,61 @@ interface CacheEntry {
 const CACHE_TTL_MS = 60_000; // 60 seconds fresh window
 const cache = new Map<number, CacheEntry>(); // key = limit
 
+/**
+ * Prefetch today's opportunities into the module-level cache.
+ * Call this from the app shell during idle time so the Opportunities tab
+ * renders instantly on first navigation.
+ */
+export async function prefetchTodayOpportunities(limit = 10): Promise<void> {
+  // Skip if cache is fresh
+  const entry = cache.get(limit);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL_MS) return;
+
+  try {
+    const res = await fetch(`/api/opportunities/today?limit=${limit}&enrich=false`);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    const mapped = (data.opportunities || []).map((opp: Record<string, unknown>) => ({
+      id: opp.id,
+      taskId: (opp.task_id as string) || null,
+      customerInsightId: (opp.customer_insight_id as string) || null,
+      customerName: opp.customer_name,
+      phone: opp.phone || '',
+      email: opp.email || '',
+      address: opp.address || '',
+      city: opp.city || '',
+      zipCode: opp.zip_code || '',
+      currentProducts: opp.current_products || '',
+      recommendedProduct: opp.recommended_product || '',
+      segment: opp.segment || '',
+      priorityTier: opp.priority_tier || 'MEDIUM',
+      priorityScore: opp.priority_score || 0,
+      currentPremium: opp.current_premium || 0,
+      potentialPremiumAdd: opp.potential_premium_add || 0,
+      expectedConversionPct: opp.expected_conversion_pct || 0,
+      talkingPoint1: opp.talking_point_1 || '',
+      talkingPoint2: opp.talking_point_2 || '',
+      talkingPoint3: opp.talking_point_3 || '',
+      tenureYears: opp.tenure_years || 0,
+      policyCount: opp.policy_count || 0,
+      ezpayStatus: opp.ezpay_status || 'Unknown',
+      balanceDue: opp.balance_due || 0,
+      renewalStatus: opp.renewal_status || 'Unknown',
+    }));
+
+    const meta = {
+      todayCount: data.meta?.todayCount || mapped.length,
+      urgentCount: data.meta?.urgentCount || 0,
+      upcomingCount: data.meta?.upcomingCount || 0,
+    };
+
+    cache.set(limit, { data: { opportunities: mapped, meta }, timestamp: Date.now() });
+  } catch {
+    // Prefetch is best-effort — silently ignore errors
+  }
+}
+
 export interface TodayOpportunity {
   id: string;
   taskId: string | null;
@@ -81,7 +136,7 @@ export function useTodayOpportunities(limit: number = 10) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/opportunities/today?limit=${limit}`);
+      const response = await fetch(`/api/opportunities/today?limit=${limit}&enrich=false`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch opportunities');
