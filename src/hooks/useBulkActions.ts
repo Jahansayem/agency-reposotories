@@ -5,12 +5,14 @@
  * Extracted from TodoList.tsx for cleaner separation of concerns.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useTodoStore } from '@/store/todoStore';
 import { TodoStatus, TodoPriority } from '@/types/todo';
 import { logActivity } from '@/lib/activityLogger';
 import { logger } from '@/lib/logger';
+import { useToast } from '@/components/ui/Toast';
+import { haptics } from '@/lib/haptics';
 
 export function useBulkActions(userName: string) {
   const {
@@ -26,6 +28,8 @@ export function useBulkActions(userName: string) {
   } = useTodoStore();
 
   const { selectedTodos, showBulkActions } = bulkActions;
+  const toast = useToast();
+  const bulkCompleteAbortRef = useRef(false);
 
   // Get selected todo objects
   const getSelectedTodos = useCallback(() => {
@@ -117,44 +121,183 @@ export function useBulkActions(userName: string) {
     }
   }, [selectedTodos, todos, userName, updateTodoInStore, clearSelection, setShowBulkActions]);
 
-  // Bulk complete selected todos
+  // Helper to retry bulk complete for specific task IDs
+  const retryBulkComplete = useCallback(async (failedIds: string[]) => {
+    const failedTodos = todos.filter(t => failedIds.includes(t.id));
+    if (failedTodos.length === 0) return;
+
+    const progressToastId = toast.loading('Retrying failed tasks...', {
+      description: `0/${failedIds.length}`,
+    });
+
+    let completed = 0;
+    const stillFailed: string[] = [];
+
+    const chunkSize = 10;
+    for (let i = 0; i < failedIds.length; i += chunkSize) {
+      const chunk = failedIds.slice(i, i + chunkSize);
+
+      for (const id of chunk) {
+        const { error } = await supabase
+          .from('todos')
+          .update({ completed: true, status: 'done' })
+          .eq('id', id);
+
+        if (error) {
+          stillFailed.push(id);
+          logger.error('Retry bulk complete failed', error, { taskId: id, component: 'useBulkActions' });
+        } else {
+          completed++;
+          updateTodoInStore(id, { completed: true, status: 'done' as TodoStatus });
+          const todo = failedTodos.find(t => t.id === id);
+          if (todo && !todo.completed) {
+            logActivity({
+              action: 'task_completed',
+              userName,
+              todoId: todo.id,
+              todoText: todo.text,
+              details: { bulk_action: true, retry: true },
+            });
+          }
+        }
+        toast.update(progressToastId, {
+          description: `${completed + stillFailed.length}/${failedIds.length}`,
+        });
+      }
+    }
+
+    toast.dismiss(progressToastId);
+
+    if (stillFailed.length > 0) {
+      toast.error(`${completed} completed, ${stillFailed.length} still failed`, {
+        description: 'Some tasks could not be completed after retry.',
+        duration: 0,
+      });
+    } else {
+      toast.success(`${completed} tasks completed on retry`, { duration: 2000 });
+      haptics.success();
+    }
+  }, [todos, userName, toast, updateTodoInStore]);
+
+  // Bulk complete selected todos with progress tracking
   const bulkComplete = useCallback(async () => {
-    const idsToUpdate = Array.from(selectedTodos);
+    const taskIds = Array.from(selectedTodos);
     const originalTodos = todos.filter(t => selectedTodos.has(t.id));
 
-    // Optimistic update
-    idsToUpdate.forEach(id => {
+    if (taskIds.length === 0) return;
+
+    // Optimistic update for UI responsiveness
+    taskIds.forEach(id => {
       updateTodoInStore(id, { completed: true, status: 'done' as TodoStatus });
     });
     clearSelection();
     setShowBulkActions(false);
 
-    const { error } = await supabase
-      .from('todos')
-      .update({ completed: true, status: 'done' })
-      .in('id', idsToUpdate);
+    // For small batches (<=5), use the original single-query approach (no progress needed)
+    if (taskIds.length <= 5) {
+      const { error } = await supabase
+        .from('todos')
+        .update({ completed: true, status: 'done' })
+        .in('id', taskIds);
 
-    if (error) {
-      logger.error('Error bulk completing', error, { component: 'useBulkActions' });
-      // Rollback
-      originalTodos.forEach(todo => {
-        updateTodoInStore(todo.id, { completed: todo.completed, status: todo.status });
-      });
-    } else {
-      // Log activity
-      originalTodos.forEach(todo => {
-        if (!todo.completed) {
-          logActivity({
-            action: 'task_completed',
-            userName,
-            todoId: todo.id,
-            todoText: todo.text,
-            details: { bulk_action: true },
-          });
-        }
+      if (error) {
+        logger.error('Error bulk completing', error, { component: 'useBulkActions' });
+        originalTodos.forEach(todo => {
+          updateTodoInStore(todo.id, { completed: todo.completed, status: todo.status });
+        });
+        toast.error(`Failed to complete ${taskIds.length} tasks`, {
+          description: 'Please try again.',
+          duration: 0,
+        });
+      } else {
+        originalTodos.forEach(todo => {
+          if (!todo.completed) {
+            logActivity({
+              action: 'task_completed',
+              userName,
+              todoId: todo.id,
+              todoText: todo.text,
+              details: { bulk_action: true },
+            });
+          }
+        });
+        toast.success(`${taskIds.length} tasks completed`, { duration: 2000 });
+        haptics.success();
+      }
+      return;
+    }
+
+    // For larger batches, show progress toast and process in chunks
+    bulkCompleteAbortRef.current = false;
+    let completed = 0;
+    const failed: string[] = [];
+
+    const progressToastId = toast.loading('Completing tasks...', {
+      description: `0/${taskIds.length}`,
+    });
+
+    const chunkSize = 10;
+    for (let i = 0; i < taskIds.length; i += chunkSize) {
+      if (bulkCompleteAbortRef.current) break;
+
+      const chunk = taskIds.slice(i, i + chunkSize);
+
+      // Process each chunk as a batch query
+      const { error } = await supabase
+        .from('todos')
+        .update({ completed: true, status: 'done' })
+        .in('id', chunk);
+
+      if (error) {
+        // If batch fails, mark all in chunk as failed
+        failed.push(...chunk);
+        logger.error('Bulk complete chunk failed', error, { chunk: i, component: 'useBulkActions' });
+        // Rollback this chunk optimistically
+        chunk.forEach(id => {
+          const original = originalTodos.find(t => t.id === id);
+          if (original) {
+            updateTodoInStore(id, { completed: original.completed, status: original.status });
+          }
+        });
+      } else {
+        completed += chunk.length;
+        // Log activity for each completed task in the chunk
+        chunk.forEach(id => {
+          const todo = originalTodos.find(t => t.id === id);
+          if (todo && !todo.completed) {
+            logActivity({
+              action: 'task_completed',
+              userName,
+              todoId: todo.id,
+              todoText: todo.text,
+              details: { bulk_action: true },
+            });
+          }
+        });
+      }
+
+      toast.update(progressToastId, {
+        description: `${completed}/${taskIds.length}${failed.length > 0 ? ` (${failed.length} failed)` : ''}`,
       });
     }
-  }, [selectedTodos, todos, userName, updateTodoInStore, clearSelection, setShowBulkActions]);
+
+    toast.dismiss(progressToastId);
+
+    if (failed.length > 0) {
+      toast.error(`${completed} completed, ${failed.length} failed`, {
+        description: 'Some tasks could not be completed.',
+        action: {
+          label: 'Retry failed',
+          onClick: () => retryBulkComplete(failed),
+        },
+        duration: 0,
+      });
+      haptics.error();
+    } else {
+      toast.success(`${completed} tasks completed`, { duration: 2000 });
+      haptics.success();
+    }
+  }, [selectedTodos, todos, userName, toast, updateTodoInStore, clearSelection, setShowBulkActions, retryBulkComplete]);
 
   // Bulk reschedule - set new due date for selected tasks
   const bulkReschedule = useCallback(async (newDueDate: string) => {
