@@ -4,7 +4,6 @@
  * Modular components extracted from TodoList.tsx
  */
 
-export { default as TodoHeader } from './TodoHeader';
 export { default as TodoStatsCards } from './TodoStatsCards';
 export { default as BulkActionBar } from './BulkActionBar';
 export { default as LoadingState } from './LoadingState';

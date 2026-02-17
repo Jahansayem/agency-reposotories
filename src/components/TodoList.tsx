@@ -35,7 +35,8 @@ import PullToRefresh from './PullToRefresh';
 
 
 import { ExitFocusModeButton } from './FocusModeToggle';
-import { LoadingState, ErrorState, TodoHeader, TodoFiltersBar, TodoListContent, BulkActionBar } from './todo';
+import { LoadingState, ErrorState, TodoFiltersBar, TodoListContent, BulkActionBar } from './todo';
+import TodoListAppBarContent from './todo/TodoListAppBarContent';
 import { TaskDetailModal } from './task-detail';
 import { useShouldUseSections } from './TaskSections';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -744,31 +745,11 @@ export default function TodoList({
       <div className="min-h-screen transition-colors bg-[var(--background)]">
         <LiveRegion message={state.announcement} />
 
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
-          Skip to main content
-        </a>
-
-        <TodoHeader
-          currentUser={currentUser}
-          onUserChange={onUserChange}
+        <TodoListAppBarContent
           viewMode={state.viewMode}
           setViewMode={state.setViewMode}
-          onAddTask={() => state.setShowAddTaskModal(true)}
           searchQuery={state.searchQuery}
           setSearchQuery={state.setSearchQuery}
-          showAdvancedFilters={state.showAdvancedFilters}
-          setShowAdvancedFilters={state.setShowAdvancedFilters}
-          onResetFilters={() => {
-            state.setQuickFilter('all');
-            state.setShowCompleted(false);
-            state.setHighPriorityOnly(false);
-            state.setSearchQuery('');
-            state.setStatusFilter('all');
-            state.setAssignedToFilter('all');
-            state.setCustomerFilter('all');
-            state.setHasAttachmentsFilter(null);
-            state.setDateRangeFilter({ start: '', end: '' });
-          }}
         />
 
         <ExitFocusModeButton />

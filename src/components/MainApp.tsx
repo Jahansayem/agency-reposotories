@@ -458,6 +458,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // Calendar task detail: update handler (writes to store + DB)
   const handleCalendarDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === id);
     const updated_at = new Date().toISOString();
     updateTodoInStore(id, { ...updates, updated_at });
     if (isSupabaseConfigured()) {
@@ -467,12 +468,17 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         .eq('id', id);
       if (error) {
         logger.error('Calendar detail update failed', error, { component: 'MainApp' });
+        // Rollback optimistic update on failure
+        if (originalTodo) {
+          updateTodoInStore(id, originalTodo);
+        }
       }
     }
   }, [updateTodoInStore]);
 
   // Calendar task detail: toggle complete
   const handleCalendarDetailComplete = useCallback(async (id: string, completed: boolean) => {
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === id);
     const updated_at = new Date().toISOString();
     const newStatus = completed ? 'done' : 'todo';
     updateTodoInStore(id, { completed, status: newStatus as Todo['status'], updated_at });
@@ -483,6 +489,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         .eq('id', id);
       if (error) {
         logger.error('Calendar detail toggle failed', error, { component: 'MainApp' });
+        // Rollback optimistic update on failure
+        if (originalTodo) {
+          updateTodoInStore(id, {
+            completed: originalTodo.completed,
+            status: originalTodo.status as Todo['status'],
+            updated_at: originalTodo.updated_at,
+          });
+        }
       }
     }
   }, [updateTodoInStore]);
@@ -504,6 +518,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // Calendar: quick complete from popup
   const handleCalendarQuickComplete = useCallback(async (todoId: string) => {
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === todoId);
     const updated_at = new Date().toISOString();
     updateTodoInStore(todoId, { completed: true, status: 'done' as Todo['status'], updated_at });
     if (isSupabaseConfigured()) {
@@ -513,6 +528,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         .eq('id', todoId);
       if (error) {
         logger.error('Calendar quick complete failed', error, { component: 'MainApp' });
+        // Rollback optimistic update on failure
+        if (originalTodo) {
+          updateTodoInStore(todoId, {
+            completed: originalTodo.completed,
+            status: originalTodo.status as Todo['status'],
+            updated_at: originalTodo.updated_at,
+          });
+        }
       }
     }
   }, [updateTodoInStore]);
@@ -778,10 +801,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         return (
           <ErrorBoundary>
             <div className="flex flex-col h-full bg-[var(--background)]">
-              <div className="flex-shrink-0 px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
-                <h1 className="text-xl font-semibold text-[var(--foreground)]">Calendar</h1>
-                <p className="text-sm text-[var(--text-muted)]">View tasks by due date</p>
-              </div>
               <div className="flex-1 min-h-0">
                 <CalendarView
                   key={agencyKey}

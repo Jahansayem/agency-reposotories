@@ -10,6 +10,8 @@ import NavigationSidebar from './NavigationSidebar';
 import CommandPalette from './CommandPalette';
 import EnhancedBottomNav from './EnhancedBottomNav';
 import FloatingChatButton from '../FloatingChatButton';
+import { AppBarProvider } from './AppBarContext';
+import UnifiedAppBar from './UnifiedAppBar';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // APP SHELL - CORE LAYOUT ARCHITECTURE
@@ -307,6 +309,7 @@ export default function AppShell({
   };
 
   return (
+    <AppBarProvider>
     <AppShellContext.Provider value={contextValue}>
       <div
         className={`
@@ -322,6 +325,12 @@ export default function AppShell({
         >
           Skip to main content
         </a>
+
+        {/* ═══ UNIFIED APP BAR ═══ */}
+        <UnifiedAppBar
+          currentUser={currentUser}
+          onUserChange={onUserChange}
+        />
 
         <div className="flex-1 flex overflow-hidden">
           {/* ═══ LEFT SIDEBAR ═══ */}
@@ -437,6 +446,7 @@ export default function AppShell({
         </AnimatePresence>
       </div>
     </AppShellContext.Provider>
+    </AppBarProvider>
   );
 }
 
