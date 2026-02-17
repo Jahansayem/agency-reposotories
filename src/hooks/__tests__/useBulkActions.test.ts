@@ -17,6 +17,25 @@ vi.mock('@/lib/activityLogger', () => ({
   logActivity: vi.fn(),
 }));
 
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(() => 'toast-id'),
+    update: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/haptics', () => ({
+  haptics: {
+    success: vi.fn(),
+    error: vi.fn(),
+    medium: vi.fn(),
+  },
+}));
+
 const mockTodos: Todo[] = [
   {
     id: 'todo-1',
