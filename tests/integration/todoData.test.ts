@@ -181,6 +181,23 @@ vi.mock('@/lib/reminderService', () => ({
   updateAutoReminders: vi.fn().mockResolvedValue({ success: true }),
 }));
 
+// Mock Toast (useTodoData now uses useToast)
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(() => 'toast-id'),
+    update: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}));
+
+// Mock retryWithBackoff to bypass retries in tests
+vi.mock('@/lib/retryWithBackoff', () => ({
+  retryWithBackoff: vi.fn(async (fn: () => Promise<any>) => fn()),
+}));
+
 // Import after mocking
 import { useTodoData } from '@/hooks/useTodoData';
 import { logActivity } from '@/lib/activityLogger';

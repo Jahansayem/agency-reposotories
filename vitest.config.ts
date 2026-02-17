@@ -8,6 +8,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx}',
+      'tests/unit/**/*.{test,spec}.{ts,tsx}',
+      'tests/integration/**/*.{test,spec}.{ts,tsx}',
+    ],
     exclude: ['node_modules', '.worktrees', 'dist', '**/*.d.ts'],
     environmentMatchGlobs: [
       // API route tests run in Node, not jsdom

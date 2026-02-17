@@ -46,6 +46,11 @@ vi.mock('@/lib/haptics', () => ({
   },
 }));
 
+// Mock retryWithBackoff to bypass retries in tests
+vi.mock('@/lib/retryWithBackoff', () => ({
+  retryWithBackoff: vi.fn(async (fn: () => Promise<any>) => fn()),
+}));
+
 // Mock logger
 vi.mock('@/lib/logger', () => ({
   logger: {

@@ -45,6 +45,42 @@ vi.mock('@/lib/activityLogger', () => ({
   logActivity: vi.fn(),
 }));
 
+// Mock retryWithBackoff to bypass retries in tests
+vi.mock('@/lib/retryWithBackoff', () => ({
+  retryWithBackoff: vi.fn(async (fn: () => Promise<any>) => fn()),
+}));
+
+// Mock Toast
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(() => 'toast-id'),
+    update: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}));
+
+// Mock haptics
+vi.mock('@/lib/haptics', () => ({
+  haptics: {
+    success: vi.fn(),
+    error: vi.fn(),
+    medium: vi.fn(),
+  },
+}));
+
+// Mock logger
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 describe('Store + Hooks Integration', () => {
   beforeEach(() => {
     // Reset store state using the actual store API
