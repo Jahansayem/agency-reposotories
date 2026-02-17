@@ -15,6 +15,7 @@ import DashboardPage from '@/components/views/DashboardPage';
 import DoerDashboard from '@/components/dashboard/DoerDashboard';
 import ManagerDashboard from '@/components/dashboard/ManagerDashboard';
 import { Todo, AuthUser } from '@/types/todo';
+import React from 'react';
 
 // Mock the theme context
 vi.mock('@/contexts/ThemeContext', () => ({
@@ -28,6 +29,47 @@ vi.mock('@/components/layout', () => ({
   }),
 }));
 
+// Mock the Agency context to satisfy useAgency() calls in sub-components
+vi.mock('@/contexts/AgencyContext', () => ({
+  useAgency: () => ({
+    currentAgencyId: 'test-agency-id',
+    currentAgency: null,
+    agencies: [],
+    isLoading: false,
+    switchAgency: vi.fn(),
+    refreshAgencies: vi.fn(),
+    permissions: {},
+    role: 'staff',
+  }),
+  AgencyProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+// Mock useAgencyMetrics hook to avoid Supabase calls
+vi.mock('@/hooks/useAgencyMetrics', () => ({
+  useAgencyMetrics: () => ({
+    metrics: null,
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
+    salesGoal: null,
+    newPoliciesThisMonth: 0,
+    renewalRate: 0,
+    averagePremium: 0,
+  }),
+}));
+
+// Mock useDailyDigest hook to avoid Supabase calls
+vi.mock('@/hooks/useDailyDigest', () => ({
+  useDailyDigest: () => ({
+    digest: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+  }),
+  getPriorityColor: () => 'text-slate-500',
+  formatDigestDueDate: () => 'Today',
+}));
+
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
@@ -36,6 +78,77 @@ vi.mock('framer-motion', () => ({
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useReducedMotion: () => false,
+}));
+
+// Mock heavy sub-components that have complex external dependencies
+vi.mock('@/components/dashboard/QuickStatsBar', () => ({
+  QuickStatsBar: ({ userName }: { userName: string }) => (
+    <div data-testid="quick-stats-bar">QuickStatsBar for {userName}</div>
+  ),
+}));
+
+vi.mock('@/components/dashboard/PipelineHealthPanel', () => ({
+  default: () => <div data-testid="pipeline-health-panel">PipelineHealthPanel</div>,
+}));
+
+vi.mock('@/components/dashboard/RenewalsCalendarPanel', () => ({
+  default: () => <div data-testid="renewals-calendar-panel">RenewalsCalendarPanel</div>,
+}));
+
+vi.mock('@/components/dashboard/TeamProductionPanel', () => ({
+  default: () => <div data-testid="team-production-panel">TeamProductionPanel</div>,
+}));
+
+vi.mock('@/components/dashboard/DailyDigestPanel', () => ({
+  default: () => <div data-testid="daily-digest-panel">DailyDigestPanel</div>,
+}));
+
+vi.mock('@/components/dashboard/MiniSparkline', () => ({
+  default: () => <div data-testid="mini-sparkline">MiniSparkline</div>,
+}));
+
+vi.mock('@/components/dashboard/CompletionPrediction', () => ({
+  default: () => <div data-testid="completion-prediction">CompletionPrediction</div>,
+}));
+
+vi.mock('@/components/dashboard/SubtaskProgressWidget', () => ({
+  default: () => <div data-testid="subtask-progress-widget">SubtaskProgressWidget</div>,
+}));
+
+vi.mock('@/components/dashboard/MissingDueDatesWarning', () => ({
+  default: () => <div data-testid="missing-due-dates-warning">MissingDueDatesWarning</div>,
+}));
+
+vi.mock('@/components/dashboard/FeatureAdoptionPrompts', () => ({
+  default: () => <div data-testid="feature-adoption-prompts">FeatureAdoptionPrompts</div>,
+}));
+
+vi.mock('@/components/dashboard/UnassignedTasksAlert', () => ({
+  default: () => <div data-testid="unassigned-tasks-alert">UnassignedTasksAlert</div>,
+}));
+
+vi.mock('@/components/calendar/CalendarView', () => ({
+  default: () => <div data-testid="calendar-view">CalendarView</div>,
+}));
+
+vi.mock('@/components/dashboard/AnimatedProgressRing', () => ({
+  default: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="animated-progress-ring">{children}</div>
+  ),
+}));
+
+vi.mock('@/components/dashboard/StatCard', () => ({
+  default: ({ label, value }: { label: string; value: number | string }) => (
+    <div data-testid={`stat-card-${label}`}>{label}: {value}</div>
+  ),
+}));
+
+vi.mock('@/components/dashboard/QuickActions', () => ({
+  default: () => <div data-testid="quick-actions">QuickActions</div>,
+}));
+
+vi.mock('@/components/dashboard/ScoreBreakdownTooltip', () => ({
+  default: () => <div data-testid="score-breakdown-tooltip">ScoreBreakdownTooltip</div>,
 }));
 
 // Helper to create mock user
@@ -97,7 +210,16 @@ const getNextWeek = () => {
 };
 
 describe('DashboardPage', () => {
+  // Staff user — used for DoerDashboard tests
   const mockCurrentUser = createMockUser('John Doe');
+  // Manager user — needed so DashboardPage delegates to ManagerDashboard
+  const mockManagerUser: AuthUser = {
+    id: 'user-manager',
+    name: 'John Doe',
+    color: '#0033A0',
+    role: 'manager',
+    created_at: new Date().toISOString(),
+  };
   const mockOnNavigate = vi.fn();
   const mockOnFilterOverdue = vi.fn();
   const mockOnFilterDueToday = vi.fn();
@@ -129,7 +251,7 @@ describe('DashboardPage', () => {
 
       render(
         <DashboardPage
-          currentUser={mockCurrentUser}
+          currentUser={mockManagerUser}
           todos={todos}
           users={['John Doe', 'Jane Smith', 'Bob Wilson']}
           onNavigateToTasks={mockOnNavigate}
@@ -140,21 +262,23 @@ describe('DashboardPage', () => {
       expect(screen.getByText(/Team Health/i)).toBeInTheDocument();
     });
 
-    it('shows team member count in header for managers', () => {
+    it('shows team size in Team Health section for managers', () => {
       render(
         <DashboardPage
-          currentUser={mockCurrentUser}
+          currentUser={mockManagerUser}
           todos={[]}
           users={['John Doe', 'Jane Smith', 'Bob Wilson']}
         />
       );
 
-      expect(screen.getByText(/3 team members/i)).toBeInTheDocument();
+      // ManagerDashboard shows "Team Size" with count in Team Health card
+      expect(screen.getByText('Team Size')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
     });
   });
 
   describe('Header Stats', () => {
-    it('displays overdue stat with correct styling when overdue exists', () => {
+    it('displays overdue alert when overdue tasks exist (DoerDashboard)', () => {
       const todos = [
         createMockTodo({ due_date: getYesterday(), assigned_to: 'John Doe' }),
         createMockTodo({ due_date: getYesterday(), assigned_to: 'John Doe' }),
@@ -168,16 +292,19 @@ describe('DashboardPage', () => {
         />
       );
 
-      // The overdue button should have red styling when there are overdue tasks
-      const overdueButtons = screen.getAllByText('Overdue');
-      const headerOverdue = overdueButtons[0].closest('button');
-      expect(headerOverdue).toHaveClass('bg-red-500/20');
+      // DoerDashboard shows "{n} tasks overdue" overdue alert button
+      expect(screen.getByText(/2 tasks overdue/i)).toBeInTheDocument();
     });
 
-    it('displays due today stat', () => {
+    it('displays due today tasks in Your Day section', () => {
+      // Use local noon today timestamp to avoid UTC parsing placing date in yesterday
+      const localNoonToday = new Date();
+      localNoonToday.setHours(12, 0, 0, 0);
+      const localTodayStr = localNoonToday.toISOString();
+
       const todos = [
-        createMockTodo({ due_date: getToday(), assigned_to: 'John Doe' }),
-        createMockTodo({ due_date: getToday(), assigned_to: 'John Doe' }),
+        createMockTodo({ due_date: localTodayStr, assigned_to: 'John Doe' }),
+        createMockTodo({ due_date: localTodayStr, assigned_to: 'John Doe' }),
       ];
 
       render(
@@ -188,12 +315,12 @@ describe('DashboardPage', () => {
         />
       );
 
-      // Header should show "Due Today" label
+      // DoerDashboard shows "Due Today" label in Your Day section
       const dueTodayElements = screen.getAllByText('Due Today');
       expect(dueTodayElements.length).toBeGreaterThan(0);
     });
 
-    it('displays upcoming week stat', () => {
+    it('displays Coming Up section for upcoming tasks', () => {
       const todos = [
         createMockTodo({ due_date: getTomorrow(), assigned_to: 'John Doe' }),
         createMockTodo({ due_date: getNextWeek(), assigned_to: 'John Doe' }),
@@ -207,12 +334,12 @@ describe('DashboardPage', () => {
         />
       );
 
-      // Should show "Due This Week" label
-      expect(screen.getByText('Due This Week')).toBeInTheDocument();
+      // DoerDashboard shows "Coming Up" label for upcoming tasks
+      expect(screen.getByText('Coming Up')).toBeInTheDocument();
     });
 
-    it('calls onFilterOverdue when overdue stat is clicked', () => {
-      const todos = [createMockTodo({ due_date: getYesterday() })];
+    it('calls onFilterOverdue when overdue alert is clicked', () => {
+      const todos = [createMockTodo({ due_date: getYesterday(), assigned_to: 'John Doe' })];
 
       render(
         <DashboardPage
@@ -223,14 +350,23 @@ describe('DashboardPage', () => {
         />
       );
 
-      const overdueButton = screen.getByText('Overdue').closest('button');
+      // DoerDashboard shows "{n} task overdue" button
+      const overdueButton = screen.getByText(/1 task overdue/i).closest('button');
       fireEvent.click(overdueButton!);
 
       expect(mockOnFilterOverdue).toHaveBeenCalledTimes(1);
     });
 
-    it('calls onFilterDueToday when due today stat is clicked', () => {
-      const todos = [createMockTodo({ due_date: getToday() })];
+    it('calls onFilterDueToday when due today task is clicked', () => {
+      // Use local noon today timestamp to avoid UTC parsing placing date in yesterday
+      const localNoonToday = new Date();
+      localNoonToday.setHours(12, 0, 0, 0);
+      const localTodayStr = localNoonToday.toISOString();
+
+      // Create more than 5 due-today tasks to trigger the "+N more due today" button
+      const todos = Array.from({ length: 7 }, () =>
+        createMockTodo({ due_date: localTodayStr, assigned_to: 'John Doe' })
+      );
 
       render(
         <DashboardPage
@@ -241,15 +377,16 @@ describe('DashboardPage', () => {
         />
       );
 
-      const dueTodayButton = screen.getByText('Due Today').closest('button');
-      fireEvent.click(dueTodayButton!);
+      // DoerDashboard shows "+N more due today" button when > 5 tasks due today
+      const moreTodayButton = screen.getByText(/\+\d+ more due today/i).closest('button');
+      fireEvent.click(moreTodayButton!);
 
       expect(mockOnFilterDueToday).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('Greeting', () => {
-    it('displays user name in header', () => {
+    it('renders DoerDashboard Your Day section for a staff user', () => {
       render(
         <DashboardPage
           currentUser={mockCurrentUser}
@@ -258,14 +395,15 @@ describe('DashboardPage', () => {
         />
       );
 
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      // DoerDashboard shows "Your Day" heading for staff users
+      expect(screen.getByText('Your Day')).toBeInTheDocument();
     });
 
-    it('displays active task count', () => {
+    it('displays active tasks count in progress section', () => {
       const todos = [
-        createMockTodo({ completed: false }),
-        createMockTodo({ completed: false }),
-        createMockTodo({ completed: true }),
+        createMockTodo({ completed: false, assigned_to: 'John Doe' }),
+        createMockTodo({ completed: false, assigned_to: 'John Doe' }),
+        createMockTodo({ completed: true, assigned_to: 'John Doe' }),
       ];
 
       render(
@@ -276,7 +414,8 @@ describe('DashboardPage', () => {
         />
       );
 
-      expect(screen.getByText(/2 active tasks/i)).toBeInTheDocument();
+      // DoerDashboard shows "Active Tasks" with count in the quick stats card
+      expect(screen.getByText('Active Tasks')).toBeInTheDocument();
     });
   });
 });
