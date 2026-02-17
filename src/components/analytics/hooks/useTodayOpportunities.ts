@@ -8,6 +8,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchWithCsrf } from '@/lib/csrf';
 
+// Module-level cache: persists across component mount/unmount cycles
+interface CacheEntry {
+  data: { opportunities: TodayOpportunity[]; meta: TodayOpportunitiesMeta };
+  timestamp: number;
+}
+const CACHE_TTL_MS = 60_000; // 60 seconds fresh window
+const cache = new Map<number, CacheEntry>(); // key = limit
+
 export interface TodayOpportunity {
   id: string;
   taskId: string | null;
@@ -57,13 +65,19 @@ export interface ContactRequest {
 }
 
 export function useTodayOpportunities(limit: number = 10) {
-  const [opportunities, setOpportunities] = useState<TodayOpportunity[]>([]);
-  const [meta, setMeta] = useState<TodayOpportunitiesMeta | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cached = cache.get(limit);
+
+  const [opportunities, setOpportunities] = useState<TodayOpportunity[]>(
+    cached ? cached.data.opportunities : []
+  );
+  const [meta, setMeta] = useState<TodayOpportunitiesMeta | null>(
+    cached ? cached.data.meta : null
+  );
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchOpportunities = useCallback(async () => {
-    setLoading(true);
+  const fetchOpportunities = useCallback(async (showLoadingSpinner = true) => {
+    if (showLoadingSpinner) setLoading(true);
     setError(null);
 
     try {
@@ -104,12 +118,17 @@ export function useTodayOpportunities(limit: number = 10) {
         renewalStatus: opp.renewal_status || 'Unknown',
       }));
 
-      setOpportunities(mapped);
-      setMeta({
+      const newMeta = {
         todayCount: data.meta?.todayCount || mapped.length,
         urgentCount: data.meta?.urgentCount || 0,
         upcomingCount: data.meta?.upcomingCount || 0,
-      });
+      };
+
+      // Write to module-level cache
+      cache.set(limit, { data: { opportunities: mapped, meta: newMeta }, timestamp: Date.now() });
+
+      setOpportunities(mapped);
+      setMeta(newMeta);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
@@ -139,13 +158,22 @@ export function useTodayOpportunities(limit: number = 10) {
       throw new Error('Failed to log contact');
     }
 
-    // Refresh the list after logging
+    // Invalidate cache so next load is fresh, then re-fetch
+    cache.delete(limit);
     await fetchOpportunities();
-  }, [fetchOpportunities]);
+  }, [limit, fetchOpportunities]);
 
   useEffect(() => {
-    fetchOpportunities();
-  }, [fetchOpportunities]);
+    const entry = cache.get(limit);
+    if (!entry) {
+      // No cache: fetch normally with loading spinner
+      fetchOpportunities(true);
+    } else if (Date.now() - entry.timestamp >= CACHE_TTL_MS) {
+      // Stale cache: show existing data immediately, refresh in background
+      fetchOpportunities(false);
+    }
+    // Fresh cache: skip fetch entirely — state was already initialized from cache
+  }, [fetchOpportunities, limit]);
 
   return {
     opportunities,
