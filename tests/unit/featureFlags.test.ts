@@ -213,12 +213,14 @@ describe('Feature Flags', () => {
   });
 
   describe('getAllFeatureFlags', () => {
-    it('should return all 7 feature flags', () => {
+    it('should return all 9 feature flags', () => {
       const flags = getAllFeatureFlags();
 
       const expectedFlags: FeatureFlag[] = [
         'new_auth_system',
         'oauth_login',
+        'clerk_auth',
+        'pin_auth',
         'normalized_schema',
         'refactored_components',
         'new_state_management',
@@ -230,7 +232,7 @@ describe('Feature Flags', () => {
         expect(flags).toHaveProperty(flag);
       });
 
-      expect(Object.keys(flags)).toHaveLength(7);
+      expect(Object.keys(flags)).toHaveLength(9);
     });
 
     it('should include enabled and description for each flag', () => {

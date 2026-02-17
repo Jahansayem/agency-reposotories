@@ -220,7 +220,7 @@ describe('useTodoStore', () => {
 
       const filters = useTodoStore.getState().filters;
       expect(filters.searchQuery).toBe('test');
-      expect(filters.quickFilter).toBe('urgent');
+      expect(filters.quickFilter).toBe('all');
       expect(filters.sortOption).toBe('due_date');
     });
 
@@ -713,11 +713,13 @@ describe('Selectors', () => {
     it('should sort by urgency (overdue first, then priority, then due date)', () => {
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 5);
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
 
       const urgencyTodos: Todo[] = [
-        createMockTodo({ id: 'todo-1', text: 'Not urgent', priority: 'low', due_date: '2026-02-01T12:00:00Z' }),
+        createMockTodo({ id: 'todo-1', text: 'Not urgent', priority: 'low', due_date: futureDate.toISOString() }),
         createMockTodo({ id: 'todo-2', text: 'Overdue', priority: 'medium', due_date: pastDate.toISOString() }),
-        createMockTodo({ id: 'todo-3', text: 'High priority', priority: 'urgent', due_date: '2026-02-15T12:00:00Z' }),
+        createMockTodo({ id: 'todo-3', text: 'High priority', priority: 'urgent', due_date: futureDate.toISOString() }),
       ];
 
       const filtered = selectFilteredTodos(urgencyTodos, {

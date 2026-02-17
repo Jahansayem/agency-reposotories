@@ -396,7 +396,8 @@ describe('/api/todos', () => {
       });
       mockFrom.mockReturnValue(builder);
 
-      const ctx = createMockAuthContext();
+      // Use staff context (lacks can_edit_all_tasks) so verifyTodoAccess is called
+      const ctx = createStaffAuthContext({ userName: 'Test User' });
       const req = createMockRequest({
         method: 'PUT',
         url: 'http://localhost:3000/api/todos',
@@ -417,7 +418,8 @@ describe('/api/todos', () => {
         ),
       });
 
-      const ctx = createMockAuthContext();
+      // Use staff context (lacks can_edit_all_tasks) so verifyTodoAccess is called
+      const ctx = createStaffAuthContext({ userName: 'Test User' });
       const req = createMockRequest({
         method: 'PUT',
         url: 'http://localhost:3000/api/todos',
@@ -521,7 +523,8 @@ describe('/api/todos', () => {
       const builder = chainBuilder({ data: null, error: null });
       mockFrom.mockReturnValue(builder);
 
-      const ctx = createMockAuthContext();
+      // Use staff context (lacks can_delete_all_tasks) so verifyTodoAccess is called
+      const ctx = createStaffAuthContext({ userName: 'Test User' });
       const req = createMockRequest({
         method: 'DELETE',
         url: 'http://localhost:3000/api/todos',
@@ -542,7 +545,8 @@ describe('/api/todos', () => {
         ),
       });
 
-      const ctx = createMockAuthContext();
+      // Use staff context (lacks can_delete_all_tasks) so verifyTodoAccess is called
+      const ctx = createStaffAuthContext({ userName: 'Test User' });
       const req = createMockRequest({
         method: 'DELETE',
         url: 'http://localhost:3000/api/todos',
