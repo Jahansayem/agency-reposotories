@@ -43,6 +43,11 @@ interface TodayOpportunitiesResponse {
     priority_tiers: CrossSellPriorityTier[];
     renewal_window_days: number;
   };
+  meta: {
+    todayCount: number;
+    urgentCount: number;
+    upcomingCount: number;
+  };
 }
 
 /**
@@ -63,10 +68,14 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const priorityTiers: CrossSellPriorityTier[] = ['HOT', 'HIGH'];
     const renewalWindowDays = 30;
 
-    // Build query
+    // Build main query — select only the columns the component renders plus
+    // the required CrossSellOpportunity type fields needed for TypeScript compatibility.
     let query = supabase
       .from('cross_sell_opportunities')
-      .select('*', { count: 'exact' });
+      .select(
+        'id, agency_id, created_at, updated_at, customer_name, phone, email, address, city, zip_code, current_products, recommended_product, segment, segment_type, priority_tier, priority_rank, priority_score, current_premium, potential_premium_add, expected_conversion_pct, retention_lift_pct, talking_point_1, talking_point_2, talking_point_3, tenure_years, policy_count, ezpay_status, balance_due, renewal_date, days_until_renewal, renewal_status, task_id',
+        { count: 'exact' }
+      );
 
     // Apply agency filter from auth context
     if (agencyId) {
@@ -92,7 +101,23 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
 
-    const { data, error, count } = await query;
+    // Build meta counts query — runs in parallel with main query
+    // Fetches days_until_renewal for all non-dismissed HOT/HIGH opportunities
+    // so we can compute todayCount / urgentCount / upcomingCount on the full set.
+    let metaQuery = supabase
+      .from('cross_sell_opportunities')
+      .select('priority_tier, days_until_renewal', { count: 'exact', head: false })
+      .in('priority_tier', priorityTiers)
+      .eq('dismissed', false);
+
+    if (agencyId) {
+      metaQuery = metaQuery.eq('agency_id', agencyId);
+    }
+
+    // Fire both independent queries in parallel
+    const [mainResult, metaResult] = await Promise.all([query, metaQuery]);
+
+    const { data, error, count } = mainResult;
 
     if (error) {
       console.error('Failed to fetch today\'s opportunities:', error);
@@ -101,6 +126,12 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
         { status: 500 }
       );
     }
+
+    // Compute meta counts from the parallel meta query results
+    const metaRows = metaResult.data || [];
+    const todayCount = metaRows.filter(r => (r.days_until_renewal ?? Infinity) <= 1).length;
+    const urgentCount = metaRows.filter(r => (r.days_until_renewal ?? Infinity) <= 7).length;
+    const upcomingCount = metaRows.filter(r => (r.days_until_renewal ?? Infinity) <= 30).length;
 
     // Enrich opportunities with customer_insight_id by matching customer_name
     let enrichedOpportunities = data || [];
@@ -134,6 +165,11 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       filters_applied: {
         priority_tiers: priorityTiers,
         renewal_window_days: renewalWindowDays,
+      },
+      meta: {
+        todayCount,
+        urgentCount,
+        upcomingCount,
       },
     };
 
