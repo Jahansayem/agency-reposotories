@@ -527,8 +527,35 @@ export default function TodoList({
   }, []);
 
   const handleDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
-    state.updateTodoInStore(id, updates);
-  }, [state.updateTodoInStore]);
+    const previousTodo = state.todos.find(t => t.id === id);
+    if (!previousTodo) return;
+
+    const normalizedUpdates: Partial<Todo> = { ...updates };
+    if (updates.completed !== undefined && updates.status === undefined) {
+      normalizedUpdates.status = updates.completed ? 'done' : 'todo';
+    } else if (updates.status !== undefined && updates.completed === undefined) {
+      normalizedUpdates.completed = updates.status === 'done';
+    }
+
+    const updated_at = new Date().toISOString();
+    state.updateTodoInStore(id, { ...normalizedUpdates, updated_at });
+
+    const { data, error } = await supabase
+      .from('todos')
+      .update({ ...normalizedUpdates, updated_at })
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+
+    if (error || !data) {
+      logger.error('Failed to persist task detail update', error ?? new Error('No rows updated'), {
+        component: 'TodoList',
+        todoId: id,
+        updates: normalizedUpdates,
+      });
+      state.updateTodoInStore(id, previousTodo);
+    }
+  }, [state.todos, state.updateTodoInStore]);
 
   // Save task as template
   const saveAsTemplate = useCallback(async (name: string, isShared: boolean) => {

@@ -332,13 +332,15 @@ export function useTodoOperations({
       }
     }
 
-    const { error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from('todos')
       .update({ status, completed, updated_at })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (updateError) {
-      logger.error('Error updating status', updateError, { component: 'useTodoOperations' });
+    if (updateError || !data) {
+      logger.error('Error updating status', updateError ?? new Error('No rows updated'), { component: 'useTodoOperations' });
       if (oldTodo) {
         updateTodoInStore(id, oldTodo);
       }
@@ -493,13 +495,15 @@ export function useTodoOperations({
       }
     }
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('todos')
       .update({ completed, status: newStatus, updated_at })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (error) {
-      logger.error('Toggle failed', error, { component: 'useTodoOperations' });
+    if (error || !data) {
+      logger.error('Toggle failed', error ?? new Error('No rows updated'), { component: 'useTodoOperations' });
       if (todoItem) {
         updateTodoInStore(id, todoItem);
       }

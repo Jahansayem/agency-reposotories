@@ -414,17 +414,19 @@ export function useTodoData(currentUser: AuthUser) {
       updated_by: userName,
     });
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('todos')
       .update({
         ...updates,
         updated_at: new Date().toISOString(),
         updated_by: userName,
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
 
-    if (error) {
-      logger.error('Error updating todo', error, { component: 'useTodoData' });
+    if (error || !data) {
+      logger.error('Error updating todo', error ?? new Error('No rows updated'), { component: 'useTodoData' });
       // UX-008: Show rollback toast and revert optimistic update
       toast.warning('Reverting...', {
         description: 'Failed to update task. Changes have been reverted.',
