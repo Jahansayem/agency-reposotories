@@ -12,6 +12,7 @@ import { Check } from 'lucide-react';
 import { TYPOGRAPHY, SPACING, RADIUS, ICON_SIZE } from '@/lib/design-tokens';
 import { haptics } from '@/lib/haptics';
 import { useState } from 'react';
+import { useAnnouncementContext } from '@/components/LiveRegion';
 
 interface TaskCardHeaderProps {
   todo: Todo;
@@ -29,6 +30,7 @@ export function TaskCardHeader({
   onTitleClick,
 }: TaskCardHeaderProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const { announce } = useAnnouncementContext();
 
   const titleStyle =
     density === 'compact'
@@ -51,6 +53,12 @@ export function TaskCardHeader({
             e.stopPropagation();
             haptics.medium();
             onToggleComplete(todo.id);
+            announce(
+              todo.completed
+                ? `Task reopened: ${todo.text}`
+                : `Task completed: ${todo.text}`,
+              'assertive'
+            );
           }}
           className="flex-shrink-0 group touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
           style={{
