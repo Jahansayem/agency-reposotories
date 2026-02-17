@@ -4,7 +4,17 @@ import { todoService } from '@/lib/db/todoService';
 import { supabase } from '@/lib/supabaseClient';
 import { createMockTodo } from '../factories/todoFactory';
 
-vi.mock('@/lib/supabaseClient');
+// Provide an explicit factory so that supabase.rpc and supabase.from are vi.fn().
+// Without a factory, vi.mock() auto-mocks the module but the `supabase` export is
+// created by calling createSupabaseClient() which returns a real (or dummy) client,
+// so supabase.rpc ends up as `undefined` rather than a vi.fn().
+vi.mock('@/lib/supabaseClient', () => ({
+  supabase: {
+    from: vi.fn(),
+    rpc: vi.fn(),
+  },
+  isSupabaseConfigured: vi.fn(() => true),
+}));
 vi.mock('@/lib/featureFlags', () => ({
   isFeatureEnabled: vi.fn(() => false), // Default: flags off
 }));
