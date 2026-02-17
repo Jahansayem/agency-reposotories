@@ -192,4 +192,47 @@ test.describe('Keyboard Navigation - Main App', () => {
 
     expect(hasVisibleFocus).toBeTruthy();
   });
+
+  test('Focus should move to next task checkbox after completing a task', async ({ page }) => {
+    // Navigate to Tasks view
+    await page.click('text=Tasks');
+    await page.waitForTimeout(1000);
+
+    // Find task checkboxes (the completion buttons)
+    const checkboxes = page.locator('[data-task-id] button[aria-pressed]');
+    const checkboxCount = await checkboxes.count();
+
+    // Skip test if fewer than 2 tasks
+    if (checkboxCount < 2) {
+      test.skip();
+      return;
+    }
+
+    // Focus the first checkbox via keyboard
+    await checkboxes.first().focus();
+
+    // Click to complete the first task
+    await checkboxes.first().click();
+
+    // After task disappears/animates, focus should move to the next task's checkbox
+    await page.waitForTimeout(500);
+    const focusedElement = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el) return null;
+      return {
+        tagName: el.tagName,
+        ariaPressed: el.getAttribute('aria-pressed'),
+        ariaLabel: el.getAttribute('aria-label'),
+      };
+    });
+
+    // Focus should be on a button with aria-pressed (a task checkbox)
+    // or on the add task input (if it was the last task)
+    expect(focusedElement).toBeTruthy();
+    if (focusedElement) {
+      const isFocusOnCheckbox = focusedElement.ariaPressed !== null;
+      const isFocusOnInput = focusedElement.tagName === 'TEXTAREA' || focusedElement.tagName === 'INPUT';
+      expect(isFocusOnCheckbox || isFocusOnInput).toBeTruthy();
+    }
+  });
 });

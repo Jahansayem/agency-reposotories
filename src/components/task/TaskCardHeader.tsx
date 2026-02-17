@@ -11,7 +11,7 @@ import { Todo } from '@/types/todo';
 import { Check } from 'lucide-react';
 import { TYPOGRAPHY, SPACING, RADIUS, ICON_SIZE } from '@/lib/design-tokens';
 import { haptics } from '@/lib/haptics';
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useAnnouncementContext } from '@/components/LiveRegion';
 
 interface TaskCardHeaderProps {
@@ -31,6 +31,42 @@ export function TaskCardHeader({
 }: TaskCardHeaderProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { announce } = useAnnouncementContext();
+  const checkboxRef = useRef<HTMLButtonElement>(null);
+
+  const moveFocusToNextTask = useCallback(() => {
+    const button = checkboxRef.current;
+    if (!button) return;
+
+    // Find the parent task card element
+    const taskCard = button.closest('[data-task-id]');
+    if (!taskCard) return;
+
+    // Collect all task cards in the same parent container
+    const container = taskCard.parentElement;
+    if (!container) return;
+
+    const allCards = Array.from(container.querySelectorAll('[data-task-id]'));
+    const currentIndex = allCards.indexOf(taskCard);
+
+    // After React re-renders, try to focus the next task's checkbox
+    requestAnimationFrame(() => {
+      // Look for the next task card's checkbox
+      const remainingCards = container.querySelectorAll('[data-task-id]');
+      const nextCheckbox = remainingCards.length > 0
+        ? remainingCards[Math.min(currentIndex, remainingCards.length - 1)]?.querySelector<HTMLButtonElement>('button[aria-pressed]')
+        : null;
+
+      if (nextCheckbox) {
+        nextCheckbox.focus();
+      } else {
+        // No more tasks - focus the add task input
+        const addTaskInput = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="task"]');
+        if (addTaskInput) {
+          addTaskInput.focus();
+        }
+      }
+    });
+  }, []);
 
   const titleStyle =
     density === 'compact'
@@ -49,16 +85,21 @@ export function TaskCardHeader({
       {/* Checkbox - 44x44px touch target */}
       {onToggleComplete && (
         <button
+          ref={checkboxRef}
           onClick={(e) => {
             e.stopPropagation();
             haptics.medium();
+            const isCompleting = !todo.completed;
             onToggleComplete(todo.id);
             announce(
-              todo.completed
-                ? `Task reopened: ${todo.text}`
-                : `Task completed: ${todo.text}`,
+              isCompleting
+                ? `Task completed: ${todo.text}`
+                : `Task reopened: ${todo.text}`,
               'assertive'
             );
+            if (isCompleting) {
+              moveFocusToNextTask();
+            }
           }}
           className="flex-shrink-0 group touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
           style={{
