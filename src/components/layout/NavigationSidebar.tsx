@@ -27,7 +27,6 @@ import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 import { CreateAgencyModal } from '@/components/CreateAgencyModal';
 import { AgencyMembersModal } from '@/components/AgencyMembersModal';
-import SyncStatusIndicator from '@/components/SyncStatusIndicator';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -216,10 +215,9 @@ export default function NavigationSidebar({
           )}
         </AnimatePresence>
 
-        {/* Sync status + Collapse toggle */}
+        {/* Collapse toggle */}
         {isExpanded && (
           <div className="flex items-center gap-1">
-            <SyncStatusIndicator showLabel />
             <button
               onClick={toggleSidebar}
               className={`
