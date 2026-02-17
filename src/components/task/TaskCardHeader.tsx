@@ -64,7 +64,9 @@ export function TaskCardHeader({
           <span
             className={`
               flex items-center justify-center
-              border-2 transition-all
+              border-2
+              transition-[background-color,border-color,transform] duration-100 ease-out
+              group-hover:scale-105 group-active:scale-95
               ${
                 todo.completed
                   ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
@@ -75,6 +77,7 @@ export function TaskCardHeader({
               width: `${checkboxSize}px`,
               height: `${checkboxSize}px`,
               borderRadius: RADIUS.md,
+              transitionTimingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}
             aria-hidden="true"
           >
