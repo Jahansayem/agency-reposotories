@@ -791,8 +791,6 @@ export default function TodoList({
                 setSortOption={state.setSortOption}
                 searchQuery={state.searchQuery}
                 setSearchQuery={state.setSearchQuery}
-                showMoreDropdown={state.showMoreDropdown}
-                setShowMoreDropdown={state.setShowMoreDropdown}
                 showTemplatePicker={state.showTemplatePicker}
                 setShowTemplatePicker={state.setShowTemplatePicker}
                 showBulkActions={state.showBulkActions}

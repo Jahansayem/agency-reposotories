@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTodoStore } from '@/store/todoStore';
-import { useTodoData, useFilters, useBulkActions, useTodoModals, useEscapeKey } from '@/hooks';
+import { useTodoData, useFilters, useBulkActions, useTodoModals } from '@/hooks';
 import { ViewMode, QuickFilter, AuthUser } from '@/types/todo';
 import { useAnnouncementContext } from '@/components/LiveRegion';
 
@@ -53,9 +53,6 @@ export function useTodoListState({
 
   // Sectioned view toggle
   const [useSectionedView, setUseSectionedView] = useState(true);
-
-  // "More" dropdown state
-  const [showMoreDropdown, setShowMoreDropdown] = useState(false);
 
   // Template picker state
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -123,9 +120,6 @@ export function useTodoListState({
 
   // Screen reader announcements (uses global AnnouncementProvider)
   const { announce } = useAnnouncementContext();
-
-  // Close "More" dropdown on Escape key
-  useEscapeKey(() => setShowMoreDropdown(false), { enabled: showMoreDropdown });
 
   // Apply initial filter from props
   useEffect(() => {
@@ -213,8 +207,6 @@ export function useTodoListState({
     setViewMode,
     useSectionedView,
     setUseSectionedView,
-    showMoreDropdown,
-    setShowMoreDropdown,
     showTemplatePicker,
     setShowTemplatePicker,
     showAddTaskModal,
