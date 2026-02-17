@@ -25,6 +25,7 @@ import type { Todo, TodoPriority, Subtask, AuthUser } from '@/types/todo';
 import type { LinkedCustomer } from '@/types/customer';
 import { v4 as uuidv4 } from 'uuid';
 import { useAgency } from '@/contexts/AgencyContext';
+import { haptics } from '@/lib/haptics';
 
 interface CreateTodoOptions {
   text: string;
@@ -243,6 +244,9 @@ export function useTodoActions({
     const success = await baseToggleComplete(id);
 
     if (success && !wasCompleted) {
+      // Haptic success feedback on task completion
+      haptics.success();
+
       // Task was just completed
       const allSubtasksComplete = todo.subtasks?.every(st => st.completed) ?? true;
 
@@ -256,6 +260,9 @@ export function useTodoActions({
       if (todo.recurrence) {
         await createNextRecurrence(todo);
       }
+    } else if (!success) {
+      // Haptic error feedback on failure
+      haptics.error();
     }
 
     return success;

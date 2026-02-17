@@ -10,6 +10,7 @@
 import { Todo } from '@/types/todo';
 import { Check } from 'lucide-react';
 import { TYPOGRAPHY, SPACING, RADIUS, ICON_SIZE } from '@/lib/design-tokens';
+import { haptics } from '@/lib/haptics';
 import { useState } from 'react';
 
 interface TaskCardHeaderProps {
@@ -48,6 +49,7 @@ export function TaskCardHeader({
         <button
           onClick={(e) => {
             e.stopPropagation();
+            haptics.medium();
             onToggleComplete(todo.id);
           }}
           className="flex-shrink-0 group touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
