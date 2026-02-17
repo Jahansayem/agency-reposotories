@@ -88,6 +88,7 @@ function TodoItemComponent({
 
   const menuRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [longPressTriggered, setLongPressTriggered] = useState(false);
 
   const priority = todo.priority || 'medium';
@@ -99,10 +100,11 @@ function TodoItemComponent({
   const completedSubtasks = subtasks.filter(s => s.completed).length;
   const subtaskProgress = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
 
-  // Cleanup long-press timer on unmount
+  // Cleanup long-press timer and saving timeout on unmount
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
     };
   }, []);
 
@@ -145,7 +147,7 @@ function TodoItemComponent({
     try {
       await onToggle(todo.id, !todo.completed);
     } finally {
-      setTimeout(() => setIsSaving(false), 500);
+      savingTimeoutRef.current = setTimeout(() => setIsSaving(false), 500);
     }
   };
 

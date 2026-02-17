@@ -62,21 +62,23 @@ export function useTodoKeyboardShortcuts({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if typing in input (except for Cmd/Ctrl shortcuts)
-      const isInInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement;
+      // Don't trigger if typing in input/contentEditable (except for Cmd/Ctrl shortcuts)
+      const target = e.target as HTMLElement;
+      const isInInput = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target.isContentEditable;
       if (isInInput && !e.metaKey && !e.ctrlKey) {
         return;
       }
 
       // Cmd/Ctrl + Shift + C - complete focused task
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
         if (!onToggleComplete) return;
 
         const taskId = getFocusedTaskId();
         if (!taskId) return;
 
-        const todo = visibleTodos.find(t => t.id === taskId);
+        e.preventDefault();
+        const currentTodos = useTodoStore.getState().todos;
+        const todo = currentTodos.find(t => t.id === taskId);
         if (!todo || todo.completed) return;
 
         lastCompletedRef.current = { id: todo.id, text: todo.text };
@@ -88,7 +90,7 @@ export function useTodoKeyboardShortcuts({
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
         if (!onToggleComplete || !lastCompletedRef.current) return;
 
-        // Only handle undo if not in an input field
+        // Only handle undo if not in an input field or contentEditable
         if (isInInput) return;
 
         e.preventDefault();
@@ -170,8 +172,9 @@ export function useTodoKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleTodos.length, showBulkActions, selectedTodos.size, onToggleComplete, getFocusedTaskId]);
+  }, [showBulkActions, selectedTodos.size, onToggleComplete, getFocusedTaskId,
+      setSearchQuery, setQuickFilter, setShowBulkActions, setFocusMode, toggleFocusMode,
+      clearSelection, selectAll, openShortcuts, visibleTodos]);
 
   // No return value - this hook only sets up keyboard listeners
 }

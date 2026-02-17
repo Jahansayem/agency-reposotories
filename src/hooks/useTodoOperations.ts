@@ -11,7 +11,7 @@
  * This hook provides clean separation of business logic from UI concerns.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabaseClient';
 import { Todo, TodoStatus, TodoPriority, Subtask } from '@/types/todo';
@@ -26,6 +26,46 @@ import { calculateCompletionStreak, getNextSuggestedTasks, getEncouragementMessa
 import { ActivityLogEntry } from '@/types/todo';
 import { useTodoStore } from '@/store/todoStore';
 import { isToday } from 'date-fns';
+
+/**
+ * Parse a date-only string (YYYY-MM-DD) as local midnight.
+ * new Date('2026-02-17') parses as UTC midnight, which shifts the day
+ * for users west of UTC. This helper avoids that timezone bug.
+ */
+function parseDateLocal(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+/**
+ * Check if all tasks due today are now complete (excluding the just-completed task).
+ * Returns celebration data if all done, null otherwise.
+ */
+function checkAllTodayComplete(
+  currentTodos: import('@/types/todo').Todo[],
+  completedId: string,
+  completedTodo: import('@/types/todo').Todo,
+  activityLog: import('@/types/todo').ActivityLogEntry[],
+  userName: string,
+  updated_at: string,
+) {
+  const todayTasks = currentTodos.filter(t => t.due_date && isToday(parseDateLocal(t.due_date)));
+  const incompleteTodayTasks = todayTasks.filter(t => !t.completed && t.id !== completedId);
+  const allTodayDone = todayTasks.length > 0 && incompleteTodayTasks.length === 0;
+
+  if (!allTodayDone) return null;
+
+  const streakCount = calculateCompletionStreak(activityLog, userName) + 1;
+  const nextTasks = getNextSuggestedTasks(currentTodos, userName, completedId);
+  const encouragementMessage = getEncouragementMessage(streakCount);
+
+  return {
+    completedTask: { ...completedTodo, completed: true, status: 'done' as import('@/types/todo').TodoStatus, updated_at },
+    nextTasks,
+    streakCount,
+    encouragementMessage,
+  };
+}
 
 interface UseTodoOperationsProps {
   userName: string;
@@ -54,6 +94,9 @@ export function useTodoOperations({
   triggerCelebration,
   triggerEnhancedCelebration,
 }: UseTodoOperationsProps) {
+
+  // Debounce celebration: only fire if 500ms+ since last one
+  const lastCelebrationRef = useRef(0);
 
   /**
    * Actually create the todo (called after duplicate check or when user confirms)
@@ -299,106 +342,6 @@ export function useTodoOperations({
   }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore]);
 
   /**
-   * Update task status with celebration for completions
-   */
-  const updateStatus = useCallback(async (id: string, status: TodoStatus) => {
-    // Use store.getState() to avoid stale closure over todos
-    const currentTodos = useTodoStore.getState().todos;
-    const oldTodo = currentTodos.find((t) => t.id === id);
-    const completed = status === 'done';
-    const updated_at = new Date().toISOString();
-
-    // Optimistic update
-    updateTodoInStore(id, { status, completed, updated_at });
-
-    if (status === 'done' && oldTodo && !oldTodo.completed) {
-      // Calculate streak and get next tasks for enhanced celebration
-      const streakCount = calculateCompletionStreak(activityLog, userName) + 1;
-      const nextTasks = getNextSuggestedTasks(currentTodos, userName, id);
-      const encouragementMessage = getEncouragementMessage(streakCount);
-
-      // Check if all tasks due today are now complete (including the one we just completed)
-      const todayTasks = currentTodos.filter(t => t.due_date && isToday(new Date(t.due_date)));
-      const incompleteTodayTasks = todayTasks.filter(t => !t.completed && t.id !== id);
-      const allTodayDone = todayTasks.length > 0 && incompleteTodayTasks.length === 0;
-
-      if (allTodayDone) {
-        // Full celebration modal only when ALL today's tasks are done
-        const updatedTodo = { ...oldTodo, completed: true, status: 'done' as TodoStatus, updated_at };
-        triggerEnhancedCelebration({
-          completedTask: updatedTodo,
-          nextTasks,
-          streakCount,
-          encouragementMessage,
-        });
-      }
-
-      // Always show lightweight inline celebration
-      triggerCelebration(oldTodo.text);
-
-      // Handle recurring tasks
-      if (oldTodo.recurrence) {
-        createNextRecurrence(oldTodo);
-      }
-
-      // Send notification if task was assigned by someone else
-      if (oldTodo.created_by && oldTodo.created_by !== userName) {
-        sendTaskCompletionNotification({
-          taskId: id,
-          taskText: oldTodo.text,
-          completedBy: userName,
-          assignedBy: oldTodo.created_by,
-        });
-      }
-    }
-
-    try {
-      await retryWithBackoff(async () => {
-        const { error: updateError } = await supabase
-          .from('todos')
-          .update({ status, completed, updated_at })
-          .eq('id', id);
-        if (updateError) throw updateError;
-      });
-
-      if (oldTodo) {
-        // Log activity
-        if (status === 'done' && oldTodo.status !== 'done') {
-          logActivity({
-            action: 'task_completed',
-            userName,
-            todoId: id,
-            todoText: oldTodo.text,
-          });
-          announce(`Task marked as complete: ${oldTodo.text}`);
-        } else if (oldTodo.status === 'done' && status !== 'done') {
-          logActivity({
-            action: 'task_reopened',
-            userName,
-            todoId: id,
-            todoText: oldTodo.text,
-          });
-          announce(`Task reopened: ${oldTodo.text}`);
-        } else {
-          logActivity({
-            action: 'status_changed',
-            userName,
-            todoId: id,
-            todoText: oldTodo.text,
-            details: { from: oldTodo.status, to: status },
-          });
-          announce(`Task status changed to ${status}: ${oldTodo.text}`);
-        }
-      }
-    } catch (error) {
-      logger.error('Error updating status', error, { component: 'useTodoOperations' });
-      if (oldTodo) {
-        updateTodoInStore(id, oldTodo);
-      }
-    }
-  }, [activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration]);
-
-  /**
    * Create next recurring task after completion
    */
   const createNextRecurrence = useCallback(async (completedTodo: Todo) => {
@@ -482,6 +425,94 @@ export function useTodoOperations({
   }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore]);
 
   /**
+   * Update task status with celebration for completions
+   */
+  const updateStatus = useCallback(async (id: string, status: TodoStatus) => {
+    // Use store.getState() to avoid stale closure over todos
+    const currentTodos = useTodoStore.getState().todos;
+    const oldTodo = currentTodos.find((t) => t.id === id);
+    const completed = status === 'done';
+    const updated_at = new Date().toISOString();
+
+    // Optimistic update
+    updateTodoInStore(id, { status, completed, updated_at });
+
+    if (status === 'done' && oldTodo && !oldTodo.completed) {
+      const celebrationData = checkAllTodayComplete(currentTodos, id, oldTodo, activityLog, userName, updated_at);
+      if (celebrationData) {
+        triggerEnhancedCelebration(celebrationData);
+      }
+
+      // Always show lightweight inline celebration (debounced)
+      const now = Date.now();
+      if (now - lastCelebrationRef.current > 500) {
+        triggerCelebration(oldTodo.text);
+        lastCelebrationRef.current = now;
+      }
+
+      // Handle recurring tasks
+      if (oldTodo.recurrence) {
+        createNextRecurrence(oldTodo);
+      }
+
+      // Send notification if task was assigned by someone else
+      if (oldTodo.created_by && oldTodo.created_by !== userName) {
+        sendTaskCompletionNotification({
+          taskId: id,
+          taskText: oldTodo.text,
+          completedBy: userName,
+          assignedBy: oldTodo.created_by,
+        });
+      }
+    }
+
+    try {
+      await retryWithBackoff(async () => {
+        const { error: updateError } = await supabase
+          .from('todos')
+          .update({ status, completed, updated_at })
+          .eq('id', id);
+        if (updateError) throw updateError;
+      });
+
+      if (oldTodo) {
+        // Log activity
+        if (status === 'done' && oldTodo.status !== 'done') {
+          logActivity({
+            action: 'task_completed',
+            userName,
+            todoId: id,
+            todoText: oldTodo.text,
+          });
+          announce(`Task marked as complete: ${oldTodo.text}`);
+        } else if (oldTodo.status === 'done' && status !== 'done') {
+          logActivity({
+            action: 'task_reopened',
+            userName,
+            todoId: id,
+            todoText: oldTodo.text,
+          });
+          announce(`Task reopened: ${oldTodo.text}`);
+        } else {
+          logActivity({
+            action: 'status_changed',
+            userName,
+            todoId: id,
+            todoText: oldTodo.text,
+            details: { from: oldTodo.status, to: status },
+          });
+          announce(`Task status changed to ${status}: ${oldTodo.text}`);
+        }
+      }
+    } catch (error) {
+      logger.error('Error updating status', error, { component: 'useTodoOperations' });
+      if (oldTodo) {
+        updateTodoInStore(id, oldTodo);
+      }
+    }
+  }, [activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration, createNextRecurrence]);
+
+  /**
    * Toggle todo completion
    */
   const toggleTodo = useCallback(async (id: string, completed: boolean) => {
@@ -494,28 +525,17 @@ export function useTodoOperations({
     updateTodoInStore(id, { completed, status: newStatus, updated_at });
 
     if (completed && todoItem) {
-      const streakCount = calculateCompletionStreak(activityLog, userName) + 1;
-      const nextTasks = getNextSuggestedTasks(currentTodos, userName, id);
-      const encouragementMessage = getEncouragementMessage(streakCount);
-
-      // Check if all tasks due today are now complete (including the one we just completed)
-      const todayTasks = currentTodos.filter(t => t.due_date && isToday(new Date(t.due_date)));
-      const incompleteTodayTasks = todayTasks.filter(t => !t.completed && t.id !== id);
-      const allTodayDone = todayTasks.length > 0 && incompleteTodayTasks.length === 0;
-
-      if (allTodayDone) {
-        // Full celebration modal only when ALL today's tasks are done
-        const updatedTodo = { ...todoItem, completed: true, updated_at };
-        triggerEnhancedCelebration({
-          completedTask: updatedTodo,
-          nextTasks,
-          streakCount,
-          encouragementMessage,
-        });
+      const celebrationData = checkAllTodayComplete(currentTodos, id, todoItem, activityLog, userName, updated_at);
+      if (celebrationData) {
+        triggerEnhancedCelebration(celebrationData);
       }
 
-      // Always show lightweight inline celebration
-      triggerCelebration(todoItem.text);
+      // Always show lightweight inline celebration (debounced)
+      const now = Date.now();
+      if (now - lastCelebrationRef.current > 500) {
+        triggerCelebration(todoItem.text);
+        lastCelebrationRef.current = now;
+      }
 
       if (todoItem.recurrence) {
         createNextRecurrence(todoItem);

@@ -10,9 +10,7 @@
 import { Todo } from '@/types/todo';
 import { Check } from 'lucide-react';
 import { TYPOGRAPHY, SPACING, RADIUS, ICON_SIZE } from '@/lib/design-tokens';
-import { haptics } from '@/lib/haptics';
 import { useState, useCallback, useRef } from 'react';
-import { useAnnouncementContext } from '@/components/LiveRegion';
 
 interface TaskCardHeaderProps {
   todo: Todo;
@@ -30,7 +28,6 @@ export function TaskCardHeader({
   onTitleClick,
 }: TaskCardHeaderProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const { announce } = useAnnouncementContext();
   const checkboxRef = useRef<HTMLButtonElement>(null);
 
   const moveFocusToNextTask = useCallback(() => {
@@ -48,24 +45,42 @@ export function TaskCardHeader({
     const allCards = Array.from(container.querySelectorAll('[data-task-id]'));
     const currentIndex = allCards.indexOf(taskCard);
 
-    // After React re-renders, try to focus the next task's checkbox
-    requestAnimationFrame(() => {
-      // Look for the next task card's checkbox
-      const remainingCards = container.querySelectorAll('[data-task-id]');
-      const nextCheckbox = remainingCards.length > 0
-        ? remainingCards[Math.min(currentIndex, remainingCards.length - 1)]?.querySelector<HTMLButtonElement>('button[aria-pressed]')
-        : null;
+    // Wait for Framer Motion exit animation (~150ms) to remove the completed card from DOM
+    setTimeout(() => {
+      // Use double rAF to ensure React has re-rendered and the paint cycle is complete
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const remainingCards = container.querySelectorAll('[data-task-id]');
+          const nextCheckbox = remainingCards.length > 0
+            ? remainingCards[Math.min(currentIndex, remainingCards.length - 1)]?.querySelector<HTMLButtonElement>('button[data-completion-checkbox]')
+            : null;
 
-      if (nextCheckbox) {
-        nextCheckbox.focus();
-      } else {
-        // No more tasks - focus the add task input
-        const addTaskInput = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="task"]');
-        if (addTaskInput) {
-          addTaskInput.focus();
-        }
-      }
-    });
+          if (nextCheckbox) {
+            nextCheckbox.focus();
+          } else {
+            // Fallback chain: try "New Task" button, then main heading, then task list container
+            const newTaskButton = document.querySelector<HTMLElement>('button[data-new-task]');
+            if (newTaskButton) {
+              newTaskButton.focus();
+              return;
+            }
+
+            const mainHeading = document.querySelector<HTMLElement>('h1, [role="heading"]');
+            if (mainHeading) {
+              mainHeading.setAttribute('tabindex', '-1');
+              mainHeading.focus();
+              return;
+            }
+
+            const taskListContainer = container.closest('[role="list"]') || container;
+            if (taskListContainer instanceof HTMLElement) {
+              taskListContainer.setAttribute('tabindex', '-1');
+              taskListContainer.focus();
+            }
+          }
+        });
+      });
+    }, 200);
   }, []);
 
   const titleStyle =
@@ -88,15 +103,8 @@ export function TaskCardHeader({
           ref={checkboxRef}
           onClick={(e) => {
             e.stopPropagation();
-            haptics.medium();
             const isCompleting = !todo.completed;
             onToggleComplete(todo.id);
-            announce(
-              isCompleting
-                ? `Task completed: ${todo.text}`
-                : `Task reopened: ${todo.text}`,
-              'assertive'
-            );
             if (isCompleting) {
               moveFocusToNextTask();
             }
@@ -109,12 +117,13 @@ export function TaskCardHeader({
           aria-label={`${todo.completed ? 'Mark as incomplete' : 'Mark as complete'}: ${todo.text || 'task'}`}
           type="button"
           aria-pressed={todo.completed}
+          data-completion-checkbox
         >
           <span
             className={`
               flex items-center justify-center
               border-2
-              transition-[background-color,border-color,transform] duration-100 ease-out
+              transition-[background-color,border-color,transform] duration-100
               group-hover:scale-105 group-active:scale-95
               ${
                 todo.completed

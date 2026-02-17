@@ -42,7 +42,6 @@ import { useShouldUseSections } from './TaskSections';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAgency } from '@/contexts/AgencyContext';
 import { logActivity } from '@/lib/activityLogger';
-import LiveRegion from './LiveRegion';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { ContextualErrorMessages } from '@/lib/errorMessages';
@@ -743,8 +742,6 @@ export default function TodoList({
   return (
     <PullToRefresh onRefresh={state.refreshTodos}>
       <div className="min-h-screen transition-colors bg-[var(--background)]">
-        <LiveRegion message={state.announcement} />
-
         <TodoListAppBarContent
           viewMode={state.viewMode}
           setViewMode={state.setViewMode}

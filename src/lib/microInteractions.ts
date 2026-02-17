@@ -330,7 +330,7 @@ export const wordVariants: Variants = {
  * Trigger haptic feedback (mobile only)
  */
 export function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'medium') {
-  if ('vibrate' in navigator) {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
     const patterns = {
       light: [10],
       medium: [20],

@@ -15,7 +15,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTodoStore } from '@/store/todoStore';
 import { useTodoData, useFilters, useBulkActions, useTodoModals, useEscapeKey } from '@/hooks';
 import { ViewMode, QuickFilter, AuthUser } from '@/types/todo';
-import { useAnnouncement } from '@/components/LiveRegion';
+import { useAnnouncementContext } from '@/components/LiveRegion';
 
 interface UseTodoListStateProps {
   currentUser: AuthUser;
@@ -121,8 +121,8 @@ export function useTodoListState({
   // Modal state management
   const modalState = useTodoModals();
 
-  // Screen reader announcements
-  const { announcement, announce } = useAnnouncement();
+  // Screen reader announcements (uses global AnnouncementProvider)
+  const { announce } = useAnnouncementContext();
 
   // Close "More" dropdown on Escape key
   useEscapeKey(() => setShowMoreDropdown(false), { enabled: showMoreDropdown });
@@ -274,7 +274,6 @@ export function useTodoListState({
     modalState,
 
     // Accessibility
-    announcement,
     announce,
   };
 }
