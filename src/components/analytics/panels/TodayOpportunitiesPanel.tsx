@@ -279,12 +279,133 @@ export function TodayOpportunitiesPanel({ onNavigateToAllOpportunities, onTaskCl
     return `mailto:${encodeURIComponent(opp.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
-  // Loading state
+  // Loading state — skeleton cards that match real opportunity card shape
   if (loading) {
     return (
-      <div className="glass-card-elevated p-12 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-400"></div>
-        <span className="ml-4 text-white/60">Loading today's priorities...</span>
+      <div className="space-y-6">
+        {/* Hero Header — real content, not skeleton */}
+        <div className="relative overflow-hidden">
+          <div className="glass-card-elevated p-8 relative">
+            <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full bg-rose-500/10 blur-3xl animate-pulse" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-amber-500/10 blur-3xl animate-pulse delay-1000" />
+            <div className="relative z-10">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-rose-500/20 to-amber-500/20 border border-rose-500/30">
+                    <Target className="w-6 h-6 text-rose-400" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">Today&apos;s Top Opportunities</h1>
+                    <p className="text-white/60">
+                      Policies renewing TODAY &mdash; {new Date().toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500/20 text-sky-400/40 border border-sky-500/30">
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton summary stats */}
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { color: 'rose', icon: <Sparkles className="w-4 h-4 text-rose-400/40" />, label: 'Renewing TODAY' },
+            { color: 'amber', icon: <TrendingUp className="w-4 h-4 text-amber-400/40" />, label: 'Next 7 Days' },
+            { color: 'sky',   icon: <DollarSign className="w-4 h-4 text-sky-400/40" />,  label: 'Next 30 Days' },
+          ].map(({ color, icon, label }) => (
+            <div
+              key={label}
+              className={`glass-card p-4 bg-gradient-to-br from-${color}-500/10 to-${color}-500/5 border border-${color}-500/20 text-center lg:text-left`}
+            >
+              <div className="flex items-center gap-2 justify-center lg:justify-start mb-2">
+                {icon}
+                <span className="text-xs text-white/30">{label}</span>
+              </div>
+              <div className="h-8 w-12 bg-white/10 rounded animate-pulse" />
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton opportunity cards */}
+        <div className="space-y-4">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="glass-card-elevated p-6 bg-gradient-to-br from-white/5 to-transparent border border-white/10"
+            >
+              {/* Card header row: name + priority badge + TODAY badge | premium */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1 min-w-0 pr-4">
+                  {/* Name + badges row */}
+                  <div className="flex items-center gap-3 mb-3 flex-wrap">
+                    {/* Customer name */}
+                    <div className="h-6 bg-white/10 rounded animate-pulse w-40" />
+                    {/* Priority badge pill */}
+                    <div className="h-5 bg-white/10 rounded-full animate-pulse w-20" />
+                    {/* TODAY badge pill */}
+                    <div className="h-5 bg-rose-500/20 rounded-full animate-pulse w-28" />
+                  </div>
+                  {/* Current → Recommended products line */}
+                  <div className="h-4 bg-white/10 rounded animate-pulse w-56 mb-2" />
+                  {/* Segment line */}
+                  <div className="h-3 bg-white/10 rounded animate-pulse w-32" />
+                </div>
+
+                {/* Premium values (right side) */}
+                <div className="text-right shrink-0">
+                  <div className="h-8 bg-white/10 rounded animate-pulse w-24 mb-1" />
+                  <div className="h-3 bg-white/10 rounded animate-pulse w-20 mb-1" />
+                  <div className="h-3 bg-white/10 rounded animate-pulse w-16" />
+                </div>
+              </div>
+
+              {/* Talking points box */}
+              <div className="glass-card p-4 mb-4 bg-sky-500/10 border border-sky-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-sky-400/40" />
+                  <div className="h-4 bg-white/10 rounded animate-pulse w-28" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-white/10 rounded animate-pulse w-full" />
+                  <div className="h-3 bg-white/10 rounded animate-pulse w-5/6" />
+                  <div className="h-3 bg-white/10 rounded animate-pulse w-4/6" />
+                </div>
+              </div>
+
+              {/* Action buttons area */}
+              <div className="space-y-3">
+                {/* Primary Create Task button */}
+                <div className="h-11 bg-white/10 rounded-lg animate-pulse w-full" />
+
+                {/* Call + Email buttons row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="h-11 bg-emerald-500/10 border border-emerald-500/20 rounded-lg animate-pulse" />
+                  <div className="h-11 bg-sky-500/10 border border-sky-500/20 rounded-lg animate-pulse" />
+                </div>
+
+                {/* Log Contact Outcome collapsed button */}
+                <div className="glass-card overflow-hidden border border-white/10">
+                  <div className="flex items-center justify-between px-4 py-3 bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-white/20" />
+                      <div className="h-4 bg-white/10 rounded animate-pulse w-36" />
+                    </div>
+                    <ChevronDown className="h-5 w-5 text-white/20" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
