@@ -25,7 +25,6 @@ export function useBulkActions(userName: string) {
     setShowBulkActions,
     updateTodo: updateTodoInStore,
     deleteTodo: deleteTodoFromStore,
-    addTodo: addTodoToStore,
     setTodos,
   } = useTodoStore();
 
@@ -370,77 +369,99 @@ export function useBulkActions(userName: string) {
 
   // Bulk reschedule - set new due date for selected tasks
   const bulkReschedule = useCallback(async (newDueDate: string) => {
-    const idsToUpdate = Array.from(selectedTodos);
-    const originalTodos = todos.filter(t => selectedTodos.has(t.id));
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
-    // Optimistic update
-    idsToUpdate.forEach(id => {
-      updateTodoInStore(id, { due_date: newDueDate });
-    });
-    clearSelection();
-    setShowBulkActions(false);
+    try {
+      const idsToUpdate = Array.from(selectedTodos);
+      const originalTodos = todos.filter(t => selectedTodos.has(t.id));
 
-    const { error } = await supabase
-      .from('todos')
-      .update({ due_date: newDueDate })
-      .in('id', idsToUpdate);
-
-    if (error) {
-      logger.error('Error bulk rescheduling', error, { component: 'useBulkActions' });
-      // Rollback
-      originalTodos.forEach(todo => {
-        updateTodoInStore(todo.id, { due_date: todo.due_date });
+      // Optimistic update
+      idsToUpdate.forEach(id => {
+        updateTodoInStore(id, { due_date: newDueDate });
       });
-    } else {
-      // Log activity
-      originalTodos.forEach(todo => {
-        logActivity({
-          action: 'due_date_changed',
-          userName,
-          todoId: todo.id,
-          todoText: todo.text,
-          details: { from: todo.due_date || null, to: newDueDate, bulk_action: true },
+      clearSelection();
+      setShowBulkActions(false);
+
+      try {
+        await retryWithBackoff(async () => {
+          const { error } = await supabase
+            .from('todos')
+            .update({ due_date: newDueDate })
+            .in('id', idsToUpdate);
+          if (error) throw error;
         });
-      });
+
+        // Log activity
+        originalTodos.forEach(todo => {
+          logActivity({
+            action: 'due_date_changed',
+            userName,
+            todoId: todo.id,
+            todoText: todo.text,
+            details: { from: todo.due_date || null, to: newDueDate, bulk_action: true },
+          });
+        });
+      } catch (error) {
+        logger.error('Error bulk rescheduling', error, { component: 'useBulkActions' });
+        // Rollback
+        originalTodos.forEach(todo => {
+          updateTodoInStore(todo.id, { due_date: todo.due_date });
+        });
+        toast.error('Failed to reschedule tasks', { description: 'Please try again.' });
+      }
+    } finally {
+      isProcessingRef.current = false;
     }
-  }, [selectedTodos, todos, userName, updateTodoInStore, clearSelection, setShowBulkActions]);
+  }, [selectedTodos, todos, userName, updateTodoInStore, clearSelection, setShowBulkActions, toast]);
 
   // Bulk set priority
   const bulkSetPriority = useCallback(async (priority: TodoPriority) => {
-    const idsToUpdate = Array.from(selectedTodos);
-    const originalTodos = todos.filter(t => selectedTodos.has(t.id));
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
-    // Optimistic update
-    idsToUpdate.forEach(id => {
-      updateTodoInStore(id, { priority });
-    });
-    clearSelection();
-    setShowBulkActions(false);
+    try {
+      const idsToUpdate = Array.from(selectedTodos);
+      const originalTodos = todos.filter(t => selectedTodos.has(t.id));
 
-    const { error } = await supabase
-      .from('todos')
-      .update({ priority })
-      .in('id', idsToUpdate);
-
-    if (error) {
-      logger.error('Error bulk setting priority', error, { component: 'useBulkActions' });
-      // Rollback
-      originalTodos.forEach(todo => {
-        updateTodoInStore(todo.id, { priority: todo.priority });
+      // Optimistic update
+      idsToUpdate.forEach(id => {
+        updateTodoInStore(id, { priority });
       });
-    } else {
-      // Log activity
-      originalTodos.forEach(todo => {
-        logActivity({
-          action: 'priority_changed',
-          userName,
-          todoId: todo.id,
-          todoText: todo.text,
-          details: { from: todo.priority, to: priority, bulk_action: true },
+      clearSelection();
+      setShowBulkActions(false);
+
+      try {
+        await retryWithBackoff(async () => {
+          const { error } = await supabase
+            .from('todos')
+            .update({ priority })
+            .in('id', idsToUpdate);
+          if (error) throw error;
         });
-      });
+
+        // Log activity
+        originalTodos.forEach(todo => {
+          logActivity({
+            action: 'priority_changed',
+            userName,
+            todoId: todo.id,
+            todoText: todo.text,
+            details: { from: todo.priority, to: priority, bulk_action: true },
+          });
+        });
+      } catch (error) {
+        logger.error('Error bulk setting priority', error, { component: 'useBulkActions' });
+        // Rollback
+        originalTodos.forEach(todo => {
+          updateTodoInStore(todo.id, { priority: todo.priority });
+        });
+        toast.error('Failed to set priority', { description: 'Please try again.' });
+      }
+    } finally {
+      isProcessingRef.current = false;
     }
-  }, [selectedTodos, todos, userName, updateTodoInStore, clearSelection, setShowBulkActions]);
+  }, [selectedTodos, todos, userName, updateTodoInStore, clearSelection, setShowBulkActions, toast]);
 
   // Merge selected todos into one
   const mergeTodos = useCallback(async (primaryTodoId: string) => {
@@ -485,7 +506,16 @@ export function useBulkActions(userName: string) {
           return priorityRank[t.priority || 'medium'] < priorityRank[highest] ? (t.priority || 'medium') : highest;
         }, primaryTodo.priority || 'medium');
 
-      // Update primary todo in database
+      // Save the original primary todo state for rollback
+      const originalPrimaryState = {
+        text: primaryTodo.text,
+        notes: primaryTodo.notes,
+        attachments: primaryTodo.attachments,
+        subtasks: primaryTodo.subtasks,
+        priority: primaryTodo.priority,
+      };
+
+      // Step 1: Update primary todo in database
       const { error: updateError } = await supabase
         .from('todos')
         .update({
@@ -499,10 +529,11 @@ export function useBulkActions(userName: string) {
 
       if (updateError) {
         logger.error('Error updating merged todo', updateError, { component: 'useBulkActions' });
+        toast.error('Failed to merge tasks', { description: 'Could not update the primary task.' });
         return false;
       }
 
-      // Delete secondary todos
+      // Step 2: Delete secondary todos
       const { error: deleteError } = await supabase
         .from('todos')
         .delete()
@@ -510,6 +541,16 @@ export function useBulkActions(userName: string) {
 
       if (deleteError) {
         logger.error('Error deleting merged todos', deleteError, { component: 'useBulkActions' });
+        // Rollback step 1: restore the primary todo to its original state in the database
+        const { error: rollbackError } = await supabase
+          .from('todos')
+          .update(originalPrimaryState)
+          .eq('id', primaryTodoId);
+
+        if (rollbackError) {
+          logger.error('Failed to rollback primary todo after merge failure', rollbackError, { component: 'useBulkActions' });
+        }
+        toast.error('Failed to merge tasks', { description: 'Could not delete secondary tasks. Changes have been rolled back.' });
         return false;
       }
 
@@ -540,12 +581,14 @@ export function useBulkActions(userName: string) {
       clearSelection();
       setShowBulkActions(false);
 
+      toast.success(`${secondaryTodos.length + 1} tasks merged`, { duration: 2000 });
       return true;
     } catch (error) {
       logger.error('Error during merge', error, { component: 'useBulkActions' });
+      toast.error('Failed to merge tasks', { description: 'An unexpected error occurred.' });
       return false;
     }
-  }, [selectedTodos, todos, userName, updateTodoInStore, deleteTodoFromStore, clearSelection, setShowBulkActions]);
+  }, [selectedTodos, todos, userName, updateTodoInStore, deleteTodoFromStore, clearSelection, setShowBulkActions, toast]);
 
   // Helper to get date offset
   const getDateOffset = useCallback((days: number) => {
@@ -571,6 +614,7 @@ export function useBulkActions(userName: string) {
     bulkDelete,
     bulkAssign,
     bulkComplete,
+    cancelBulkComplete,
     bulkReschedule,
     bulkSetPriority,
     mergeTodos,

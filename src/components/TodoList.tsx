@@ -41,6 +41,7 @@ import { TaskDetailModal } from './task-detail';
 import { useShouldUseSections } from './TaskSections';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAgency } from '@/contexts/AgencyContext';
+import { useToast } from '@/components/ui/Toast';
 import { logActivity } from '@/lib/activityLogger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskReassignmentNotification } from '@/lib/taskNotifications';
@@ -92,6 +93,7 @@ export default function TodoList({
 }: TodoListProps) {
   const userName = currentUser.name;
   const { currentAgencyId } = useAgency();
+  const toast = useToast();
   const canViewArchive = usePermission('can_view_archive');
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
   const canManageTemplates = usePermission('can_manage_templates');
@@ -161,6 +163,7 @@ export default function TodoList({
     selectAll: state.selectAll,
     openShortcuts: state.modalState.openShortcuts,
     onToggleComplete: operations.toggleTodo,
+    showToast: (message: string) => toast.success(message),
   });
 
   // Determine if sections should be used

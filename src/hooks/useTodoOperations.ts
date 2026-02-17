@@ -25,6 +25,7 @@ import { retryWithBackoff } from '@/lib/retryWithBackoff';
 import { calculateCompletionStreak, getNextSuggestedTasks, getEncouragementMessage } from '@/lib/taskSuggestions';
 import { ActivityLogEntry } from '@/types/todo';
 import { useTodoStore } from '@/store/todoStore';
+import { useToast } from '@/components/ui/Toast';
 import { isToday } from 'date-fns';
 
 /**
@@ -95,6 +96,8 @@ export function useTodoOperations({
   triggerEnhancedCelebration,
 }: UseTodoOperationsProps) {
 
+  const toast = useToast();
+
   // Debounce celebration: only fire if 500ms+ since last one
   const lastCelebrationRef = useRef(0);
 
@@ -138,7 +141,7 @@ export function useTodoOperations({
     // Optimistic update
     addTodoToStore(newTodo);
 
-    const insertData: Record<string, unknown> = {
+    const upsertData: Record<string, unknown> = {
       id: newTodo.id,
       text: newTodo.text,
       completed: newTodo.completed,
@@ -146,31 +149,31 @@ export function useTodoOperations({
       created_by: newTodo.created_by,
     };
 
-    if (newTodo.status && newTodo.status !== 'todo') insertData.status = newTodo.status;
-    if (newTodo.priority && newTodo.priority !== 'medium') insertData.priority = newTodo.priority;
-    if (newTodo.due_date) insertData.due_date = newTodo.due_date;
-    if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
-    if (newTodo.subtasks && newTodo.subtasks.length > 0) insertData.subtasks = newTodo.subtasks;
-    if (newTodo.transcription) insertData.transcription = newTodo.transcription;
+    if (newTodo.status && newTodo.status !== 'todo') upsertData.status = newTodo.status;
+    if (newTodo.priority && newTodo.priority !== 'medium') upsertData.priority = newTodo.priority;
+    if (newTodo.due_date) upsertData.due_date = newTodo.due_date;
+    if (newTodo.assigned_to) upsertData.assigned_to = newTodo.assigned_to;
+    if (newTodo.subtasks && newTodo.subtasks.length > 0) upsertData.subtasks = newTodo.subtasks;
+    if (newTodo.transcription) upsertData.transcription = newTodo.transcription;
     if (newTodo.reminder_at) {
-      insertData.reminder_at = newTodo.reminder_at;
-      insertData.reminder_sent = false;
+      upsertData.reminder_at = newTodo.reminder_at;
+      upsertData.reminder_sent = false;
     }
-    if (newTodo.notes) insertData.notes = newTodo.notes;
-    if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
-    if (newTodo.customer_id) insertData.customer_id = newTodo.customer_id;
-    if (newTodo.customer_name) insertData.customer_name = newTodo.customer_name;
-    if (newTodo.customer_segment) insertData.customer_segment = newTodo.customer_segment;
+    if (newTodo.notes) upsertData.notes = newTodo.notes;
+    if (newTodo.recurrence) upsertData.recurrence = newTodo.recurrence;
+    if (newTodo.customer_id) upsertData.customer_id = newTodo.customer_id;
+    if (newTodo.customer_name) upsertData.customer_name = newTodo.customer_name;
+    if (newTodo.customer_segment) upsertData.customer_segment = newTodo.customer_segment;
 
     // Set agency_id for multi-tenancy
     if (currentAgencyId) {
-      insertData.agency_id = currentAgencyId;
+      upsertData.agency_id = currentAgencyId;
     }
 
     try {
       await retryWithBackoff(async () => {
-        const { error: insertError } = await supabase.from('todos').insert([insertData]);
-        if (insertError) throw insertError;
+        const { error: upsertError } = await supabase.from('todos').upsert([upsertData], { onConflict: 'id' });
+        if (upsertError) throw upsertError;
       });
 
       // Log activity
@@ -299,7 +302,7 @@ export function useTodoOperations({
     // Optimistic update
     addTodoToStore(newTodo);
 
-    const insertData: Record<string, unknown> = {
+    const upsertData: Record<string, unknown> = {
       id: newTodo.id,
       text: newTodo.text,
       completed: false,
@@ -307,20 +310,20 @@ export function useTodoOperations({
       created_by: newTodo.created_by,
     };
 
-    if (newTodo.priority && newTodo.priority !== 'medium') insertData.priority = newTodo.priority;
-    if (newTodo.due_date) insertData.due_date = newTodo.due_date;
-    if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
-    if (newTodo.notes) insertData.notes = newTodo.notes;
-    if (newTodo.recurrence) insertData.recurrence = newTodo.recurrence;
+    if (newTodo.priority && newTodo.priority !== 'medium') upsertData.priority = newTodo.priority;
+    if (newTodo.due_date) upsertData.due_date = newTodo.due_date;
+    if (newTodo.assigned_to) upsertData.assigned_to = newTodo.assigned_to;
+    if (newTodo.notes) upsertData.notes = newTodo.notes;
+    if (newTodo.recurrence) upsertData.recurrence = newTodo.recurrence;
 
     if (currentAgencyId) {
-      insertData.agency_id = currentAgencyId;
+      upsertData.agency_id = currentAgencyId;
     }
 
     try {
       await retryWithBackoff(async () => {
-        const { error: insertError } = await supabase.from('todos').insert([insertData]);
-        if (insertError) throw insertError;
+        const { error: upsertError } = await supabase.from('todos').upsert([upsertData], { onConflict: 'id' });
+        if (upsertError) throw upsertError;
       });
 
       // Send notification if duplicated task is assigned to someone else
@@ -350,8 +353,11 @@ export function useTodoOperations({
     const currentDue = new Date(completedTodo.due_date);
 
     if (isNaN(currentDue.getTime())) {
-      console.error('Invalid due date in recurring task:', completedTodo.id, completedTodo.due_date);
-      alert('Could not create next recurring task: Invalid due date format.');
+      logger.error('Invalid due date in recurring task', null, {
+        component: 'useTodoOperations',
+        metadata: { todoId: completedTodo.id, dueDate: completedTodo.due_date },
+      });
+      toast.error('Could not create next recurring task: Invalid due date format.');
       return;
     }
 
@@ -380,7 +386,7 @@ export function useTodoOperations({
 
     addTodoToStore(newTodo);
 
-    const insertData: Record<string, unknown> = {
+    const upsertData: Record<string, unknown> = {
       id: newTodo.id,
       text: newTodo.text,
       completed: false,
@@ -391,18 +397,18 @@ export function useTodoOperations({
       recurrence: newTodo.recurrence,
     };
 
-    if (newTodo.priority && newTodo.priority !== 'medium') insertData.priority = newTodo.priority;
-    if (newTodo.assigned_to) insertData.assigned_to = newTodo.assigned_to;
-    if (newTodo.notes) insertData.notes = newTodo.notes;
+    if (newTodo.priority && newTodo.priority !== 'medium') upsertData.priority = newTodo.priority;
+    if (newTodo.assigned_to) upsertData.assigned_to = newTodo.assigned_to;
+    if (newTodo.notes) upsertData.notes = newTodo.notes;
 
     if (currentAgencyId) {
-      insertData.agency_id = currentAgencyId;
+      upsertData.agency_id = currentAgencyId;
     }
 
     try {
       await retryWithBackoff(async () => {
-        const { error: insertError } = await supabase.from('todos').insert([insertData]);
-        if (insertError) throw insertError;
+        const { error: upsertError } = await supabase.from('todos').upsert([upsertData], { onConflict: 'id' });
+        if (upsertError) throw upsertError;
       });
 
       // Send notification for recurring task if assigned to someone else
@@ -418,11 +424,11 @@ export function useTodoOperations({
         });
       }
     } catch (error) {
-      console.error('Failed to create next recurring task:', error);
+      logger.error('Failed to create next recurring task', error, { component: 'useTodoOperations' });
       deleteTodoFromStore(newTodo.id);
-      alert('Failed to create next recurring task. Please try again.');
+      toast.error('Failed to create next recurring task. Please try again.');
     }
-  }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore]);
+  }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore, toast]);
 
   /**
    * Update task status with celebration for completions
@@ -434,37 +440,8 @@ export function useTodoOperations({
     const completed = status === 'done';
     const updated_at = new Date().toISOString();
 
-    // Optimistic update
+    // Optimistic update (UI only)
     updateTodoInStore(id, { status, completed, updated_at });
-
-    if (status === 'done' && oldTodo && !oldTodo.completed) {
-      const celebrationData = checkAllTodayComplete(currentTodos, id, oldTodo, activityLog, userName, updated_at);
-      if (celebrationData) {
-        triggerEnhancedCelebration(celebrationData);
-      }
-
-      // Always show lightweight inline celebration (debounced)
-      const now = Date.now();
-      if (now - lastCelebrationRef.current > 500) {
-        triggerCelebration(oldTodo.text);
-        lastCelebrationRef.current = now;
-      }
-
-      // Handle recurring tasks
-      if (oldTodo.recurrence) {
-        createNextRecurrence(oldTodo);
-      }
-
-      // Send notification if task was assigned by someone else
-      if (oldTodo.created_by && oldTodo.created_by !== userName) {
-        sendTaskCompletionNotification({
-          taskId: id,
-          taskText: oldTodo.text,
-          completedBy: userName,
-          assignedBy: oldTodo.created_by,
-        });
-      }
-    }
 
     try {
       await retryWithBackoff(async () => {
@@ -474,6 +451,36 @@ export function useTodoOperations({
           .eq('id', id);
         if (updateError) throw updateError;
       });
+
+      // Side effects fire AFTER DB confirmation
+      if (status === 'done' && oldTodo && !oldTodo.completed) {
+        const celebrationData = checkAllTodayComplete(currentTodos, id, oldTodo, activityLog, userName, updated_at);
+        if (celebrationData) {
+          triggerEnhancedCelebration(celebrationData);
+        }
+
+        // Always show lightweight inline celebration (debounced)
+        const now = Date.now();
+        if (now - lastCelebrationRef.current > 500) {
+          triggerCelebration(oldTodo.text);
+          lastCelebrationRef.current = now;
+        }
+
+        // Handle recurring tasks
+        if (oldTodo.recurrence) {
+          createNextRecurrence(oldTodo);
+        }
+
+        // Send notification if task was assigned by someone else
+        if (oldTodo.created_by && oldTodo.created_by !== userName) {
+          sendTaskCompletionNotification({
+            taskId: id,
+            taskText: oldTodo.text,
+            completedBy: userName,
+            assignedBy: oldTodo.created_by,
+          });
+        }
+      }
 
       if (oldTodo) {
         // Log activity
@@ -522,34 +529,8 @@ export function useTodoOperations({
     const updated_at = new Date().toISOString();
     const newStatus: TodoStatus = completed ? 'done' : 'todo';
 
+    // Optimistic update (UI only)
     updateTodoInStore(id, { completed, status: newStatus, updated_at });
-
-    if (completed && todoItem) {
-      const celebrationData = checkAllTodayComplete(currentTodos, id, todoItem, activityLog, userName, updated_at);
-      if (celebrationData) {
-        triggerEnhancedCelebration(celebrationData);
-      }
-
-      // Always show lightweight inline celebration (debounced)
-      const now = Date.now();
-      if (now - lastCelebrationRef.current > 500) {
-        triggerCelebration(todoItem.text);
-        lastCelebrationRef.current = now;
-      }
-
-      if (todoItem.recurrence) {
-        createNextRecurrence(todoItem);
-      }
-
-      if (todoItem.created_by && todoItem.created_by !== userName) {
-        sendTaskCompletionNotification({
-          taskId: id,
-          taskText: todoItem.text,
-          completedBy: userName,
-          assignedBy: todoItem.created_by,
-        });
-      }
-    }
 
     try {
       await retryWithBackoff(async () => {
@@ -559,6 +540,34 @@ export function useTodoOperations({
           .eq('id', id);
         if (error) throw error;
       });
+
+      // Side effects fire AFTER DB confirmation
+      if (completed && todoItem) {
+        const celebrationData = checkAllTodayComplete(currentTodos, id, todoItem, activityLog, userName, updated_at);
+        if (celebrationData) {
+          triggerEnhancedCelebration(celebrationData);
+        }
+
+        // Always show lightweight inline celebration (debounced)
+        const now = Date.now();
+        if (now - lastCelebrationRef.current > 500) {
+          triggerCelebration(todoItem.text);
+          lastCelebrationRef.current = now;
+        }
+
+        if (todoItem.recurrence) {
+          createNextRecurrence(todoItem);
+        }
+
+        if (todoItem.created_by && todoItem.created_by !== userName) {
+          sendTaskCompletionNotification({
+            taskId: id,
+            taskText: todoItem.text,
+            completedBy: userName,
+            assignedBy: todoItem.created_by,
+          });
+        }
+      }
 
       if (todoItem) {
         const action = completed ? 'task_completed' : 'task_reopened';

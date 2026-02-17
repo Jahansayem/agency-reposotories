@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Keyboard } from 'lucide-react';
-import { useEscapeKey, useFocusTrap } from '@/hooks';
+import { useFocusTrap } from '@/hooks';
 
 interface KeyboardShortcutsModalProps {
   show: boolean;
@@ -88,8 +88,7 @@ export default function KeyboardShortcutsModal({
   show,
   onClose,
 }: KeyboardShortcutsModalProps) {
-  // Handle Escape key to close modal
-  useEscapeKey(onClose, { enabled: show });
+  // Bug 10: Removed useEscapeKey — useFocusTrap already handles Escape
 
   // Focus trap for accessibility (WCAG 2.1 AA)
   const { containerRef } = useFocusTrap<HTMLDivElement>({
@@ -113,6 +112,9 @@ export default function KeyboardShortcutsModal({
         >
           <motion.div
             ref={containerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="keyboard-shortcuts-heading"
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
@@ -123,19 +125,20 @@ export default function KeyboardShortcutsModal({
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  'bg-slate-100'}`}>
-                  <Keyboard className={`w-4 h-4 ${'text-slate-600'}`} />
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--surface-3)]">
+                  <Keyboard className="w-4 h-4 text-[var(--text-muted)]" />
                 </div>
-                <h3 className={`text-lg font-semibold ${'text-slate-800'}`}>
+                <h3
+                  id="keyboard-shortcuts-heading"
+                  className="text-lg font-semibold text-[var(--foreground)]"
+                >
                   Keyboard Shortcuts
                 </h3>
               </div>
               <button
                 onClick={onClose}
                 aria-label="Close keyboard shortcuts"
-                className={`p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation ${
-                  'hover:bg-slate-100 text-slate-500'}`}
+                className="p-2 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation hover:bg-[var(--surface-3)] text-[var(--text-muted)]"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -145,31 +148,28 @@ export default function KeyboardShortcutsModal({
             <div className="p-4 max-h-[60vh] overflow-y-auto">
               {shortcutGroups.map((group, groupIndex) => (
                 <div key={group.title} className={groupIndex > 0 ? 'mt-5' : ''}>
-                  <h4 className={`text-xs font-semibold uppercase tracking-wider mb-3 ${
-                    'text-slate-500'}`}>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider mb-3 text-[var(--text-muted)]">
                     {group.title}
                   </h4>
                   <div className="space-y-2">
                     {group.shortcuts.map((shortcut) => (
                       <div
                         key={shortcut.description}
-                        className={`flex items-center justify-between py-2 px-3 rounded-lg ${
-                          'bg-slate-50'}`}
+                        className="flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--surface-2)]"
                       >
-                        <span className={`text-sm ${'text-slate-600'}`}>
+                        <span className="text-sm text-[var(--text-muted)]">
                           {shortcut.description}
                         </span>
                         <div className="flex items-center gap-1">
                           {shortcut.keys.map((key, keyIndex) => (
                             <span key={keyIndex}>
                               <kbd
-                                className={`px-2 py-1 text-xs font-medium rounded ${
-                                  'bg-[var(--surface)] text-slate-700 border border-[var(--border)] shadow-sm'}`}
+                                className="px-2 py-1 text-xs font-medium rounded bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] shadow-sm"
                               >
                                 {key}
                               </kbd>
                               {keyIndex < shortcut.keys.length - 1 && (
-                                <span className={`mx-1 text-xs ${'text-slate-400'}`}>+</span>
+                                <span className="mx-1 text-xs text-[var(--text-muted)]">+</span>
                               )}
                             </span>
                           ))}
@@ -182,11 +182,9 @@ export default function KeyboardShortcutsModal({
             </div>
 
             {/* Footer */}
-            <div className={`px-4 py-3 border-t ${
-              'border-slate-100 bg-slate-50'}`}>
-              <p className={`text-xs text-center ${'text-slate-500'}`}>
-                Press <kbd className={`px-1.5 py-0.5 rounded text-xs ${
-                  'bg-[var(--surface)] border border-[var(--border)]'}`}>?</kbd> anywhere to show this help
+            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-700 bg-[var(--surface-2)]">
+              <p className="text-xs text-center text-[var(--text-muted)]">
+                Press <kbd className="px-1.5 py-0.5 rounded text-xs bg-[var(--surface)] border border-[var(--border)]">?</kbd> anywhere to show this help
               </p>
             </div>
           </motion.div>

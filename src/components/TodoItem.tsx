@@ -139,15 +139,58 @@ function TodoItemComponent({
   }, []);
 
   const handleToggle = async () => {
-    if (!todo.completed) {
+    const isCompleting = !todo.completed;
+    if (isCompleting) {
       setCelebrating(true);
-      haptics.success();
     }
     setIsSaving(true);
     try {
       await onToggle(todo.id, !todo.completed);
     } finally {
       savingTimeoutRef.current = setTimeout(() => setIsSaving(false), 500);
+    }
+    // After completing a task, move focus to the next task's completion button
+    if (isCompleting) {
+      const currentItem = document.getElementById(`todo-${todo.id}`);
+      if (!currentItem) return;
+      const container = currentItem.parentElement;
+      if (!container) return;
+      const allItems = Array.from(container.querySelectorAll('[data-testid="todo-item"]'));
+      const currentIndex = allItems.indexOf(currentItem);
+
+      // Wait for exit animation, then use double rAF for React re-render
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const remainingItems = container.querySelectorAll('[data-testid="todo-item"]');
+            const nextItem = remainingItems.length > 0
+              ? remainingItems[Math.min(currentIndex, remainingItems.length - 1)]
+              : null;
+            const nextCheckbox = nextItem?.querySelector<HTMLButtonElement>('button[data-completion-checkbox]');
+
+            if (nextCheckbox) {
+              nextCheckbox.focus();
+            } else {
+              // Fallback chain: "New Task" button, main heading, then container
+              const newTaskButton = document.querySelector<HTMLElement>('button[data-new-task]');
+              if (newTaskButton) {
+                newTaskButton.focus();
+                return;
+              }
+              const mainHeading = document.querySelector<HTMLElement>('h1, [role="heading"]');
+              if (mainHeading) {
+                mainHeading.setAttribute('tabindex', '-1');
+                mainHeading.focus();
+                return;
+              }
+              if (container instanceof HTMLElement) {
+                container.setAttribute('tabindex', '-1');
+                container.focus();
+              }
+            }
+          });
+        });
+      }, 200);
     }
   };
 
@@ -290,6 +333,7 @@ function TodoItemComponent({
           whileHover={canEdit ? { scale: 1.1 } : undefined}
           whileTap={canEdit ? { scale: 0.95 } : undefined}
           transition={{ duration: DURATION.fast }}
+          data-completion-checkbox
         >
           <motion.span
             className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center ${
