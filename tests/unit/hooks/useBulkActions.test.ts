@@ -25,6 +25,37 @@ vi.mock('@/lib/supabaseClient', () => ({
   isSupabaseConfigured: () => true,
 }));
 
+// Mock Toast
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(() => 'toast-id'),
+    update: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}));
+
+// Mock haptics
+vi.mock('@/lib/haptics', () => ({
+  haptics: {
+    success: vi.fn(),
+    error: vi.fn(),
+    medium: vi.fn(),
+  },
+}));
+
+// Mock logger
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 // Mock activity logger
 vi.mock('@/lib/activityLogger', () => ({
   logActivity: vi.fn(),

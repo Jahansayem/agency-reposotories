@@ -235,7 +235,8 @@ export function useTodoActions({
    * Enhanced toggleComplete with recurrence and celebrations
    */
   const toggleComplete = useCallback(async (id: string): Promise<boolean> => {
-    const todo = todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const todo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!todo) return false;
 
     const wasCompleted = todo.completed;
@@ -266,7 +267,7 @@ export function useTodoActions({
     }
 
     return success;
-  }, [todos, baseToggleComplete, onCelebration, onEnhancedCelebration, createNextRecurrence]);
+  }, [baseToggleComplete, onCelebration, onEnhancedCelebration, createNextRecurrence]);
 
   /**
    * Enhanced updateTodo with announcements
