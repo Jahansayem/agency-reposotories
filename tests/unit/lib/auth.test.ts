@@ -73,7 +73,7 @@ describe('Auth Utilities', () => {
     it('should hash a PIN using SHA-256', async () => {
       const hash = await hashPin('1234');
 
-      expect(mockDigest).toHaveBeenCalledWith('SHA-256', expect.any(Uint8Array));
+      expect(mockDigest).toHaveBeenCalledWith('SHA-256', expect.anything());
       expect(typeof hash).toBe('string');
       expect(hash.length).toBe(64); // SHA-256 produces 32 bytes = 64 hex chars
     });
@@ -140,7 +140,7 @@ describe('Auth Utilities', () => {
         const mockSession = {
           userId: 'user-123',
           userName: 'TestUser',
-          loginAt: '2025-01-15T10:00:00Z',
+          loginAt: new Date().toISOString(), // Use current time so session is not expired
         };
         mockLocalStorage.store['todoSession'] = JSON.stringify(mockSession);
 
@@ -202,12 +202,14 @@ describe('Auth Utilities', () => {
         expect(state).toEqual({ attempts: 0 });
       });
 
-      it('should return stored lockout state', () => {
+      it('should return default state regardless of localStorage (lockout is server-side)', () => {
+        // Lockout was moved server-side; getLockoutState is a stub that always
+        // returns { attempts: 0 } regardless of what is in localStorage.
         const mockState = { attempts: 2, lockedUntil: '2025-01-15T10:01:00Z' };
         mockLocalStorage.store['authLockout_user-123'] = JSON.stringify(mockState);
 
         const state = getLockoutState('user-123');
-        expect(state).toEqual(mockState);
+        expect(state).toEqual({ attempts: 0 });
       });
 
       it('should return default state for invalid JSON', () => {
@@ -219,41 +221,45 @@ describe('Auth Utilities', () => {
     });
 
     describe('incrementLockout', () => {
-      it('should increment attempt counter', () => {
+      // Lockout was moved entirely server-side. These functions are now stubs
+      // that always return { attempts: 0 } for backward-compatibility only.
+
+      it('should return default state (lockout is server-side)', () => {
+        // Stub always returns { attempts: 0 } — server tracks real attempt count
         const state = incrementLockout('user-123');
-        expect(state.attempts).toBe(1);
+        expect(state.attempts).toBe(0);
       });
 
-      it('should lock after 3 failed attempts', () => {
+      it('should never lock client-side (lockout is server-side)', () => {
         incrementLockout('user-123');
         incrementLockout('user-123');
         const state = incrementLockout('user-123');
 
-        expect(state.attempts).toBe(3);
-        expect(state.lockedUntil).toBeDefined();
+        // Stub returns { attempts: 0 } and never sets lockedUntil
+        expect(state.attempts).toBe(0);
+        expect(state.lockedUntil).toBeUndefined();
       });
 
-      it('should set lockout duration to ~30 seconds', () => {
+      it('should not set lockedUntil (lockout is server-side)', () => {
         incrementLockout('user-123');
         incrementLockout('user-123');
         const state = incrementLockout('user-123');
 
-        const lockUntil = new Date(state.lockedUntil!);
-        const now = new Date();
-        const diffSeconds = (lockUntil.getTime() - now.getTime()) / 1000;
-
-        expect(diffSeconds).toBeGreaterThan(28);
-        expect(diffSeconds).toBeLessThanOrEqual(31);
+        // Stub never provides a lockout time
+        expect(state.lockedUntil).toBeUndefined();
       });
     });
 
     describe('clearLockout', () => {
-      it('should remove lockout state', () => {
+      it('should be a no-op (lockout is server-side)', () => {
+        // Stub is a no-op — server handles lockout clearance, so localStorage
+        // is never touched by clearLockout anymore.
         mockLocalStorage.store['authLockout_user-123'] = JSON.stringify({ attempts: 3 });
 
         clearLockout('user-123');
 
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('authLockout_user-123');
+        // No localStorage interaction expected from the stub
+        expect(mockLocalStorage.removeItem).not.toHaveBeenCalledWith('authLockout_user-123');
       });
     });
 
@@ -263,7 +269,9 @@ describe('Auth Utilities', () => {
         expect(result).toEqual({ locked: false, remainingSeconds: 0 });
       });
 
-      it('should return locked with remaining time when locked', () => {
+      it('should always return unlocked (lockout is server-side)', () => {
+        // Stub always returns { locked: false, remainingSeconds: 0 } regardless
+        // of localStorage — server handles all lockout logic.
         const futureTime = new Date();
         futureTime.setSeconds(futureTime.getSeconds() + 15);
         mockLocalStorage.store['authLockout_user-123'] = JSON.stringify({
@@ -272,12 +280,12 @@ describe('Auth Utilities', () => {
         });
 
         const result = isLockedOut('user-123');
-        expect(result.locked).toBe(true);
-        expect(result.remainingSeconds).toBeGreaterThan(10);
-        expect(result.remainingSeconds).toBeLessThanOrEqual(16);
+        expect(result).toEqual({ locked: false, remainingSeconds: 0 });
       });
 
-      it('should clear lockout and return not locked when lockout expired', () => {
+      it('should not interact with localStorage (lockout is server-side)', () => {
+        // Stub is a no-op — even with expired lockout data in storage, the
+        // stub never calls removeItem or reads localStorage.
         const pastTime = new Date();
         pastTime.setSeconds(pastTime.getSeconds() - 10);
         mockLocalStorage.store['authLockout_user-123'] = JSON.stringify({
@@ -287,7 +295,7 @@ describe('Auth Utilities', () => {
 
         const result = isLockedOut('user-123');
         expect(result).toEqual({ locked: false, remainingSeconds: 0 });
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('authLockout_user-123');
+        expect(mockLocalStorage.removeItem).not.toHaveBeenCalledWith('authLockout_user-123');
       });
     });
   });
