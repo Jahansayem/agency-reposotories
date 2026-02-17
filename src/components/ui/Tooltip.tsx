@@ -332,15 +332,9 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
       }, hideDelay);
     }, [hideDelay, isControlled, onOpenChange]);
 
-    // Don't render if disabled or no content
-    if (disabled || !content) {
-      return children;
-    }
-
-    // Get accessible label
-    const accessibleLabel = ariaLabel || (typeof content === 'string' ? content : undefined);
-
     // Ref callback to merge our ref with child's ref
+    // NOTE: This useCallback MUST be called before the early return below
+    // to satisfy the Rules of Hooks (hooks must be called unconditionally).
     const mergeRefs = useCallback((node: HTMLElement | null) => {
       (triggerRef as React.MutableRefObject<HTMLElement | null>).current = node;
       // Handle existing child ref if any
@@ -351,6 +345,14 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
         (childRef as React.MutableRefObject<HTMLElement | null>).current = node;
       }
     }, [children]);
+
+    // Don't render if disabled or no content
+    if (disabled || !content) {
+      return children;
+    }
+
+    // Get accessible label
+    const accessibleLabel = ariaLabel || (typeof content === 'string' ? content : undefined);
 
     // Get child props safely
     const childProps = isValidElement(children)

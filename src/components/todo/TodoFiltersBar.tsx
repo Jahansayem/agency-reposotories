@@ -1,7 +1,6 @@
 'use client';
 
 import { memo, useEffect, useRef, useCallback, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowUpDown, AlertTriangle, CheckSquare, ChevronDown,
@@ -145,158 +144,7 @@ function OptionsButton({
   );
 }
 
-/** Dropdown rendered via portal to escape overflow:hidden ancestors in AppShell */
-function OptionsDropdown({
-  showMoreDropdown,
-  setShowMoreDropdown,
-  showBulkActions,
-  setShowBulkActions,
-  clearSelection,
-  useSectionedView,
-  setUseSectionedView,
-  shouldUseSections,
-  setShowTemplatePicker,
-}: {
-  showMoreDropdown: boolean;
-  setShowMoreDropdown: (show: boolean) => void;
-  showBulkActions: boolean;
-  setShowBulkActions: (show: boolean) => void;
-  clearSelection: () => void;
-  useSectionedView: boolean;
-  setUseSectionedView: (show: boolean) => void;
-  shouldUseSections: boolean;
-  setShowTemplatePicker: (show: boolean) => void;
-}) {
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
 
-  // Recalculate position when dropdown opens
-  useEffect(() => {
-    if (showMoreDropdown && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
-    }
-  }, [showMoreDropdown]);
-
-  return (
-    <div ref={triggerRef} className="ml-auto flex-shrink-0">
-      <OptionsButton
-        showMoreDropdown={showMoreDropdown}
-        setShowMoreDropdown={setShowMoreDropdown}
-        showBulkActions={showBulkActions}
-        useSectionedView={useSectionedView}
-        shouldUseSections={shouldUseSections}
-      />
-
-      {showMoreDropdown && dropdownPos && createPortal(
-        <>
-          {/* Backdrop */}
-          <div className="fixed inset-0 z-40" onClick={() => setShowMoreDropdown(false)} aria-hidden="true" />
-
-          {/* Dropdown menu - fixed positioning to escape overflow:hidden */}
-          <div
-            className="fixed w-64 rounded-lg shadow-lg border z-50 overflow-hidden bg-[var(--surface)] border-[var(--border)]"
-            role="menu"
-            aria-label="Task options"
-            style={{ top: dropdownPos.top, right: dropdownPos.right }}
-          >
-            {/* Quick Actions Section */}
-            <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
-              <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                Quick Actions
-              </span>
-            </div>
-
-            {/* Templates button */}
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setShowMoreDropdown(false);
-                setShowTemplatePicker(true);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors text-[var(--foreground)] hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none"
-            >
-              <FileText className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-              <div className="flex-1">
-                <span className="font-medium">Use Template</span>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">Create task from saved template</p>
-              </div>
-            </button>
-
-            {/* Select/Bulk actions button */}
-            <button
-              type="button"
-              role="menuitemcheckbox"
-              aria-checked={showBulkActions}
-              onClick={() => {
-                if (showBulkActions) {
-                  clearSelection();
-                }
-                setShowBulkActions(!showBulkActions);
-                setShowMoreDropdown(false);
-              }}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors focus:outline-none ${
-                showBulkActions
-                  ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                  : 'text-[var(--foreground)] hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)]'
-              }`}
-            >
-              <CheckSquare className="w-4 h-4" aria-hidden="true" />
-              <div className="flex-1">
-                <span className="font-medium">{showBulkActions ? 'Exit Selection Mode' : 'Select Multiple Tasks'}</span>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  {showBulkActions ? 'Return to normal view' : 'Bulk edit, complete, or delete tasks'}
-                </p>
-              </div>
-              {showBulkActions && <Check className="w-4 h-4 flex-shrink-0" aria-hidden="true" />}
-            </button>
-
-            {/* View Settings Section - only show if sections are available */}
-            {shouldUseSections && (
-              <>
-                <div className="px-3 py-2 border-t border-b border-[var(--border-subtle)]">
-                  <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                    View Settings
-                  </span>
-                </div>
-
-                {/* Sections Toggle */}
-                <button
-                  type="button"
-                  role="menuitemcheckbox"
-                  aria-checked={useSectionedView}
-                  onClick={() => {
-                    setUseSectionedView(!useSectionedView);
-                    setShowMoreDropdown(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors focus:outline-none ${
-                    useSectionedView
-                      ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
-                      : 'text-[var(--foreground)] hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)]'
-                  }`}
-                >
-                  <Layers className="w-4 h-4" aria-hidden="true" />
-                  <div className="flex-1">
-                    <span className="font-medium">Group by Sections</span>
-                    <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                      {useSectionedView ? 'Tasks grouped by time period' : 'Organize tasks into time-based sections'}
-                    </p>
-                  </div>
-                  {useSectionedView && <Check className="w-4 h-4 flex-shrink-0" aria-hidden="true" />}
-                </button>
-              </>
-            )}
-          </div>
-        </>,
-        document.body
-      )}
-    </div>
-  );
-}
 
 function TodoFiltersBar({
   quickFilter,
@@ -341,6 +189,22 @@ function TodoFiltersBar({
 }: TodoFiltersBarProps) {
   const isMobile = useIsMobile();
   const filtersBarRef = useRef<HTMLDivElement>(null);
+  const optionsBtnRef = useRef<HTMLDivElement>(null);
+  const [optionsPos, setOptionsPos] = useState<{ top: number; right: number } | null>(null);
+
+  // Calculate dropdown position when Options menu opens
+  useEffect(() => {
+    if (showMoreDropdown && optionsBtnRef.current) {
+      const rect = optionsBtnRef.current.getBoundingClientRect();
+      setOptionsPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    } else {
+      setOptionsPos(null);
+    }
+  }, [showMoreDropdown]);
+
   // Global keyboard shortcuts for filters
   // / = Focus search, f = Toggle filters panel, m/t/o/a = Quick filters, Escape = Close
   useEffect(() => {
@@ -783,17 +647,107 @@ function TodoFiltersBar({
         )}
 
         {/* Options dropdown - task actions and view settings - 44px minimum touch target (WCAG 2.5.5) */}
-        <OptionsDropdown
-          showMoreDropdown={showMoreDropdown}
-          setShowMoreDropdown={setShowMoreDropdown}
-          showBulkActions={showBulkActions}
-          setShowBulkActions={setShowBulkActions}
-          clearSelection={clearSelection}
-          useSectionedView={useSectionedView}
-          setUseSectionedView={setUseSectionedView}
-          shouldUseSections={shouldUseSections}
-          setShowTemplatePicker={setShowTemplatePicker}
-        />
+        <div ref={optionsBtnRef} className="ml-auto flex-shrink-0">
+          <OptionsButton
+            showMoreDropdown={showMoreDropdown}
+            setShowMoreDropdown={setShowMoreDropdown}
+            showBulkActions={showBulkActions}
+            useSectionedView={useSectionedView}
+            shouldUseSections={shouldUseSections}
+          />
+        </div>
+
+        {/* Options menu rendered with fixed positioning to escape overflow:hidden ancestors */}
+        {showMoreDropdown && optionsPos && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowMoreDropdown(false)} aria-hidden="true" />
+            <div
+              className="fixed w-64 rounded-lg shadow-lg border z-50 overflow-hidden bg-[var(--surface)] border-[var(--border)]"
+              role="menu"
+              aria-label="Task options"
+              style={{ top: optionsPos.top, right: optionsPos.right }}
+            >
+              <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
+                <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                  Quick Actions
+                </span>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setShowMoreDropdown(false);
+                  setShowTemplatePicker(true);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors text-[var(--foreground)] hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none"
+              >
+                <FileText className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                <div className="flex-1">
+                  <span className="font-medium">Use Template</span>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">Create task from saved template</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={showBulkActions}
+                onClick={() => {
+                  if (showBulkActions) {
+                    clearSelection();
+                  }
+                  setShowBulkActions(!showBulkActions);
+                  setShowMoreDropdown(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors focus:outline-none ${
+                  showBulkActions
+                    ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                    : 'text-[var(--foreground)] hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)]'
+                }`}
+              >
+                <CheckSquare className="w-4 h-4" aria-hidden="true" />
+                <div className="flex-1">
+                  <span className="font-medium">{showBulkActions ? 'Exit Selection Mode' : 'Select Multiple Tasks'}</span>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    {showBulkActions ? 'Return to normal view' : 'Bulk edit, complete, or delete tasks'}
+                  </p>
+                </div>
+                {showBulkActions && <Check className="w-4 h-4 flex-shrink-0" aria-hidden="true" />}
+              </button>
+              {shouldUseSections && (
+                <>
+                  <div className="px-3 py-2 border-t border-b border-[var(--border-subtle)]">
+                    <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
+                      View Settings
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={useSectionedView}
+                    onClick={() => {
+                      setUseSectionedView(!useSectionedView);
+                      setShowMoreDropdown(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors focus:outline-none ${
+                      useSectionedView
+                        ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                        : 'text-[var(--foreground)] hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)]'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4" aria-hidden="true" />
+                    <div className="flex-1">
+                      <span className="font-medium">Group by Sections</span>
+                      <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                        {useSectionedView ? 'Tasks grouped by time period' : 'Organize tasks into time-based sections'}
+                      </p>
+                    </div>
+                    {useSectionedView && <Check className="w-4 h-4 flex-shrink-0" aria-hidden="true" />}
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Template Picker - controlled from More dropdown */}
         <div className="relative">
