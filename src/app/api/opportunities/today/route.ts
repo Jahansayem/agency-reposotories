@@ -63,6 +63,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const agencyId = ctx.agencyId;
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20', 10), 1), 100);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10), 0);
+    const skipEnrichment = searchParams.get('enrich') === 'false';
 
     // Fixed filter values for "today's" work queue
     const priorityTiers: CrossSellPriorityTier[] = ['HOT', 'HIGH'];
@@ -135,7 +136,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     // Enrich opportunities with customer_insight_id by matching customer_name
     let enrichedOpportunities = data || [];
-    if (enrichedOpportunities.length > 0) {
+    if (!skipEnrichment && enrichedOpportunities.length > 0) {
       const customerNames = [...new Set(enrichedOpportunities.map(o => o.customer_name))];
       let insightQuery = supabase
         .from('customer_insights')
@@ -173,7 +174,11 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       },
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=300',
+      },
+    });
   } catch (error) {
     console.error('Error fetching today\'s opportunities:', error);
     return NextResponse.json(
