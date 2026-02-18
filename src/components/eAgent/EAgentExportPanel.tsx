@@ -23,11 +23,7 @@ import {
 } from '@/lib/summaryGenerator';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { prefersReducedMotion } from '@/lib/animations';
-import {
-  useNewCustomerStore,
-  selectPendingImports,
-  selectImportedItems,
-} from '@/store/newCustomerStore';
+import { useNewCustomerStore } from '@/store/newCustomerStore';
 
 // ============================================
 // Types
@@ -69,12 +65,19 @@ export function EAgentExportPanel({ isOpen, onClose }: EAgentExportPanelProps) {
   const pendingCount = pendingItems.length;
   const exportedCount = exportedItems.length;
 
-  // New customers store
-  const newCustomersPending = useNewCustomerStore(selectPendingImports);
-  const newCustomersImported = useNewCustomerStore(selectImportedItems);
+  // New customers store — derive lists with useMemo to avoid infinite re-render
+  const newCustomerItems = useNewCustomerStore((s) => s.items);
   const markCustomerImported = useNewCustomerStore((s) => s.markImported);
   const removeCustomer = useNewCustomerStore((s) => s.removeItem);
   const clearImportedCustomers = useNewCustomerStore((s) => s.clearImported);
+  const newCustomersPending = useMemo(
+    () => newCustomerItems.filter((i) => !i.importedToEAgent).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [newCustomerItems]
+  );
+  const newCustomersImported = useMemo(
+    () => newCustomerItems.filter((i) => i.importedToEAgent),
+    [newCustomerItems]
+  );
   const newCustomerCount = newCustomersPending.length;
 
   // Focus trap
