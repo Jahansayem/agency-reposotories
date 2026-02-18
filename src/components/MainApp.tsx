@@ -20,6 +20,7 @@ import SkipLink from './SkipLink';
 import { OnboardingModal } from './AIOnboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { AIPreferencesModal } from './AIPreferences';
+import { CustomerLinkPrompt } from './customer/CustomerLinkPrompt';
 
 // Lazy load TodoList - large component with subtasks, kanban, etc.
 const TodoList = dynamic(() => import('./TodoList'), {
@@ -1004,6 +1005,9 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
       {/* Push notification permission banner */}
       <NotificationPermissionBanner currentUser={currentUser} />
+
+      {/* Customer link prompt — appears after completing a non-customer task */}
+      <CustomerLinkPrompt userName={currentUser.name} />
 
       {/* Weekly Progress Chart Modal - accessible from any view via sidebar */}
       {showWeeklyChart && (

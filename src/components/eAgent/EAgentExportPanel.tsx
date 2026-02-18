@@ -11,6 +11,8 @@ import {
   Phone,
   FileText,
   Trash2,
+  UserPlus,
+  Shield,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useEAgentQueueStore } from '@/store/eAgentQueueStore';
@@ -21,6 +23,11 @@ import {
 } from '@/lib/summaryGenerator';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { prefersReducedMotion } from '@/lib/animations';
+import {
+  useNewCustomerStore,
+  selectPendingImports,
+  selectImportedItems,
+} from '@/store/newCustomerStore';
 
 // ============================================
 // Types
@@ -44,6 +51,7 @@ const COPY_FEEDBACK_TIMEOUT = 2000;
 export function EAgentExportPanel({ isOpen, onClose }: EAgentExportPanelProps) {
   const [copyStates, setCopyStates] = useState<CopyStates>({});
   const [exportedExpanded, setExportedExpanded] = useState(false);
+  const [newCustomersExpanded, setNewCustomersExpanded] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const timeoutRefs = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const reducedMotion = prefersReducedMotion();
@@ -60,6 +68,14 @@ export function EAgentExportPanel({ isOpen, onClose }: EAgentExportPanelProps) {
   const exportedItems = useMemo(() => items.filter((i) => i.exported), [items]);
   const pendingCount = pendingItems.length;
   const exportedCount = exportedItems.length;
+
+  // New customers store
+  const newCustomersPending = useNewCustomerStore(selectPendingImports);
+  const newCustomersImported = useNewCustomerStore(selectImportedItems);
+  const markCustomerImported = useNewCustomerStore((s) => s.markImported);
+  const removeCustomer = useNewCustomerStore((s) => s.removeItem);
+  const clearImportedCustomers = useNewCustomerStore((s) => s.clearImported);
+  const newCustomerCount = newCustomersPending.length;
 
   // Focus trap
   const { containerRef } = useFocusTrap<HTMLDivElement>({
@@ -522,6 +538,140 @@ export function EAgentExportPanel({ isOpen, onClose }: EAgentExportPanelProps) {
                             </div>
                           ))}
                         </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {/* ──────────────────────────────────────
+                  New Customers to Import
+                  ────────────────────────────────────── */}
+              {newCustomersPending.length > 0 && (
+                <div className="px-5 py-4 border-t border-[var(--border)]">
+                  <button
+                    onClick={() => setNewCustomersExpanded(!newCustomersExpanded)}
+                    className="w-full flex items-center justify-between py-1 text-left focus:outline-none focus:ring-2 focus:ring-[var(--accent)] rounded-[var(--radius-lg)]"
+                    aria-expanded={newCustomersExpanded}
+                    aria-controls="new-customers-section"
+                  >
+                    <h3 className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-[0.05em] flex items-center gap-1.5">
+                      <UserPlus className="w-3.5 h-3.5" aria-hidden="true" />
+                      New Customers to Import ({newCustomerCount})
+                    </h3>
+                    <motion.div
+                      animate={{ rotate: newCustomersExpanded ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+                    </motion.div>
+                  </button>
+
+                  <AnimatePresence>
+                    {newCustomersExpanded && (
+                      <motion.div
+                        id="new-customers-section"
+                        initial={reducedMotion ? false : { opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <p className="text-xs text-[var(--text-muted)] mt-2 mb-3">
+                          These customers were created on the fly and need to be added to eAgent.
+                        </p>
+
+                        <div className="space-y-2">
+                          {newCustomersPending.map((customer) => (
+                            <div
+                              key={customer.id}
+                              className="bg-amber-50 dark:bg-amber-900/10 rounded-[var(--radius-xl)] p-3 border border-amber-200 dark:border-amber-800/30"
+                            >
+                              <div className="flex items-start justify-between mb-1">
+                                <p className="text-sm font-semibold text-[var(--foreground)] leading-tight">
+                                  {customer.name}
+                                </p>
+                                <button
+                                  onClick={() => removeCustomer(customer.id)}
+                                  className="p-1 rounded-[var(--radius-lg)] hover:bg-[var(--surface-3)] transition-colors flex-shrink-0 ml-2 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                                  aria-label={`Remove ${customer.name} from import list`}
+                                >
+                                  <X className="w-3.5 h-3.5 text-[var(--text-muted)]" aria-hidden="true" />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+                                {customer.phone && (
+                                  <span className="flex items-center gap-1">
+                                    <Phone className="w-3 h-3" aria-hidden="true" />
+                                    {customer.phone}
+                                  </span>
+                                )}
+                                {customer.policyType && (
+                                  <span className="flex items-center gap-1">
+                                    <Shield className="w-3 h-3" aria-hidden="true" />
+                                    {customer.policyType}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Copy for eAgent import + mark imported */}
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  onClick={() => {
+                                    const text = [
+                                      `Customer: ${customer.name}`,
+                                      customer.phone ? `Phone: ${customer.phone}` : '',
+                                      customer.policyType ? `Policy Type: ${customer.policyType}` : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join('\n');
+                                    handleCopyItem(`new-customer-${customer.id}`, text);
+                                  }}
+                                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-lg)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 ${
+                                    getCopyState(`new-customer-${customer.id}`) === 'copied'
+                                      ? 'bg-[var(--success)] text-white'
+                                      : 'bg-amber-600 text-white hover:bg-amber-700'
+                                  }`}
+                                  aria-label={`Copy ${customer.name} details for eAgent import`}
+                                >
+                                  {getCopyState(`new-customer-${customer.id}`) === 'copied' ? (
+                                    <>
+                                      <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                                      Copied!
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                                      Copy for Import
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => markCustomerImported(customer.id)}
+                                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-lg)] bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--success)]/10 hover:text-[var(--success)] transition-all focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2"
+                                  aria-label={`Mark ${customer.name} as imported to eAgent`}
+                                >
+                                  <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                                  Imported
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Clear imported customers */}
+                        {newCustomersImported.length > 0 && (
+                          <div className="flex justify-end mt-3">
+                            <button
+                              onClick={clearImportedCustomers}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-lg)] text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 focus:ring-offset-[var(--surface)]"
+                              aria-label="Clear all imported customers"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                              Clear imported ({newCustomersImported.length})
+                            </button>
+                          </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>

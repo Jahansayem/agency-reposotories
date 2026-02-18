@@ -729,6 +729,19 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
                 </span>
               </div>
             )}
+            {/* Customer Link - prominent position for eAgent integration */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase tracking-wider">
+                Customer
+              </label>
+              <CustomerSearchInput
+                value={linkedCustomer}
+                onChange={setLinkedCustomer}
+                placeholder="Search book of business..."
+                agencyId={agencyId}
+              />
+            </div>
+
             <div className="flex flex-wrap items-center gap-4">
               {/* Priority - improved pill proportions */}
               <div
@@ -825,20 +838,6 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
                 dueDate={dueDate || undefined}
                 onChange={(time) => setReminderAt(time)}
                 compact
-              />
-            </div>
-
-            {/* Customer Link - Link task to customer from book of business */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">
-                Link to Customer (optional)
-              </label>
-              <CustomerSearchInput
-                value={linkedCustomer}
-                onChange={setLinkedCustomer}
-                placeholder="Search customers by name..."
-                agencyId={agencyId}
-                className="max-w-md"
               />
             </div>
 

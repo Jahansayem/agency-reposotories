@@ -26,6 +26,7 @@ import { calculateCompletionStreak, getNextSuggestedTasks, getEncouragementMessa
 import { ActivityLogEntry } from '@/types/todo';
 import { useTodoStore } from '@/store/todoStore';
 import { useEAgentQueueStore } from '@/store/eAgentQueueStore';
+import { useCustomerLinkPromptStore } from '@/store/customerLinkPromptStore';
 import { useToast } from '@/components/ui/Toast';
 import { isToday } from 'date-fns';
 
@@ -467,9 +468,14 @@ export function useTodoOperations({
           lastCelebrationRef.current = now;
         }
 
-        // Queue for eAgent if customer-linked
+        // Queue for eAgent if customer-linked, otherwise prompt to link
         const { addToQueue } = useEAgentQueueStore.getState();
         addToQueue(oldTodo, userName);
+
+        if (!oldTodo.customer_name && !oldTodo.customer_id) {
+          const { show } = useCustomerLinkPromptStore.getState();
+          show(oldTodo.id, oldTodo.text);
+        }
 
         // Handle recurring tasks
         if (oldTodo.recurrence) {
@@ -560,9 +566,14 @@ export function useTodoOperations({
           lastCelebrationRef.current = now;
         }
 
-        // Queue for eAgent if customer-linked
+        // Queue for eAgent if customer-linked, otherwise prompt to link
         const { addToQueue } = useEAgentQueueStore.getState();
         addToQueue(todoItem, userName);
+
+        if (!todoItem.customer_name && !todoItem.customer_id) {
+          const { show } = useCustomerLinkPromptStore.getState();
+          show(todoItem.id, todoItem.text);
+        }
 
         if (todoItem.recurrence) {
           createNextRecurrence(todoItem);

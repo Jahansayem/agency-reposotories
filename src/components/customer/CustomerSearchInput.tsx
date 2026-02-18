@@ -8,9 +8,10 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, X, Loader2, User, Phone, DollarSign } from 'lucide-react';
+import { Search, X, Loader2, User, Phone, DollarSign, Plus } from 'lucide-react';
 import { useCustomerSearch } from '@/hooks/useCustomers';
 import type { Customer, LinkedCustomer } from '@/types/customer';
+import { QuickAddCustomerForm } from './QuickAddCustomerForm';
 
 interface CustomerSearchInputProps {
   value: LinkedCustomer | null;
@@ -31,6 +32,7 @@ export function CustomerSearchInput({
 }: CustomerSearchInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,6 +49,7 @@ export function CustomerSearchInput({
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setShowQuickAdd(false);
       }
     }
 
@@ -76,7 +79,19 @@ export function CustomerSearchInput({
   const handleClear = () => {
     onChange(null);
     clear();
+    setShowQuickAdd(false);
     inputRef.current?.focus();
+  };
+
+  const handleQuickAddCreated = (customer: LinkedCustomer) => {
+    onChange(customer);
+    setIsOpen(false);
+    setShowQuickAdd(false);
+    clear();
+  };
+
+  const handleQuickAddCancel = () => {
+    setShowQuickAdd(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,18 +225,43 @@ export function CustomerSearchInput({
         </div>
       )}
 
-      {/* No Results */}
+      {/* No Results + Quick Add */}
       {isOpen && query.length >= 2 && customers.length === 0 && !loading && (
         <div className="
-          absolute z-50 w-full mt-1 p-4
+          absolute z-50 w-full mt-1
           bg-[var(--surface)]
           border border-[var(--border)]
-          rounded-lg shadow-lg text-center
+          rounded-lg shadow-lg
         ">
-          <User className="w-8 h-8 mx-auto text-[var(--text-light)] mb-2" />
-          <p className="text-sm text-[var(--text-muted)]">
-            No customers found for "{query}"
-          </p>
+          {showQuickAdd ? (
+            <QuickAddCustomerForm
+              initialName={query}
+              onCustomerCreated={handleQuickAddCreated}
+              onCancel={handleQuickAddCancel}
+            />
+          ) : (
+            <div className="p-4 text-center">
+              <User className="w-8 h-8 mx-auto text-[var(--text-light)] mb-2" />
+              <p className="text-sm text-[var(--text-muted)] mb-3">
+                No customers found for &ldquo;{query}&rdquo;
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowQuickAdd(true)}
+                className="
+                  inline-flex items-center gap-1.5
+                  px-3 py-1.5 text-sm font-medium
+                  text-[var(--accent)]
+                  border border-[var(--accent)] rounded-md
+                  hover:bg-[var(--accent)] hover:text-white
+                  transition-colors
+                "
+              >
+                <Plus className="w-4 h-4" />
+                Add &ldquo;{query}&rdquo; as new customer
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
