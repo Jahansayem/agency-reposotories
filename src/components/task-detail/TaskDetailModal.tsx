@@ -10,6 +10,10 @@ import { usePermission } from '@/hooks/usePermission';
 import TaskDetailHeader from './TaskDetailHeader';
 import MetadataSection from './MetadataSection';
 import { CustomerDetailPanel } from '../customer/CustomerDetailPanel';
+import { CustomerSearchInput } from '../customer/CustomerSearchInput';
+import type { LinkedCustomer } from '@/types/customer';
+import { useEAgentQueueStore } from '@/store/eAgentQueueStore';
+import { Users } from 'lucide-react';
 import ReminderRow from './ReminderRow';
 import WaitingRow from './WaitingRow';
 import NotesSection from './NotesSection';
@@ -199,21 +203,58 @@ export default function TaskDetailModal({
             canAssign={canAssignTasks}
           />
 
-          {/* Customer context panel - shown when task is linked to a customer */}
-          {todo.customer_id && (
-            <motion.div
-              custom={0}
-              initial="hidden"
-              animate="visible"
-              variants={sectionStagger}
-            >
+          {/* Customer context panel or link-customer input */}
+          <motion.div
+            custom={0}
+            initial="hidden"
+            animate="visible"
+            variants={sectionStagger}
+          >
+            {todo.customer_id ? (
               <CustomerDetailPanel
                 customerId={todo.customer_id}
                 currentUser={currentUser.name}
                 className="bg-[var(--surface-2)]/30 rounded-xl border border-[var(--border)]/50"
               />
-            </motion.div>
-          )}
+            ) : canEdit ? (
+              <div className="bg-[var(--surface-2)]/30 rounded-xl border border-[var(--border)]/50 p-3">
+                <div className="flex items-center gap-1.5 text-label text-[var(--text-muted)] mb-1.5">
+                  <Users size={12} />
+                  Customer
+                </div>
+                <CustomerSearchInput
+                  value={todo.customer_name ? {
+                    id: todo.customer_id || '',
+                    name: todo.customer_name,
+                    segment: (todo.customer_segment as any) || 'standard',
+                  } : null}
+                  onChange={async (customer: LinkedCustomer | null) => {
+                    if (customer) {
+                      const updates = {
+                        customer_id: customer.id,
+                        customer_name: customer.name,
+                        customer_segment: customer.segment,
+                      };
+                      await onUpdate(todo.id, updates);
+                      // If task is already completed, queue to eAgent now
+                      if (todo.completed) {
+                        const { addToQueue } = useEAgentQueueStore.getState();
+                        addToQueue({ ...todo, ...updates }, currentUser.name);
+                      }
+                    } else {
+                      await onUpdate(todo.id, {
+                        customer_id: undefined,
+                        customer_name: undefined,
+                        customer_segment: undefined,
+                      });
+                    }
+                  }}
+                  placeholder="Search book of business..."
+                  agencyId={currentUser.current_agency_id}
+                />
+              </div>
+            ) : null}
+          </motion.div>
 
           {/* Reminder row */}
           <ReminderRow
