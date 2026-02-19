@@ -186,7 +186,7 @@ export default function ChatPanel({
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [showPinnedMessages, setShowPinnedMessages] = useState(false);
-  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
+  // firstUnreadId is now computed below via useMemo instead of state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [taskFromMessage, setTaskFromMessage] = useState<ChatMessage | null>(null);
   const [rateLimitWarning, setRateLimitWarning] = useState<string | null>(null);
@@ -317,6 +317,16 @@ export default function ChatPanel({
       .filter(([user, isTyping]) => isTyping && user !== currentUser.name)
       .map(([user]) => user);
   }, [typingUsers, conversation, currentUser.name]);
+
+  // Compute firstUnreadId: the first message not created by the current user
+  // that the current user has not yet read
+  const firstUnreadId = useMemo(() => {
+    if (!conversation || filteredMessages.length === 0) return null;
+    const firstUnread = filteredMessages.find(
+      m => m.created_by !== currentUser.name && !(m.read_by || []).includes(currentUser.name)
+    );
+    return firstUnread?.id ?? null;
+  }, [filteredMessages, currentUser.name, conversation]);
 
   // Utility functions
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
@@ -824,33 +834,7 @@ export default function ChatPanel({
         }
       });
 
-    // REACT-006: Track typing timeouts properly to prevent memory leaks
-    const typingChannel = supabase
-      .channel('typing-channel')
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.user !== currentUser.name) {
-          setTypingUsers(prev => ({ ...prev, [payload.user]: true }));
-          // Clear existing timeout before creating new one
-          const existingTimeout = typingTimeoutsRef.current.get(payload.user);
-          if (existingTimeout) {
-            clearTimeout(existingTimeout);
-            typingTimeoutsRef.current.delete(payload.user);
-          }
-          const timeout = setTimeout(() => {
-            // Guard against unmounted component - only update if ref map still has this timeout
-            if (typingTimeoutsRef.current.has(payload.user)) {
-              setTypingUsers(prev => ({ ...prev, [payload.user]: false }));
-              typingTimeoutsRef.current.delete(payload.user);
-            }
-          }, 3000);
-          typingTimeoutsRef.current.set(payload.user, timeout);
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          typingChannelRef.current = typingChannel;
-        }
-      });
+    // Typing channel is managed in a separate conversation-scoped effect below
 
     const presenceChannel = supabase
       .channel('presence-channel')
@@ -877,12 +861,8 @@ export default function ChatPanel({
 
     return () => {
       supabase.removeChannel(messagesChannel);
-      supabase.removeChannel(typingChannel);
       supabase.removeChannel(presenceChannel);
-      typingChannelRef.current = null;
       presenceChannelRef.current = null;
-      typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
-      typingTimeoutsRef.current.clear();
     };
   // BUGFIX REACT-005: Removed fetchMessages from deps - using fetchMessagesRef instead
   // to prevent subscription teardown on every conversation change
@@ -894,6 +874,52 @@ export default function ChatPanel({
     if (!isSupabaseConfigured() || !conversation) return;
     fetchMessagesRef.current();
   }, [conversation]);
+
+  // Conversation-scoped typing channel: subscribe/unsubscribe when conversation changes
+  // so typing indicators are only visible within the active conversation
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !conversation) return;
+
+    const convKey = getConversationKey(conversation);
+    const typingChannelName = `typing-channel-${convKey}`;
+
+    // Clear typing state from previous conversation
+    setTypingUsers({});
+
+    const typingChannel = supabase
+      .channel(typingChannelName)
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.user !== currentUser.name) {
+          setTypingUsers(prev => ({ ...prev, [payload.user]: true }));
+          // Clear existing timeout before creating new one
+          const existingTimeout = typingTimeoutsRef.current.get(payload.user);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+            typingTimeoutsRef.current.delete(payload.user);
+          }
+          const timeout = setTimeout(() => {
+            // Guard against unmounted component - only update if ref map still has this timeout
+            if (typingTimeoutsRef.current.has(payload.user)) {
+              setTypingUsers(prev => ({ ...prev, [payload.user]: false }));
+              typingTimeoutsRef.current.delete(payload.user);
+            }
+          }, 3000);
+          typingTimeoutsRef.current.set(payload.user, timeout);
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          typingChannelRef.current = typingChannel;
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(typingChannel);
+      typingChannelRef.current = null;
+      typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
+    };
+  }, [conversation, getConversationKey, currentUser.name]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -956,6 +982,19 @@ export default function ChatPanel({
         getInitials={getInitials}
         getConversationTitle={getConversationTitle}
         extractMentions={extractAndValidateMentions}
+        groupedMessages={groupedMessages}
+        pinnedMessages={pinnedMessages}
+        loading={loading}
+        hasMoreMessages={hasMoreMessages}
+        isLoadingMore={isLoadingMore}
+        loadMoreMessages={loadMoreMessages}
+        sortedConversations={sortedConversations}
+        unreadCounts={unreadCounts}
+        mutedConversations={mutedConversations}
+        userPresence={userPresence}
+        formatRelativeTime={formatRelativeTime}
+        onToggleMute={toggleMute}
+        firstUnreadId={firstUnreadId}
         addReaction={addReaction}
         editMessage={editMessage}
         deleteMessage={deleteMessage}

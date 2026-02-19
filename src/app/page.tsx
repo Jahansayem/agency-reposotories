@@ -9,6 +9,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { AgencyProvider } from '@/contexts/AgencyContext';
 import { UserProvider } from '@/contexts/UserContext';
+import { UnreadCountProvider } from '@/contexts/UnreadCountContext';
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -111,7 +112,9 @@ export default function Home() {
   return (
     <UserProvider currentUser={currentUser}>
       <AgencyProvider userId={currentUser.id}>
-        <MainApp currentUser={currentUser} onUserChange={handleUserChange} />
+        <UnreadCountProvider currentUserName={currentUser.name}>
+          <MainApp currentUser={currentUser} onUserChange={handleUserChange} />
+        </UnreadCountProvider>
       </AgencyProvider>
     </UserProvider>
   );

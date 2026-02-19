@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext, useCallback, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, AlertCircle, AlertTriangle, Info, Loader2 } from 'lucide-react';
+import { zClass } from '@/lib/z-index';
 
 // Toast types
 export type ToastVariant = 'success' | 'error' | 'warning' | 'info' | 'loading';
@@ -268,7 +269,7 @@ export function ToastProvider({
 
       {/* Toast container */}
       <div
-        className={`fixed z-[100] flex flex-col gap-3 pointer-events-none ${positionClasses[position]}`}
+        className={`fixed ${zClass.toast} flex flex-col gap-3 pointer-events-none ${positionClasses[position]}`}
         aria-label="Notifications"
       >
         <AnimatePresence mode="popLayout">

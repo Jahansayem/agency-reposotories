@@ -72,80 +72,82 @@ export function ChatPanelHeader({
   return (
     <>
       {/* Header */}
-      <div className="relative flex items-center justify-between px-5 py-4 border-b border-[var(--chat-border)]">
+      <div className="relative flex items-center justify-between px-5 py-4 border-b border-[var(--chat-border)]" role="banner">
         <div className="flex items-center gap-3 relative z-10">
           {showConversationList ? (
             <>
-              <div className="w-9 h-9 rounded-[var(--radius-xl)] bg-[var(--accent)] flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-white" strokeWidth={2.5} />
+              <div className="w-9 h-9 rounded-[var(--radius-xl)] bg-[var(--accent)] flex items-center justify-center" aria-hidden="true">
+                <MessageSquare className="w-5 h-5 text-[var(--text-inverse)]" strokeWidth={2.5} />
               </div>
-              <span className="font-bold text-white text-lg tracking-tight">Messages</span>
+              <h2 className="font-bold text-[var(--foreground)] text-lg tracking-tight">Messages</h2>
             </>
           ) : (
             <>
               <motion.button
                 onClick={onBack}
-                className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-xl)] transition-all duration-200 -ml-1"
+                className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-xl)] transition-all duration-200 -ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
                 aria-label="Back to conversations"
                 whileHover={{ x: -2 }}
               >
-                <ChevronLeft className="w-5 h-5 text-white/70" />
+                <ChevronLeft className="w-5 h-5 text-[var(--text-muted)]" aria-hidden="true" />
               </motion.button>
               {conversation?.type === 'team' ? (
-                <div className="w-9 h-9 rounded-[var(--radius-xl)] bg-[#2563EB] flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white" />
+                <div className="w-9 h-9 rounded-[var(--radius-xl)] bg-[var(--accent)] flex items-center justify-center" aria-hidden="true">
+                  <Users className="w-5 h-5 text-[var(--text-inverse)]" />
                 </div>
               ) : conversation?.type === 'dm' ? (
                 <div className="relative">
                   <div
-                    className="w-9 h-9 rounded-[var(--radius-xl)] flex items-center justify-center text-xs font-bold text-white shadow-lg ring-2 ring-white/10"
+                    className="w-9 h-9 rounded-[var(--radius-xl)] flex items-center justify-center text-xs font-bold text-[var(--text-inverse)] shadow-lg ring-2 ring-[var(--border-subtle)]"
                     style={{ backgroundColor: getUserColor(conversation.userName) }}
+                    aria-hidden="true"
                   >
                     {getInitials(conversation.userName)}
                   </div>
                   <div
-                    className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--surface-dark)]"
+                    className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[var(--surface)]"
                     style={{ backgroundColor: PRESENCE_CONFIG[userPresence[conversation.userName] || 'offline'].color }}
-                    title={PRESENCE_CONFIG[userPresence[conversation.userName] || 'offline'].label}
+                    role="img"
+                    aria-label={`${conversation.userName} is ${PRESENCE_CONFIG[userPresence[conversation.userName] || 'offline'].label.toLowerCase()}`}
                   />
                 </div>
               ) : (
-                <MessageSquare className="w-5 h-5 text-[var(--accent)]" />
+                <MessageSquare className="w-5 h-5 text-[var(--accent)]" aria-hidden="true" />
               )}
-              <span className="font-bold text-white text-lg tracking-tight">{getConversationTitle()}</span>
+              <h2 className="font-bold text-[var(--foreground)] text-lg tracking-tight">{getConversationTitle()}</h2>
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-1 relative z-10">
+        <div className="flex items-center gap-1 relative z-10" role="toolbar" aria-label="Chat actions">
           {!showConversationList && (
             <motion.button
               onClick={onToggleSearch}
-              className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 ${
-                showSearch ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white'
+              className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 ${
+                showSearch ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-[var(--foreground)]'
               }`}
-              title="Search messages"
-              aria-label="Search messages"
+              aria-label={showSearch ? 'Close search' : 'Search messages'}
+              aria-pressed={showSearch}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Search className="w-4 h-4" />
+              <Search className="w-4 h-4" aria-hidden="true" />
             </motion.button>
           )}
 
           {!showConversationList && pinnedMessages.length > 0 && (
             <motion.button
               onClick={onTogglePinnedMessages}
-              className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 relative ${
-                showPinnedMessages ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white'
+              className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 ${
+                showPinnedMessages ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-[var(--foreground)]'
               }`}
-              title="Pinned messages"
-              aria-label="Pinned messages"
+              aria-label={`${showPinnedMessages ? 'Hide' : 'Show'} ${pinnedMessages.length} pinned message${pinnedMessages.length !== 1 ? 's' : ''}`}
+              aria-pressed={showPinnedMessages}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <Pin className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full text-badge flex items-center justify-center text-white">
+              <Pin className="w-4 h-4" aria-hidden="true" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] rounded-full text-badge flex items-center justify-center text-[var(--text-inverse)]" aria-hidden="true">
                 {pinnedMessages.length}
               </span>
             </motion.button>
@@ -153,58 +155,59 @@ export function ChatPanelHeader({
 
           <motion.button
             onClick={onToggleDndMode}
-            className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 ${
-              isDndMode ? 'bg-red-500/20 text-red-400' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white'
+            className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 ${
+              isDndMode ? 'bg-[var(--danger-light)] text-[var(--danger)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-[var(--foreground)]'
             }`}
-            title={isDndMode ? 'Do Not Disturb (ON)' : 'Do Not Disturb (OFF)'}
             aria-label={isDndMode ? 'Disable Do Not Disturb' : 'Enable Do Not Disturb'}
+            aria-pressed={isDndMode}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Moon className="w-4 h-4" />
+            <Moon className="w-4 h-4" aria-hidden="true" />
           </motion.button>
 
           <motion.button
             onClick={onToggleNotifications}
-            className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 ${
-              notificationsEnabled ? 'bg-green-500/20 text-green-400' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)]'
+            className={`p-2 rounded-[var(--radius-xl)] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 ${
+              notificationsEnabled ? 'bg-[var(--success-light)] text-[var(--success)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)]'
             }`}
-            title={notificationsEnabled ? 'Click to disable notifications' : 'Click to enable notifications'}
             aria-label={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+            aria-pressed={notificationsEnabled}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            {notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
+            {notificationsEnabled ? <Bell className="w-4 h-4" aria-hidden="true" /> : <BellOff className="w-4 h-4" aria-hidden="true" />}
           </motion.button>
 
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-xl)] text-xs font-medium ${
-              connected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+              connected ? 'bg-[var(--success-light)] text-[var(--success)]' : 'bg-[var(--danger-light)] text-[var(--danger)]'
             }`}
-            title={connected ? 'Connected' : 'Disconnected'}
             role="status"
-            aria-label={connected ? 'Connected' : 'Disconnected'}
+            aria-live="polite"
+            aria-label={connected ? 'Chat connected' : 'Chat disconnected'}
           >
-            {connected ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+            {connected ? <Wifi className="w-3.5 h-3.5" aria-hidden="true" /> : <WifiOff className="w-3.5 h-3.5" aria-hidden="true" />}
+            <span className="sr-only">{connected ? 'Connected' : 'Disconnected'}</span>
           </div>
 
           <motion.button
             onClick={onToggleMinimize}
             aria-label={isMinimized ? 'Maximize chat' : 'Minimize chat'}
-            className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-xl)] transition-all duration-200 text-[var(--chat-text-secondary)] hover:text-white"
+            className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-xl)] transition-all duration-200 text-[var(--chat-text-secondary)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+            {isMinimized ? <Maximize2 className="w-4 h-4" aria-hidden="true" /> : <Minimize2 className="w-4 h-4" aria-hidden="true" />}
           </motion.button>
           <motion.button
             onClick={onClose}
             aria-label="Close chat"
-            className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-xl)] transition-all duration-200 text-[var(--chat-text-secondary)] hover:text-white"
+            className="p-2 hover:bg-[var(--chat-surface-hover)] rounded-[var(--radius-xl)] transition-all duration-200 text-[var(--chat-text-secondary)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
           </motion.button>
         </div>
       </div>
@@ -217,31 +220,34 @@ export function ChatPanelHeader({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="border-b border-[var(--chat-surface-hover)] bg-[var(--chat-surface)]"
+            role="search"
+            aria-label="Search messages"
           >
             <div className="p-3">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--chat-text-muted)]" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--chat-text-muted)]" aria-hidden="true" />
                 <input
-                  type="text"
+                  type="search"
                   value={searchInput}
                   onChange={(e) => onSearchChange(e.target.value)}
                   placeholder="Search messages..."
-                  className="w-full pl-11 pr-10 py-3 rounded-[var(--radius-xl)] border border-[var(--chat-border)] bg-[var(--chat-surface)] text-white placeholder:text-[var(--chat-text-muted)] text-sm focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 transition-all duration-200"
+                  aria-label="Search messages"
+                  className="w-full pl-11 pr-10 py-3 rounded-[var(--radius-xl)] border border-[var(--chat-border)] bg-[var(--chat-surface)] text-[var(--foreground)] placeholder:text-[var(--chat-text-muted)] text-sm focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 transition-all duration-200"
                   autoFocus
                 />
                 {searchInput && (
                   <button
                     onClick={onClearSearch}
                     aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-[var(--chat-border)] rounded-[var(--radius-lg)] transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-[var(--chat-border)] rounded-[var(--radius-lg)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                   >
-                    <X className="w-4 h-4 text-[var(--chat-text-secondary)]" />
+                    <X className="w-4 h-4 text-[var(--chat-text-secondary)]" aria-hidden="true" />
                   </button>
                 )}
               </div>
               {searchInput && (
-                <div className="mt-2 text-xs text-[var(--chat-text-secondary)] px-1">
-                  {filteredMessagesCount} result{filteredMessagesCount !== 1 ? 's' : ''}
+                <div className="mt-2 text-xs text-[var(--chat-text-secondary)] px-1" role="status" aria-live="polite">
+                  {filteredMessagesCount} result{filteredMessagesCount !== 1 ? 's' : ''} found
                 </div>
               )}
             </div>
@@ -257,24 +263,30 @@ export function ChatPanelHeader({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="border-b border-[var(--chat-surface-hover)] bg-[var(--accent)]/5 max-h-36 overflow-y-auto"
+            role="region"
+            aria-label="Pinned messages"
           >
             <div className="p-3">
               <div className="flex items-center gap-2 text-xs text-[var(--accent)]/70 mb-2 font-medium">
-                <Pin className="w-3.5 h-3.5" />
-                <span>Pinned Messages</span>
+                <Pin className="w-3.5 h-3.5" aria-hidden="true" />
+                <h3>Pinned Messages</h3>
               </div>
-              {pinnedMessages.map(msg => (
-                <div
-                  key={msg.id}
-                  className="text-sm p-3 rounded-[var(--radius-xl)] bg-[var(--chat-surface)] border border-[var(--chat-surface-hover)] mb-2 cursor-pointer hover:bg-[var(--chat-surface-hover)] transition-colors"
-                  onClick={onTogglePinnedMessages}
-                >
-                  <span className="font-medium text-white">{msg.created_by}: </span>
-                  <span className="text-white/60">
-                    {msg.text.slice(0, 50)}{msg.text.length > 50 ? '...' : ''}
-                  </span>
-                </div>
-              ))}
+              <ul role="list" aria-label="Pinned messages list">
+                {pinnedMessages.map(msg => (
+                  <li key={msg.id}>
+                    <button
+                      className="w-full text-left text-sm p-3 rounded-[var(--radius-xl)] bg-[var(--chat-surface)] border border-[var(--chat-surface-hover)] mb-2 cursor-pointer hover:bg-[var(--chat-surface-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                      onClick={onTogglePinnedMessages}
+                      aria-label={`Pinned message from ${msg.created_by}: ${msg.text.slice(0, 50)}${msg.text.length > 50 ? '...' : ''}`}
+                    >
+                      <span className="font-medium text-[var(--foreground)]">{msg.created_by}: </span>
+                      <span className="text-[var(--chat-text-secondary)]">
+                        {msg.text.slice(0, 50)}{msg.text.length > 50 ? '...' : ''}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           </motion.div>
         )}

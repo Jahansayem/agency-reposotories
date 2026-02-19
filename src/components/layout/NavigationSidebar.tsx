@@ -23,7 +23,7 @@ import { AuthUser } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppShell, ActiveView } from './AppShell';
 import { useAgency } from '@/contexts/AgencyContext';
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
+import { useUnreadCount } from '@/contexts/UnreadCountContext';
 import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 import { CreateAgencyModal } from '@/components/CreateAgencyModal';
@@ -100,6 +100,9 @@ export default function NavigationSidebar({
   // Multi-tenancy context
   const { currentAgency, isMultiTenancyEnabled } = useAgency();
 
+  // Shared unread chat message count
+  const { unreadCount: chatUnreadCount } = useUnreadCount();
+
   // Agency onboarding tooltip
   const { showTooltip, dismissTooltip } = useAgencyOnboarding();
 
@@ -130,84 +133,6 @@ export default function NavigationSidebar({
     observer.observe(el);
     return () => observer.disconnect();
   }, [handleNavScroll]);
-
-  // Unread chat message count
-  const [chatUnreadCount, setChatUnreadCount] = useState(0);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !currentUser?.name) return;
-
-    const fetchUnreadCount = async () => {
-      try {
-        // Only count messages from the last 7 days to avoid inflating count
-        // with historical messages that predate read-tracking
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        let query = supabase
-          .from('messages')
-          .select('id, read_by, recipient, created_by')
-          .not('created_by', 'eq', currentUser.name)
-          .is('deleted_at', null)
-          .gte('created_at', sevenDaysAgo.toISOString());
-
-        if (isMultiTenancyEnabled && currentAgency?.id) {
-          query = query.eq('agency_id', currentAgency.id);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const unread = data?.filter((msg) => {
-          if (msg.read_by?.includes(currentUser.name)) return false;
-          if (!msg.recipient) return true;
-          if (msg.recipient === currentUser.name) return true;
-          return false;
-        }).length || 0;
-
-        setChatUnreadCount(unread);
-      } catch (err) {
-        logger.error('Error fetching unread count', err as Error, {
-          component: 'NavigationSidebar',
-          action: 'fetchUnreadCount',
-          userName: currentUser.name,
-        });
-      }
-    };
-
-    fetchUnreadCount();
-
-    const channelName = isMultiTenancyEnabled && currentAgency?.id
-      ? `sidebar-nav-messages-${currentAgency.id}`
-      : 'sidebar-nav-messages';
-
-    const subscriptionConfig: {
-      event: '*';
-      schema: 'public';
-      table: 'messages';
-      filter?: string;
-    } = {
-      event: '*',
-      schema: 'public',
-      table: 'messages',
-    };
-
-    if (isMultiTenancyEnabled && currentAgency?.id) {
-      subscriptionConfig.filter = `agency_id=eq.${currentAgency.id}`;
-    }
-
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', subscriptionConfig, () => {
-        fetchUnreadCount();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser?.name, currentAgency?.id, isMultiTenancyEnabled]);
 
   // Determine if the sidebar should be expanded (collapsed=false OR hovering while collapsed)
   const isExpanded = !sidebarCollapsed || hovering;

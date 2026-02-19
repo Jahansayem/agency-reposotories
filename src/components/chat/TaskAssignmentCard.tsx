@@ -154,11 +154,11 @@ export const TaskAssignmentCard = memo(function TaskAssignmentCard({
   // Get priority border color
   const getPriorityBorderColor = () => {
     switch (todo.priority) {
-      case 'urgent': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-yellow-500';
-      case 'low': return 'bg-blue-400';
-      default: return 'bg-slate-400';
+      case 'urgent': return 'bg-[var(--danger)]';
+      case 'high': return 'bg-[var(--warning)]';
+      case 'medium': return 'bg-[var(--accent-sky)]';
+      case 'low': return 'bg-[var(--accent)]';
+      default: return 'bg-[var(--text-light)]';
     }
   };
 

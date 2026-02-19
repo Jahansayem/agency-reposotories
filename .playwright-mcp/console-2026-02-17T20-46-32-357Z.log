@@ -1,0 +1,13 @@
+[    8331ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[    9434ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[   11541ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[   15649ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[   15651ms] [ERROR] [ERROR] Failed to fetch agency metrics after retries Error: [object Object]
+    at Object.error (http://localhost:3001/_next/static/chunks/000405b3ffb43982.js:1:11764)
+    at t (http://localhost:3001/_next/static/chunks/323e816bd44c5504.js:2:14547)
+    at async http://localhost:3001/_next/static/chunks/323e816bd44c5504.js:2:14661 {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e, attempts: 4} @ http://localhost:3001/_next/static/chunks/000405b3ffb43982.js:0
+[   69443ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/todos?id=eq.2ec4b4a2-f2e4-43fa-8378-c360d75cfc8b:0
+[   69444ms] [ERROR] [ERROR] Toggle failed Error: [object Object]
+    at Object.error (http://localhost:3001/_next/static/chunks/000405b3ffb43982.js:1:11764)
+    at http://localhost:3001/_next/static/chunks/a45c16273e9f5eb3.js:39:71787
+    at async ez (http://localhost:3001/_next/static/chunks/a45c16273e9f5eb3.js:17:35290) {component: useTodoOperations} @ http://localhost:3001/_next/static/chunks/000405b3ffb43982.js:0

@@ -40,7 +40,7 @@ const MentionAutocomplete = memo(function MentionAutocomplete({
       initial={{ opacity: 0, y: 5, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 5, scale: 0.95 }}
-      className="absolute z-30 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-2xl overflow-hidden min-w-[180px] backdrop-blur-xl"
+      className="absolute z-30 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-2xl overflow-hidden min-w-[180px] backdrop-blur-xl"
       style={{ bottom: position.top, left: position.left }}
     >
       {filteredUsers.map((user) => (
@@ -50,12 +50,12 @@ const MentionAutocomplete = memo(function MentionAutocomplete({
           className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] transition-all duration-200 text-left group"
         >
           <div
-            className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-white text-xs font-bold shadow-lg ring-1 ring-white/10 group-hover:ring-white/20 transition-all"
+            className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center text-[var(--text-inverse)] text-xs font-bold shadow-lg ring-1 ring-[var(--border-subtle)] group-hover:ring-[var(--border)] transition-all"
             style={{ backgroundColor: user.color }}
           >
             {user.name.charAt(0).toUpperCase()}
           </div>
-          <span className="text-sm text-white/80 group-hover:text-white transition-colors">{user.name}</span>
+          <span className="text-sm text-[var(--text-muted)] group-hover:text-[var(--foreground)] transition-colors">{user.name}</span>
         </button>
       ))}
     </motion.div>
@@ -265,7 +265,7 @@ export const ChatInputBar = memo(function ChatInputBar({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-sm">
             <Edit3 className="w-4 h-4 text-[var(--accent)]" />
-            <span className="font-semibold text-white">Editing message</span>
+            <span className="font-semibold text-[var(--foreground)]">Editing message</span>
           </div>
           <button
             onClick={onCancelEdit}
@@ -281,13 +281,13 @@ export const ChatInputBar = memo(function ChatInputBar({
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 px-4 py-3 rounded-[var(--radius-xl)] border border-[var(--chat-border)] bg-[var(--chat-surface)] text-white text-sm focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 transition-all"
+            className="flex-1 px-4 py-3 rounded-[var(--radius-xl)] border border-[var(--chat-border)] bg-[var(--chat-surface)] text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 transition-all"
             autoFocus
           />
           <motion.button
             onClick={handleSaveEditClick}
             disabled={!editText.trim()}
-            className="px-5 py-3 bg-[var(--accent)] text-white rounded-[var(--radius-xl)] text-sm font-semibold hover:bg-[var(--accent)]/90 disabled:opacity-50 transition-all"
+            className="px-5 py-3 bg-[var(--accent)] text-[var(--text-inverse)] rounded-[var(--radius-xl)] text-sm font-semibold hover:bg-[var(--accent)]/90 disabled:opacity-50 transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -313,7 +313,7 @@ export const ChatInputBar = memo(function ChatInputBar({
               <div className="flex items-center gap-2 text-sm">
                 <Reply className="w-4 h-4 text-[var(--accent)]" />
                 <span className="text-[var(--chat-text-secondary)]">Replying to</span>
-                <span className="font-semibold text-white">{replyingTo.created_by}</span>
+                <span className="font-semibold text-[var(--foreground)]">{replyingTo.created_by}</span>
               </div>
               <button
                 onClick={onCancelReply}
@@ -332,7 +332,7 @@ export const ChatInputBar = memo(function ChatInputBar({
 
       {/* Rate Limit Warning */}
       {rateLimitWarning && (
-        <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/20 text-amber-400 text-sm flex items-center gap-2">
+        <div className="px-4 py-2 bg-[var(--warning-light)] border-t border-[var(--warning)]/20 text-[var(--warning)] text-sm flex items-center gap-2">
           <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -341,7 +341,7 @@ export const ChatInputBar = memo(function ChatInputBar({
       )}
 
       {/* Input Area */}
-      <div className="p-4 border-t border-[var(--chat-border)] bg-[var(--surface-dark)] relative">
+      <div className="p-4 border-t border-[var(--border)] bg-[var(--surface)] relative">
         {/* Mention autocomplete */}
         <AnimatePresence>
           {showMentions && (
@@ -362,7 +362,7 @@ export const ChatInputBar = memo(function ChatInputBar({
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="mb-3 bg-[var(--surface-dark)] border border-[var(--chat-border)] rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden"
+              className="mb-3 bg-[var(--surface-elevated)] border border-[var(--border)] rounded-[var(--radius-2xl)] shadow-2xl overflow-hidden"
             >
               <div className="flex border-b border-[var(--chat-surface-hover)]">
                 {(Object.keys(EMOJI_CATEGORIES) as (keyof typeof EMOJI_CATEGORIES)[]).map((cat) => (
@@ -372,7 +372,7 @@ export const ChatInputBar = memo(function ChatInputBar({
                     className={`flex-1 py-3 text-xs font-semibold capitalize transition-all duration-200 ${
                       emojiCategory === cat
                         ? 'bg-[var(--accent)]/20 text-[var(--accent)] border-b-2 border-[var(--accent)]'
-                        : 'text-[var(--chat-text-secondary)] hover:bg-[var(--chat-surface)] hover:text-white/60'
+                        : 'text-[var(--chat-text-secondary)] hover:bg-[var(--chat-surface)] hover:text-[var(--text-muted)]'
                     }`}
                   >
                     {cat}
@@ -419,7 +419,7 @@ export const ChatInputBar = memo(function ChatInputBar({
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             disabled={disabled}
             className={`p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
-              showEmojiPicker ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white/70'
+              showEmojiPicker ? 'bg-[var(--accent)]/20 text-[var(--accent)]' : 'hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-[var(--foreground)]'
             }`}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -443,7 +443,7 @@ export const ChatInputBar = memo(function ChatInputBar({
               inputRef.current?.focus();
             }}
             disabled={disabled}
-            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] transition-all duration-200 hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-white/70 disabled:opacity-50"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] transition-all duration-200 hover:bg-[var(--chat-surface-hover)] text-[var(--chat-text-secondary)] hover:text-[var(--foreground)] disabled:opacity-50"
             title="Mention someone"
             aria-label="Mention someone"
             whileHover={{ scale: 1.05 }}
@@ -464,7 +464,7 @@ export const ChatInputBar = memo(function ChatInputBar({
               rows={1}
               aria-label={conversation ? `Message input for ${conversation.type === 'team' ? 'team chat' : conversation.userName}` : 'Message input'}
               aria-describedby="char-counter"
-              className="w-full px-5 py-3 rounded-[var(--radius-2xl)] border border-[var(--chat-border)] bg-[var(--chat-surface)] text-white placeholder:text-[var(--chat-text-muted)] focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 resize-none max-h-28 transition-all text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-5 py-3 rounded-[var(--radius-2xl)] border border-[var(--chat-border)] bg-[var(--chat-surface)] text-[var(--foreground)] placeholder:text-[var(--chat-text-muted)] focus:outline-none focus:border-[var(--accent)]/50 focus:ring-2 focus:ring-[var(--accent)]/20 resize-none max-h-28 transition-all text-[15px] disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
                 height: 'auto',
                 minHeight: '48px',
@@ -482,7 +482,7 @@ export const ChatInputBar = memo(function ChatInputBar({
                 id="char-counter"
                 className={`absolute bottom-1 right-2 text-xs ${
                   newMessage.length > CHAT_LIMITS.MAX_MESSAGE_LENGTH * 0.95
-                    ? 'text-red-400'
+                    ? 'text-[var(--danger)]'
                     : 'text-[var(--chat-text-secondary)]'
                 }`}
               >
@@ -493,7 +493,7 @@ export const ChatInputBar = memo(function ChatInputBar({
           <motion.button
             onClick={handleSend}
             disabled={(!newMessage.trim() && !uploadedAttachment) || disabled}
-            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] bg-[var(--accent)] text-white hover:bg-[var(--accent)]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-[var(--radius-xl)] bg-[var(--accent)] text-[var(--text-inverse)] hover:bg-[var(--accent)]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label="Send message"

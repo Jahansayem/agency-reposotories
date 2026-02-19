@@ -2,6 +2,18 @@
 
 import { useState, useCallback, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  CheckSquare,
+  Calendar,
+  MessageCircle,
+  Flame,
+  Inbox,
+  LayoutDashboard,
+  BarChart2,
+  Users,
+  Target,
+  Archive,
+} from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser } from '@/types/todo';
@@ -13,6 +25,8 @@ import EnhancedBottomNav from './EnhancedBottomNav';
 import FloatingChatButton from '../FloatingChatButton';
 import { AppBarProvider } from './AppBarContext';
 import UnifiedAppBar from './UnifiedAppBar';
+import { AgentPanel, AgentToggleButton } from '@/components/agent';
+import { useAgent } from '@/hooks/useAgent';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // APP SHELL - CORE LAYOUT ARCHITECTURE
@@ -110,6 +124,10 @@ export default function AppShell({
 
   // Get users from store for FloatingChatButton
   const users = useTodoStore((state) => state.usersWithColors);
+
+  // Agent panel state and hook
+  const { usage: agentUsage } = useAgent();
+  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
 
   // Navigation state
   const [activeView, setActiveView] = useState<ActiveView>('tasks');
@@ -338,7 +356,6 @@ export default function AppShell({
           {/* ═══ LEFT SIDEBAR ═══ */}
           <NavigationSidebar
             currentUser={currentUser}
-            onUserChange={onUserChange}
             onShowWeeklyChart={openWeeklyChart}
             onShowShortcuts={openShortcuts}
           />
@@ -384,6 +401,19 @@ export default function AppShell({
           currentUser={currentUser}
           users={users}
           onTaskLinkClick={handleTaskLinkClick}
+        />
+
+        {/* ═══ AI AGENT TOGGLE BUTTON ═══ */}
+        <AgentToggleButton
+          onClick={() => setIsAgentPanelOpen(true)}
+          usage={agentUsage}
+        />
+
+        {/* ═══ AI AGENT PANEL ═══ */}
+        <AgentPanel
+          isOpen={isAgentPanelOpen}
+          onClose={() => setIsAgentPanelOpen(false)}
+          onMinimize={() => setIsAgentPanelOpen(false)}
         />
 
         {/* ═══ COMMAND PALETTE ═══ */}
@@ -457,56 +487,83 @@ export default function AppShell({
 // ═══════════════════════════════════════════════════════════════════════════
 
 function MobileMenuContent({ onClose }: { onClose: () => void }) {
-  const { theme } = useTheme();
-  const { setActiveView, currentUser } = useAppShell();
+  const { setActiveView, activeView } = useAppShell();
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canViewArchive = usePermission('can_view_archive');
 
-  const menuItems = [
-    { id: 'tasks', label: 'Tasks', icon: '📋' },
-    { id: 'calendar', label: 'Calendar', icon: '📅' },
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'chat', label: 'Messages', icon: '💬' },
+  const primaryItems: { id: ActiveView; label: string; icon: typeof CheckSquare }[] = [
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+    { id: 'calendar', label: 'Calendar', icon: Calendar },
+    { id: 'chat', label: 'Messages', icon: MessageCircle },
+    { id: 'opportunities', label: 'Opportunities', icon: Flame },
+    { id: 'ai_inbox', label: 'AI Inbox', icon: Inbox },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
   ];
 
-  const handleItemClick = (viewId: string) => {
-    setActiveView(viewId as ActiveView);
+  const secondaryItems: { id: ActiveView; label: string; icon: typeof CheckSquare; show: boolean }[] = [
+    { id: 'customers', label: 'Customers', icon: Users, show: true },
+    { id: 'goals', label: 'Strategic Goals', icon: Target, show: canViewStrategicGoals },
+    { id: 'archive', label: 'Archive', icon: Archive, show: canViewArchive },
+  ];
+
+  const handleItemClick = (viewId: ActiveView) => {
+    setActiveView(viewId);
     onClose();
   };
 
   return (
-    <div className="space-y-2 pb-4">
-      <h2 className={`text-lg font-semibold mb-4 ${'text-[var(--foreground)]'}`}>
+    <div className="space-y-1 pb-4">
+      <h2 className="text-lg font-semibold mb-4 text-[var(--foreground)]">
         Navigation
       </h2>
-      {menuItems.map(item => (
-        <button
-          key={item.id}
-          onClick={() => handleItemClick(item.id)}
-          className={`
-            w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
-            transition-colors
-            ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
-          `}
-        >
-          <span className="text-xl">{item.icon}</span>
-          <span className="font-medium">{item.label}</span>
-        </button>
-      ))}
-
-      {canViewStrategicGoals && (
-        <>
-          <div className={`border-t my-4 ${'border-[var(--border)]'}`} />
+      {primaryItems.map(item => {
+        const Icon = item.icon;
+        const isActive = activeView === item.id;
+        return (
           <button
-            onClick={() => handleItemClick('goals')}
+            key={item.id}
+            onClick={() => handleItemClick(item.id)}
             className={`
               w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
               transition-colors
-              ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
+              ${isActive
+                ? 'bg-[var(--accent-light)] text-[var(--accent)] font-semibold'
+                : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
           >
-            <span className="text-xl">🎯</span>
-            <span className="font-medium">Strategic Goals</span>
+            <Icon className="w-5 h-5" aria-hidden="true" />
+            <span className="font-medium">{item.label}</span>
           </button>
+        );
+      })}
+
+      {secondaryItems.some(i => i.show) && (
+        <>
+          <div className="border-t my-3 border-[var(--border)]" />
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-light)]">
+            More
+          </p>
+          {secondaryItems.filter(i => i.show).map(item => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
+                  transition-colors
+                  ${isActive
+                    ? 'bg-[var(--accent-light)] text-[var(--accent)] font-semibold'
+                    : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
+                `}
+              >
+                <Icon className="w-5 h-5" aria-hidden="true" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            );
+          })}
         </>
       )}
     </div>
@@ -514,14 +571,12 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 }
 
 function MobileFiltersContent({ onClose }: { onClose: () => void }) {
-  const { theme } = useTheme();
-
   return (
     <div className="space-y-4 pb-4">
-      <h2 className={`text-lg font-semibold ${'text-[var(--foreground)]'}`}>
+      <h2 className="text-lg font-semibold text-[var(--foreground)]">
         Filters
       </h2>
-      <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
+      <p className="text-sm text-[var(--text-muted)]">
         Filter controls will be rendered here
       </p>
     </div>

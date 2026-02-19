@@ -6,6 +6,15 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { loginAsUser } from './helpers/auth';
+import { deleteTasksByPrefix } from './helpers/cleanup';
+
+// Seeded test user (from 20260219_seed_e2e_test_data.sql)
+const TEST_USER = 'Derrick';
+const TEST_PIN = '8008';
+
+// Prefix for tasks created by this test suite
+const TASK_PREFIX = 'E2E_Summary_';
 
 // Mock Todo data for testing
 const mockTodo = {
@@ -91,43 +100,19 @@ test.describe('Summary Generator - Unit Tests', () => {
 });
 
 test.describe('Summary Generator - Integration Tests', () => {
+  test.afterEach(async ({ page }) => {
+    await deleteTasksByPrefix(page, TASK_PREFIX, 5);
+  });
+
   test('Task completion modal appears and shows summary', async ({ page }) => {
-    // Register and login
-    const userName = `User${Date.now()}`;
-    await page.goto('/');
-
-    // Wait for login screen
-    const header = page.locator('h1').filter({ hasText: 'Bealer Agency' });
-    await expect(header).toBeVisible({ timeout: 15000 });
-
-    // Click Add New User button
-    const addUserBtn = page.getByRole('button', { name: 'Add New User' });
-    await addUserBtn.click();
-
-    // Fill registration
-    const nameInput = page.locator('input[placeholder="Enter name"]').or(page.locator('input[type="text"]').first());
-    await expect(nameInput).toBeVisible({ timeout: 5000 });
-    await nameInput.fill(userName);
-
-    // Enter PIN
-    const pinInputs = page.locator('input[type="password"]');
-    for (let i = 0; i < 4; i++) {
-      await pinInputs.nth(i).fill('1');
-    }
-    for (let i = 4; i < 8; i++) {
-      await pinInputs.nth(i).fill('1');
-    }
-
-    // Create account
-    const createBtn = page.getByRole('button', { name: 'Create Account' });
-    await createBtn.click();
+    await loginAsUser(page, TEST_USER, TEST_PIN);
 
     // Wait for main app
-    const todoInput = page.locator('textarea[placeholder="What needs to be done?"]');
+    const todoInput = page.locator('[data-testid="add-task-input"]');
     await expect(todoInput).toBeVisible({ timeout: 15000 });
 
     // Create a task
-    const taskName = `Summary Test Task ${Date.now()}`;
+    const taskName = `${TASK_PREFIX}Test Task ${Date.now()}`;
     await todoInput.click();
     await todoInput.fill(taskName);
     await page.keyboard.press('Enter');

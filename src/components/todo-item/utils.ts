@@ -51,14 +51,15 @@ export const getDaysOverdue = (date: string): number => {
 
 export const getDueDateStatus = (date: string, completed: boolean): 'overdue' | 'today' | 'upcoming' | 'future' => {
   if (completed) return 'future';
-  const d = new Date(date);
+  // Parse as local date to avoid UTC timezone shift for users west of UTC
+  const [year, month, day] = date.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const weekFromNow = new Date(today);
   weekFromNow.setDate(weekFromNow.getDate() + 7);
-  d.setHours(0, 0, 0, 0);
 
   if (d < today) return 'overdue';
   if (d.getTime() === today.getTime()) return 'today';

@@ -355,12 +355,12 @@ export function useChatMessages({
     }
   }, [currentUser.name]);
 
-  // Mark messages as read (batched)
+  // Mark messages as read (batched into a single parallel operation)
   const markMessagesAsRead = useCallback(async (messageIds: string[]) => {
     if (messageIds.length === 0) return;
 
     // Filter to only unread messages not created by current user
-    // Capture read_by arrays at filter time to avoid race conditions in fallback loop
+    // Capture read_by arrays at filter time to avoid race conditions in fallback path
     const unreadEntries = messageIds.map(id => {
       const msg = messagesRef.current.find(m => m.id === id);
       if (!msg || msg.created_by === currentUser.name || (msg.read_by || []).includes(currentUser.name)) {
@@ -383,34 +383,29 @@ export function useChatMessages({
       return m;
     }));
 
-    // Batch update in database using RPC first, then fallback
+    // Batch update: fire all RPC calls in parallel in a single Promise.all
+    // instead of the old sequential test-first-then-remaining pattern
     try {
-      // Try RPC for each message (most reliable for array_append)
-      const { error: rpcError } = await supabase.rpc('mark_message_read', {
-        p_message_id: unreadIds[0],
-        p_user_name: currentUser.name
-      });
+      const results = await Promise.all(
+        unreadIds.map(messageId =>
+          supabase.rpc('mark_message_read', {
+            p_message_id: messageId,
+            p_user_name: currentUser.name
+          })
+        )
+      );
 
-      if (rpcError) {
-        // RPC not available - use batched fallback for all messages at once
-        // Use read_by captured at filter time to avoid race conditions
+      // Check if RPC is not available (first call failed)
+      const firstError = results[0]?.error;
+      if (firstError) {
+        // RPC not available — fall back to a single batched update per message
+        // using captured read_by arrays to avoid race conditions
         await Promise.all(
           unreadEntries.map(({ id, readBy }) =>
             supabase
               .from('messages')
               .update({ read_by: [...readBy, currentUser.name] })
               .eq('id', id)
-          )
-        );
-      } else if (unreadIds.length > 1) {
-        // RPC works - use it for remaining messages
-        const remainingIds = unreadIds.slice(1);
-        await Promise.all(
-          remainingIds.map(messageId =>
-            supabase.rpc('mark_message_read', {
-              p_message_id: messageId,
-              p_user_name: currentUser.name
-            })
           )
         );
       }

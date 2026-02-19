@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Loader2, AlertCircle } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE } from '@/types/todo';
-import { fetchWithCsrf } from '@/lib/csrf';
+import { ensureCsrfToken } from '@/lib/csrf';
 import { ContextualErrorMessages } from '@/lib/errorMessages';
 
 interface AttachmentUploadProps {
@@ -82,6 +82,9 @@ export default function AttachmentUpload({
       formData.append('todoId', todoId);
       formData.append('userName', userName);
 
+      // Get CSRF token before starting XHR (uses cookie-based CSRF system)
+      const csrfToken = await ensureCsrfToken();
+
       // UX-005: Use XMLHttpRequest to track actual upload progress
       const result = await new Promise<{ success: boolean; attachment?: import('@/types/todo').Attachment; error?: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -132,9 +135,6 @@ export default function AttachmentUpload({
         });
 
         xhr.open('POST', '/api/attachments');
-        // Note: fetchWithCsrf adds CSRF token, we need to add it manually here
-        // The CSRF token is fetched from cookies or a meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (csrfToken) {
           xhr.setRequestHeader('X-CSRF-Token', csrfToken);
         }

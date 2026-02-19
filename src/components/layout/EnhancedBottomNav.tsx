@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckSquare,
@@ -16,11 +16,10 @@ import {
 import { useAppShell, ActiveView } from './AppShell';
 import { DURATION, EASE } from '@/lib/animations';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { zClass } from '@/lib/z-index';
 import { useIsLandscape } from '@/hooks/useIsLandscape';
 import SyncStatusIndicator from '../SyncStatusIndicator';
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
-import { useAgency } from '@/contexts/AgencyContext';
-import { logger } from '@/lib/logger';
+import { useUnreadCount } from '@/contexts/UnreadCountContext';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENHANCED BOTTOM NAVIGATION
@@ -46,98 +45,12 @@ export default function EnhancedBottomNav() {
     activeView,
     setActiveView,
     openMobileSheet,
-    currentUser,
     triggerNewTask,
   } = useAppShell();
 
   const isLandscape = useIsLandscape();
   const prefersReducedMotion = useReducedMotion();
-  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
-
-  // Stats for badges
-  const [stats, setStats] = useState({
-    unreadMessages: 0,
-    overdueTasks: 0,
-    dueTodayTasks: 0,
-  });
-
-  // Fetch unread message count from Supabase
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !currentUser?.name) return;
-
-    const fetchUnreadCount = async () => {
-      try {
-        // Only count messages from the last 7 days to avoid inflating count
-        // with historical messages that predate read-tracking
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        let query = supabase
-          .from('messages')
-          .select('id, read_by, recipient, created_by')
-          .not('created_by', 'eq', currentUser.name)
-          .is('deleted_at', null)
-          .gte('created_at', sevenDaysAgo.toISOString());
-
-        if (isMultiTenancyEnabled && currentAgencyId) {
-          query = query.eq('agency_id', currentAgencyId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        const unread = data?.filter((msg) => {
-          if (msg.read_by?.includes(currentUser.name)) return false;
-          // Team message (no recipient)
-          if (!msg.recipient) return true;
-          // DM to current user
-          if (msg.recipient === currentUser.name) return true;
-          return false;
-        }).length || 0;
-
-        setStats(prev => ({ ...prev, unreadMessages: unread }));
-      } catch (err) {
-        logger.error('Error fetching unread count', err as Error, {
-          component: 'EnhancedBottomNav',
-          action: 'fetchUnreadCount',
-          userName: currentUser.name,
-        });
-      }
-    };
-
-    fetchUnreadCount();
-
-    const channelName = isMultiTenancyEnabled && currentAgencyId
-      ? `bottom-nav-messages-${currentAgencyId}`
-      : 'bottom-nav-messages';
-
-    const subscriptionConfig: {
-      event: '*';
-      schema: 'public';
-      table: 'messages';
-      filter?: string;
-    } = {
-      event: '*',
-      schema: 'public',
-      table: 'messages',
-    };
-
-    if (isMultiTenancyEnabled && currentAgencyId) {
-      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
-    }
-
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', subscriptionConfig, () => {
-        fetchUnreadCount();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser?.name, currentAgencyId, isMultiTenancyEnabled]);
+  const { unreadCount } = useUnreadCount();
 
   const tabs: NavTab[] = [
     {
@@ -159,7 +72,7 @@ export default function EnhancedBottomNav() {
       id: 'chat',
       label: 'Messages',
       icon: MessageCircle,
-      badge: stats.unreadMessages,
+      badge: unreadCount,
     },
     {
       id: 'activity',
@@ -193,18 +106,17 @@ export default function EnhancedBottomNav() {
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-40 lg:hidden pb-safe bg-[var(--surface)] backdrop-blur-xl border-t border-[var(--border)] ${
+      className={`fixed bottom-0 left-0 right-0 ${zClass.sticky} lg:hidden pb-safe bg-[var(--surface)] backdrop-blur-xl border-t border-[var(--border)] ${
         isLandscape ? 'h-12' : ''
       }`}
-      role="navigation"
-      aria-label="Main navigation"
+      aria-label="Mobile navigation"
     >
       {/* Connection status dot — visible only on mobile (sidebar hidden) */}
       <div className="absolute top-1.5 right-3">
         <SyncStatusIndicator />
       </div>
 
-      <div className="flex items-center justify-around max-w-lg mx-auto px-2">
+      <div className="flex items-center justify-around max-w-lg mx-auto px-2" role="tablist">
         {tabs.map((tab, index) => {
           const Icon = tab.icon;
           const isActive = tab.id !== 'add' && activeView === tab.id;

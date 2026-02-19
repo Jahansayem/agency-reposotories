@@ -1,45 +1,41 @@
 import { test, expect, Page } from '@playwright/test';
+import { loginAsUser } from './helpers/auth';
+import { deleteTasksByPrefix } from './helpers/cleanup';
 
-// Helper: log in as Derrick (known PIN: 8008)
-async function loginAsDerrick(page: Page) {
-  await page.goto('http://localhost:3001');
-  await page.waitForSelector('[data-testid="user-card-Derrick"]', { timeout: 15000 });
-  await page.click('[data-testid="user-card-Derrick"]');
-  await page.waitForSelector('input', { timeout: 5000 });
-  const inputs = await page.locator('input').all();
-  for (const [i, digit] of ['8', '0', '0', '8'].entries()) {
-    await inputs[i].fill(digit);
-  }
-  await page.waitForSelector('nav[aria-label="Main navigation"]', { timeout: 15000 });
-}
+// Seeded test user (from 20260219_seed_e2e_test_data.sql)
+const TEST_USER = 'Derrick';
+const TEST_PIN = '8008';
+
+// Prefix for tasks created by this test suite
+const TASK_PREFIX = 'E2E_CrossSell_';
 
 test.describe('Cross-sell opportunity integration', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAsDerrick(page);
+    await loginAsUser(page, TEST_USER, TEST_PIN);
     // Navigate to Tasks view
-    await page.click('button:has-text("Tasks")');
+    await page.click('button:has-text("Tasks"), [role="tab"]:has-text("Tasks")', { force: true });
     await page.waitForSelector('[aria-label="Create new task"]', { timeout: 10000 });
   });
 
+  test.afterEach(async ({ page }) => {
+    // Clean up tasks created during this test
+    await deleteTasksByPrefix(page, TASK_PREFIX, 5);
+  });
+
   test('shows opportunity match banner after creating task with customer name', async ({ page }) => {
-    // Open add task modal
     await page.click('[aria-label="Create new task"]');
-    await page.waitForSelector('input[placeholder*="task" i], input[placeholder*="add" i]', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] textarea, [role="dialog"] input[type="text"]', { timeout: 5000 });
 
-    // Type a task with a customer name that exists in the opportunities table
-    // This test assumes a customer named something in the real DB — adjust to match test data
-    const taskText = 'Call Janis Urich about her upcoming renewal';
-    await page.fill('input[placeholder*="task" i], input[placeholder*="add" i]', taskText);
-
-    // Submit (press Enter or click Add button)
+    // James Wilson exists in seed data with HOT cross-sell opportunity
+    const taskText = `${TASK_PREFIX}Call James Wilson about his upcoming renewal`;
+    await page.fill('[role="dialog"] textarea, [role="dialog"] input[type="text"]', taskText);
     await page.keyboard.press('Enter');
 
-    // Wait for banner to appear (up to 10s — Claude name extraction takes ~1–2s)
+    // Wait for banner to appear (Claude name extraction takes ~1–2s)
     const banner = page.locator('[role="alert"]').filter({ hasText: 'Looks like this is for' });
     await expect(banner).toBeVisible({ timeout: 10000 });
 
-    // Banner should show customer name and opportunity tier
-    await expect(banner.locator('text=Janis')).toBeVisible();
+    await expect(banner.locator('text=James')).toBeVisible();
     await expect(banner.locator('button:has-text("Link")')).toBeVisible();
     await expect(banner.locator('button:has-text("Not")')).toBeVisible();
   });
@@ -48,18 +44,16 @@ test.describe('Cross-sell opportunity integration', () => {
     await page.click('[aria-label="Create new task"]');
     await page.waitForSelector('input[placeholder*="task" i]', { timeout: 5000 });
 
-    const taskText = 'Follow up with Janis Urich on her policy';
+    const taskText = `${TASK_PREFIX}Follow up with James Wilson on his policy`;
     await page.fill('input[placeholder*="task" i]', taskText);
     await page.keyboard.press('Enter');
 
     const banner = page.locator('[role="alert"]').filter({ hasText: 'Link' });
     await expect(banner).toBeVisible({ timeout: 10000 });
 
-    // Click "Link" button
     await banner.locator('button:has-text("Link")').click();
 
-    // After linking, check that the task row in the list now shows an opportunity badge
-    const taskRow = page.locator('li').filter({ hasText: 'Follow up with Janis Urich' });
+    const taskRow = page.locator('li').filter({ hasText: `${TASK_PREFIX}Follow up with James Wilson` });
     await expect(taskRow.locator('[title*="opportunity" i]')).toBeVisible({ timeout: 5000 });
   });
 
@@ -67,7 +61,8 @@ test.describe('Cross-sell opportunity integration', () => {
     await page.click('[aria-label="Create new task"]');
     await page.waitForSelector('input[placeholder*="task" i]', { timeout: 5000 });
 
-    await page.fill('input[placeholder*="task" i]', 'Review quarterly reports');
+    const taskText = `${TASK_PREFIX}Review quarterly reports`;
+    await page.fill('input[placeholder*="task" i]', taskText);
     await page.keyboard.press('Enter');
 
     // Wait 6 seconds — if no banner appears within that time, test passes
@@ -77,20 +72,16 @@ test.describe('Cross-sell opportunity integration', () => {
   });
 
   test('opportunity callout appears in task detail modal for linked customer', async ({ page }) => {
-    // Find a task that already has a customer_id set (created from generate-tasks flow or previously linked)
-    // Click on a task that has an opportunity badge
     const taskWithBadge = page.locator('li').filter({ hasText: '' }).locator('[title*="opportunity" i]').first();
 
-    // If no badge exists yet, skip this test
     const count = await taskWithBadge.count();
     if (count === 0) {
       test.skip();
       return;
     }
 
-    await taskWithBadge.click(); // Opens task detail modal
+    await taskWithBadge.click();
 
-    // Wait for modal and check for OpportunityCallout
     await page.waitForSelector('[role="dialog"]', { timeout: 5000 });
     const callout = page.locator('[role="dialog"]').locator('text=opportunity');
     await expect(callout).toBeVisible({ timeout: 5000 });

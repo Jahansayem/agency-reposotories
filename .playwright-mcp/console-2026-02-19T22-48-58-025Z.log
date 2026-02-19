@@ -1,0 +1,14 @@
+[   32975ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0
+[   43369ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ http://localhost:3000/api/auth/login:0
+[  188391ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  188484ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  189498ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  189610ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  191608ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  191708ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  195719ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0
+[  195722ms] [ERROR] [ERROR] Failed to fetch agency metrics after retries Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/shared-todo-list_src_6f10fbb9._.js:4832:59)
+    at useAgencyMetrics.useCallback[fetchMetrics].attemptFetch (http://localhost:3000/_next/static/chunks/shared-todo-list_src_hooks_bbec6ca5._.js:5352:185)
+    at async useAgencyMetrics.useCallback[fetchMetrics] (http://localhost:3000/_next/static/chunks/shared-todo-list_src_hooks_bbec6ca5._.js:5361:13) {component: useAgencyMetrics, agencyId: 893577db-4271-4a70-88ba-a93121f22e0e, attempts: 4} @ http://localhost:3000/_next/static/chunks/e1fc4_next_dist_ca2f7e60._.js:3117
+[  195828ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/agency_metrics?select=*&agency_id=eq.893577db-4271-4a70-88ba-a93121f22e0e&month=eq.2026-02:0

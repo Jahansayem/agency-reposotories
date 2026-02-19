@@ -1,0 +1,5 @@
+[   18421ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://bzjssogezdnybbenqygq.supabase.co/rest/v1/todos?id=eq.c00e949b-a1ab-4830-b5df-a704d918281c:0
+[   18425ms] [ERROR] [ERROR] Toggle failed Error: [object Object]
+    at Logger.error (http://localhost:3000/_next/static/chunks/shared-todo-list_src_d67f33a0._.js:4775:59)
+    at useTodoOperations.useCallback[toggleTodo] (http://localhost:3000/_next/static/chunks/shared-todo-list_src_d98d363f._.js:2120:173)
+    at async handleToggle (http://localhost:3000/_next/static/chunks/shared-todo-list_src_components_bfea4130._.js:6881:13) {component: useTodoOperations} @ http://localhost:3000/_next/static/chunks/e1fc4_next_dist_ca2f7e60._.js:3117

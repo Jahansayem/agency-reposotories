@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { X } from 'lucide-react';
 import { prefersReducedMotion } from '@/lib/animations';
+import { zClass } from '@/lib/z-index';
 
 interface FilterBottomSheetProps {
   isOpen: boolean;
@@ -78,7 +79,7 @@ export function FilterBottomSheet({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black z-50"
+            className={`fixed inset-0 bg-black ${zClass.overlay}`}
             aria-hidden="true"
           />
 
@@ -98,7 +99,7 @@ export function FilterBottomSheet({
             dragConstraints={{ top: 0 }}
             dragElastic={0.2}
             onDragEnd={handleDragEnd}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--surface)] rounded-t-2xl max-h-[85vh] overflow-hidden shadow-2xl"
+            className={`fixed bottom-0 left-0 right-0 ${zClass.modal} bg-[var(--surface)] rounded-t-2xl max-h-[85vh] overflow-hidden shadow-2xl`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="filter-sheet-title"
