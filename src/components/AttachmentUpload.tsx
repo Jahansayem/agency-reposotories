@@ -13,6 +13,8 @@ interface AttachmentUploadProps {
   onClose: () => void;
   currentAttachmentCount: number;
   maxAttachments: number;
+  /** If provided, auto-upload this file immediately on mount */
+  initialFile?: File;
 }
 
 export default function AttachmentUpload({
@@ -22,6 +24,7 @@ export default function AttachmentUpload({
   onClose,
   currentAttachmentCount,
   maxAttachments,
+  initialFile,
 }: AttachmentUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -172,6 +175,15 @@ export default function AttachmentUpload({
     // Upload the first file only
     uploadFile(files[0]);
   }, [remainingSlots, maxAttachments, uploadFile]);
+
+  // Auto-upload dropped file on mount
+  const initialFileProcessed = useRef(false);
+  useEffect(() => {
+    if (initialFile && !initialFileProcessed.current) {
+      initialFileProcessed.current = true;
+      uploadFile(initialFile);
+    }
+  }, [initialFile, uploadFile]);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
