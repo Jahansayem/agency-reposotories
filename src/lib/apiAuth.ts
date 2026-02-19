@@ -13,9 +13,19 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Todo, Attachment } from '@/types/todo';
 import type { AgencyRole } from '@/types/agency';
 import { validateSession } from './sessionValidator';
+import { createServiceRoleClient } from './supabaseClient';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+function getApiAuthSupabaseClient(): SupabaseClient {
+  try {
+    return createServiceRoleClient();
+  } catch {
+    // Fallback for environments without service role key.
+    return createClient(supabaseUrl, supabaseAnonKey);
+  }
+}
 
 /**
  * Result of user extraction and validation.
@@ -160,9 +170,10 @@ export function agencyScopedQuery(supabaseClient: SupabaseClient, table: string,
 export async function verifyTodoAccess(
   todoId: string,
   userName: string,
-  agencyId?: string
+  agencyId?: string,
+  canEditAllTasks: boolean = false
 ): Promise<{ todo: Todo; error: null } | { todo: null; error: NextResponse }> {
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = getApiAuthSupabaseClient();
 
   let query = supabase
     .from('todos')
@@ -192,6 +203,7 @@ export async function verifyTodoAccess(
   // 2. Are assigned to the todo
   // 3. Updated the todo (had previous access)
   const hasAccess =
+    canEditAllTasks ||
     todo.created_by === userName ||
     todo.assigned_to === userName ||
     todo.updated_by === userName;

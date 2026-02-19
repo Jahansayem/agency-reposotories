@@ -277,7 +277,15 @@ export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     // Verify the user has access to this todo (creator, assigned, or updater)
     // Pass agencyId for cross-tenant protection
-    const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
+    const canEditAllTasks = Boolean(
+      ctx.permissions?.can_edit_all_tasks || ctx.permissions?.can_edit_any_task
+    );
+    const { todo: _todo, error: accessError } = await verifyTodoAccess(
+      id,
+      ctx.userName,
+      ctx.agencyId || undefined,
+      canEditAllTasks
+    );
     if (accessError) return accessError;
 
     // Build update object
@@ -383,7 +391,15 @@ export const DELETE = withAgencyAuth(async (request: NextRequest, ctx: AgencyAut
 
     // Verify the user has access to this todo (creator, assigned, or updater)
     // Pass agencyId for cross-tenant protection
-    const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
+    const canDeleteAllTasks = Boolean(
+      ctx.permissions?.can_delete_all_tasks || ctx.permissions?.can_delete_tasks
+    );
+    const { todo, error: accessError } = await verifyTodoAccess(
+      id,
+      ctx.userName,
+      ctx.agencyId || undefined,
+      canDeleteAllTasks
+    );
     if (accessError) return accessError;
 
     let query = supabase
