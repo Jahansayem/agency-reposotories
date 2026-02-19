@@ -227,6 +227,7 @@ export function useTodoOperations({
             updateTodoInStore(newTodo.id, {
               attachments: [...(newTodo.attachments || []), attachment]
             });
+            toast.success('Attachment saved', { description: sourceFile.name });
             logActivity({
               action: 'attachment_added',
               userName,
@@ -239,10 +240,13 @@ export function useTodoOperations({
               },
             });
           } else {
-            logger.error('Failed to auto-attach source file', null, { component: 'useTodoOperations' });
+            const errBody = await response.text().catch(() => '');
+            logger.error('Failed to auto-attach source file', null, { component: 'useTodoOperations', status: response.status, body: errBody });
+            toast.error('Attachment failed to upload', { description: `${sourceFile.name} — server returned ${response.status}` });
           }
         } catch (err) {
           logger.error('Error auto-attaching source file', err, { component: 'useTodoOperations' });
+          toast.error('Attachment failed to upload', { description: sourceFile.name });
         }
       }
     } catch (error) {
