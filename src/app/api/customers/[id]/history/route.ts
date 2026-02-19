@@ -1,7 +1,7 @@
 /**
  * Customer Interaction History API
  *
- * GET /api/customers/[customerId]/history - Fetch paginated interaction history
+ * GET /api/customers/[id]/history - Fetch paginated interaction history
  *
  * Query params:
  * - limit: Max results per page (default 50, max 100)
@@ -25,7 +25,7 @@ function getSupabaseClient() {
 }
 
 interface RouteParams {
-  params: Promise<{ customerId: string }>;
+  params: Promise<{ id: string }>;
 }
 
 export async function GET(
@@ -41,7 +41,7 @@ export async function GET(
 
   try {
     const supabase = getSupabaseClient();
-    const { customerId } = await params;
+    const { id: customerId } = await params;
 
     if (!customerId) {
       return NextResponse.json(
