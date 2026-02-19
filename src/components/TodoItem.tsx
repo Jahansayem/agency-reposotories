@@ -326,12 +326,11 @@ function TodoItemComponent({
         {/* Completion checkbox with animation */}
         <motion.button
           onClick={handleToggle}
-          disabled={!canEdit}
-          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${canEdit ? '' : 'opacity-50 cursor-not-allowed'}`}
+          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0`}
           style={{ touchAction: 'manipulation' }}
-          title={!canEdit ? 'You do not have permission to modify this task' : todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
-          whileHover={canEdit ? { scale: 1.1 } : undefined}
-          whileTap={canEdit ? { scale: 0.95 } : undefined}
+          title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
           transition={{ duration: DURATION.fast }}
           data-completion-checkbox
         >
@@ -339,9 +338,7 @@ function TodoItemComponent({
             className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center ${
               todo.completed
                 ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
-                : canEdit
-                  ? 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
-                  : 'border-[var(--border)]'
+                : 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
             }`}
             initial={false}
             animate={todo.completed ? 'checked' : 'unchecked'}
