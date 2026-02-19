@@ -28,7 +28,9 @@ import {
   Copy,
   Check,
   X,
+  History,
 } from 'lucide-react';
+import { InteractionTimeline } from './InteractionTimeline';
 import { useToast } from '@/components/ui/Toast';
 import { useCustomerDetail, useCreateTaskFromOpportunity, useDismissOpportunity } from '@/hooks/useCustomers';
 import type { CustomerOpportunity, CustomerTask } from '@/types/customer';
@@ -49,7 +51,7 @@ export function CustomerDetailPanel({
   className = '',
 }: CustomerDetailPanelProps) {
   const { customer, opportunities, tasks, stats, loading, error } = useCustomerDetail(customerId);
-  const [expandedSection, setExpandedSection] = useState<'opportunities' | 'tasks' | null>('opportunities');
+  const [expandedSection, setExpandedSection] = useState<'opportunities' | 'tasks' | 'history' | null>('opportunities');
   const [copiedPhone, setCopiedPhone] = useState(false);
   const toast = useToast();
 
@@ -243,6 +245,21 @@ export function CustomerDetailPanel({
             No related tasks
           </p>
         )}
+      </CollapsibleSection>
+
+      {/* Interaction History Section */}
+      <CollapsibleSection
+        title="Interaction History"
+        count={0}
+        expanded={expandedSection === 'history'}
+        onToggle={() => setExpandedSection(expandedSection === 'history' ? null : 'history')}
+        icon={History}
+        iconColor="text-gray-500"
+      >
+        <InteractionTimeline
+          customerId={customerId}
+          onViewTask={onViewTask}
+        />
       </CollapsibleSection>
     </div>
   );
