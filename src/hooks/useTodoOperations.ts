@@ -23,6 +23,7 @@ import { sendTaskAssignmentNotification, sendTaskCompletionNotification } from '
 import { fetchWithCsrf } from '@/lib/csrf';
 import { calculateCompletionStreak, getNextSuggestedTasks, getEncouragementMessage } from '@/lib/taskSuggestions';
 import { ActivityLogEntry } from '@/types/todo';
+import { useToast } from '@/components/ui/Toast';
 
 interface UseTodoOperationsProps {
   userName: string;
@@ -51,6 +52,7 @@ export function useTodoOperations({
   triggerCelebration,
   triggerEnhancedCelebration,
 }: UseTodoOperationsProps) {
+  const toast = useToast();
 
   /**
    * Actually create the todo (called after duplicate check or when user confirms)
@@ -495,24 +497,42 @@ export function useTodoOperations({
       }
     }
 
-    const { data, error } = await supabase
-      .from('todos')
-      .update({ completed, status: newStatus, updated_at })
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+    let persistError: Error | null = null;
+    try {
+      const response = await fetchWithCsrf('/api/todos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id,
+          completed,
+          status: newStatus,
+        }),
+      });
 
-    if (error || !data) {
-      logger.error('Toggle failed', error ?? new Error('No rows updated'), { component: 'useTodoOperations' });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        const apiError = errorPayload?.error || `Request failed with status ${response.status}`;
+        throw new Error(apiError);
+      }
+    } catch (error) {
+      persistError = error instanceof Error ? error : new Error('Failed to persist toggle');
+    }
+
+    if (persistError) {
+      logger.error('Toggle failed', persistError, { component: 'useTodoOperations' });
       if (todoItem) {
         updateTodoInStore(id, todoItem);
       }
+      toast.warning('Reverting...', {
+        description: 'Failed to update task. Changes have been reverted.',
+        duration: 5000,
+      });
     } else if (todoItem) {
       const action = completed ? 'task_completed' : 'task_reopened';
       logActivity({ action, userName, todoId: id, todoText: todoItem.text });
       announce(`Task ${completed ? 'completed' : 'reopened'}: ${todoItem.text}`);
     }
-  }, [todos, activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration, createNextRecurrence]);
+  }, [todos, activityLog, userName, updateTodoInStore, announce, triggerCelebration, triggerEnhancedCelebration, createNextRecurrence, toast]);
 
   return {
     addTodo,
