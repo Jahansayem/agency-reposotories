@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { zClass } from '@/lib/z-index';
 import {
   Bell,
   BellOff,
@@ -133,8 +135,22 @@ export default function NotificationModal({
   onViewAllActivity,
 }: NotificationModalProps) {
   const { theme } = useTheme();
-  const modalRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
+
+  // Focus trap for modal accessibility (WCAG 2.1 AA)
+  const { containerRef: focusTrapRef } = useFocusTrap<HTMLDivElement>({
+    onEscape: onClose,
+    enabled: isOpen,
+    autoFocus: true,
+  });
+
+  // Combined ref: useFocusTrap's containerRef + local ref for positioning/click-outside
+  const modalRef = useRef<HTMLDivElement>(null);
+  const setModalRef = useCallback((node: HTMLDivElement | null) => {
+    // Assign to both refs
+    (modalRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (focusTrapRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [focusTrapRef]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   // Stable channel name — avoids creating a new Supabase channel on every render/effect run.
   // Using a ref ensures the same name persists across the component's lifetime.
@@ -263,19 +279,7 @@ export default function NotificationModal({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen, onClose, anchorRef]);
 
-  // Handle escape key
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  // Escape key is handled by useFocusTrap hook above
 
   // Check if activity is unread (happened after last seen)
   const isUnread = useCallback(
@@ -352,7 +356,7 @@ export default function NotificationModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          ref={modalRef}
+          ref={setModalRef}
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -363,11 +367,12 @@ export default function NotificationModal({
             left: position.left,
           }}
           className={`
-            z-[100] w-[380px] max-h-[520px] rounded-[var(--radius-xl)] overflow-hidden
+            ${zClass.popover} w-[380px] max-h-[520px] rounded-[var(--radius-xl)] overflow-hidden
             shadow-2xl border
             ${'bg-[var(--surface)] border-[var(--border)]'}
           `}
           role="dialog"
+          aria-modal="true"
           aria-label="Notifications"
         >
           {/* Header */}

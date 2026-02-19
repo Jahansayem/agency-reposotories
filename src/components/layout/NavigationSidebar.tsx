@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/lib/logger';
+import { zClass } from '@/lib/z-index';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -29,6 +30,8 @@ import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 import { CreateAgencyModal } from '@/components/CreateAgencyModal';
 import { AgencyMembersModal } from '@/components/AgencyMembersModal';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // NAVIGATION SIDEBAR
@@ -112,6 +115,7 @@ export default function NavigationSidebar({
   const [showMembersModal, setShowMembersModal] = useState(false);
 
   const [hovering, setHovering] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   // Unread chat message count
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
@@ -227,10 +231,10 @@ export default function NavigationSidebar({
       animate={{
         width: isExpanded ? 260 : 72,
       }}
-      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       onMouseEnter={() => sidebarCollapsed && setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      className="hidden lg:flex flex-col flex-shrink-0 overflow-hidden border-r transition-colors bg-[var(--surface)] border-[var(--border)]"
+      className={`hidden lg:flex flex-col flex-shrink-0 overflow-hidden border-r transition-colors bg-[var(--surface)] border-[var(--border)] ${zClass.sticky}`}
       aria-label="Main navigation"
     >
       {/* ─── Header ─── */}
@@ -239,9 +243,9 @@ export default function NavigationSidebar({
           {isExpanded ? (
             <motion.div
               key="expanded"
-              initial={{ opacity: 0 }}
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
               className="flex items-center gap-2 flex-1"
             >
               {/* Show AgencySwitcher when multi-tenancy is enabled */}
@@ -283,9 +287,9 @@ export default function NavigationSidebar({
           ) : (
             <motion.div
               key="collapsed"
-              initial={{ opacity: 0 }}
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
               className="w-8 h-8 rounded-[var(--radius-lg)] flex items-center justify-center mx-auto"
               style={{ backgroundColor: currentAgency?.primary_color || 'var(--brand-blue)' }}
             >
@@ -319,19 +323,21 @@ export default function NavigationSidebar({
 
       {/* ─── Quick Add Button ─── */}
       <div className="px-3 py-3">
-        <button
-          onClick={triggerNewTask}
-          aria-label="Create new task"
-          className={`
-            w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[var(--radius-xl)]
-            font-medium text-sm transition-all
-            bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]
-            text-white shadow-md hover:shadow-lg hover:brightness-110
-          `}
-        >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          {isExpanded && <span>New Task</span>}
-        </button>
+        <Tooltip content="New Task" position="right" disabled={isExpanded}>
+          <button
+            onClick={triggerNewTask}
+            aria-label="Create new task"
+            className={`
+              w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[var(--radius-xl)]
+              font-medium text-sm transition-all
+              bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]
+              text-white shadow-md hover:shadow-lg hover:brightness-110
+            `}
+          >
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            {isExpanded && <span>New Task</span>}
+          </button>
+        </Tooltip>
       </div>
 
       {/* ─── Primary Navigation ─── */}
@@ -342,30 +348,32 @@ export default function NavigationSidebar({
           const badgeCount = item.id === 'chat' ? chatUnreadCount : (item.badge || 0);
 
           return (
-            <button
-              key={item.id}
-              onClick={() => setActiveView(item.id)}
-              className={navItemClass(isActive)}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <div className="relative flex-shrink-0">
-                <Icon className={iconClass(isActive)} />
-                {/* Collapsed: show red dot when there are unread messages */}
-                {!isExpanded && badgeCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--danger)] border-2 border-[var(--surface)]" />
-                )}
-              </div>
-              {isExpanded && (
-                <>
-                  <span className="flex-1 text-left truncate">{item.label}</span>
-                  {badgeCount > 0 && (
-                    <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-xs font-medium bg-[var(--danger)] text-white">
-                      {badgeCount > 99 ? '99+' : badgeCount}
-                    </span>
+            <Tooltip key={item.id} content={item.label} position="right" disabled={isExpanded}>
+              <button
+                onClick={() => setActiveView(item.id)}
+                className={navItemClass(isActive)}
+                aria-current={isActive ? 'page' : undefined}
+                aria-label={!isExpanded ? item.label : undefined}
+              >
+                <div className="relative flex-shrink-0">
+                  <Icon className={iconClass(isActive)} />
+                  {/* Collapsed: show red dot when there are unread messages */}
+                  {!isExpanded && badgeCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--danger)] border-2 border-[var(--surface)]" />
                   )}
-                </>
-              )}
-            </button>
+                </div>
+                {isExpanded && (
+                  <>
+                    <span className="flex-1 text-left truncate">{item.label}</span>
+                    {badgeCount > 0 && (
+                      <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-xs font-medium bg-[var(--danger)] text-white">
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                      </span>
+                    )}
+                  </>
+                )}
+              </button>
+            </Tooltip>
           );
         })}
 
@@ -387,17 +395,19 @@ export default function NavigationSidebar({
             const isActive = activeView === item.id;
 
             return (
-              <button
-                key={item.id}
-                onClick={() => setActiveView(item.id)}
-                className={navItemClass(isActive)}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon className={iconClass(isActive)} />
-                {isExpanded && (
-                  <span className="flex-1 text-left truncate">{item.label}</span>
-                )}
-              </button>
+              <Tooltip key={item.id} content={item.label} position="right" disabled={isExpanded}>
+                <button
+                  onClick={() => setActiveView(item.id)}
+                  className={navItemClass(isActive)}
+                  aria-current={isActive ? 'page' : undefined}
+                  aria-label={!isExpanded ? item.label : undefined}
+                >
+                  <Icon className={iconClass(isActive)} />
+                  {isExpanded && (
+                    <span className="flex-1 text-left truncate">{item.label}</span>
+                  )}
+                </button>
+              </Tooltip>
             );
           })}
 
@@ -409,37 +419,43 @@ export default function NavigationSidebar({
 
             {/* Weekly Progress */}
             {onShowWeeklyChart && (
-              <button
-                onClick={onShowWeeklyChart}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
-                  font-medium text-sm transition-all duration-150
-                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-                `}
-              >
-                <BarChart2 className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
-                {isExpanded && <span>Weekly Progress</span>}
-              </button>
+              <Tooltip content="Weekly Progress" position="right" disabled={isExpanded}>
+                <button
+                  onClick={onShowWeeklyChart}
+                  aria-label={!isExpanded ? 'Weekly Progress' : undefined}
+                  className={`
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
+                    font-medium text-sm transition-all duration-150
+                    text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
+                  `}
+                >
+                  <BarChart2 className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
+                  {isExpanded && <span>Weekly Progress</span>}
+                </button>
+              </Tooltip>
             )}
 
             {/* Keyboard Shortcuts */}
             {onShowShortcuts && (
-              <button
-                onClick={onShowShortcuts}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
-                  font-medium text-sm transition-all duration-150
-                  text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-                `}
-              >
-                <Keyboard className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
-                {isExpanded && (
-                  <>
-                    <span className="flex-1 text-left">Shortcuts</span>
-                    <span className="text-xs text-[var(--text-light)]">?</span>
-                  </>
-                )}
-              </button>
+              <Tooltip content="Shortcuts" position="right" disabled={isExpanded}>
+                <button
+                  onClick={onShowShortcuts}
+                  aria-label={!isExpanded ? 'Keyboard Shortcuts' : undefined}
+                  className={`
+                    w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
+                    font-medium text-sm transition-all duration-150
+                    text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
+                  `}
+                >
+                  <Keyboard className="w-5 h-5 flex-shrink-0 text-[var(--text-muted)]" />
+                  {isExpanded && (
+                    <>
+                      <span className="flex-1 text-left">Shortcuts</span>
+                      <span className="text-xs text-[var(--text-light)]">?</span>
+                    </>
+                  )}
+                </button>
+              </Tooltip>
             )}
           </>
         )}
@@ -447,18 +463,20 @@ export default function NavigationSidebar({
 
       {/* ─── Footer / Logout ─── */}
       <div className="mt-auto border-t px-3 py-3 border-[var(--border)]">
-        <button
-          onClick={handleLogout}
-          className={`
-            w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
-            transition-colors
-            text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-          `}
-          aria-label="Log out"
-        >
-          <LogOut className="w-4 h-4" />
-          {isExpanded && <span className="text-sm">Log out</span>}
-        </button>
+        <Tooltip content="Log out" position="right" disabled={isExpanded}>
+          <button
+            onClick={handleLogout}
+            className={`
+              w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
+              transition-colors
+              text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
+            `}
+            aria-label="Log out"
+          >
+            <LogOut className="w-4 h-4" />
+            {isExpanded && <span className="text-sm">Log out</span>}
+          </button>
+        </Tooltip>
       </div>
 
       {/* Create Agency Modal */}

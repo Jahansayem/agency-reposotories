@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -29,9 +29,15 @@ export function UserMenu({
 }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const { theme, toggleTheme } = useTheme();
   const focusMode = useTodoStore((state) => state.ui.focusMode);
   const setFocusMode = useTodoStore((state) => state.setFocusMode);
+
+  const closeAndRestoreFocus = useCallback(() => {
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -47,17 +53,66 @@ export function UserMenu({
     }
   }, [isOpen]);
 
-  // Close on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
+  // Arrow-key navigation for menu items
+  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const menu = menuRef.current;
+    if (!menu) return;
 
+    const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    if (items.length === 0) return;
+
+    const currentIndex = items.findIndex(item => item === document.activeElement);
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault();
+        const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        items[next].focus();
+        break;
+      }
+      case 'ArrowUp': {
+        e.preventDefault();
+        const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        items[prev].focus();
+        break;
+      }
+      case 'Home': {
+        e.preventDefault();
+        items[0].focus();
+        break;
+      }
+      case 'End': {
+        e.preventDefault();
+        items[items.length - 1].focus();
+        break;
+      }
+      case 'Escape': {
+        e.preventDefault();
+        closeAndRestoreFocus();
+        break;
+      }
+      case 'Enter':
+      case ' ': {
+        // Let the browser's default click behavior handle activation
+        // for the currently focused menuitem
+        if (document.activeElement && items.includes(document.activeElement as HTMLElement)) {
+          e.preventDefault();
+          (document.activeElement as HTMLElement).click();
+        }
+        break;
+      }
+    }
+  }, [closeAndRestoreFocus]);
+
+  // Focus first menu item when dropdown opens
+  useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
+      requestAnimationFrame(() => {
+        const menu = menuRef.current;
+        if (!menu) return;
+        const firstItem = menu.querySelector<HTMLElement>('[role="menuitem"]');
+        firstItem?.focus();
+      });
     }
   }, [isOpen]);
 
@@ -84,6 +139,7 @@ export function UserMenu({
     <div ref={menuRef} className="relative">
       {/* Trigger Button */}
       <button
+        ref={triggerRef}
         onClick={() => setIsOpen(!isOpen)}
         className="
           flex items-center gap-2 p-2 rounded-lg
@@ -132,6 +188,7 @@ export function UserMenu({
               z-50
             "
             role="menu"
+            onKeyDown={handleMenuKeyDown}
           >
             {/* User Info Header */}
             <div className="px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--surface-2)]">
@@ -217,7 +274,7 @@ export function UserMenu({
                   <Keyboard className="w-4 h-4" />
                   <span>Keyboard Shortcuts</span>
                   <span className="ml-auto text-xs text-[var(--text-muted)]">
-                    ⌘K
+                    ?
                   </span>
                 </button>
               )}
