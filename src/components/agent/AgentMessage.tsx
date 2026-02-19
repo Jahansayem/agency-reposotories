@@ -5,17 +5,19 @@ import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import type { AgentMessage as AgentMessageType } from '@/types/agent';
 import { AgentToolCard } from './AgentToolCard';
+import type { Components } from 'react-markdown';
 
 interface AgentMessageProps {
   message: AgentMessageType;
 }
 
 export function AgentMessage({ message }: AgentMessageProps) {
-  const { role, content, timestamp, toolCalls } = message;
+  const { role, content, timestamp, createdAt, toolCalls } = message;
 
   const formattedTime = useMemo(() => {
-    return format(new Date(timestamp), 'h:mm a');
-  }, [timestamp]);
+    const date = timestamp || new Date(createdAt);
+    return format(date, 'h:mm a');
+  }, [timestamp, createdAt]);
 
   const isUser = role === 'user';
 
@@ -33,24 +35,24 @@ export function AgentMessage({ message }: AgentMessageProps) {
             <div className="prose prose-sm max-w-none">
               <ReactMarkdown
                 components={{
-                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                  em: ({ children }) => <em className="italic">{children}</em>,
-                  code: ({ children }) => (
+                  p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-semibold">{children}</strong>,
+                  em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
+                  code: ({ children }: { children?: React.ReactNode }) => (
                     <code className={`px-1 py-0.5 rounded text-xs font-mono ${
                       isUser ? 'bg-blue-700' : 'bg-gray-200'
                     }`}>
                       {children}
                     </code>
                   ),
-                  pre: ({ children }) => (
+                  pre: ({ children }: { children?: React.ReactNode }) => (
                     <pre className={`p-2 rounded mt-2 overflow-x-auto ${
                       isUser ? 'bg-blue-700' : 'bg-gray-200'
                     }`}>
                       {children}
                     </pre>
                   ),
-                  a: ({ href, children }) => (
+                  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
                     <a
                       href={href}
                       target="_blank"
@@ -62,9 +64,9 @@ export function AgentMessage({ message }: AgentMessageProps) {
                       {children}
                     </a>
                   ),
-                  ul: ({ children }) => <ul className="list-disc list-inside my-2">{children}</ul>,
-                  ol: ({ children }) => <ol className="list-decimal list-inside my-2">{children}</ol>,
-                  li: ({ children }) => <li className="ml-2">{children}</li>,
+                  ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc list-inside my-2">{children}</ul>,
+                  ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal list-inside my-2">{children}</ol>,
+                  li: ({ children }: { children?: React.ReactNode }) => <li className="ml-2">{children}</li>,
                 }}
               >
                 {content}

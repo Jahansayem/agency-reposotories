@@ -3,11 +3,17 @@
 import { useEffect } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import type { AgentUsage } from '@/types/agent';
+
+// Simplified usage type for frontend display
+export interface AgentUsageSummary {
+  inputTokens: number;
+  outputTokens: number;
+  totalCost: number;
+}
 
 interface AgentToggleButtonProps {
   onClick: () => void;
-  usage: AgentUsage;
+  usage: AgentUsageSummary;
   budgetLimit?: number;
 }
 

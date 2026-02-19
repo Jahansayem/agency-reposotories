@@ -137,7 +137,7 @@ export function InteractionTimeline({ customerId, onViewTask }: InteractionTimel
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-0" data-testid="interaction-timeline">
       {allInteractions.map((interaction, index) => (
         <InteractionItem
           key={interaction.id}

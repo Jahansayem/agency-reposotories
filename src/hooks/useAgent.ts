@@ -4,10 +4,17 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import type { AgentMessage, AgentUsage, AgentToolCall, ToolStatus } from '@/types/agent';
 
+// Simplified usage type for frontend state
+interface AgentUsageSummary {
+  inputTokens: number;
+  outputTokens: number;
+  totalCost: number;
+}
+
 interface UseAgentReturn {
   messages: AgentMessage[];
   isLoading: boolean;
-  usage: AgentUsage;
+  usage: AgentUsageSummary;
   sendMessage: (content: string) => Promise<void>;
   clearMessages: () => void;
 }
@@ -15,7 +22,7 @@ interface UseAgentReturn {
 export function useAgent(): UseAgentReturn {
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [usage, setUsage] = useState<AgentUsage>({
+  const [usage, setUsage] = useState<AgentUsageSummary>({
     inputTokens: 0,
     outputTokens: 0,
     totalCost: 0,
@@ -31,7 +38,7 @@ export function useAgent(): UseAgentReturn {
   const parseStreamChunk = (chunk: string): {
     content?: string;
     toolCall?: Partial<AgentToolCall>;
-    usage?: AgentUsage;
+    usage?: AgentUsageSummary;
   } | null => {
     try {
       const lines = chunk.split('\n').filter(line => line.trim());
@@ -52,9 +59,12 @@ export function useAgent(): UseAgentReturn {
 
     const userMessage: AgentMessage = {
       id: `user-${Date.now()}`,
+      conversationId: 'local', // Frontend-only message, no conversation yet
       role: 'user',
       content: content.trim(),
+      createdAt: new Date().toISOString(),
       timestamp: new Date(),
+      toolCalls: null,
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -62,10 +72,12 @@ export function useAgent(): UseAgentReturn {
 
     const assistantMessage: AgentMessage = {
       id: `assistant-${Date.now()}`,
+      conversationId: 'local', // Frontend-only message, no conversation yet
       role: 'assistant',
       content: '',
+      createdAt: new Date().toISOString(),
       timestamp: new Date(),
-      toolCalls: [],
+      toolCalls: null,
     };
 
     setMessages(prev => [...prev, assistantMessage]);

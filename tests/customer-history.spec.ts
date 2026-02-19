@@ -91,7 +91,7 @@ test.describe('Customer History & Interaction Tracking', () => {
 
       // Verify the timeline component rendered (look for loading state or content)
       const timeline = page.locator('[data-testid="interaction-timeline"]');
-      const noInteractions = page.locator('text=No interactions recorded');
+      const noInteractions = page.locator('text=No interaction history yet');
       const loadingSpinner = page.locator('svg.animate-spin');
 
       // At least one of these states should be visible
@@ -131,7 +131,7 @@ test.describe('Customer History & Interaction Tracking', () => {
             await page.waitForTimeout(1000);
 
             // Verify timeline component renders (content or empty state)
-            const historyContent = page.locator('[data-testid="interaction-timeline"], text=No interactions recorded');
+            const historyContent = page.locator('[data-testid="interaction-timeline"], text=No interaction history yet');
             const contentVisible = await historyContent.first().isVisible().catch(() => false);
             expect(contentVisible).toBeTruthy();
           }

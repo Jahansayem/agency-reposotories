@@ -56,7 +56,7 @@ Supports `contact_attempt` and `note_added` types for ad-hoc logging outside of 
 
 ## API Endpoints
 
-### GET `/api/customers/[customerId]/history`
+### GET `/api/customers/[id]/history`
 
 Returns interaction timeline with pagination.
 
