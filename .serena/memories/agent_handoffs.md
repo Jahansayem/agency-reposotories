@@ -176,4 +176,38 @@ When completing work, use this template:
 
 ---
 
+## Handoff: Nav Polish Batch 1 (P1-P5)
+- **Date**: 2026-02-19
+- **From Agent**: Frontend Engineer (Agent 3)
+- **To Agent**: Code Reviewer (Agent 5)
+- **Status**: Complete
+
+### Completed Work
+- P1: Wrapped all collapsed sidebar icon buttons in `<Tooltip position="right" disabled={isExpanded}>` — covers primary nav (7 items), secondary nav (3 items), Quick Add, Weekly Progress, Shortcuts, and Log Out buttons
+- P2: Fixed keyboard shortcut display in UserMenu dropdown — changed `⌘K` to `?` (the actual shortcut per `useKeyboardShortcuts` / AppShell.tsx)
+- P3: Added `<span role="status" aria-live="polite" className="sr-only">` for notification badge count in UnifiedAppBar, so screen readers announce count changes
+- P4: Added `useReducedMotion()` hook to 4 nav components — conditionally disables/simplifies all Framer Motion animations (sidebar width, header fade, badge scale, tab springs, mobile sheet slide, right panel expand, glow effects)
+- P5: Deleted dead `AppHeader.tsx` and removed its export from `layout/index.ts` — confirmed only self-references and one barrel export
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/layout/NavigationSidebar.tsx` | Added Tooltip wrapping on all 10 icon buttons (disabled when expanded); added `useReducedMotion` for sidebar width + header opacity transitions |
+| `src/components/UserMenu.tsx` | Changed shortcut hint from `⌘K` to `?` |
+| `src/components/layout/UnifiedAppBar.tsx` | Added aria-live region for notification count; added `useReducedMotion` for badge scale animations |
+| `src/components/layout/EnhancedBottomNav.tsx` | Added `useReducedMotion` for tab button variants, spring transitions, glow effect, badge scale, icon y-offset |
+| `src/components/layout/AppShell.tsx` | Added `useReducedMotion` for right panel expand, mobile sheet backdrop/slide animations |
+| `src/components/layout/AppHeader.tsx` | Deleted (dead code) |
+| `src/components/layout/index.ts` | Removed `AppHeader` export |
+
+### Key Context
+- **Tooltip component used** (`src/components/ui/Tooltip.tsx`) — full-featured with portal, arrows, position calculation. `disabled={isExpanded}` ensures tooltips only show when sidebar is collapsed
+- **Full reduced-motion support** on NavigationSidebar, UnifiedAppBar, EnhancedBottomNav, AppShell — all Framer Motion `initial`, `animate`, `exit`, `transition`, `whileHover`, `whileTap`, `variants` conditionally simplified
+- **Non-nav components** (146 files with `motion.`) were NOT touched — too many for this batch. A separate sweep is needed for full project-wide reduced-motion coverage
+- **AppHeader confirmed unused** via grep: only referenced in its own file and `layout/index.ts` barrel export. No other imports found
+- `npx tsc --noEmit` passes clean, `npm run build` succeeds, lint warnings are all pre-existing
+
+---
+
 *Updated: 2026-02-19*
