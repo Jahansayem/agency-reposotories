@@ -65,11 +65,17 @@ export default function EnhancedBottomNav() {
 
     const fetchUnreadCount = async () => {
       try {
+        // Only count messages from the last 7 days to avoid inflating count
+        // with historical messages that predate read-tracking
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
         let query = supabase
           .from('messages')
           .select('id, read_by, recipient, created_by')
           .not('created_by', 'eq', currentUser.name)
-          .is('deleted_at', null);
+          .is('deleted_at', null)
+          .gte('created_at', sevenDaysAgo.toISOString());
 
         if (isMultiTenancyEnabled && currentAgencyId) {
           query = query.eq('agency_id', currentAgencyId);
