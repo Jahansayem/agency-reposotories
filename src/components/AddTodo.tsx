@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell, HelpCircle } from 'lucide-react';
+import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell, HelpCircle, Paperclip } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import SmartParseModal from './SmartParseModal';
 import ReminderPicker from './ReminderPicker';
@@ -10,7 +10,7 @@ import VoiceRecordingIndicator from './VoiceRecordingIndicator';
 import FileImporter from './FileImporter';
 import { QuickTaskButtons, useTaskPatterns } from './QuickTaskButtons';
 import { CategoryConfidenceIndicator } from './CategoryConfidenceIndicator';
-import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate } from '@/types/todo';
+import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate, ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE } from '@/types/todo';
 import type { LinkedCustomer, Customer } from '@/types/customer';
 import { CustomerSearchInput } from './customer/CustomerSearchInput';
 import { useAiCustomerSuggest } from '@/hooks/useCustomers';
@@ -154,6 +154,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
 
   // File importer state
   const [showFileImporter, setShowFileImporter] = useState(false);
+
+  // Simple file attachment state (no AI processing)
+  const [pendingAttachment, setPendingAttachment] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Template picker state (Phase 2.2)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -351,7 +355,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
         }))
       : undefined as unknown as Subtask[];
 
-    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
+    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, pendingAttachment || undefined, reminderAt || undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -431,7 +435,38 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
     setTemplateSubtasks([]); // Clear template subtasks (Phase 2.2)
     setPatternDismissed(false); // Reset so new pattern can be detected on next input
     setLinkedCustomer(null); // Clear linked customer
+    setPendingAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     aiSuggest.clear();
+  };
+
+  // Stable object URL for image thumbnail preview
+  const attachmentPreviewUrl = useMemo(() => {
+    if (pendingAttachment?.type.startsWith('image/')) {
+      return URL.createObjectURL(pendingAttachment);
+    }
+    return null;
+  }, [pendingAttachment]);
+
+  // Revoke object URL on cleanup
+  useEffect(() => {
+    return () => {
+      if (attachmentPreviewUrl) URL.revokeObjectURL(attachmentPreviewUrl);
+    };
+  }, [attachmentPreviewUrl]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      toast.error('File too large', { description: 'Maximum size is 25MB' });
+      return;
+    }
+    if (!(file.type in ALLOWED_ATTACHMENT_TYPES)) {
+      toast.error('Unsupported file type', { description: 'Try PDF, images, audio, or documents' });
+      return;
+    }
+    setPendingAttachment(file);
   };
 
   // Auto-suggest customer from task text (debounced)
@@ -468,7 +503,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
     if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       if (text.trim() && !isProcessing) {
-        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
+        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, pendingAttachment || undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
         // Save preferences for next time
         if (currentUserId) {
           updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -673,9 +708,57 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
               )}
             </div>
 
+            {/* Pending attachment preview */}
+            {pendingAttachment && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-sm">
+                <Paperclip className="w-3.5 h-3.5 text-[var(--accent)] flex-shrink-0" />
+                {attachmentPreviewUrl && (
+                  <img
+                    src={attachmentPreviewUrl}
+                    alt=""
+                    className="w-6 h-6 rounded object-cover flex-shrink-0"
+                  />
+                )}
+                <span className="text-[var(--foreground)] truncate max-w-[200px]">{pendingAttachment.name}</span>
+                <span className="text-[var(--text-muted)] text-xs flex-shrink-0">
+                  {(pendingAttachment.size / 1024).toFixed(0)}KB
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingAttachment(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="p-0.5 rounded-full hover:bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors flex-shrink-0"
+                  aria-label="Remove attachment"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Action buttons - grouped dock style */}
             <div className="flex gap-3 flex-shrink-0 items-center justify-between">
               <div className="flex gap-2 items-center">
+                {/* Simple file attach (no AI processing) */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept={Object.keys(ALLOWED_ATTACHMENT_TYPES).join(',')}
+                  onChange={handleFileSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessing || !!pendingAttachment}
+                  className="p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Attach file"
+                  title="Attach a file (no AI processing)"
+                >
+                  <Paperclip className="w-4.5 h-4.5" />
+                </button>
+
                 {/* AI Features Menu - consolidates Upload, Voice, and AI Parse */}
                 {canUseAiFeatures && (
                   <AIFeaturesMenu
