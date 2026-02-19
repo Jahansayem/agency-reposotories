@@ -48,6 +48,8 @@ import { sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { ContextualErrorMessages } from '@/lib/errorMessages';
 import { TodoModals } from './todo';
 import { TodoMergeModal } from './todo/TodoMergeModal';
+import OpportunityMatchBanner from './todo/OpportunityMatchBanner';
+import type { CustomerSegment } from '@/types/customer';
 import {
   StrategicDashboardSkeleton,
   ActivityFeedSkeleton,
@@ -110,6 +112,12 @@ export default function TodoList({
 
   // Detail modal state
   const [detailTodoId, setDetailTodoId] = useState<string | null>(null);
+
+  // Opportunity match banner state — set after a new task is created
+  const [pendingOpportunityCheck, setPendingOpportunityCheck] = useState<{
+    taskId: string;
+    taskText: string;
+  } | null>(null);
   const detailTodo = useMemo(() =>
     state.todos.find(t => t.id === detailTodoId) || null,
     [state.todos, detailTodoId]
@@ -165,6 +173,32 @@ export default function TodoList({
     onToggleComplete: operations.toggleTodo,
     showToast: (message: string) => toast.success(message),
   });
+
+  // Wrapped addTodo handler that captures the returned task ID and triggers
+  // the opportunity match banner when no customer is pre-linked.
+  const handleAddTodo = useCallback((
+    text: string,
+    priority: 'low' | 'medium' | 'high' | 'urgent',
+    dueDate?: string,
+    assignedTo?: string,
+    subtasks?: Subtask[],
+    transcription?: string,
+    sourceFile?: File,
+    reminderAt?: string,
+    notes?: string,
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null,
+    customer?: import('@/types/customer').LinkedCustomer
+  ) => {
+    const result = operations.addTodo(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
+    if (result && !customer?.id) {
+      result.then((newTaskId) => {
+        if (newTaskId) {
+          setPendingOpportunityCheck({ taskId: newTaskId, taskText: text });
+        }
+      }).catch(() => {/* ignore */});
+    }
+    return result;
+  }, [operations.addTodo]);
 
   // Determine if sections should be used
   const shouldUseSections = useShouldUseSections(state.sortOption);
@@ -915,7 +949,7 @@ export default function TodoList({
           closeConfirmDialog={state.modalState.closeConfirmDialog}
           showAddTaskModal={state.showAddTaskModal}
           setShowAddTaskModal={state.setShowAddTaskModal}
-          onAddTodo={operations.addTodo}
+          onAddTodo={handleAddTodo}
           templateTodo={state.modalState.templateTodo}
           closeTemplateModal={state.modalState.closeTemplateModal}
           onSaveAsTemplate={saveAsTemplate}
@@ -958,6 +992,31 @@ export default function TodoList({
           onSelectPrimary={state.modalState.setMergePrimaryId}
           onMerge={handleMergeTodos}
         />
+
+        {pendingOpportunityCheck && (
+          <OpportunityMatchBanner
+            taskId={pendingOpportunityCheck.taskId}
+            taskText={pendingOpportunityCheck.taskText}
+            agencyId={currentAgencyId ?? ''}
+            existingCustomerId={null}
+            onConfirm={async (customer) => {
+              state.updateTodoInStore(pendingOpportunityCheck.taskId, {
+                customer_id: customer.id,
+                customer_name: customer.name,
+                customer_segment: customer.segment as CustomerSegment,
+              });
+              await supabase
+                .from('todos')
+                .update({
+                  customer_id: customer.id,
+                  customer_name: customer.name,
+                  customer_segment: customer.segment,
+                })
+                .eq('id', pendingOpportunityCheck.taskId);
+              setPendingOpportunityCheck(null);
+            }}
+          />
+        )}
 
         {state.showBulkActions && state.selectedTodos.size > 0 && (
           <BulkActionBar
