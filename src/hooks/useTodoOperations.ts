@@ -118,7 +118,7 @@ export function useTodoOperations({
     notes?: string,
     recurrence?: 'daily' | 'weekly' | 'monthly' | null,
     customer?: LinkedCustomer
-  ): Promise<string> => {
+  ): Promise<string | null> => {
     const newTodo: Todo = {
       id: uuidv4(),
       text,
@@ -251,6 +251,7 @@ export function useTodoOperations({
       logger.error('Error adding todo', error, { component: 'useTodoOperations' });
       // Rollback optimistic update
       deleteTodoFromStore(newTodo.id);
+      return null;
     }
     return newTodo.id;
   }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore, updateTodoInStore, announce, todos]);
@@ -270,7 +271,7 @@ export function useTodoOperations({
     notes?: string,
     recurrence?: 'daily' | 'weekly' | 'monthly' | null,
     customer?: LinkedCustomer
-  ): Promise<string> | undefined => {
+  ): Promise<string | null> | undefined => {
     // Check for duplicates
     const combinedText = `${text} ${transcription || ''}`;
     if (shouldCheckForDuplicates(combinedText)) {
