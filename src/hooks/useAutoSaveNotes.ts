@@ -28,6 +28,7 @@ export function useAutoSaveNotes({
   const [value, setValue] = useState(initialValue);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const valueRef = useRef(initialValue);
+  const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Debounced save function
   const debouncedSave = useDebouncedCallback(
@@ -42,7 +43,8 @@ export function useAutoSaveNotes({
         setSaveStatus('saved');
 
         // Auto-clear after 2s
-        setTimeout(() => setSaveStatus('idle'), 2000);
+        if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+        statusTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (error) {
         console.error('Failed to save notes:', error);
         setSaveStatus('error');
@@ -75,16 +77,18 @@ export function useAutoSaveNotes({
       await onSave();
       setSaveStatus('saved');
 
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+      statusTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (error) {
       console.error('Failed to save notes:', error);
       setSaveStatus('error');
     }
   }, [enabled, onChange, onSave, debouncedSave]);
 
-  // Cleanup: flush pending save on unmount
+  // Cleanup: flush pending save and clear timeout on unmount
   useEffect(() => {
     return () => {
+      if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
       if (debouncedSave.isPending()) {
         debouncedSave.flush();
       }
