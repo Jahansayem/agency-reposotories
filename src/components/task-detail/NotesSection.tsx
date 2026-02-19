@@ -139,10 +139,16 @@ export default function NotesSection({
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
                           transition={{ duration: 0.15 }}
-                          className="text-label text-red-600 dark:text-red-400 flex items-center gap-1"
+                          className="text-label text-red-600 dark:text-red-400 flex items-center gap-1.5"
                         >
-                          <AlertCircle className="w-3 h-3" />
+                          <AlertCircle className="w-3.5 h-3.5" />
                           Error saving
+                          <button
+                            onClick={handleManualSave}
+                            className="underline hover:no-underline text-sm"
+                          >
+                            Retry
+                          </button>
                         </motion.span>
                       )}
                     </AnimatePresence>
