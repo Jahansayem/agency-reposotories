@@ -272,10 +272,15 @@ export const PUT = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
       );
     }
 
+    // Completion toggling is allowed for all users — skip access check when
+    // the only fields being changed are completed/status.
+    const updateKeys = Object.keys(updates);
+    const isCompletionOnly = updateKeys.every(k => ['completed', 'status'].includes(k));
+
     // Verify the user has access to this todo (creator, assigned, or updater)
     // Skip per-user access check if user has can_edit_all_tasks permission (managers/owners)
     // Pass agencyId for cross-tenant protection
-    if (!ctx.permissions?.can_edit_all_tasks) {
+    if (!isCompletionOnly && !ctx.permissions?.can_edit_all_tasks) {
       const { todo, error: accessError } = await verifyTodoAccess(id, ctx.userName, ctx.agencyId || undefined);
       if (accessError) return accessError;
     }

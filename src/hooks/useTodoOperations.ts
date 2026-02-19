@@ -545,11 +545,15 @@ export function useTodoOperations({
 
     try {
       await retryWithBackoff(async () => {
-        const { error } = await supabase
-          .from('todos')
-          .update({ completed, status: newStatus, updated_at })
-          .eq('id', id);
-        if (error) throw error;
+        const res = await fetchWithCsrf('/api/todos', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, completed, status: newStatus }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Toggle failed' }));
+          throw new Error(err.error || 'Toggle failed');
+        }
       });
 
       // Side effects fire AFTER DB confirmation
