@@ -117,7 +117,7 @@ export default function ChatView({
           currentUser={currentUser}
           users={users}
           todosMap={todosMap}
-          docked={false}
+          docked={true}
           onTaskLinkClick={handleTaskLinkClick}
         />
       </motion.main>
