@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, ChevronDown, Check, Plus, Briefcase, Crown, User, Users, AlertTriangle } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
+import { zClass } from '@/lib/z-index';
 import { useTodoStore } from '@/store/todoStore';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import type { AgencyRole } from '@/types/agency';
@@ -313,13 +314,13 @@ export function AgencySwitcher({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
-              className="
-                absolute z-[100] mt-1 w-72
+              className={`
+                absolute mt-1 w-72
                 bg-[var(--surface)]
                 border border-[var(--border)]
                 rounded-[var(--radius-lg)] shadow-lg
-                overflow-hidden
-              "
+                overflow-hidden ${zClass.dropdown}
+              `}
               role="listbox"
               aria-activedescendant={activeDescendantId || undefined}
               onKeyDown={handleListboxKeyDown}

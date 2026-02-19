@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import { useTheme } from '@/contexts/ThemeContext';
+import { zClass } from '@/lib/z-index';
 import { useTodoStore } from '@/store/todoStore';
 
 interface UserMenuProps {
@@ -179,14 +180,14 @@ export function UserMenu({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="
+            className={`
               absolute right-0 mt-2 w-64
               bg-[var(--surface)]
               border border-[var(--border)]
               rounded-lg shadow-lg
               overflow-hidden
-              z-[100]
-            "
+              ${zClass.dropdown}
+            `}
             role="menu"
             onKeyDown={handleMenuKeyDown}
           >
