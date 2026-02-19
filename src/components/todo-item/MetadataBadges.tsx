@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui';
 import { WaitingBadge } from '../WaitingStatusBadge';
 import { CustomerBadge } from '../customer/CustomerBadge';
 import { PRIORITY_TO_BADGE_VARIANT, formatDueDate, getDaysOverdue } from './utils';
+import OpportunityBadge from '../todo/OpportunityBadge';
+import { useCustomerOpportunities } from '@/hooks/useCustomerOpportunities';
 
 // Helper function to format reminder text
 function formatReminderText(reminderAt: string): string {
@@ -64,6 +66,8 @@ export default function MetadataBadges({
   setShowAttachments,
 }: MetadataBadgesProps) {
   const priorityConfig = PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG];
+  const opportunityMap = useCustomerOpportunities();
+  const opportunityTier = todo.customer_id ? opportunityMap.get(todo.customer_id) : undefined;
 
   const hasSecondaryMetadata = (
     subtasks.length > 0 ||
@@ -143,6 +147,11 @@ export default function MetadataBadges({
             segment={todo.customer_segment}
             size="sm"
           />
+        )}
+
+        {/* Opportunity badge */}
+        {opportunityTier && (
+          <OpportunityBadge tier={opportunityTier} />
         )}
 
         {/* Waiting for response badge */}
