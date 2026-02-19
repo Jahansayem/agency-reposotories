@@ -72,7 +72,7 @@ export default function OverflowMenu({
         <>
           {/* Click-outside backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[300]"
             onClick={handleClose}
           />
 
@@ -82,7 +82,7 @@ export default function OverflowMenu({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 top-full z-50 mt-1 min-w-[210px] rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-xl)] overflow-hidden"
+            className="absolute right-0 top-full z-[100] mt-1 min-w-[210px] rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow-xl)] overflow-hidden"
           >
             {onDuplicate && (
               <button

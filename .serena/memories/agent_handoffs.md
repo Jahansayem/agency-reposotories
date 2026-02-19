@@ -69,4 +69,111 @@ When completing work, use this template:
 
 ---
 
+## Handoff: Z-Index System (Z1-Z4)
+- **Date**: 2026-02-19
+- **From Agent**: Frontend Engineer (Agent 2)
+- **To Agent**: Code Reviewer (Agent 5)
+- **Status**: Complete
+
+### Completed Work
+- Z1: Created `src/lib/z-index.ts` with formal 9-tier z-index scale (base→tooltip: 0–700)
+- Z2: `UnifiedAppBar.tsx` — bumped from z-10 to `zClass.sticky` (z-[200]) via import
+- Z3: `NavigationSidebar.tsx` — added `zClass.sticky` (z-[200]) via import (had NO z-index before)
+- Z4: Project-wide audit — replaced all arbitrary z-50/z-40/z-[60]/z-[100]/z-[101]/z-[9999] usages across ~55 components with values from the formal scale
+- `NotificationModal.tsx` — changed z-[100] to `zClass.popover` (z-[500]) via import
+
+### Files Modified
+
+| File | Old z-index | New z-index tier |
+|------|-------------|------------------|
+| `src/lib/z-index.ts` | (new file) | Z_INDEX + zClass scale definition |
+| `src/components/layout/UnifiedAppBar.tsx` | z-10 | sticky (z-[200]) via zClass import |
+| `src/components/layout/NavigationSidebar.tsx` | (none) | sticky (z-[200]) via zClass import |
+| `src/components/NotificationModal.tsx` | z-[100] | popover (z-[500]) via zClass import |
+| `src/components/layout/AppLayout.tsx` | z-40 | sticky (z-[200]) |
+| `src/components/BottomTabs.tsx` | z-40 | sticky (z-[200]) |
+| `src/components/layout/EnhancedBottomNav.tsx` | z-40 | sticky (z-[200]) |
+| `src/components/todo/BulkActionBar.tsx` | z-40 | sticky (z-[200]) |
+| `src/components/AgencySwitcher.tsx` | z-50 | dropdown (z-[100]) |
+| `src/components/UserSwitcher.tsx` | z-50 | dropdown (z-[100]) + overlay (z-[300]) |
+| `src/components/UserMenu.tsx` | z-50 | dropdown (z-[100]) |
+| `src/components/AppMenu.tsx` | z-40+z-50 | overlay (z-[300]) + dropdown (z-[100]) |
+| `src/components/customer/CustomerSearchInput.tsx` | z-50 | dropdown (z-[100]) |
+| `src/components/task-detail/MetadataSection.tsx` | z-50 | dropdown (z-[100]) |
+| `src/components/task-detail/OverflowMenu.tsx` | z-40+z-50 | overlay (z-[300]) + dropdown (z-[100]) |
+| `src/components/TemplatePicker.tsx` | z-40+z-50 | overlay (z-[300]) + dropdown (z-[100]) |
+| `src/components/calendar/CalendarView.tsx` | z-40+z-50 | overlay (z-[300]) + dropdown (z-[100]) |
+| `src/components/calendar/CalendarDayCell.tsx` | z-50 | popover (z-[500]) |
+| `src/components/ChatPanel.tsx` | z-50+z-[60] | dropdown (z-[100]) + modal (z-[400]) |
+| `src/components/FloatingChat.tsx` | z-50 | dropdown (z-[100]) |
+| `src/components/FloatingChatButton.tsx` | z-40+z-50 | dropdown (z-[100]) + overlay (z-[300]) |
+| `src/components/FocusModeToggle.tsx` | z-50 | dropdown (z-[100]) |
+| `src/components/AttachmentUpload.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/WeeklyProgressChart.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/VersionHistoryModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/FileImporter.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/DuplicateDetectionModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/SmartParseModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/AddTodo.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/TaskCompletionSummary.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/CustomerEmailModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/todo-item/DeleteConfirmDialog.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/ConfirmDialog.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/KeyboardShortcutsModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/CompletionCelebration.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/todo/TodoMergeModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/ProgressSummary.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/AttachmentList.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/ChatAttachments.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/RegisterModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/SaveTemplateModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/ContentToSubtasksImporter.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/CelebrationEffect.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/Celebration.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/LoadingSkeletons.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/LoginScreen.tsx` | z-50 | dropdown (z-[100]) skip link + overlay (z-[300]) modal |
+| `src/components/KanbanBoard.tsx` | z-50 | overlay (z-[300]) + dropdown (z-[100]) |
+| `src/components/StrategicDashboard.tsx` | z-40+z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/AgencyMembersModal.tsx` | z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/AddTaskModal.tsx` | z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/CreateAgencyModal.tsx` | z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/layout/CommandPalette.tsx` | z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/layout/TaskBottomSheet.tsx` | z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/layout/AppShell.tsx` | z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/eAgent/EAgentExportPanel.tsx` | z-50 | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/analytics/dashboards/ConnectedBookOfBusinessDashboard.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/analytics/dashboards/BookOfBusinessDashboard.tsx` | z-50 | toast (z-[600]) |
+| `src/components/analytics/panels/TodayOpportunitiesPanel.tsx` | z-50 | toast (z-[600]) + overlay (z-[300]) |
+| `src/components/dashboard/LogSaleModal.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/dashboard/ManagerDashboard.tsx` | z-50 | overlay (z-[300]) |
+| `src/components/OfflineIndicator.tsx` | z-50 | toast (z-[600]) |
+| `src/components/ErrorToast.tsx` | z-50 | toast (z-[600]) |
+| `src/components/WelcomeBackNotification.tsx` | z-50 | toast (z-[600]) |
+| `src/components/NotificationPermissionBanner.tsx` | z-50 | toast (z-[600]) |
+| `src/components/todo/OpportunityMatchBanner.tsx` | z-50 | toast (z-[600]) |
+| `src/components/PullToRefresh.tsx` | z-50 | toast (z-[600]) |
+| `src/components/customer/CustomerLinkPrompt.tsx` | z-50 | toast (z-[600]) |
+| `src/components/PresenceIndicator.tsx` | z-50 | popover (z-[500]) |
+| `src/components/WaitingStatusBadge.tsx` | z-40+z-50 | overlay (z-[300]) + popover (z-[500]) |
+| `src/components/dashboard/AnimatedProgressRing.tsx` | z-50 | tooltip (z-[700]) |
+| `src/components/AgencyOnboardingTooltip.tsx` | z-50 | tooltip (z-[700]) |
+| `src/components/ArchivedTaskModal.tsx` | z-[60] | modal (z-[400]) |
+| `src/components/dashboard/EditGoalModal.tsx` | z-[60] | modal (z-[400]) |
+| `src/components/dashboard/AddGoalModal.tsx` | z-[60] | modal (z-[400]) |
+| `src/components/AIPreferences/AIPreferencesModal.tsx` | z-[100]+z-[101] | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/AIOnboarding/OnboardingModal.tsx` | z-[100]+z-[101] | overlay (z-[300]) + modal (z-[400]) |
+| `src/components/MainApp.tsx` | z-[100] | overlay (z-[300]) |
+| `src/components/ReminderPicker.tsx` | z-[9999] | popover (z-[500]) |
+
+### Key Context
+- **Scale definition** in `src/lib/z-index.ts`: base(0), raised(10), dropdown(100), sticky(200), overlay(300), modal(400), popover(500), toast(600), tooltip(700)
+- **Three critical nav files** use `import { zClass }` for semantic tokens; all other files use raw Tailwind values from the scale
+- **src/components/ui/ (shadcn primitives) were NOT changed** per instructions — Modal.tsx, Toast.tsx, Tooltip.tsx, FilterBottomSheet.tsx, AIFeaturesMenu.tsx, ProgressRing.tsx retain original z-index values
+- **Internal z-10/z-20/z-30** used for relative stacking within components (gradients, sticky headers within modals, swipe layers, etc.) were left unchanged — these don't participate in the global stacking context
+- **Ambiguous tier assignments**: CalendarDayCell popup (z-[500] popover — needs to appear above calendar grid), ChatPanel floating buttons (z-[100] dropdown — below sticky nav), WaitingStatusBadge popover (z-[500] — tooltip-like but interactive)
+- `npx tsc --noEmit` and `npm run build` both pass clean
+- Lint warnings are all pre-existing (test files), none introduced by these changes
+
+---
+
 *Updated: 2026-02-19*

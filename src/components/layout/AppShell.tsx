@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
@@ -105,7 +106,8 @@ export default function AppShell({
   onUserChange
 }: AppShellProps) {
   const { theme } = useTheme();
-  
+  const prefersReducedMotion = useReducedMotion();
+
   // Get users from store for FloatingChatButton
   const users = useTodoStore((state) => state.usersWithColors);
 
@@ -357,10 +359,10 @@ export default function AppShell({
           <AnimatePresence mode="wait">
             {rightPanel && rightPanelContent && (
               <motion.aside
-                initial={{ width: 0, opacity: 0 }}
+                initial={prefersReducedMotion ? false : { width: 0, opacity: 0 }}
                 animate={{ width: 380, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { width: 0, opacity: 0 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                 className={`
                   hidden lg:flex flex-col overflow-hidden
                   border-l flex-shrink-0
@@ -397,21 +399,21 @@ export default function AppShell({
             <>
               {/* Backdrop */}
               <motion.div
-                initial={{ opacity: 0 }}
+                initial={prefersReducedMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={closeMobileSheet}
-                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden"
+                className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm lg:hidden"
               />
 
               {/* Sheet */}
               <motion.div
-                initial={{ y: '100%' }}
+                initial={prefersReducedMotion ? false : { y: '100%' }}
                 animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { y: '100%' }}
+                transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 300 }}
                 className={`
-                  fixed inset-x-0 bottom-0 z-50 lg:hidden
+                  fixed inset-x-0 bottom-0 z-[400] lg:hidden
                   max-h-[85vh] rounded-t-3xl overflow-hidden
                   ${'bg-[var(--surface)]'}
                 `}

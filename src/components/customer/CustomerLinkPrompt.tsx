@@ -139,7 +139,7 @@ export function CustomerLinkPrompt({ userName }: CustomerLinkPromptProps) {
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="
-            fixed bottom-4 left-1/2 -translate-x-1/2 z-50
+            fixed bottom-4 left-1/2 -translate-x-1/2 z-[600]
             w-[calc(100%-2rem)] max-w-md
             bg-[var(--surface)] border border-[var(--border)]
             rounded-xl shadow-2xl

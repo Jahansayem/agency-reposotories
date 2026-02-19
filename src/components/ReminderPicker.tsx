@@ -264,7 +264,7 @@ export default function ReminderPicker({
         {isOpen && dropdownPosition && typeof document !== 'undefined' && createPortal(
           <div
             id="reminder-dropdown"
-            className="fixed z-[9999] w-64 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)] overflow-hidden"
+            className="fixed z-[500] w-64 rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)] overflow-hidden"
             style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
             onMouseDown={(e) => e.stopPropagation()}
           >

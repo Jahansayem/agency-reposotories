@@ -372,7 +372,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps) {
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-screen flex items-center justify-center px-4 py-8 overflow-hidden relative bg-gradient-to-br from-[#00205B] via-[#0033A0] to-[#1E3A5F]">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-[100]">
           Skip to content
         </a>
 
@@ -893,7 +893,7 @@ function ForgotPinModal({ isOpen, onClose, userName }: { isOpen: boolean; onClos
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[300]"
       onClick={onClose}
     >
       <motion.div

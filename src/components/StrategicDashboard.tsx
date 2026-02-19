@@ -305,7 +305,7 @@ export default function StrategicDashboard({
   if (loading) {
     return (
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[300]"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
@@ -333,7 +333,7 @@ export default function StrategicDashboard({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 overflow-hidden"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-[300] overflow-hidden"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -356,7 +356,7 @@ export default function StrategicDashboard({
               animate={isMobile ? { x: 0 } : undefined}
               exit={isMobile ? { x: -300 } : undefined}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className={`${isMobile ? 'absolute inset-y-0 left-0 z-50 w-64' : 'w-64 flex-shrink-0'} border-r flex flex-col ${
+              className={`${isMobile ? 'absolute inset-y-0 left-0 z-[400] w-64' : 'w-64 flex-shrink-0'} border-r flex flex-col ${
                 darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
               }`}
             >
@@ -539,7 +539,7 @@ export default function StrategicDashboard({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMobileMenu(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm z-40"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm z-[300]"
             />
           )}
         </AnimatePresence>

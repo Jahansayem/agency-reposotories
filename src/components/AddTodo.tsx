@@ -1091,7 +1091,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
 
       {/* Loading modal with brand personality */}
       {showModal && !parsedResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Processing">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Processing">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] p-8 bg-[var(--surface)] min-w-[280px]">
             <div className="text-center space-y-4">

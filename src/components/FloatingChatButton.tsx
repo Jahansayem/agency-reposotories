@@ -215,7 +215,7 @@ export default function FloatingChatButton({
       <motion.button
         onClick={() => setIsOpen(true)}
         className={`
-          fixed right-6 z-40
+          fixed right-6 z-[100]
           w-14 h-14 rounded-full
           flex items-center justify-center
           shadow-lg hover:shadow-xl
@@ -240,7 +240,7 @@ export default function FloatingChatButton({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-[300]"
               onClick={() => setIsOpen(false)}
             />
 
@@ -251,7 +251,7 @@ export default function FloatingChatButton({
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 400 }}
               className={`
-                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6 z-50
+                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6 z-[100]
                 w-[360px] sm:w-[400px] h-[500px] max-h-[70vh]
                 flex flex-col
                 rounded-[var(--radius-xl)] overflow-hidden

@@ -998,7 +998,7 @@ export default function ChatPanel({
                 setShowConversationList(true);
               }
             }}
-            className="fixed bottom-6 right-6 z-50 group"
+            className="fixed bottom-6 right-6 z-[100] group"
             aria-label={`Open chat${totalUnreadCount > 0 ? `, ${totalUnreadCount} unread messages` : ''}`}
           >
             <div className="w-14 h-14 rounded-[var(--radius-2xl)] bg-[var(--accent)] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:bg-[var(--accent)]/90">
@@ -1026,7 +1026,7 @@ export default function ChatPanel({
             }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ duration: isResizing ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-6 right-6 z-50 max-w-[calc(100vw-2rem)] flex flex-col"
+            className="fixed bottom-6 right-6 z-[100] max-w-[calc(100vw-2rem)] flex flex-col"
             style={{ width: `${panelWidth}px` }}
             role="dialog"
             aria-label="Chat panel"
@@ -1201,7 +1201,7 @@ export default function ChatPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setShowCreateTaskModal(false)}
           >
             <motion.div

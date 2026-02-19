@@ -183,7 +183,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-64 max-w-[280px] bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-[var(--shadow-xl)] border border-[var(--border)] overflow-hidden z-50 max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
+          <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-64 max-w-[280px] bg-[var(--surface)] rounded-[var(--radius-xl)] shadow-[var(--shadow-xl)] border border-[var(--border)] overflow-hidden z-[100] max-h-[70vh] sm:max-h-[80vh] overflow-y-auto">
             {/* Current user */}
             <div className="p-3 bg-[var(--surface-2)] border-b border-[var(--border-subtle)]">
               <div className="flex items-center gap-3">
@@ -244,7 +244,7 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
       {/* Modal */}
       {modalState !== 'closed' && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[300]"
           onClick={closeModal}
         >
           <div

@@ -220,7 +220,7 @@ export function EAgentExportPanel({ isOpen, onClose }: EAgentExportPanelProps) {
             exit={backdropVariants.hidden}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[300]"
             aria-hidden="true"
           />
 
@@ -236,7 +236,7 @@ export function EAgentExportPanel({ isOpen, onClose }: EAgentExportPanelProps) {
               stiffness: 300,
               duration: reducedMotion ? 0.1 : undefined,
             }}
-            className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-md bg-[var(--surface)] shadow-2xl flex flex-col"
+            className="fixed top-0 right-0 bottom-0 z-[400] w-full max-w-md bg-[var(--surface)] shadow-2xl flex flex-col"
             role="dialog"
             aria-modal="true"
             aria-labelledby="eagent-panel-title"

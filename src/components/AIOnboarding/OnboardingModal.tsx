@@ -106,7 +106,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300]"
             onClick={handleSkip}
           />
 
@@ -117,7 +117,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className={`
-              fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[101]
+              fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[400]
               w-[90vw] max-w-2xl max-h-[85vh] overflow-hidden
               rounded-[28px] shadow-2xl
               ${isDark ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-slate-200'}

@@ -972,7 +972,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm"
             role="alert"
             aria-live="polite"
             aria-label="Switching agency"

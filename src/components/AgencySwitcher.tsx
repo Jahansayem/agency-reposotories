@@ -314,7 +314,7 @@ export function AgencySwitcher({
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
               className="
-                absolute z-50 mt-1 w-72
+                absolute z-[100] mt-1 w-72
                 bg-[var(--surface)]
                 border border-[var(--border)]
                 rounded-[var(--radius-lg)] shadow-lg

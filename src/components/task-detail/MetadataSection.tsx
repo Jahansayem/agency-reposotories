@@ -206,7 +206,7 @@ export default function MetadataSection({
                   initial={{ opacity: 0, y: -4, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.12 }}
-                  className="absolute right-0 top-full mt-1.5 z-50 min-w-[150px] rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] shadow-[var(--shadow-lg)] py-1.5 overflow-hidden"
+                  className="absolute right-0 top-full mt-1.5 z-[100] min-w-[150px] rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] shadow-[var(--shadow-lg)] py-1.5 overflow-hidden"
                 >
                   {SNOOZE_OPTIONS.map((opt) => (
                     <button

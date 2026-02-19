@@ -220,7 +220,7 @@ export default function RegisterModal({ isOpen, onClose, onSuccess }: RegisterMo
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[300]"
       onClick={onClose}
     >
       <div

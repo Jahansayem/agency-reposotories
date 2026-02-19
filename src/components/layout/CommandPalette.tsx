@@ -307,7 +307,7 @@ export default function CommandPalette({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm"
           />
 
           {/* Palette */}
@@ -317,7 +317,7 @@ export default function CommandPalette({
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
             className={`
-              fixed top-[20%] left-1/2 -translate-x-1/2 z-50
+              fixed top-[20%] left-1/2 -translate-x-1/2 z-[400]
               w-full max-w-xl mx-4 sm:mx-auto
               rounded-[var(--radius-2xl)] overflow-hidden shadow-2xl
               ${'bg-[var(--surface)] border border-[var(--border)]'}

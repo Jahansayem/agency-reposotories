@@ -165,7 +165,7 @@ export function CustomerSearchInput({
       {/* Dropdown Results */}
       {isOpen && customers.length > 0 && (
         <div className="
-          absolute z-50 w-full mt-1
+          absolute z-[100] w-full mt-1
           bg-[var(--surface)]
           border border-[var(--border)]
           rounded-lg shadow-lg
@@ -228,7 +228,7 @@ export function CustomerSearchInput({
       {/* No Results + Quick Add */}
       {isOpen && query.length >= 2 && customers.length === 0 && !loading && (
         <div className="
-          absolute z-50 w-full mt-1
+          absolute z-[100] w-full mt-1
           bg-[var(--surface)]
           border border-[var(--border)]
           rounded-lg shadow-lg

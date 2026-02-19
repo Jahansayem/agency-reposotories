@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAppShell, ActiveView } from './AppShell';
 import { DURATION, EASE } from '@/lib/animations';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useIsLandscape } from '@/hooks/useIsLandscape';
 import SyncStatusIndicator from '../SyncStatusIndicator';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
@@ -50,6 +51,7 @@ export default function EnhancedBottomNav() {
   } = useAppShell();
 
   const isLandscape = useIsLandscape();
+  const prefersReducedMotion = useReducedMotion();
   const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
 
   // Stats for badges
@@ -219,19 +221,21 @@ export default function EnhancedBottomNav() {
                   isLandscape ? '-mt-3 w-12 h-12' : '-mt-6 w-14 h-14'
                 } rounded-[var(--radius-2xl)] flex items-center justify-center bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-blue-light)] text-white shadow-lg shadow-[var(--brand-blue)]/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2`}
                 aria-label="Create new task"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: DURATION.fast, ease: EASE.default }}
+                whileHover={prefersReducedMotion ? undefined : { scale: 1.05 }}
+                whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: DURATION.fast, ease: EASE.default }}
               >
                 <Plus className={isLandscape ? 'w-5 h-5' : 'w-6 h-6'} strokeWidth={2.5} aria-hidden="true" />
 
                 {/* Subtle glow effect */}
-                <motion.div
-                  className="absolute inset-0 rounded-[var(--radius-2xl)] bg-white/20"
-                  initial={{ opacity: 0 }}
-                  whileHover={{ opacity: 1 }}
-                  transition={{ duration: DURATION.fast }}
-                />
+                {!prefersReducedMotion && (
+                  <motion.div
+                    className="absolute inset-0 rounded-[var(--radius-2xl)] bg-white/20"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                    transition={{ duration: DURATION.fast }}
+                  />
+                )}
               </motion.button>
             );
           }
@@ -253,27 +257,27 @@ export default function EnhancedBottomNav() {
               role="tab"
               aria-selected={isActive}
               aria-label={tab.label}
-              variants={tabButtonVariants}
+              variants={prefersReducedMotion ? undefined : tabButtonVariants}
               initial="idle"
               animate={isActive ? 'active' : 'idle'}
-              whileTap="pressed"
-              transition={{ duration: DURATION.fast, ease: EASE.default }}
+              whileTap={prefersReducedMotion ? undefined : "pressed"}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: DURATION.fast, ease: EASE.default }}
             >
               {/* Active indicator pill */}
               {isActive && !isLandscape && (
                 <motion.div
                   layoutId="activeTab"
                   className="absolute top-1 w-8 h-1 rounded-full bg-[var(--accent)]"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
 
               {/* Icon with badge */}
               <motion.div
                 className="relative"
-                variants={iconVariants}
+                variants={prefersReducedMotion ? undefined : iconVariants}
                 animate={isActive ? 'active' : 'idle'}
-                transition={{ duration: DURATION.fast }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: DURATION.fast }}
               >
                 <Icon
                   className={`
@@ -289,9 +293,9 @@ export default function EnhancedBottomNav() {
                 <AnimatePresence>
                   {tab.badge && tab.badge > 0 && (
                     <motion.span
-                      initial={{ scale: 0, opacity: 0 }}
+                      initial={prefersReducedMotion ? false : { scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
+                      exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0, opacity: 0 }}
                       className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full text-badge bg-[var(--danger)] text-white"
                     >
                       {tab.badge > 99 ? '99+' : tab.badge}

@@ -81,7 +81,7 @@ export default function OpportunityMatchBanner({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 16, scale: 0.97 }}
           transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm ${tierConfig.bg}`}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[600] w-full max-w-md rounded-xl border px-4 py-3 shadow-lg backdrop-blur-sm ${tierConfig.bg}`}
         >
           <div className="flex items-start gap-3">
             <UserCheck

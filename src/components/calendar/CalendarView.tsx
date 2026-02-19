@@ -509,7 +509,7 @@ export default function CalendarView({
               {showFilterMenu && (
                 <>
                   <div
-                    className="fixed inset-0 z-40"
+                    className="fixed inset-0 z-[300]"
                     aria-hidden="true"
                     onClick={() => setShowFilterMenu(false)}
                   />
@@ -520,7 +520,7 @@ export default function CalendarView({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] z-50"
+                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] z-[100]"
                   >
                     <div className="flex items-center gap-2 px-2 py-1.5 mb-2 border-b border-[var(--border)]">
                       <button

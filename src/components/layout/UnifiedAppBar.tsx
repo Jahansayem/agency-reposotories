@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Bell, ClipboardList } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { AuthUser, ActivityLogEntry } from '@/types/todo';
 import { useAppBar } from './AppBarContext';
 import { useAppShell } from './AppShell';
@@ -11,6 +12,7 @@ import NotificationModal from '@/components/NotificationModal';
 import { EAgentExportPanel } from '@/components/eAgent/EAgentExportPanel';
 import { supabase } from '@/lib/supabaseClient';
 import { useTodoStore } from '@/store/todoStore';
+import { zClass } from '@/lib/z-index';
 import { useEAgentQueueStore, selectPendingCount } from '@/store/eAgentQueueStore';
 
 interface UnifiedAppBarProps {
@@ -27,6 +29,7 @@ export default function UnifiedAppBar({
   const { content } = useAppBar();
   const { triggerNewTask, setActiveView } = useAppShell();
   const { focusMode } = useTodoStore((state) => state.ui);
+  const prefersReducedMotion = useReducedMotion();
 
   // Notification state
   const [notificationModalOpen, setNotificationModalOpen] = useState(false);
@@ -128,7 +131,7 @@ export default function UnifiedAppBar({
 
   return (
     <>
-      <header className="h-16 border-b bg-[var(--surface)] border-[var(--border)] flex-shrink-0 z-10">
+      <header className={`h-16 border-b bg-[var(--surface)] border-[var(--border)] flex-shrink-0 ${zClass.sticky}`}>
         <div className="flex items-center justify-between h-full px-4 sm:px-6">
           {/* Center: View-specific content from context */}
           <div className="flex-1 flex items-center gap-4 min-w-0">
@@ -164,7 +167,7 @@ export default function UnifiedAppBar({
               <ClipboardList className="w-5 h-5" aria-hidden="true" />
               {eAgentPendingCount > 0 && (
                 <motion.span
-                  initial={{ scale: 0 }}
+                  initial={prefersReducedMotion ? false : { scale: 0 }}
                   animate={{ scale: 1 }}
                   className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-badge bg-[var(--accent)] text-white"
                   aria-label={`${eAgentPendingCount} tasks to log`}
@@ -191,9 +194,12 @@ export default function UnifiedAppBar({
                 aria-expanded={notificationModalOpen}
               >
                 <Bell className="w-5 h-5" aria-hidden="true" />
+                <span role="status" aria-live="polite" className="sr-only">
+                  {unreadNotifications > 0 ? `${unreadNotifications} unread notifications` : ''}
+                </span>
                 {unreadNotifications > 0 && (
                   <motion.span
-                    initial={{ scale: 0 }}
+                    initial={prefersReducedMotion ? false : { scale: 0 }}
                     animate={{ scale: 1 }}
                     className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 min-w-[18px] h-[18px] flex items-center justify-center px-1 rounded-full text-badge bg-[var(--danger)] text-white"
                     aria-label={`${unreadNotifications} unread notifications`}

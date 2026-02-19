@@ -304,7 +304,7 @@ function TaskDetailModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[300]"
       onClick={onClose}
     >
       <motion.div
@@ -427,7 +427,7 @@ function TaskDetailModal({
                       <Clock className="w-4 h-4" />
                     </button>
                     {showSnoozeMenu && (
-                      <div className={`absolute right-0 top-full mt-1 rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-50 py-1 min-w-[140px] border border-[var(--border)] bg-[var(--surface-elevated)]`}>
+                      <div className={`absolute right-0 top-full mt-1 rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] z-[100] py-1 min-w-[140px] border border-[var(--border)] bg-[var(--surface-elevated)]`}>
                         <button
                           onClick={() => handleSnooze(1)}
                           className={`w-full px-3 py-2 text-sm text-left transition-colors hover:bg-[var(--surface-2)] text-[var(--foreground)]`}

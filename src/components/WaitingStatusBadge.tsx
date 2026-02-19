@@ -160,7 +160,7 @@ export function WaitingStatusBadge({
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="absolute top-full left-0 mt-2 z-50 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-lg overflow-hidden min-w-[180px]"
+                className="absolute top-full left-0 mt-2 z-[500] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-lg overflow-hidden min-w-[180px]"
               >
                 <div className="p-1">
                   <button
@@ -202,7 +202,7 @@ export function WaitingStatusBadge({
       {/* Click outside to close menu */}
       {showMenu && (
         <div
-          className="fixed inset-0 z-40"
+          className="fixed inset-0 z-[300]"
           onClick={() => setShowMenu(false)}
         />
       )}

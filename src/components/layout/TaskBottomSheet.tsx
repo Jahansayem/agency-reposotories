@@ -323,7 +323,7 @@ export default function TaskBottomSheet({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm"
             aria-hidden="true"
           />
 
@@ -339,7 +339,7 @@ export default function TaskBottomSheet({
             dragElastic={{ top: 0, bottom: 0.5 }}
             onDragEnd={handleDragEnd}
             className={`
-              fixed inset-x-0 bottom-0 z-50
+              fixed inset-x-0 bottom-0 z-[400]
               max-h-[92vh] rounded-t-3xl overflow-hidden
               flex flex-col
               ${'bg-[var(--surface)]'}

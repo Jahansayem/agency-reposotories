@@ -185,7 +185,7 @@ export function UserMenu({
               border border-[var(--border)]
               rounded-lg shadow-lg
               overflow-hidden
-              z-50
+              z-[100]
             "
             role="menu"
             onKeyDown={handleMenuKeyDown}

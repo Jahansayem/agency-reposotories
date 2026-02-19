@@ -213,7 +213,7 @@ export default function AttachmentUpload({
     .join(',');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Upload attachment">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Upload attachment">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full max-w-md rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] bg-[var(--surface)] border border-[var(--border)] overflow-hidden">

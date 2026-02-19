@@ -503,7 +503,7 @@ export default function CalendarDayCell({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className={`absolute z-50 ${popupVertical} ${popupHorizontal} min-w-[220px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)]`}
+            className={`absolute z-[500] ${popupVertical} ${popupHorizontal} min-w-[220px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)]`}
             style={{ pointerEvents: 'auto' }}
             onMouseEnter={() => setShowPopup(true)}
             onMouseLeave={() => !isDragActive && setShowPopup(false)}

@@ -97,7 +97,7 @@ export default function PullToRefresh({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed top-0 left-0 right-0 z-50 flex justify-center"
+            className="fixed top-0 left-0 right-0 z-[600] flex justify-center"
             style={{
               transform: `translateY(${Math.min(pullDistance - 40, 20)}px)`,
             }}

@@ -102,13 +102,13 @@ export default function AppMenu({
         <>
           {/* Backdrop for mobile */}
           <div
-            className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-[300] bg-black/20 backdrop-blur-sm md:hidden"
             onClick={() => setIsOpen(false)}
           />
 
           {/* Menu Panel */}
           <div
-            className={`absolute right-0 top-full mt-2 w-64 rounded-[var(--radius-xl)] border shadow-lg z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
+            className={`absolute right-0 top-full mt-2 w-64 rounded-[var(--radius-xl)] border shadow-lg z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${
               'bg-[var(--surface)] border-[var(--border)]'}`}
             role="menu"
             aria-orientation="vertical"

@@ -560,7 +560,7 @@ export function BookOfBusinessDashboard() {
     >
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+        <div className={`fixed top-4 right-4 z-[600] px-4 py-3 rounded-lg shadow-lg ${
           toastMessage.type === 'success'
             ? 'bg-green-600 text-white'
             : 'bg-red-600 text-white'

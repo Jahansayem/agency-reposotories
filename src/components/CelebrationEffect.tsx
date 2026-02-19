@@ -24,7 +24,7 @@ export default function CelebrationEffect({ show, onComplete, taskText }: Celebr
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+    <div className="fixed inset-0 flex items-center justify-center z-[300] pointer-events-none">
       <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-lg border border-[var(--border)] p-6 text-center animate-[fadeIn_0.2s_ease-out]">
         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
           <Check className="w-6 h-6 text-green-600" />

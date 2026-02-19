@@ -69,7 +69,7 @@ export default function SaveTemplateModal({
       animate={reducedMotion ? { opacity: 1 } : 'visible'}
       exit={reducedMotion ? { opacity: 0 } : 'exit'}
       transition={{ duration: reducedMotion ? 0 : DURATION.fast }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[300] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label="Save as Template"
