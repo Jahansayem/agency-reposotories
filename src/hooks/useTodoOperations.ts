@@ -118,7 +118,7 @@ export function useTodoOperations({
     notes?: string,
     recurrence?: 'daily' | 'weekly' | 'monthly' | null,
     customer?: LinkedCustomer
-  ) => {
+  ): Promise<string> => {
     const newTodo: Todo = {
       id: uuidv4(),
       text,
@@ -252,6 +252,7 @@ export function useTodoOperations({
       // Rollback optimistic update
       deleteTodoFromStore(newTodo.id);
     }
+    return newTodo.id;
   }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore, updateTodoInStore, announce, todos]);
 
   /**
@@ -269,7 +270,7 @@ export function useTodoOperations({
     notes?: string,
     recurrence?: 'daily' | 'weekly' | 'monthly' | null,
     customer?: LinkedCustomer
-  ) => {
+  ): Promise<string> | undefined => {
     // Check for duplicates
     const combinedText = `${text} ${transcription || ''}`;
     if (shouldCheckForDuplicates(combinedText)) {
@@ -280,11 +281,11 @@ export function useTodoOperations({
           { text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile },
           duplicates
         );
-        return;
+        return undefined;
       }
     }
     // No duplicates found, create directly
-    createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
+    return createTodoDirectly(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
   }, [todos, openDuplicateModal, createTodoDirectly]);
 
   /**
