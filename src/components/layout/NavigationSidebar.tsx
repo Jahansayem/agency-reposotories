@@ -18,11 +18,13 @@ import {
   Keyboard,
   Users,
   Flame,
+  MessageCircle,
 } from 'lucide-react';
 import { AuthUser } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
 import { useAppShell, ActiveView } from './AppShell';
 import { useAgency } from '@/contexts/AgencyContext';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { AgencySwitcher } from '@/components/AgencySwitcher';
 import { AgencyOnboardingTooltip, useAgencyOnboarding } from '@/components/AgencyOnboardingTooltip';
 import { CreateAgencyModal } from '@/components/CreateAgencyModal';
@@ -53,6 +55,7 @@ interface NavItem {
 const primaryNavItems: NavItem[] = [
   { id: 'tasks', label: 'Tasks', icon: CheckSquare },
   { id: 'calendar', label: 'Calendar', icon: Calendar },
+  { id: 'chat', label: 'Messages', icon: MessageCircle },
   { id: 'opportunities', label: 'Opportunities', icon: Flame },
   { id: 'ai_inbox', label: 'AI Inbox', icon: Inbox },
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -109,6 +112,78 @@ export default function NavigationSidebar({
   const [showMembersModal, setShowMembersModal] = useState(false);
 
   const [hovering, setHovering] = useState(false);
+
+  // Unread chat message count
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !currentUser?.name) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        let query = supabase
+          .from('messages')
+          .select('id, read_by, recipient, created_by')
+          .not('created_by', 'eq', currentUser.name)
+          .is('deleted_at', null);
+
+        if (isMultiTenancyEnabled && currentAgency?.id) {
+          query = query.eq('agency_id', currentAgency.id);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        const unread = data?.filter((msg) => {
+          if (msg.read_by?.includes(currentUser.name)) return false;
+          if (!msg.recipient) return true;
+          if (msg.recipient === currentUser.name) return true;
+          return false;
+        }).length || 0;
+
+        setChatUnreadCount(unread);
+      } catch (err) {
+        logger.error('Error fetching unread count', err as Error, {
+          component: 'NavigationSidebar',
+          action: 'fetchUnreadCount',
+          userName: currentUser.name,
+        });
+      }
+    };
+
+    fetchUnreadCount();
+
+    const channelName = isMultiTenancyEnabled && currentAgency?.id
+      ? `sidebar-nav-messages-${currentAgency.id}`
+      : 'sidebar-nav-messages';
+
+    const subscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'messages';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+    };
+
+    if (isMultiTenancyEnabled && currentAgency?.id) {
+      subscriptionConfig.filter = `agency_id=eq.${currentAgency.id}`;
+    }
+
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', subscriptionConfig, () => {
+        fetchUnreadCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.name, currentAgency?.id, isMultiTenancyEnabled]);
 
   // Determine if the sidebar should be expanded (collapsed=false OR hovering while collapsed)
   const isExpanded = !sidebarCollapsed || hovering;
@@ -258,6 +333,7 @@ export default function NavigationSidebar({
         {primaryNavItems.map(item => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
+          const badgeCount = item.id === 'chat' ? chatUnreadCount : (item.badge || 0);
 
           return (
             <button
@@ -266,9 +342,22 @@ export default function NavigationSidebar({
               className={navItemClass(isActive)}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className={iconClass(isActive)} />
+              <div className="relative flex-shrink-0">
+                <Icon className={iconClass(isActive)} />
+                {/* Collapsed: show red dot when there are unread messages */}
+                {!isExpanded && badgeCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--danger)] border-2 border-[var(--surface)]" />
+                )}
+              </div>
               {isExpanded && (
-                <span className="flex-1 text-left truncate">{item.label}</span>
+                <>
+                  <span className="flex-1 text-left truncate">{item.label}</span>
+                  {badgeCount > 0 && (
+                    <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full text-xs font-medium bg-[var(--danger)] text-white">
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                  )}
+                </>
               )}
             </button>
           );

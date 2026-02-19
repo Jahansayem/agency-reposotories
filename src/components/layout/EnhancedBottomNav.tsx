@@ -17,6 +17,9 @@ import { useAppShell, ActiveView } from './AppShell';
 import { DURATION, EASE } from '@/lib/animations';
 import { useIsLandscape } from '@/hooks/useIsLandscape';
 import SyncStatusIndicator from '../SyncStatusIndicator';
+import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
+import { useAgency } from '@/contexts/AgencyContext';
+import { logger } from '@/lib/logger';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ENHANCED BOTTOM NAVIGATION
@@ -47,13 +50,86 @@ export default function EnhancedBottomNav() {
   } = useAppShell();
 
   const isLandscape = useIsLandscape();
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
 
-  // Stats for badges (these would come from props or context in real implementation)
+  // Stats for badges
   const [stats, setStats] = useState({
     unreadMessages: 0,
     overdueTasks: 0,
     dueTodayTasks: 0,
   });
+
+  // Fetch unread message count from Supabase
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !currentUser?.name) return;
+
+    const fetchUnreadCount = async () => {
+      try {
+        let query = supabase
+          .from('messages')
+          .select('id, read_by, recipient, created_by')
+          .not('created_by', 'eq', currentUser.name)
+          .is('deleted_at', null);
+
+        if (isMultiTenancyEnabled && currentAgencyId) {
+          query = query.eq('agency_id', currentAgencyId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        const unread = data?.filter((msg) => {
+          if (msg.read_by?.includes(currentUser.name)) return false;
+          // Team message (no recipient)
+          if (!msg.recipient) return true;
+          // DM to current user
+          if (msg.recipient === currentUser.name) return true;
+          return false;
+        }).length || 0;
+
+        setStats(prev => ({ ...prev, unreadMessages: unread }));
+      } catch (err) {
+        logger.error('Error fetching unread count', err as Error, {
+          component: 'EnhancedBottomNav',
+          action: 'fetchUnreadCount',
+          userName: currentUser.name,
+        });
+      }
+    };
+
+    fetchUnreadCount();
+
+    const channelName = isMultiTenancyEnabled && currentAgencyId
+      ? `bottom-nav-messages-${currentAgencyId}`
+      : 'bottom-nav-messages';
+
+    const subscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'messages';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+    };
+
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
+    const channel = supabase
+      .channel(channelName)
+      .on('postgres_changes', subscriptionConfig, () => {
+        fetchUnreadCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.name, currentAgencyId, isMultiTenancyEnabled]);
 
   const tabs: NavTab[] = [
     {

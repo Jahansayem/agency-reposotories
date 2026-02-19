@@ -17,6 +17,7 @@ import {
   truncateText,
 } from '@/lib/chatUtils';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { useToast } from '@/components/ui/Toast';
 import {
   ChatMessageList,
   ChatInputBar,
@@ -142,6 +143,7 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   // Agency context for multi-tenancy
   const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+  const toast = useToast();
 
   // Panel visibility state
   const [isOpen, setIsOpen] = useState(docked);
@@ -239,6 +241,7 @@ export default function ChatPanel({
     deleteMessage,
     togglePin,
     markMessagesAsRead,
+    markMessageAsUnread,
     handleNewMessage,
     handleMessageUpdate,
     handleMessageDelete,
@@ -467,6 +470,7 @@ export default function ChatPanel({
 
     if (error) {
       logger.error('Error sending message', error, { component: 'ChatPanel' });
+      toast.error('Failed to send message. Please try again.');
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
     } else {
       const recipientsToNotify: string[] = [];
@@ -960,6 +964,16 @@ export default function ChatPanel({
         onTaskLinkClick={onTaskLinkClick}
         todosMap={todosMap}
         markMessagesAsRead={markMessagesAsRead}
+        onMarkUnread={(messageId) => {
+          markMessageAsUnread(messageId);
+          if (conversation) {
+            const key = getConversationKey(conversation);
+            setUnreadCounts(prev => ({
+              ...prev,
+              [key]: (prev[key] || 0) + 1
+            }));
+          }
+        }}
       />
     );
   }
@@ -1109,6 +1123,16 @@ export default function ChatPanel({
                               onDelete={handleDeleteMessageRequest}
                               onPin={togglePin}
                               onCreateTask={onCreateTask ? createTaskFromMessage : undefined}
+                              onMarkUnread={(messageId) => {
+                                markMessageAsUnread(messageId);
+                                if (conversation) {
+                                  const key = getConversationKey(conversation);
+                                  setUnreadCounts(prev => ({
+                                    ...prev,
+                                    [key]: (prev[key] || 0) + 1
+                                  }));
+                                }
+                              }}
                               onTaskLinkClick={onTaskLinkClick}
                               todosMap={todosMap}
                               firstUnreadId={firstUnreadId}

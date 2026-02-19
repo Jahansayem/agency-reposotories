@@ -4,7 +4,7 @@ import React, { memo, useCallback, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Check, CheckCheck, Reply, MoreHorizontal,
-  Edit3, Trash2, Pin, Plus, ExternalLink, Sparkles, X, Smile
+  Edit3, Trash2, Pin, Plus, ExternalLink, Sparkles, X, Smile, EyeOff
 } from 'lucide-react';
 import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, Todo, ChatAttachment } from '@/types/todo';
 import { getReactionAriaLabel } from '@/lib/chatUtils';
@@ -35,6 +35,7 @@ interface ChatMessageListProps {
   onDelete: (messageId: string, messageText: string) => void;
   onPin: (message: ChatMessage) => void;
   onCreateTask?: (message: ChatMessage) => void;
+  onMarkUnread?: (messageId: string) => void;
   onTaskLinkClick?: (todoId: string) => void;
   todosMap?: Map<string, Todo>;
   firstUnreadId: string | null;
@@ -242,6 +243,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   onDelete,
   onPin,
   onCreateTask,
+  onMarkUnread,
   onTaskLinkClick,
   todosMap,
   firstUnreadId,
@@ -608,6 +610,18 @@ export const ChatMessageList = memo(function ChatMessageList({
                           >
                             <Reply className="w-4 h-4" aria-hidden="true" /> Reply
                           </button>
+                          {!isOwn && readBy.includes(currentUser.name) && onMarkUnread && (
+                            <button
+                              role="menuitem"
+                              onClick={() => {
+                                onMarkUnread(msg.id);
+                                setShowMessageMenu(null);
+                              }}
+                              className="w-full px-4 py-3 text-left text-sm flex items-center gap-3 hover:bg-[var(--chat-surface-hover)] text-white/80 transition-colors"
+                            >
+                              <EyeOff className="w-4 h-4" aria-hidden="true" /> Mark as Unread
+                            </button>
+                          )}
                           {canPinMessages && (
                             <button
                               role="menuitem"

@@ -6,7 +6,7 @@ import {
   MessageSquare, Users, ChevronLeft, X, Search, Bell,
   BellOff, Moon, Pin, ChevronDown
 } from 'lucide-react';
-import { AuthUser, ChatConversation, ChatMessage, Todo, TapbackType } from '@/types/todo';
+import { AuthUser, ChatConversation, ChatMessage, ChatAttachment, Todo, TapbackType } from '@/types/todo';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { ChatMessageList } from './ChatMessageList';
@@ -24,7 +24,7 @@ interface DockedChatPanelProps {
   messagesContainerRef: RefObject<HTMLDivElement | null>;
   inputValue: string;
   onInputChange: (value: string) => void;
-  onSendMessage: (text: string, mentions: string[]) => void;
+  onSendMessage: (text: string, mentions: string[], attachments?: ChatAttachment[]) => void;
   onSelectConversation: (conv: ChatConversation) => void;
   onShowConversationList: () => void;
   onTyping: () => void;
@@ -42,6 +42,7 @@ interface DockedChatPanelProps {
   onTaskLinkClick?: (todoId: string) => void;
   todosMap?: Map<string, Todo>;
   markMessagesAsRead?: (messageIds: string[]) => void;
+  onMarkUnread?: (messageId: string) => void;
 
   /** Callback to close the chat panel (used in mobile/tablet overlay modes) */
   onClose?: () => void;
@@ -73,6 +74,7 @@ export function DockedChatPanel({
   onTaskLinkClick,
   todosMap,
   markMessagesAsRead,
+  onMarkUnread,
   onClose,
 }: DockedChatPanelProps) {
   // Responsive breakpoints: mobile (<640px), tablet (640-1024px), desktop (>1024px)
@@ -427,6 +429,7 @@ export function DockedChatPanel({
                   onDelete={handleDelete}
                   onPin={togglePin || (() => {})}
                   onCreateTask={onCreateTask ? createTaskFromMessage : undefined}
+                  onMarkUnread={onMarkUnread}
                   onTaskLinkClick={onTaskLinkClick}
                   todosMap={todosMap}
                   firstUnreadId={null}

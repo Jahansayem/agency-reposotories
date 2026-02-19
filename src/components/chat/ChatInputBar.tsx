@@ -7,6 +7,7 @@ import { ChatMessage, ChatConversation, ChatAttachment } from '@/types/todo';
 import { CHAT_LIMITS } from '@/lib/chatUtils';
 import { AttachmentUploadButton, AttachmentPreview } from '../ChatAttachments';
 import { useChatAttachments } from '@/hooks/useChatAttachments';
+import { useToast } from '../ui/Toast';
 
 // Expanded emoji picker with categories
 const EMOJI_CATEGORIES = {
@@ -104,6 +105,7 @@ export const ChatInputBar = memo(function ChatInputBar({
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   const { uploadAttachment, uploading, progress, error: uploadError, clearError } = useChatAttachments();
+  const toast = useToast();
 
   // Update edit text when editing message changes
   useEffect(() => {
@@ -177,7 +179,15 @@ export const ChatInputBar = memo(function ChatInputBar({
     const attachment = await uploadAttachment(file, currentUserName);
     if (attachment) {
       setUploadedAttachment(attachment);
+    } else {
+      // Upload failed -- show a toast so the user notices even if the
+      // small preview error overlay is easy to miss.
+      toast.error('Upload failed', {
+        description: 'Could not upload the attachment. Please try again.',
+        duration: 5000,
+      });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- toast object is stable in practice
   }, [uploadAttachment, currentUserName, clearError]);
 
   // Remove attachment

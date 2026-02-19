@@ -28,6 +28,7 @@ interface UseChatMessagesReturn {
   deleteMessage: (messageId: string) => Promise<void>;
   togglePin: (message: ChatMessage) => Promise<void>;
   markMessagesAsRead: (messageIds: string[]) => Promise<void>;
+  markMessageAsUnread: (messageId: string) => Promise<void>;
   handleNewMessage: (message: ChatMessage) => void;
   handleMessageUpdate: (message: ChatMessage) => void;
   handleMessageDelete: (messageId: string) => void;
@@ -418,6 +419,36 @@ export function useChatMessages({
     }
   }, [currentUser.name]);
 
+  // Mark a single message as unread (remove current user from read_by)
+  const markMessageAsUnread = useCallback(async (messageId: string) => {
+    const message = messagesRef.current.find(m => m.id === messageId);
+    if (!message) return;
+
+    const currentReadBy = message.read_by || [];
+    if (!currentReadBy.includes(currentUser.name)) return; // Already unread
+
+    const newReadBy = currentReadBy.filter(name => name !== currentUser.name);
+
+    // Optimistic update
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, read_by: newReadBy } : m
+    ));
+
+    // Database update
+    const { error } = await supabase
+      .from('messages')
+      .update({ read_by: newReadBy })
+      .eq('id', messageId);
+
+    if (error) {
+      logger.error('Error marking message as unread', error, { component: 'useChatMessages' });
+      // Rollback
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, read_by: currentReadBy } : m
+      ));
+    }
+  }, [currentUser.name]);
+
   return {
     messages,
     setMessages,
@@ -434,6 +465,7 @@ export function useChatMessages({
     deleteMessage,
     togglePin,
     markMessagesAsRead,
+    markMessageAsUnread,
     handleNewMessage,
     handleMessageUpdate,
     handleMessageDelete,
