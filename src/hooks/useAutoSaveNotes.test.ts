@@ -43,4 +43,38 @@ describe('useAutoSaveNotes', () => {
     expect(onChange).toHaveBeenCalledWith('new text');
     expect(onSave).toHaveBeenCalledTimes(1);
   });
+
+  it('manual save bypasses debounce and saves immediately', () => {
+    const onSave = vi.fn();
+    const onChange = vi.fn();
+
+    const { result } = renderHook(() =>
+      useAutoSaveNotes({
+        initialValue: '',
+        onSave,
+        onChange,
+        enabled: true,
+      })
+    );
+
+    act(() => {
+      result.current.handleChange('new text');
+    });
+
+    // Trigger manual save immediately
+    act(() => {
+      result.current.handleManualSave();
+    });
+
+    // Should save immediately without waiting
+    expect(onChange).toHaveBeenCalledWith('new text');
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    // Advance debounce timer - should NOT call again
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(onSave).toHaveBeenCalledTimes(1); // Still only once
+  });
 });
