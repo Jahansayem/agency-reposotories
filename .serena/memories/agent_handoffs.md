@@ -210,4 +210,39 @@ When completing work, use this template:
 
 ---
 
+## Handoff: Dedup + Mobile + Polish Batch 2 (D1-D2, M1, P6-P11)
+- **Date**: 2026-02-19
+- **From Agent**: Frontend Engineer (Agent 4)
+- **To Agent**: Code Reviewer (Agent 5)
+- **Status**: Complete
+
+### Completed Work
+- D1: Audited all "New Task" button instances — only exists in UnifiedAppBar (top bar) and EnhancedBottomNav (mobile FAB). No instance in sidebar. No removal needed.
+- D2: Audited all logout instances — only exists in UserMenu dropdown. No instance in sidebar footer. No removal needed.
+- M1: MobileMenuContent already has all 10 views matching NavigationSidebar (7 primary + 3 secondary). No additions needed.
+- P6: Already completed by Agent 3 — `role="tablist"` already present on bottom nav inner div, `aria-selected` on each tab.
+- P7: Changed sidebar `aria-label` from "Main navigation" to "Sidebar navigation". Bottom nav was already "Mobile navigation" (Agent 3).
+- P8: Made collapse toggle always visible — when expanded shows ChevronLeft normally, when collapsed shows a small ChevronRight absolutely positioned in top-right corner of header.
+- P9: Added scroll shadow to NavigationSidebar — uses `useRef` + `ResizeObserver` + `onScroll` to detect overflow, renders a `from-[var(--surface)]` gradient at the bottom of the nav when scrollable and not at bottom.
+- P10: Added 3px left border accent to active nav items — `border-l-[3px] border-l-[var(--accent)] rounded-l-none` on active, `border-l-transparent` on inactive to prevent layout shift. Replaced `shadow-sm` with border for stronger visual affordance.
+- P11: Added view title to UnifiedAppBar left side — shows `<h1>` with view name (from ActiveView→label mapping) when AppBarContext content is null (non-task views).
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/layout/NavigationSidebar.tsx` | P7: aria-label → "Sidebar navigation"; P8: collapse toggle always visible with absolute positioning when collapsed; P9: scroll shadow with ResizeObserver + gradient overlay; P10: 3px left border accent on active items |
+| `src/components/layout/UnifiedAppBar.tsx` | P11: Added `activeView` from useAppShell, view title fallback when AppBarContext content is null |
+
+### Key Context
+- **D1/D2/M1 were already resolved**: No "New Task" or "Logout" existed in the sidebar in the current codebase. MobileMenuContent already had full parity with NavigationSidebar (10 views). These items were either pre-resolved or the original audit was based on an older snapshot.
+- **P6 was already done by Agent 3**: `role="tablist"` and `aria-label="Mobile navigation"` were already in place on EnhancedBottomNav.
+- **P8 collapse toggle**: When collapsed, the chevron is absolutely positioned (`absolute top-4 right-1`) inside the header (which now has `relative`). This avoids layout conflicts with the 72px collapsed width.
+- **P9 scroll shadow**: The nav element is wrapped in a `relative flex-1 min-h-0` container. The gradient div appears at the bottom when `scrollHeight > clientHeight && !atBottom`. ResizeObserver handles dynamic content changes.
+- **P10 border approach**: Both active and inactive items have `border-l-[3px]` to prevent layout shift. Active gets `border-l-[var(--accent)] rounded-l-none`, inactive gets `border-l-transparent`.
+- **P11 view title**: Uses inline object lookup `{ tasks: 'Tasks', calendar: 'Calendar', ... }[activeView]` as a simple mapping. Falls back when `content` (from AppBarContext) is null — which happens on all views except tasks view (which sets its own app bar content).
+- `npx tsc --noEmit`, `npm run build`, and `npm run lint` all pass clean (lint warnings are all pre-existing)
+
+---
+
 *Updated: 2026-02-19*

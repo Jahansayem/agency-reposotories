@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { logger } from '@/lib/logger';
 import { zClass } from '@/lib/z-index';
@@ -12,8 +12,6 @@ import {
   Archive,
   ChevronLeft,
   ChevronRight,
-  LogOut,
-  Plus,
   Inbox,
   BarChart2,
   Keyboard,
@@ -41,7 +39,6 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface NavigationSidebarProps {
   currentUser: AuthUser;
-  onUserChange?: (user: AuthUser | null) => void;
   onShowWeeklyChart?: () => void;
   onShowShortcuts?: () => void;
 }
@@ -73,7 +70,6 @@ const secondaryNavItems: NavItem[] = [
 
 export default function NavigationSidebar({
   currentUser,
-  onUserChange,
   onShowWeeklyChart,
   onShowShortcuts,
 }: NavigationSidebarProps) {
@@ -82,9 +78,6 @@ export default function NavigationSidebar({
     setActiveView,
     sidebarCollapsed,
     toggleSidebar,
-    openCommandPalette,
-    openRightPanel,
-    triggerNewTask,
   } = useAppShell();
 
   // Permission checks for gated nav items
@@ -116,6 +109,27 @@ export default function NavigationSidebar({
 
   const [hovering, setHovering] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+
+  // Scroll shadow for nav overflow
+  const navRef = useRef<HTMLElement>(null);
+  const [showScrollShadow, setShowScrollShadow] = useState(false);
+
+  const handleNavScroll = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollHeight > el.clientHeight;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 2;
+    setShowScrollShadow(hasOverflow && !atBottom);
+  }, []);
+
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    handleNavScroll();
+    const observer = new ResizeObserver(handleNavScroll);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [handleNavScroll]);
 
   // Unread chat message count
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
@@ -198,22 +212,12 @@ export default function NavigationSidebar({
   // Determine if the sidebar should be expanded (collapsed=false OR hovering while collapsed)
   const isExpanded = !sidebarCollapsed || hovering;
 
-  // Keyboard shortcut hint
-  const shortcutKey = typeof navigator !== 'undefined' && navigator.platform.includes('Mac') ? '⌘' : 'Ctrl';
-
-  const handleLogout = () => {
-    if (onUserChange) {
-      localStorage.removeItem('todoSession');
-      onUserChange(null);
-    }
-  };
-
   const navItemClass = (isActive: boolean) => `
     group relative flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-xl)]
-    font-medium text-sm transition-all duration-150 cursor-pointer
-    \${isActive
-      ? 'bg-[var(--accent-light)] text-[var(--accent)]'
-      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'
+    font-medium text-sm transition-all duration-150 cursor-pointer border-l-[3px]
+    ${isActive
+      ? 'bg-[var(--accent-light)] text-[var(--accent)] font-semibold border-l-[var(--accent)] rounded-l-none'
+      : 'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)] border-l-transparent'
     }
   `;
 
@@ -235,10 +239,10 @@ export default function NavigationSidebar({
       onMouseEnter={() => sidebarCollapsed && setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       className={`hidden lg:flex flex-col flex-shrink-0 overflow-hidden border-r transition-colors bg-[var(--surface)] border-[var(--border)] ${zClass.sticky}`}
-      aria-label="Main navigation"
+      aria-label="Sidebar navigation"
     >
       {/* ─── Header ─── */}
-      <div className="flex items-center justify-between px-4 h-16 border-b border-[var(--border-subtle)]">
+      <div className="relative flex items-center justify-between px-4 h-16 border-b border-[var(--border-subtle)]">
         <AnimatePresence mode="wait">
           {isExpanded ? (
             <motion.div
@@ -300,8 +304,8 @@ export default function NavigationSidebar({
           )}
         </AnimatePresence>
 
-        {/* Collapse toggle */}
-        {isExpanded && (
+        {/* Collapse toggle — always visible */}
+        {isExpanded ? (
           <div className="flex items-center gap-1">
             <button
               onClick={toggleSidebar}
@@ -309,39 +313,25 @@ export default function NavigationSidebar({
                 p-1.5 rounded-[var(--radius-lg)] transition-colors
                 text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
               `}
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label="Collapse sidebar"
             >
-              {sidebarCollapsed ? (
-                <ChevronRight className="w-4 h-4" />
-              ) : (
-                <ChevronLeft className="w-4 h-4" />
-            )}
+              <ChevronLeft className="w-4 h-4" />
             </button>
           </div>
+        ) : (
+          <button
+            onClick={toggleSidebar}
+            className="absolute top-4 right-1 p-1 rounded-[var(--radius-md)] transition-colors text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]"
+            aria-label="Expand sidebar"
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         )}
       </div>
 
-      {/* ─── Quick Add Button ─── */}
-      <div className="px-3 py-3">
-        <Tooltip content="New Task" position="right" disabled={isExpanded}>
-          <button
-            onClick={triggerNewTask}
-            aria-label="Create new task"
-            className={`
-              w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-[var(--radius-xl)]
-              font-medium text-sm transition-all
-              bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-blue-light)]
-              text-white shadow-md hover:shadow-lg hover:brightness-110
-            `}
-          >
-            <Plus className="w-4 h-4" aria-hidden="true" />
-            {isExpanded && <span>New Task</span>}
-          </button>
-        </Tooltip>
-      </div>
-
       {/* ─── Primary Navigation ─── */}
-      <nav className="px-3 py-2 space-y-1 overflow-y-auto" aria-label="Primary">
+      <div className="relative flex-1 min-h-0">
+      <nav ref={navRef} onScroll={handleNavScroll} className="px-3 py-2 space-y-1 overflow-y-auto h-full" aria-label="Primary">
         {primaryNavItems.map(item => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -460,23 +450,13 @@ export default function NavigationSidebar({
           </>
         )}
       </nav>
-
-      {/* ─── Footer / Logout ─── */}
-      <div className="mt-auto border-t px-3 py-3 border-[var(--border)]">
-        <Tooltip content="Log out" position="right" disabled={isExpanded}>
-          <button
-            onClick={handleLogout}
-            className={`
-              w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[var(--radius-lg)]
-              transition-colors
-              text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]
-            `}
-            aria-label="Log out"
-          >
-            <LogOut className="w-4 h-4" />
-            {isExpanded && <span className="text-sm">Log out</span>}
-          </button>
-        </Tooltip>
+      {/* Scroll shadow gradient */}
+      {showScrollShadow && (
+        <div
+          className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[var(--surface)] to-transparent pointer-events-none"
+          aria-hidden="true"
+        />
+      )}
       </div>
 
       {/* Create Agency Modal */}

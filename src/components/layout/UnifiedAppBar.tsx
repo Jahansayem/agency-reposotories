@@ -27,7 +27,7 @@ export default function UnifiedAppBar({
   onUserChange,
 }: UnifiedAppBarProps) {
   const { content } = useAppBar();
-  const { triggerNewTask, setActiveView } = useAppShell();
+  const { triggerNewTask, setActiveView, activeView } = useAppShell();
   const { focusMode } = useTodoStore((state) => state.ui);
   const prefersReducedMotion = useReducedMotion();
 
@@ -133,9 +133,13 @@ export default function UnifiedAppBar({
     <>
       <header className={`h-16 border-b bg-[var(--surface)] border-[var(--border)] flex-shrink-0 ${zClass.sticky}`}>
         <div className="flex items-center justify-between h-full px-4 sm:px-6">
-          {/* Center: View-specific content from context */}
+          {/* Left: View title or view-specific content */}
           <div className="flex-1 flex items-center gap-4 min-w-0">
-            {content}
+            {content || (
+              <h1 className="text-lg font-semibold text-[var(--foreground)]">
+                {{ tasks: 'Tasks', calendar: 'Calendar', dashboard: 'Dashboard', activity: 'Activity', chat: 'Messages', goals: 'Strategic Goals', archive: 'Archive', ai_inbox: 'AI Inbox', analytics: 'Analytics', opportunities: 'Opportunities', customers: 'Customers', settings: 'Settings' }[activeView]}
+              </h1>
+            )}
           </div>
 
           {/* Right: Fixed global actions */}
