@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import {
   callClaude,
   parseAiJsonResponse,
   aiSuccessResponse,
   validateAiRequest,
   withAiErrorHandling,
-  withSessionAuth,
 } from '@/lib/aiApiHelper';
+import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { escapeLikePattern } from '@/lib/constants';
+
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 interface MatchRequest {
   taskText: string;
-  agencyId: string;
 }
 
 interface MatchResult {
@@ -33,17 +40,20 @@ interface MatchResult {
   } | null;
 }
 
-async function handleMatchCustomerOpportunity(request: NextRequest): Promise<NextResponse> {
+async function handleMatchCustomerOpportunity(
+  request: NextRequest,
+  ctx: AgencyAuthContext
+): Promise<NextResponse> {
   const validation = await validateAiRequest(request, {
     customValidator: (body) => {
       if (!body.taskText || typeof body.taskText !== 'string') return 'taskText is required';
-      if (!body.agencyId || typeof body.agencyId !== 'string') return 'agencyId is required';
       return null;
     },
   });
   if (!validation.valid) return validation.response;
 
-  const { taskText, agencyId } = validation.body as unknown as MatchRequest;
+  const { taskText } = validation.body as unknown as MatchRequest;
+  const agencyId = ctx.agencyId;
 
   // Skip very short task texts
   if (taskText.trim().split(/\s+/).length < 3) {
@@ -68,9 +78,15 @@ Task: "${taskText.slice(0, 500)}"`,
     return aiSuccessResponse({ matched: false, customer: null, opportunity: null } as MatchResult);
   }
 
-  const extractedName = parsed.customer_name.trim();
+  // Sanitize extracted name: strip SQL wildcard characters before ILIKE query
+  const safeName = escapeLikePattern(parsed.customer_name.trim());
+  if (!safeName.trim()) {
+    return aiSuccessResponse({ matched: false, customer: null, opportunity: null } as MatchResult);
+  }
 
-  // Step 2: Fuzzy match against cross_sell_opportunities
+  const supabase = getSupabaseClient();
+
+  // Step 2: Fuzzy match against cross_sell_opportunities scoped to the authenticated agency
   const { data: opportunities, error } = await supabase
     .from('cross_sell_opportunities')
     .select(`
@@ -82,7 +98,7 @@ Task: "${taskText.slice(0, 500)}"`,
     `)
     .eq('agency_id', agencyId)
     .eq('dismissed', false)
-    .ilike('customer_name', `%${extractedName}%`)
+    .ilike('customer_name', `%${safeName}%`)
     .order('priority_score', { ascending: false })
     .limit(1);
 
@@ -93,11 +109,12 @@ Task: "${taskText.slice(0, 500)}"`,
   const opp = opportunities[0];
 
   // Step 3: Look up customer segment from customer_insights by name
+  const safeOppName = escapeLikePattern(opp.customer_name);
   const { data: insights } = await supabase
     .from('customer_insights')
     .select('id, segment_tier')
     .eq('agency_id', agencyId)
-    .ilike('customer_name', `%${opp.customer_name}%`)
+    .ilike('customer_name', `%${safeOppName}%`)
     .limit(1);
 
   const insight = insights?.[0];
@@ -128,7 +145,7 @@ Task: "${taskText.slice(0, 500)}"`,
 
 export const POST = withAiErrorHandling(
   'MatchCustomerOpportunity',
-  withSessionAuth(async (request: NextRequest, _userId: string, _userName: string) => {
-    return handleMatchCustomerOpportunity(request);
+  withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+    return handleMatchCustomerOpportunity(request, ctx);
   })
 );

@@ -8,21 +8,31 @@ vi.mock('@/lib/aiApiHelper', () => ({
   aiErrorResponse: (msg: string, status = 500) => Response.json({ success: false, error: msg }, { status }),
   validateAiRequest: vi.fn(),
   withAiErrorHandling: (_name: string, handler: Function) => handler,
-  withSessionAuth: (handler: Function) => handler,
 }));
 
-// Mock supabase
-vi.mock('@/lib/supabaseClient', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      ilike: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      neq: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
-    })),
-  },
+// Mock agencyAuth - provide withAgencyAuth that passes a default ctx
+vi.mock('@/lib/agencyAuth', () => ({
+  withAgencyAuth: (handler: Function) => (req: unknown) =>
+    handler(req, { agencyId: 'agency-1', userId: 'user-1', userName: 'Test User' }),
+}));
+
+// Mock constants (escapeLikePattern)
+vi.mock('@/lib/constants', () => ({
+  escapeLikePattern: (input: string) => input.replace(/[%_\\]/g, '\\$&'),
+}));
+
+// Mock Supabase
+const mockFrom = vi.fn(() => ({
+  select: vi.fn().mockReturnThis(),
+  ilike: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  neq: vi.fn().mockReturnThis(),
+  order: vi.fn().mockReturnThis(),
+  limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+}));
+
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({ from: (...args: unknown[]) => mockFrom(...args) }),
 }));
 
 import { callClaude, parseAiJsonResponse, validateAiRequest } from '@/lib/aiApiHelper';
@@ -34,7 +44,6 @@ describe('match-customer-opportunity', () => {
     vi.mocked(validateAiRequest).mockResolvedValue({
       valid: true,
       body: { taskText: 'Call Janis Urich about her claim', agencyId: 'agency-1' },
-      response: null,
     });
     vi.mocked(callClaude).mockResolvedValue({
       success: true,
@@ -58,7 +67,6 @@ describe('match-customer-opportunity', () => {
     vi.mocked(validateAiRequest).mockResolvedValue({
       valid: true,
       body: { taskText: 'Review documents', agencyId: 'agency-1' },
-      response: null,
     });
     vi.mocked(callClaude).mockResolvedValue({
       success: true,
@@ -81,7 +89,6 @@ describe('match-customer-opportunity', () => {
     vi.mocked(validateAiRequest).mockResolvedValue({
       valid: true,
       body: { taskText: 'Call Bob Jones', agencyId: 'agency-1' },
-      response: null,
     });
     vi.mocked(callClaude).mockResolvedValue({ success: false, error: 'timeout' });
 
