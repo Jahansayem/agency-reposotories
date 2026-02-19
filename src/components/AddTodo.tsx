@@ -11,8 +11,9 @@ import FileImporter from './FileImporter';
 import { QuickTaskButtons, useTaskPatterns } from './QuickTaskButtons';
 import { CategoryConfidenceIndicator } from './CategoryConfidenceIndicator';
 import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate } from '@/types/todo';
-import type { LinkedCustomer } from '@/types/customer';
+import type { LinkedCustomer, Customer } from '@/types/customer';
 import { CustomerSearchInput } from './customer/CustomerSearchInput';
+import { useAiCustomerSuggest } from '@/hooks/useCustomers';
 import { getUserPreferences, updateLastTaskDefaults } from '@/lib/userPreferences';
 import { analyzeTaskPattern } from '@/lib/insurancePatterns';
 import { logger } from '@/lib/logger';
@@ -105,6 +106,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
 
   // Customer linking state
   const [linkedCustomer, setLinkedCustomer] = useState<LinkedCustomer | null>(null);
+
+  // AI customer auto-suggest from task text
+  const aiSuggest = useAiCustomerSuggest({ agencyId });
+  const aiSuggestDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch smart defaults based on user patterns
   const { suggestions, isLoading: suggestionsLoading } = useSuggestedDefaults(currentUserId);
@@ -426,7 +431,28 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
     setTemplateSubtasks([]); // Clear template subtasks (Phase 2.2)
     setPatternDismissed(false); // Reset so new pattern can be detected on next input
     setLinkedCustomer(null); // Clear linked customer
+    aiSuggest.clear();
   };
+
+  // Auto-suggest customer from task text (debounced)
+  useEffect(() => {
+    if (aiSuggestDebounceRef.current) {
+      clearTimeout(aiSuggestDebounceRef.current);
+    }
+
+    if (canUseAiFeatures && text.trim().length >= 10 && !linkedCustomer) {
+      aiSuggestDebounceRef.current = setTimeout(() => {
+        aiSuggest.suggest(text);
+      }, 1500); // Longer debounce to avoid excessive API calls while typing
+    } else {
+      aiSuggest.clear();
+    }
+
+    return () => {
+      if (aiSuggestDebounceRef.current) clearTimeout(aiSuggestDebounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, linkedCustomer, canUseAiFeatures]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Cmd/Ctrl + Enter - Submit with AI enhancement
@@ -736,10 +762,41 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
               </label>
               <CustomerSearchInput
                 value={linkedCustomer}
-                onChange={setLinkedCustomer}
+                onChange={(c) => { setLinkedCustomer(c); if (c) aiSuggest.clear(); }}
                 placeholder="Search book of business..."
                 agencyId={agencyId}
               />
+              {/* AI-suggested customers from task text */}
+              {canUseAiFeatures && !linkedCustomer && aiSuggest.suggestions.length > 0 && (
+                <div className="mt-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-2">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--accent)] mb-1.5">
+                    <Sparkles className="w-3 h-3" />
+                    AI Suggested
+                  </div>
+                  <div className="space-y-1">
+                    {aiSuggest.suggestions.slice(0, 3).map((c: Customer) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setLinkedCustomer({ id: c.id, name: c.name, segment: c.segment, phone: c.phone || undefined, email: c.email || undefined });
+                          aiSuggest.clear();
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 text-sm rounded-md hover:bg-[var(--surface)] transition-colors flex items-center justify-between"
+                      >
+                        <span className="font-medium text-[var(--foreground)]">{c.name}</span>
+                        <span className="text-xs text-[var(--text-muted)]">${c.totalPremium.toLocaleString()}/yr</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {canUseAiFeatures && aiSuggest.loading && !linkedCustomer && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Finding matching customers...
+                </div>
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-4">

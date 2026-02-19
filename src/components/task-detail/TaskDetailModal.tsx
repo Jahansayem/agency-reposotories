@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Modal } from '../ui/Modal';
 import type { Todo, AuthUser, WaitingContactType, Attachment } from '@/types/todo';
@@ -12,8 +12,10 @@ import MetadataSection from './MetadataSection';
 import { CustomerDetailPanel } from '../customer/CustomerDetailPanel';
 import { CustomerSearchInput } from '../customer/CustomerSearchInput';
 import type { LinkedCustomer } from '@/types/customer';
+import type { Customer } from '@/types/customer';
 import { useEAgentQueueStore } from '@/store/eAgentQueueStore';
-import { Users } from 'lucide-react';
+import { useAiCustomerSuggest } from '@/hooks/useCustomers';
+import { Users, Sparkles, Loader2 } from 'lucide-react';
 import ReminderRow from './ReminderRow';
 import WaitingRow from './WaitingRow';
 import NotesSection from './NotesSection';
@@ -113,6 +115,20 @@ export default function TaskDetailModal({
     onEmailCustomer,
     onUpdateAttachments,
   });
+
+  // AI auto-suggest for unlinked tasks
+  const aiSuggest = useAiCustomerSuggest();
+  const [suggestDismissed, setSuggestDismissed] = useState(false);
+
+  // Auto-suggest when opening an unlinked task
+  useEffect(() => {
+    if (isOpen && todo && !todo.customer_id && todo.text && canUseAiFeatures) {
+      setSuggestDismissed(false);
+      aiSuggest.suggest(todo.text);
+    }
+    // Only run when modal opens or todo changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, todo?.id, todo?.customer_id]);
 
   // Guard against null todo after hooks
   if (!todo) {
@@ -236,11 +252,11 @@ export default function TaskDetailModal({
                         customer_segment: customer.segment,
                       };
                       await onUpdate(todo.id, updates);
-                      // If task is already completed, queue to eAgent now
                       if (todo.completed) {
                         const { addToQueue } = useEAgentQueueStore.getState();
                         addToQueue({ ...todo, ...updates }, currentUser.name);
                       }
+                      aiSuggest.clear();
                     } else {
                       await onUpdate(todo.id, {
                         customer_id: undefined,
@@ -252,6 +268,54 @@ export default function TaskDetailModal({
                   placeholder="Search book of business..."
                   agencyId={currentUser.current_agency_id}
                 />
+
+                {/* AI-suggested customers */}
+                {canUseAiFeatures && !suggestDismissed && !todo.customer_id && aiSuggest.suggestions.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-2">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--accent)] mb-1.5">
+                      <Sparkles size={12} />
+                      AI Suggested
+                    </div>
+                    <div className="space-y-1">
+                      {aiSuggest.suggestions.slice(0, 3).map((c: Customer) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={async () => {
+                            const updates = {
+                              customer_id: c.id,
+                              customer_name: c.name,
+                              customer_segment: c.segment,
+                            };
+                            await onUpdate(todo.id, updates);
+                            if (todo.completed) {
+                              const { addToQueue } = useEAgentQueueStore.getState();
+                              addToQueue({ ...todo, ...updates }, currentUser.name);
+                            }
+                            aiSuggest.clear();
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 text-sm rounded-md hover:bg-[var(--surface)] transition-colors flex items-center justify-between"
+                        >
+                          <span className="font-medium text-[var(--foreground)]">{c.name}</span>
+                          <span className="text-xs text-[var(--text-muted)]">${c.totalPremium.toLocaleString()}/yr</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestDismissed(true)}
+                      className="mt-1 text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+                {canUseAiFeatures && aiSuggest.loading && !todo.customer_id && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                    <Loader2 size={12} className="animate-spin" />
+                    Finding matching customers...
+                  </div>
+                )}
               </div>
             ) : null}
           </motion.div>
