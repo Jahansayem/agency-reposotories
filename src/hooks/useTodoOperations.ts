@@ -223,12 +223,10 @@ export function useTodoOperations({
 
           if (response.ok) {
             const { attachment } = await response.json();
-            const currentTodo = todos.find(t => t.id === newTodo.id);
-            if (currentTodo) {
-              updateTodoInStore(newTodo.id, {
-                attachments: [...(currentTodo.attachments || []), attachment]
-              });
-            }
+            // Use newTodo (local var) instead of todos.find() to avoid stale closure
+            updateTodoInStore(newTodo.id, {
+              attachments: [...(newTodo.attachments || []), attachment]
+            });
             logActivity({
               action: 'attachment_added',
               userName,
@@ -254,7 +252,7 @@ export function useTodoOperations({
       return null;
     }
     return newTodo.id;
-  }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore, updateTodoInStore, announce, todos]);
+  }, [userName, currentAgencyId, addTodoToStore, deleteTodoFromStore, updateTodoInStore, announce]);
 
   /**
    * Add a new todo with duplicate detection
