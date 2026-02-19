@@ -365,6 +365,11 @@ export function validateSubtasks(
 }
 
 /**
+ * Re-export withSessionAuth from agencyAuth for AI route convenience
+ */
+export { withSessionAuth } from '@/lib/agencyAuth';
+
+/**
  * Higher-order function to wrap AI endpoint handlers with standard error handling
  */
 export function withAiErrorHandling(
