@@ -16,6 +16,7 @@ import type { Customer } from '@/types/customer';
 import { useEAgentQueueStore } from '@/store/eAgentQueueStore';
 import { useAiCustomerSuggest } from '@/hooks/useCustomers';
 import { Users, Sparkles, Loader2 } from 'lucide-react';
+import OpportunityCallout from './OpportunityCallout';
 import ReminderRow from './ReminderRow';
 import WaitingRow from './WaitingRow';
 import NotesSection from './NotesSection';
@@ -120,6 +121,9 @@ export default function TaskDetailModal({
   const aiSuggest = useAiCustomerSuggest();
   const [suggestDismissed, setSuggestDismissed] = useState(false);
 
+  // Opportunity data for linked customer
+  const [customerOpportunity, setCustomerOpportunity] = useState<any>(null);
+
   // Auto-suggest when opening an unlinked task
   useEffect(() => {
     if (isOpen && todo && !todo.customer_id && todo.text && canUseAiFeatures) {
@@ -129,6 +133,34 @@ export default function TaskDetailModal({
     // Only run when modal opens or todo changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, todo?.id, todo?.customer_id]);
+
+  // Fetch full opportunity data when customer is linked
+  useEffect(() => {
+    if (!todo?.customer_id || !isOpen) {
+      setCustomerOpportunity(null);
+      return;
+    }
+
+    const fetchOpportunity = async () => {
+      try {
+        const res = await fetch('/api/analytics/cross-sell/by-customer-ids', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerIds: [todo.customer_id], includeDetails: true }),
+        });
+        const data = await res.json();
+        if (data[0]?.opportunity) {
+          setCustomerOpportunity(data[0]);
+        } else {
+          setCustomerOpportunity(null);
+        }
+      } catch {
+        setCustomerOpportunity(null);
+      }
+    };
+
+    fetchOpportunity();
+  }, [todo?.customer_id, isOpen]);
 
   // Guard against null todo after hooks
   if (!todo) {
@@ -204,6 +236,15 @@ export default function TaskDetailModal({
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-[var(--surface)] to-transparent" />
 
         <div className="absolute inset-0 overflow-y-auto px-4 sm:px-5 py-4 space-y-3">
+          {/* Opportunity callout — shown above metadata when customer has active opportunity */}
+          {customerOpportunity?.opportunity && (
+            <OpportunityCallout
+              opportunity={customerOpportunity.opportunity}
+              customerName={todo.customer_name ?? ''}
+              taskText={todo.text}
+            />
+          )}
+
           {/* Key-value metadata rows */}
           <MetadataSection
             todo={todo}
