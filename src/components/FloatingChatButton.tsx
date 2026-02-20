@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { useAppShell } from './layout/AppShell';
@@ -240,57 +240,26 @@ export default function FloatingChatButton({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-[300]"
+              className="fixed inset-0 z-[200]"
               onClick={() => setIsOpen(false)}
             />
 
-            {/* Chat Popup Window - positioned above the FAB */}
+            {/* Chat Popup Window - z-index MUST be above backdrop */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 400 }}
               className={`
-                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6 z-[100]
+                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6 z-[201]
                 w-[360px] sm:w-[400px] h-[500px] max-h-[70vh]
                 flex flex-col
                 rounded-[var(--radius-xl)] overflow-hidden
-                ${'bg-[var(--surface)] border border-[var(--border)]'}
+                bg-[var(--surface-dark)]
                 shadow-2xl
               `}
             >
-              {/* Header with close button */}
-              <div
-                className={`
-                  flex items-center justify-between
-                  px-4 py-2.5 border-b
-                  ${'border-[var(--border)] bg-[var(--surface)]'}
-                `}
-              >
-                <div className="flex items-center gap-2">
-                  <MessageCircle className={`w-4 h-4 ${'text-[var(--accent)]'}`} />
-                  <h2
-                    className={`
-                      font-medium text-sm
-                      ${'text-[var(--foreground)]'}
-                    `}
-                  >
-                    Team Chat
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className={`
-                    p-1.5 rounded-[var(--radius-md)] transition-colors
-                    ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
-                  `}
-                  aria-label="Close chat"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Chat Panel */}
+              {/* DockedChatPanel provides its own header with back, title, search, and close */}
               <div className="flex-1 overflow-hidden">
                 <ChatPanel
                   currentUser={currentUser}
@@ -298,6 +267,7 @@ export default function FloatingChatButton({
                   docked={true}
                   initialConversation={lastConversation}
                   onConversationChange={handleConversationChange}
+                  onClose={() => setIsOpen(false)}
                   onTaskLinkClick={(taskId) => {
                     onTaskLinkClick?.(taskId);
                     setIsOpen(false);

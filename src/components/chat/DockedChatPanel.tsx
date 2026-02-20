@@ -350,8 +350,8 @@ export function DockedChatPanel({
             </>
           )}
 
-          {/* Close button for mobile/tablet overlay */}
-          {(isMobile || (isTablet && !isMobile)) && onClose && (
+          {/* Close button — shown whenever onClose is provided (floating popup, mobile/tablet overlay) */}
+          {onClose && (
             <button
               onClick={onClose}
               className="p-2 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
