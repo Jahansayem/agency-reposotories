@@ -122,7 +122,7 @@ describe('useCustomerSearch', () => {
       json: async () => mockSearchResult,
     });
 
-    const { result } = renderHook(() => useCustomerSearch({ minChars: 2 }));
+    const { result } = renderHook(() => useCustomerSearch({ minChars: 2, aiPowered: false }));
 
     act(() => {
       result.current.setQuery('John');
@@ -146,7 +146,7 @@ describe('useCustomerSearch', () => {
     });
 
     const { result } = renderHook(() =>
-      useCustomerSearch({ agencyId: 'agency-123' })
+      useCustomerSearch({ agencyId: 'agency-123', aiPowered: false })
     );
 
     act(() => {
@@ -207,7 +207,7 @@ describe('useCustomerSearch', () => {
       json: async () => ({ customers: [] }),
     });
 
-    const { result } = renderHook(() => useCustomerSearch({ limit: 25 }));
+    const { result } = renderHook(() => useCustomerSearch({ limit: 25, aiPowered: false }));
 
     act(() => {
       result.current.setQuery('Smith');

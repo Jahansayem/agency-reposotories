@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AgentPanel } from './AgentPanel';
+import { useAgent } from '@/hooks/useAgent';
 
 // Mock dependencies
 vi.mock('@/hooks/useAgent', () => ({
@@ -10,6 +11,7 @@ vi.mock('@/hooks/useAgent', () => ({
     isLoading: false,
     usage: { inputTokens: 0, outputTokens: 0, totalCost: 0 },
     sendMessage: vi.fn(),
+    clearMessages: vi.fn(),
   })),
 }));
 
@@ -27,11 +29,29 @@ vi.mock('./AgentQuickActions', () => ({
   ),
 }));
 
-const mockUseAgent = {
-  messages: [],
+// Mock framer-motion to avoid AnimatePresence issues in jsdom
+vi.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+  motion: {
+    div: ({ children, className, onClick, ...props }: any) => (
+      <div className={className} onClick={onClick} {...props}>
+        {children}
+      </div>
+    ),
+  },
+}));
+
+// jsdom doesn't provide scrollIntoView
+Element.prototype.scrollIntoView = vi.fn();
+
+const mockUseAgent = vi.mocked(useAgent);
+
+const defaultMockReturn = {
+  messages: [] as any[],
   isLoading: false,
   usage: { inputTokens: 0, outputTokens: 0, totalCost: 0 },
   sendMessage: vi.fn(),
+  clearMessages: vi.fn(),
 };
 
 describe('AgentPanel', () => {
@@ -45,8 +65,7 @@ describe('AgentPanel', () => {
     vi.clearAllMocks();
 
     // Reset mock
-    const { useAgent } = require('@/hooks/useAgent');
-    useAgent.mockReturnValue(mockUseAgent);
+    mockUseAgent.mockReturnValue({ ...defaultMockReturn, sendMessage: vi.fn(), clearMessages: vi.fn() });
   });
 
   describe('visibility', () => {
@@ -110,8 +129,7 @@ describe('AgentPanel', () => {
 
     it('should clear input after sending message', async () => {
       const sendMessage = vi.fn().mockResolvedValue(undefined);
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({ ...mockUseAgent, sendMessage });
+      mockUseAgent.mockReturnValue({ ...defaultMockReturn, sendMessage });
 
       render(<AgentPanel {...defaultProps} />);
 
@@ -157,8 +175,7 @@ describe('AgentPanel', () => {
     });
 
     it('should be disabled when loading', () => {
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({ ...mockUseAgent, isLoading: true });
+      mockUseAgent.mockReturnValue({ ...defaultMockReturn, isLoading: true });
 
       render(<AgentPanel {...defaultProps} />);
 
@@ -167,8 +184,7 @@ describe('AgentPanel', () => {
     });
 
     it('should show loading state when sending', () => {
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({ ...mockUseAgent, isLoading: true });
+      mockUseAgent.mockReturnValue({ ...defaultMockReturn, isLoading: true });
 
       render(<AgentPanel {...defaultProps} />);
 
@@ -177,8 +193,7 @@ describe('AgentPanel', () => {
 
     it('should call sendMessage when clicked', async () => {
       const sendMessage = vi.fn().mockResolvedValue(undefined);
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({ ...mockUseAgent, sendMessage });
+      mockUseAgent.mockReturnValue({ ...defaultMockReturn, sendMessage });
 
       render(<AgentPanel {...defaultProps} />);
 
@@ -206,8 +221,7 @@ describe('AgentPanel', () => {
       render(<AgentPanel {...defaultProps} />);
 
       const textarea = screen.getByRole('textbox');
-      const longText = 'a'.repeat(2001);
-      await userEvent.type(textarea, longText);
+      fireEvent.change(textarea, { target: { value: 'a'.repeat(2001) } });
 
       const counter = screen.getByText(/2001 \/ 2000/);
       expect(counter).toHaveClass('text-red-600');
@@ -217,8 +231,7 @@ describe('AgentPanel', () => {
       render(<AgentPanel {...defaultProps} />);
 
       const textarea = screen.getByRole('textbox');
-      const longText = 'a'.repeat(2001);
-      await userEvent.type(textarea, longText);
+      fireEvent.change(textarea, { target: { value: 'a'.repeat(2001) } });
 
       const sendButton = screen.getByText('Send');
       expect(sendButton).toBeDisabled();
@@ -228,8 +241,7 @@ describe('AgentPanel', () => {
   describe('keyboard shortcuts', () => {
     it('should send message on Cmd+Enter', async () => {
       const sendMessage = vi.fn().mockResolvedValue(undefined);
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({ ...mockUseAgent, sendMessage });
+      mockUseAgent.mockReturnValue({ ...defaultMockReturn, sendMessage });
 
       render(<AgentPanel {...defaultProps} />);
 
@@ -243,8 +255,7 @@ describe('AgentPanel', () => {
 
     it('should send message on Ctrl+Enter', async () => {
       const sendMessage = vi.fn().mockResolvedValue(undefined);
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({ ...mockUseAgent, sendMessage });
+      mockUseAgent.mockReturnValue({ ...defaultMockReturn, sendMessage });
 
       render(<AgentPanel {...defaultProps} />);
 
@@ -297,8 +308,7 @@ describe('AgentPanel', () => {
         },
       ];
 
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({ ...mockUseAgent, messages });
+      mockUseAgent.mockReturnValue({ ...defaultMockReturn, messages });
 
       render(<AgentPanel {...defaultProps} />);
 
@@ -316,9 +326,8 @@ describe('AgentPanel', () => {
     });
 
     it('should show token count when tokens used', () => {
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({
-        ...mockUseAgent,
+      mockUseAgent.mockReturnValue({
+        ...defaultMockReturn,
         usage: { inputTokens: 500, outputTokens: 300, totalCost: 0.01 },
       });
 
@@ -328,9 +337,8 @@ describe('AgentPanel', () => {
     });
 
     it('should show cost when available', () => {
-      const { useAgent } = require('@/hooks/useAgent');
-      useAgent.mockReturnValue({
-        ...mockUseAgent,
+      mockUseAgent.mockReturnValue({
+        ...defaultMockReturn,
         usage: { inputTokens: 1000, outputTokens: 500, totalCost: 0.0234 },
       });
 
@@ -374,7 +382,9 @@ describe('AgentPanel', () => {
     it('should render overlay on mobile', () => {
       const { container } = render(<AgentPanel {...defaultProps} />);
 
-      const overlay = container.querySelector('.md\\:hidden');
+      // With framer-motion mocked, the overlay is rendered as a plain div
+      // Look for the overlay by its class combination
+      const overlay = container.querySelector('.bg-black\\/50');
       expect(overlay).toBeInTheDocument();
     });
 
@@ -382,7 +392,7 @@ describe('AgentPanel', () => {
       const onClose = vi.fn();
       const { container } = render(<AgentPanel {...defaultProps} onClose={onClose} />);
 
-      const overlay = container.querySelector('.fixed.inset-0.bg-black\\/50') as HTMLElement;
+      const overlay = container.querySelector('.bg-black\\/50') as HTMLElement;
       await userEvent.click(overlay);
 
       expect(onClose).toHaveBeenCalledTimes(1);

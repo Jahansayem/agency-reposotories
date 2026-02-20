@@ -55,6 +55,16 @@ prisma/*.db
 screenshots/
 playwright.config.local.ts
 
+# playwright-mcp debug artifacts
+.playwright-mcp/console-*.log
+.playwright-mcp/page-*.png
+
+# debug/test screenshots at repo root (preserves public/ and test-assets/)
+/*.png
+debug-*.png
+review-*.png
+*-test-*.png
+
 # Sentry
 .sentryclirc
 

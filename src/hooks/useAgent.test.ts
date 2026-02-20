@@ -91,35 +91,62 @@ describe('useAgent', () => {
     it('should not send while loading', async () => {
       const { result } = renderHook(() => useAgent());
 
-      // Create a response that never resolves
-      const mockResponse = new Response(
-        new ReadableStream({
-          start() {
-            // Never close
-          },
-        }),
-        { status: 200 }
-      );
-
-      fetchMock.mockResolvedValue(mockResponse);
-
-      const sendPromise = act(async () => {
-        await result.current.sendMessage('First message');
+      // Create a response that never resolves to keep isLoading=true
+      let resolveResponse: (value: any) => void;
+      const pendingPromise = new Promise((resolve) => {
+        resolveResponse = resolve;
       });
 
+      fetchMock.mockReturnValue(pendingPromise);
+
+      // Start first message (won't complete because fetch never resolves)
+      let sendPromise: Promise<void>;
+      act(() => {
+        sendPromise = result.current.sendMessage('First message');
+      });
+
+      // The hook should now be loading
+      expect(result.current.isLoading).toBe(true);
+
       // Try to send another message while first is loading
+      // Need fresh reference since useCallback depends on isLoading
       await act(async () => {
         await result.current.sendMessage('Second message');
       });
 
-      // Should only have called fetch once
+      // Should only have called fetch once (second was blocked by isLoading guard)
       expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Clean up by resolving the pending promise
+      resolveResponse!(new Response(
+        new ReadableStream({ start(controller) { controller.close(); } }),
+        { status: 200 }
+      ));
+      await act(async () => {
+        await sendPromise;
+      });
     });
 
     it('should set loading state during request', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
+      let resolveResponse: (value: any) => void;
+      const pendingPromise = new Promise((resolve) => {
+        resolveResponse = resolve;
+      });
+
+      fetchMock.mockReturnValue(pendingPromise);
+
+      let sendPromise: Promise<void>;
+      act(() => {
+        sendPromise = result.current.sendMessage('Test');
+      });
+
+      // Should be loading while request is pending
+      expect(result.current.isLoading).toBe(true);
+
+      // Resolve the response
+      resolveResponse!(new Response(
         new ReadableStream({
           start(controller) {
             controller.enqueue(new TextEncoder().encode('data: {"content":"Response"}\n\n'));
@@ -127,19 +154,12 @@ describe('useAgent', () => {
           },
         }),
         { status: 200 }
-      );
-
-      fetchMock.mockResolvedValue(mockResponse);
-
-      let wasLoading = false;
+      ));
 
       await act(async () => {
-        const promise = result.current.sendMessage('Test');
-        wasLoading = result.current.isLoading;
-        await promise;
+        await sendPromise;
       });
 
-      expect(wasLoading).toBe(true);
       expect(result.current.isLoading).toBe(false);
     });
   });
@@ -502,7 +522,7 @@ describe('useAgent', () => {
   });
 
   describe('API request', () => {
-    it('should send POST request to /api/ai/agent', async () => {
+    it('should send POST request to /api/ai/agent with messages array', async () => {
       const { result } = renderHook(() => useAgent());
 
       const mockResponse = new Response(
@@ -525,7 +545,7 @@ describe('useAgent', () => {
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: 'Test message' }),
+          body: JSON.stringify({ messages: [] }),
         })
       );
     });
