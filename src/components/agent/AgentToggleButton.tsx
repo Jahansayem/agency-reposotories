@@ -28,10 +28,10 @@ export function AgentToggleButton({
   const usagePercent = (totalTokens / budgetLimit) * 100;
   const showWarning = usagePercent > 80;
 
-  // Keyboard shortcut: Cmd+K
+  // Keyboard shortcut: Cmd+Shift+A
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         onClick();
       }
@@ -46,8 +46,8 @@ export function AgentToggleButton({
       <Button
         onClick={onClick}
         className="relative h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all"
-        aria-label="Open AI Assistant (Cmd+K)"
-        title="Open AI Assistant (Cmd+K)"
+        aria-label="Open AI Assistant (⌘⇧A)"
+        title="Open AI Assistant (⌘⇧A)"
       >
         <MessageCircle className="h-6 w-6 text-white" />
 
@@ -58,7 +58,7 @@ export function AgentToggleButton({
 
       {/* Keyboard hint tooltip */}
       <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-        Cmd+K
+        ⌘⇧A
       </div>
     </div>
   );

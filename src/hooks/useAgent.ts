@@ -86,7 +86,12 @@ export function useAgent(): UseAgentReturn {
       const response = await fetch('/api/ai/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({
+          messages: messages.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }),
       });
 
       if (!response.ok) {
