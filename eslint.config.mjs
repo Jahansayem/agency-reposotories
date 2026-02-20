@@ -8,12 +8,18 @@ const eslintConfig = defineConfig([
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
-    ".next/**",
+    "**/.next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
     // Coverage reports are generated files
     "coverage/**",
+    // Local git worktrees can contain their own build outputs
+    ".worktrees/**",
+    // Local tooling outputs
+    ".playwright-mcp/**",
+    "playwright-report/**",
+    "test-results/**",
   ]),
   // Custom rules overrides
   {
