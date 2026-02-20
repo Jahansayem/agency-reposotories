@@ -52,7 +52,7 @@ export async function trackTokenUsage(
     const supabase = getSupabaseClient();
     const totalTokens = inputTokens + outputTokens;
 
-    await supabase.from('ai_token_usage').insert({
+    await supabase.from('agent_usage').insert({
       agency_id: agencyId,
       user_id: userId,
       input_tokens: inputTokens,
@@ -96,7 +96,7 @@ export async function checkTokenBudget(agencyId: string): Promise<BudgetStatus> 
     startOfMonth.setHours(0, 0, 0, 0);
 
     const { data, error } = await supabase
-      .from('ai_token_usage')
+      .from('agent_usage')
       .select('total_tokens')
       .eq('agency_id', agencyId)
       .gte('created_at', startOfMonth.toISOString());
@@ -177,17 +177,17 @@ export async function getUsageStats(agencyId: string): Promise<{
 
   const [todayResult, weekResult, monthResult] = await Promise.all([
     supabase
-      .from('ai_token_usage')
+      .from('agent_usage')
       .select('total_tokens')
       .eq('agency_id', agencyId)
       .gte('created_at', startOfDay.toISOString()),
     supabase
-      .from('ai_token_usage')
+      .from('agent_usage')
       .select('total_tokens')
       .eq('agency_id', agencyId)
       .gte('created_at', startOfWeek.toISOString()),
     supabase
-      .from('ai_token_usage')
+      .from('agent_usage')
       .select('total_tokens')
       .eq('agency_id', agencyId)
       .gte('created_at', startOfMonth.toISOString()),

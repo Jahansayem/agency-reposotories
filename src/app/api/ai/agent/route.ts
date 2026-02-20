@@ -44,6 +44,15 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       );
     }
 
+    // Validate message length
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.content.length > 10000) {
+      return NextResponse.json(
+        { error: 'Message too long (max 10,000 characters)' },
+        { status: 400 }
+      );
+    }
+
     // Check token budget
     const budget = await checkTokenBudget(ctx.agencyId);
 
@@ -88,8 +97,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     // Build system prompt with agency context
     const systemPrompt = getAgencyContext(ctx, viewContext);
 
-    // Get the last user message
-    const lastMessage = messages[messages.length - 1];
+    // Verify the last user message
     if (!lastMessage || lastMessage.role !== 'user') {
       return NextResponse.json(
         { error: 'Last message must be from user' },
