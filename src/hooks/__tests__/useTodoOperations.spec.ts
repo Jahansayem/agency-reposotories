@@ -19,11 +19,11 @@ vi.mock('@/lib/supabaseClient', () => ({
   isSupabaseConfigured: vi.fn(() => true)
 }));
 vi.mock('@/lib/activityLogger', () => ({
-  logActivity: vi.fn()
+  logActivity: vi.fn().mockResolvedValue(undefined)
 }));
 vi.mock('@/lib/taskNotifications', () => ({
-  sendTaskAssignmentNotification: vi.fn(),
-  sendTaskCompletionNotification: vi.fn(),
+  sendTaskAssignmentNotification: vi.fn().mockResolvedValue({ success: true }),
+  sendTaskCompletionNotification: vi.fn().mockResolvedValue({ success: true }),
 }));
 vi.mock('@/lib/duplicateDetection', () => ({
   findPotentialDuplicates: vi.fn(() => []),

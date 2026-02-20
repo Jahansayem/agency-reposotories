@@ -139,10 +139,9 @@ export default function MonthView({
 
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
-        // Stop both React synthetic and native event propagation so the global
-        // CalendarView arrow-key handler (which navigates months) does not also fire.
+        // Stop React synthetic propagation so the global CalendarView
+        // arrow-key handler (which navigates months) does not also fire.
         e.stopPropagation();
-        e.nativeEvent.stopImmediatePropagation();
         setFocusedCellIndex((prev) => {
           const current = prev || { row: 0, col: 0 };
           let { row, col } = current;
@@ -230,10 +229,27 @@ export default function MonthView({
     }
   }, [focusedCellIndex]);
 
-  // Reset focused cell when month changes
+  // Reset focused cell when month changes — default to today or first day of month
   useEffect(() => {
+    // Find today's cell, or fall back to first day of current month
+    for (let row = 0; row < calendarWeeks.length; row++) {
+      for (let col = 0; col < calendarWeeks[row].length; col++) {
+        if (isToday(calendarWeeks[row][col])) {
+          setFocusedCellIndex({ row, col });
+          return;
+        }
+      }
+    }
+    for (let row = 0; row < calendarWeeks.length; row++) {
+      for (let col = 0; col < calendarWeeks[row].length; col++) {
+        if (isSameMonth(calendarWeeks[row][col], currentMonth)) {
+          setFocusedCellIndex({ row, col });
+          return;
+        }
+      }
+    }
     setFocusedCellIndex(null);
-  }, [currentMonth]);
+  }, [currentMonth, calendarWeeks]);
 
   const content = (
     <div

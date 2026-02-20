@@ -164,7 +164,10 @@ Respond with ONLY the JSON object, no other text.`,
       }
       result = JSON.parse(jsonText.trim());
     } catch {
-      logger.error('Failed to parse AI response', undefined, { component: 'ParseFileAPI', responseText: textContent.text });
+      logger.error('Failed to parse AI response', undefined, {
+        component: 'ParseFileAPI',
+        responseCharCount: textContent.text.length,
+      });
       throw new Error('Failed to parse AI response as JSON');
     }
 

@@ -496,15 +496,15 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 // Helper functions for conversion and retention rates
 function getExpectedConversion(segment: string): number {
   const rates: Record<string, number> = {
-    auto_to_home: 22,
-    home_to_auto: 25,
-    mono_to_bundle: 30,
-    add_life: 15,
-    add_umbrella: 18,
-    commercial_add: 12,
-    other: 10,
+    auto_to_home: 0.22,
+    home_to_auto: 0.25,
+    mono_to_bundle: 0.30,
+    add_life: 0.15,
+    add_umbrella: 0.18,
+    commercial_add: 0.12,
+    other: 0.10,
   };
-  return rates[segment] || 10;
+  return rates[segment] || 0.10;
 }
 
 function getRetentionLift(segment: string): number {

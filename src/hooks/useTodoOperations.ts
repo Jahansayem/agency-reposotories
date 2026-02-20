@@ -191,6 +191,8 @@ export function useTodoOperations({
           has_subtasks: (subtasks?.length || 0) > 0,
           has_transcription: !!transcription,
         },
+      }).catch((err) => {
+        logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
       });
       announce(`New task added: ${newTodo.text}`);
 
@@ -205,6 +207,8 @@ export function useTodoOperations({
           priority: newTodo.priority,
           subtasks: newTodo.subtasks,
           notes: newTodo.notes,
+        }).catch((err) => {
+          logger.error('Failed to send assignment notification', err instanceof Error ? err : new Error(String(err)));
         });
       }
 
@@ -238,6 +242,8 @@ export function useTodoOperations({
                 file_type: attachment.file_type,
                 auto_attached: true,
               },
+            }).catch((err) => {
+              logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
             });
           } else {
             const errBody = await response.text().catch(() => '');
@@ -342,6 +348,8 @@ export function useTodoOperations({
           dueDate: newTodo.due_date,
           priority: newTodo.priority,
           notes: newTodo.notes,
+        }).catch((err) => {
+          logger.error('Failed to send assignment notification', err instanceof Error ? err : new Error(String(err)));
         });
       }
     } catch (error) {
@@ -427,6 +435,8 @@ export function useTodoOperations({
           dueDate: newTodo.due_date,
           priority: newTodo.priority,
           notes: newTodo.notes,
+        }).catch((err) => {
+          logger.error('Failed to send assignment notification', err instanceof Error ? err : new Error(String(err)));
         });
       }
     } catch (error) {
@@ -493,6 +503,8 @@ export function useTodoOperations({
             taskText: oldTodo.text,
             completedBy: userName,
             assignedBy: oldTodo.created_by,
+          }).catch((err) => {
+            logger.error('Failed to send completion notification', err instanceof Error ? err : new Error(String(err)));
           });
         }
       }
@@ -505,6 +517,8 @@ export function useTodoOperations({
             userName,
             todoId: id,
             todoText: oldTodo.text,
+          }).catch((err) => {
+            logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
           });
           announce(`Task marked as complete: ${oldTodo.text}`);
         } else if (oldTodo.status === 'done' && status !== 'done') {
@@ -513,6 +527,8 @@ export function useTodoOperations({
             userName,
             todoId: id,
             todoText: oldTodo.text,
+          }).catch((err) => {
+            logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
           });
           announce(`Task reopened: ${oldTodo.text}`);
         } else {
@@ -522,6 +538,8 @@ export function useTodoOperations({
             todoId: id,
             todoText: oldTodo.text,
             details: { from: oldTodo.status, to: status },
+          }).catch((err) => {
+            logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
           });
           announce(`Task status changed to ${status}: ${oldTodo.text}`);
         }
@@ -593,13 +611,17 @@ export function useTodoOperations({
             taskText: todoItem.text,
             completedBy: userName,
             assignedBy: todoItem.created_by,
+          }).catch((err) => {
+            logger.error('Failed to send completion notification', err instanceof Error ? err : new Error(String(err)));
           });
         }
       }
 
       if (todoItem) {
         const action = completed ? 'task_completed' : 'task_reopened';
-        logActivity({ action, userName, todoId: id, todoText: todoItem.text });
+        logActivity({ action, userName, todoId: id, todoText: todoItem.text }).catch((err) => {
+          logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
+        });
         announce(`Task ${completed ? 'completed' : 'reopened'}: ${todoItem.text}`);
       }
     } catch (error) {

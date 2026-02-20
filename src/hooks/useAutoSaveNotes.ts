@@ -85,15 +85,19 @@ export function useAutoSaveNotes({
     }
   }, [enabled, onChange, onSave, debouncedSave]);
 
+  // Keep a ref to the debounced function to avoid re-running cleanup on every render
+  const debouncedSaveRef = useRef(debouncedSave);
+  useEffect(() => { debouncedSaveRef.current = debouncedSave; }, [debouncedSave]);
+
   // Cleanup: flush pending save and clear timeout on unmount
   useEffect(() => {
     return () => {
       if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
-      if (debouncedSave.isPending()) {
-        debouncedSave.flush();
+      if (debouncedSaveRef.current.isPending()) {
+        debouncedSaveRef.current.flush();
       }
     };
-  }, [debouncedSave]);
+  }, []); // Only run on final unmount
 
   if (!enabled) {
     return {

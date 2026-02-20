@@ -256,10 +256,9 @@ describe('useChatMessages', () => {
         await result.current.loadMoreMessages();
       });
 
-      // lt should have been called with a valid created_at timestamp from initial messages
-      expect(selectMock.lt).toHaveBeenCalledWith(
-        'created_at',
-        expect.stringMatching(/^2026-02-06T/)
+      // or should have been called with composite cursor (created_at + id tiebreaker)
+      expect(selectMock.or).toHaveBeenCalledWith(
+        expect.stringContaining('created_at.lt.')
       );
       expect(result.current.messages).toHaveLength(51);
     });

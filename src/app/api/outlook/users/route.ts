@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { type AgencyAuthContext } from '@/lib/agencyAuth';
 import { createOutlookCorsPreflightResponse, withOutlookAuth } from '@/lib/outlookAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -45,63 +46,43 @@ async function getUsersFromAgency(agencyId: string): Promise<string[]> {
 }
 
 export const GET = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+  // SECURITY: Rate limit API operations to prevent abuse
+  // Uses the 'api' limiter: 100 requests per minute per IP
+  const rateLimitResult = await withRateLimit(request, rateLimiters.api);
+  if (!rateLimitResult.success) {
+    logger.warn('Rate limit exceeded for Outlook users', {
+      component: 'OutlookUsersAPI',
+    });
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   try {
-    const supabase = getSupabaseClient();
     const agencyId = ctx.agencyId;
 
-    // If agency is scoped via auth context, return only users from that agency
-    if (agencyId) {
-      const agencyUsers = await getUsersFromAgency(agencyId);
-
-      return NextResponse.json({
-        success: true,
-        users: agencyUsers,
-        agencyId,
-        scoped: true,
+    // SECURITY FIX: Require agency context for all requests
+    // This prevents user enumeration across all tenants
+    if (!agencyId) {
+      logger.security('Outlook users endpoint called without agency context', {
+        component: 'OutlookUsersAPI',
       });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Bad Request',
+          message: 'Agency context required. Provide agencyId in request.',
+        },
+        { status: 400 }
+      );
     }
 
-    // Backward compatible: return all users when no agency context
-    // Fetch registered users
-    const { data: registeredUsers, error: usersError } = await supabase
-      .from('users')
-      .select('name')
-      .order('name');
-
-    if (usersError) {
-      logger.error('Error fetching users', usersError, { component: 'OutlookUsersAPI' });
-    }
-
-    // Also get unique users from todos (for backwards compatibility)
-    const { data: todos, error: todosError } = await supabase
-      .from('todos')
-      .select('created_by, assigned_to');
-
-    if (todosError) {
-      logger.error('Error fetching todos', todosError, { component: 'OutlookUsersAPI' });
-    }
-
-    // Combine all user names
-    const userNames = new Set<string>();
-
-    // Add registered users
-    (registeredUsers || []).forEach((u: { name: string }) => {
-      if (u.name) userNames.add(u.name);
-    });
-
-    // Add users from todos
-    (todos || []).forEach((t: { created_by?: string; assigned_to?: string }) => {
-      if (t.created_by) userNames.add(t.created_by);
-      if (t.assigned_to) userNames.add(t.assigned_to);
-    });
-
-    // Convert to sorted array
-    const users = Array.from(userNames).sort();
+    // Return only users from the scoped agency
+    const agencyUsers = await getUsersFromAgency(agencyId);
 
     return NextResponse.json({
       success: true,
-      users,
-      scoped: false,
+      users: agencyUsers,
+      agencyId,
+      scoped: true,
     });
   } catch (error) {
     logger.error('Error fetching users', error, { component: 'OutlookUsersAPI' });

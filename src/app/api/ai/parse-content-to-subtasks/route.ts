@@ -146,7 +146,8 @@ async function handleParseContentToSubtasks(request: NextRequest) {
   if (!result) {
     logger.error('Failed to parse AI response', undefined, {
       component: 'ParseContentToSubtasksAPI',
-      responseText: aiResult.content,
+      responseCharCount: aiResult.content.length,
+      responseHash: require('crypto').createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
     });
     return aiErrorResponse('Failed to parse AI response', 500);
   }

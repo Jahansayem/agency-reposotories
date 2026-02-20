@@ -110,6 +110,10 @@ export default function CalendarView({
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [direction, setDirection] = useState<'left' | 'right'>('right');
 
+  // Ref to avoid stale closure in goToToday
+  const currentDateRef = useRef(currentDate);
+  currentDateRef.current = currentDate;
+
   // Navigation
   const goToPrevious = useCallback(() => {
     setDirection('left');
@@ -135,9 +139,9 @@ export default function CalendarView({
 
   const goToToday = useCallback(() => {
     const today = new Date();
-    setDirection(startOfDay(today) > startOfDay(currentDate) ? 'right' : 'left');
+    setDirection(startOfDay(today) > startOfDay(currentDateRef.current) ? 'right' : 'left');
     setCurrentDate(today);
-  }, [currentDate]);
+  }, []);
 
   // Swipe navigation for touch devices (month/day views only, not week which has horizontal scroll)
   const SWIPE_THRESHOLD = 50;
@@ -327,6 +331,9 @@ export default function CalendarView({
     return filtered;
   }, [allTodosByDate, selectedCategories, selectedUsers]);
 
+  // Extract month key to avoid recomputing on every currentDate change within the same month
+  const currentMonthKey = useMemo(() => format(currentDate, 'yyyy-MM'), [currentDate]);
+
   // Category counts for current month
   // Uses string-based month extraction to avoid timezone issues with new Date()
   const categoryCounts = useMemo(() => {
@@ -334,18 +341,17 @@ export default function CalendarView({
       quote: 0, renewal: 0, claim: 0, service: 0,
       'follow-up': 0, prospecting: 0, other: 0,
     };
-    const currentYearMonth = format(currentDate, 'yyyy-MM');
     todos.forEach((todo) => {
       if (!todo.due_date) return;
       if (todo.completed || todo.status === 'done') return;
       // Extract YYYY-MM directly from the date string to avoid timezone shift
       const dueDateYearMonth = todo.due_date.substring(0, 7);
-      if (dueDateYearMonth !== currentYearMonth) return;
+      if (dueDateYearMonth !== currentMonthKey) return;
       const category = todo.category || 'other';
       counts[category]++;
     });
     return counts;
-  }, [todos, currentDate]);
+  }, [todos, currentMonthKey]);
 
   const uniqueAssignees = useMemo(() => {
     const users = new Set<string>();

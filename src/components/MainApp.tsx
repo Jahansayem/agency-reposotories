@@ -236,8 +236,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
-      if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+      if (taskLinkScrollTimerRef.current) {
+        clearTimeout(taskLinkScrollTimerRef.current);
+        taskLinkScrollTimerRef.current = null;
+      }
+      if (taskLinkHighlightTimerRef.current) {
+        clearTimeout(taskLinkHighlightTimerRef.current);
+        taskLinkHighlightTimerRef.current = null;
+      }
     };
   }, []);
 

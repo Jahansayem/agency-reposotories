@@ -35,7 +35,12 @@ export default function Home() {
 
           try {
             const result = await Promise.race([queryPromise, timeoutPromise]);
-            const { data } = result as { data: AuthUser | null };
+            const { data, error } = result as { data: AuthUser | null; error: any };
+
+            if (error) {
+              console.error('Session verification error:', error);
+              // Don't silently log out — show error or retry
+            }
 
             if (data) {
               // Default role to 'staff' if not set

@@ -7,7 +7,7 @@ let redis: Redis | null = null;
 export function getRedisClient(): Redis | null {
   // Return null if Redis URL is not configured (graceful degradation)
   if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
-    console.warn('Redis not configured - caching disabled');
+    logger.warn('Redis not configured - caching disabled', { component: 'Redis' });
     return null;
   }
 

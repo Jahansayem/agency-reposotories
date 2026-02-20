@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { type AgencyAuthContext } from '@/lib/agencyAuth';
 import { createOutlookCorsPreflightResponse, withOutlookAuth } from '@/lib/outlookAuth';
 import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
+import { redactAIRequest, redactAIResponse, generateRequestId } from '@/lib/logRedaction';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -53,23 +54,6 @@ async function getUsersFromAgency(agencyId: string): Promise<string[]> {
   return userNames.sort();
 }
 
-/**
- * Get all registered users (fallback when no agency specified)
- */
-async function getAllUsers(): Promise<string[]> {
-  const supabase = getSupabaseClient();
-  const { data: users, error } = await supabase
-    .from('users')
-    .select('name')
-    .order('name');
-
-  if (error) {
-    logger.error('Error fetching all users for parse-email', error, { component: 'OutlookParseEmailAPI' });
-    return [];
-  }
-
-  return (users || []).map((u: { name: string }) => u.name).filter(Boolean);
-}
 
 export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   // SECURITY: Rate limit AI operations to prevent abuse
@@ -93,22 +77,30 @@ export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuth
       );
     }
 
-    // Get available users to suggest as assignees
-    // Use agency from auth context to scope user suggestions
-    let availableUsers: string[];
-    if (agencyId) {
-      availableUsers = await getUsersFromAgency(agencyId);
-      if (availableUsers.length === 0) {
-        logger.warn('No users found in specified agency for parse-email', {
-          component: 'OutlookParseEmailAPI',
-          agencyId,
-        });
-        // Fall back to all users if agency has no members
-        availableUsers = await getAllUsers();
-      }
-    } else {
-      // Backward compatible: get all users when no agency context
-      availableUsers = await getAllUsers();
+    // SECURITY FIX: Require agency context for all requests
+    // This prevents user enumeration across all tenants
+    if (!agencyId) {
+      logger.security('Outlook parse-email endpoint called without agency context', {
+        component: 'OutlookParseEmailAPI',
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Bad Request',
+          message: 'Agency context required. Provide agencyId in request.',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Get available users to suggest as assignees from the scoped agency
+    const availableUsers = await getUsersFromAgency(agencyId);
+
+    if (availableUsers.length === 0) {
+      logger.warn('No users found in agency for parse-email', {
+        component: 'OutlookParseEmailAPI',
+        agencyId,
+      });
     }
 
     // Build user list for the prompt
@@ -143,6 +135,19 @@ Rules:
 
 Respond with ONLY the JSON object, no other text.`;
 
+    const requestId = generateRequestId();
+
+    // Log redacted request metadata (no PII)
+    logger.info('AI request initiated', {
+      component: 'OutlookParseEmailAPI',
+      ...redactAIRequest({
+        prompt,
+        model: 'claude-sonnet-4-20250514',
+        maxTokens: 500,
+        requestId,
+      }),
+    });
+
     const anthropic = getAnthropicClient();
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -154,10 +159,27 @@ Respond with ONLY the JSON object, no other text.`;
       ? message.content[0].text
       : '';
 
+    // Log redacted response metadata (no PII)
+    logger.info('AI response received', {
+      component: 'OutlookParseEmailAPI',
+      ...redactAIResponse({
+        content: responseText,
+        model: 'claude-sonnet-4-20250514',
+        stopReason: message.stop_reason,
+        inputTokens: message.usage?.input_tokens,
+        outputTokens: message.usage?.output_tokens,
+        requestId,
+      }),
+    });
+
     // Parse the JSON from Claude's response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      logger.error('Failed to parse AI response', undefined, { component: 'OutlookParseEmailAPI', responseText });
+      logger.error('Failed to parse AI response', undefined, {
+        component: 'OutlookParseEmailAPI',
+        requestId,
+        responseCharCount: responseText.length,
+      });
       return NextResponse.json(
         { success: false, error: 'Failed to parse AI response' },
         { status: 500 }

@@ -6,6 +6,7 @@ import { TodoPriority } from '@/types/todo';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
 import { type AgencyAuthContext } from '@/lib/agencyAuth';
 import { createOutlookCorsPreflightResponse, withOutlookAuth } from '@/lib/outlookAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -16,10 +17,36 @@ function getSupabaseClient() {
 }
 
 export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+  // SECURITY: Rate limit API operations to prevent abuse
+  // Uses the 'api' limiter: 100 requests per minute per IP
+  const rateLimitResult = await withRateLimit(request, rateLimiters.api);
+  if (!rateLimitResult.success) {
+    logger.warn('Rate limit exceeded for Outlook create-task', {
+      component: 'OutlookCreateTaskAPI',
+    });
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   try {
     const supabase = getSupabaseClient();
     const { text, assignedTo, priority, dueDate } = await request.json();
     const agencyId = ctx.agencyId;
+
+    // SECURITY FIX: Require agency context for all task creation
+    // This prevents unscoped writes (tasks with no agency_id)
+    if (!agencyId) {
+      logger.security('Outlook create-task endpoint called without agency context', {
+        component: 'OutlookCreateTaskAPI',
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Bad Request',
+          message: 'Agency context required. Provide agencyId in request.',
+        },
+        { status: 400 }
+      );
+    }
 
     if (!text || !text.trim()) {
       return NextResponse.json(
@@ -31,8 +58,9 @@ export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuth
     const taskId = uuidv4();
     const now = new Date().toISOString();
 
-    // Always use authenticated user's identity — never trust client-provided createdBy
-    const creator = ctx.userName || 'Outlook Add-in';
+    // SECURITY FIX: Always use fixed identity for API key auth
+    // Never trust client-provided createdBy field
+    const creator = 'Outlook Add-in';
 
     // Build the task object with agency scoping from auth context
     const task: Record<string, unknown> = {
@@ -42,12 +70,8 @@ export const POST = withOutlookAuth(async (request: NextRequest, ctx: AgencyAuth
       status: 'todo',
       created_at: now,
       created_by: creator,
+      agency_id: agencyId, // Always set agency_id (required)
     };
-
-    // Only include agency_id if auth context provides one (multi-tenancy enabled)
-    if (agencyId) {
-      task.agency_id = agencyId;
-    }
 
     // Add optional fields
     if (priority && ['low', 'medium', 'high', 'urgent'].includes(priority)) {

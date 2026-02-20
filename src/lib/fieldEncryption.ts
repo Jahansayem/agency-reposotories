@@ -30,18 +30,23 @@ interface EncryptionResult {
 
 /**
  * Get encryption key from environment
- * In production, throws if not configured. In development, warns loudly.
+ * SECURITY: In production, FAILS CLOSED - throws on missing/invalid key.
+ * In development, logs warnings but allows fallback to help developers.
  */
 function getEncryptionKey(): Buffer | null {
   const keyHex = process.env.FIELD_ENCRYPTION_KEY;
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (!keyHex) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error(
-        'FIELD_ENCRYPTION_KEY is not set. Refusing to store PII in plaintext in production. ' +
-        'Generate a key with: openssl rand -hex 32'
-      );
+    const errorMsg =
+      'FIELD_ENCRYPTION_KEY is not set. Refusing to store PII in plaintext. ' +
+      'Generate a key with: openssl rand -hex 32';
+
+    if (isProduction) {
+      // FAIL CLOSED: Production must never store PII in plaintext
+      throw new Error(errorMsg);
     }
+
     // Development: allow plaintext fallback but warn loudly
     logger.error(
       'FIELD_ENCRYPTION_KEY is not set - PII data will be stored in PLAINTEXT. ' +
@@ -52,22 +57,36 @@ function getEncryptionKey(): Buffer | null {
         action: 'getKey',
       }
     );
-    // Duplicate warning removed - logger.error already logs to console
     return null;
   }
 
   if (keyHex.length !== 64) {
-    logger.error('FIELD_ENCRYPTION_KEY must be 64 hex characters (32 bytes)', new Error('Invalid key length'), {
+    const errorMsg = 'FIELD_ENCRYPTION_KEY must be 64 hex characters (32 bytes)';
+
+    if (isProduction) {
+      // FAIL CLOSED: Invalid key is a critical configuration error
+      throw new Error(errorMsg);
+    }
+
+    logger.error(errorMsg, new Error('Invalid key length'), {
       component: 'fieldEncryption',
       action: 'getKey',
+      keyLength: keyHex.length,
     });
     return null;
   }
 
   try {
     return Buffer.from(keyHex, 'hex');
-  } catch {
-    logger.error('Invalid FIELD_ENCRYPTION_KEY format', new Error('Invalid key format'), {
+  } catch (err) {
+    const errorMsg = 'Invalid FIELD_ENCRYPTION_KEY format (must be hex-encoded)';
+
+    if (isProduction) {
+      // FAIL CLOSED: Invalid key format is a critical configuration error
+      throw new Error(errorMsg);
+    }
+
+    logger.error(errorMsg, new Error('Invalid key format'), {
       component: 'fieldEncryption',
       action: 'getKey',
     });
@@ -104,7 +123,11 @@ export function encryptField(plaintext: string | null | undefined, fieldName: st
 
   const masterKey = getEncryptionKey();
   if (!masterKey) {
-    // Encryption not configured - return plaintext
+    // In production, getEncryptionKey() throws, so we never reach here
+    // In development, allow plaintext fallback for local testing
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Encryption key unavailable - cannot encrypt field');
+    }
     return plaintext;
   }
 
@@ -132,9 +155,11 @@ export function encryptField(plaintext: string | null | undefined, fieldName: st
       component: 'fieldEncryption',
       action: 'encrypt',
       fieldName,
+      isProduction: process.env.NODE_ENV === 'production',
     });
-    // Return plaintext on error to avoid data loss
-    return plaintext;
+
+    // FAIL CLOSED: Never store plaintext PII on encryption failure
+    throw new Error(`Encryption failed for field ${fieldName} - refusing to store plaintext PII`);
   }
 }
 
@@ -154,12 +179,25 @@ export function decryptField(ciphertext: string | null | undefined, fieldName: s
 
   const masterKey = getEncryptionKey();
   if (!masterKey) {
-    logger.warn('Cannot decrypt field - FIELD_ENCRYPTION_KEY not configured', {
+    const warnMsg = 'Cannot decrypt field - FIELD_ENCRYPTION_KEY not configured';
+
+    if (process.env.NODE_ENV === 'production') {
+      // In production, this is a critical error - encrypted data exists but we can't decrypt it
+      logger.error(warnMsg, new Error('Missing encryption key in production'), {
+        component: 'fieldEncryption',
+        action: 'decrypt',
+        fieldName,
+      });
+      // Return an error indicator instead of plaintext or ciphertext
+      return '[DECRYPTION_ERROR: Missing encryption key]';
+    }
+
+    logger.warn(warnMsg, {
       component: 'fieldEncryption',
       action: 'decrypt',
       fieldName,
     });
-    // Return ciphertext as-is (will show as encrypted string)
+    // Development: Return ciphertext as-is (will show as encrypted string)
     return ciphertext;
   }
 
@@ -192,8 +230,16 @@ export function decryptField(ciphertext: string | null | undefined, fieldName: s
       component: 'fieldEncryption',
       action: 'decrypt',
       fieldName,
+      isProduction: process.env.NODE_ENV === 'production',
+      errorType: (error as Error).name,
     });
-    // Return ciphertext on error
+
+    if (process.env.NODE_ENV === 'production') {
+      // FAIL CLOSED: Return error indicator instead of potentially corrupted data
+      return '[DECRYPTION_ERROR: Failed to decrypt field]';
+    }
+
+    // Development: Return ciphertext on error to help debug
     return ciphertext;
   }
 }

@@ -236,14 +236,16 @@ export default function WeekView({
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
   const weekGridRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to today's column on mobile
+  // Auto-scroll to today's column on mobile — only recompute when week changes
+  const currentWeekKey = useMemo(() => format(currentDate, 'yyyy-MM-dd'), [currentDate]);
+
   useEffect(() => {
     if (!weekGridRef.current) return;
     const todayCol = weekGridRef.current.querySelector('[data-is-today="true"]');
     if (todayCol) {
       todayCol.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     }
-  }, [currentDate]);
+  }, [currentWeekKey]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

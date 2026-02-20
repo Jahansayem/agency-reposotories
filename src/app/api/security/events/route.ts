@@ -40,10 +40,11 @@ export const GET = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyA
     // Get recent events from database
     const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 
-    // Fetch from security_audit_log
+    // Fetch from security_audit_log (filtered by agency)
     const { data: auditLogs, error: auditError } = await supabase
       .from('security_audit_log')
       .select('*')
+      .eq('agency_id', ctx.agencyId)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -51,13 +52,15 @@ export const GET = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyA
     if (auditError) {
       logger.error('Failed to fetch audit logs', auditError, {
         component: 'api/security/events',
+        agencyId: ctx.agencyId,
       });
     }
 
-    // Fetch from auth_failure_log
+    // Fetch from auth_failure_log (filtered by agency)
     const { data: authFailures, error: authError } = await supabase
       .from('auth_failure_log')
       .select('*')
+      .eq('agency_id', ctx.agencyId)
       .gte('created_at', since)
       .order('created_at', { ascending: false })
       .limit(limit);

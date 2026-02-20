@@ -300,10 +300,10 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
 
   // Subscribe to real-time agency updates
   useEffect(() => {
-    if (!isMultiTenancyEnabled || !userId) return;
+    if (!isMultiTenancyEnabled || !userId || !currentAgency?.id) return;
 
     const channel = supabase
-      .channel('agency-updates')
+      .channel(`agency-updates-${currentAgency.id}`)
       .on(
         'postgres_changes',
         {
@@ -323,7 +323,7 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
           event: 'UPDATE',
           schema: 'public',
           table: 'agencies',
-          filter: currentAgency ? `id=eq.${currentAgency.id}` : undefined,
+          filter: `id=eq.${currentAgency.id}`,
         },
         (payload) => {
           // Update current agency if it changed
@@ -337,7 +337,7 @@ export function AgencyProvider({ children, userId }: AgencyProviderProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, currentAgency, refreshAgencies, isMultiTenancyEnabled]);
+  }, [userId, currentAgency?.id, refreshAgencies, isMultiTenancyEnabled]);
 
   const value: AgencyContextType = {
     currentAgency,

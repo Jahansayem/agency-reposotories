@@ -260,11 +260,11 @@ export default function CalendarDayCell({
   // if the mouse hasn't moved after the drag completes
   const prevIsDragActive = useRef(isDragActive);
   useEffect(() => {
-    if (prevIsDragActive.current && !isDragActive) {
+    if (prevIsDragActive.current && !isDragActive && showPopup) {
       setShowPopup(false);
     }
     prevIsDragActive.current = isDragActive;
-  }, [isDragActive]);
+  }, [isDragActive, showPopup]);
 
   // Handle Escape key to close popup and return focus to cell
   useEffect(() => {
@@ -314,12 +314,7 @@ export default function CalendarDayCell({
           : ''
       : '';
 
-  // Auto-focus the quick-add input when it appears
-  useEffect(() => {
-    if (showQuickAdd && quickAddInputRef.current) {
-      quickAddInputRef.current.focus();
-    }
-  }, [showQuickAdd]);
+  // Auto-focus the quick-add input when it appears (handled by ref callback below)
 
   // Scroll the cell into view when it becomes focused via keyboard navigation
   useEffect(() => {
@@ -424,7 +419,10 @@ export default function CalendarDayCell({
         )}
         {todos.length === 0 && showQuickAdd && (
           <input
-            ref={quickAddInputRef}
+            ref={(el) => {
+              quickAddInputRef.current = el;
+              if (el && showQuickAdd) el.focus();
+            }}
             type="text"
             value={quickAddText}
             onChange={(e) => setQuickAddText(e.target.value)}

@@ -369,11 +369,16 @@ export async function POST(
     // Actual conversion is tracked separately when policy is written
     // Note: 'contacted_interested' maps to 'quoted' status, not immediate sale
 
-    const { error: updateError } = await supabase
+    let updateQuery = supabase
       .from('cross_sell_opportunities')
       .update(opportunityUpdate)
-      .eq('id', opportunityId)
-      .eq('agency_id', ctx.agencyId);
+      .eq('id', opportunityId);
+
+    if (ctx.agencyId) {
+      updateQuery = updateQuery.eq('agency_id', ctx.agencyId);
+    }
+
+    const { error: updateError } = await updateQuery;
 
     if (updateError) {
       console.error('Failed to update opportunity:', updateError);

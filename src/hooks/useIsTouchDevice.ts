@@ -8,7 +8,10 @@ function isTouchDevice(): boolean {
 }
 
 export function useIsTouchDevice(): boolean {
-  const [isTouch, setIsTouch] = useState(false);
+  const [isTouch, setIsTouch] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  });
 
   useEffect(() => {
     setIsTouch(isTouchDevice());

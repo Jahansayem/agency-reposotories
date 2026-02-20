@@ -146,12 +146,14 @@ export default function DayView({
     return () => clearInterval(interval);
   }, [today]);
 
-  // Scroll current time indicator into view on mount
+  // Scroll current time indicator into view on mount or when tasks load
   useEffect(() => {
-    if (today && timeIndicatorRef.current) {
-      timeIndicatorRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (today && timeIndicatorRef.current && dayTodos.length > 0) {
+      requestAnimationFrame(() => {
+        timeIndicatorRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
     }
-  }, [today]);
+  }, [today, dayTodos.length]);
 
   const handleQuickAddSubmit = useCallback(() => {
     const trimmed = quickAddText.trim();

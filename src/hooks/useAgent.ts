@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useToast } from '@/components/ui/Toast';
+import { logger } from '@/lib/logger';
 import type { AgentMessage, AgentUsage, AgentToolCall, ToolStatus } from '@/types/agent';
 
 // Simplified usage type for frontend state
@@ -167,7 +168,7 @@ export function useAgent(): UseAgentReturn {
 
       setIsLoading(false);
     } catch (error) {
-      console.error('Agent error:', error);
+      logger.error('Agent error', error instanceof Error ? error : new Error(String(error)), { component: 'useAgent' });
       toast.error(
         error instanceof Error ? error.message : 'Failed to send message'
       );

@@ -105,6 +105,14 @@ export function useTodoData(currentUser: AuthUser) {
       supabase.from('users').select('name, color').order('name'),
     ]);
 
+    if (countResult.error) {
+      logger.error('Error fetching todo count', countResult.error, { component: 'useTodoData' });
+    }
+
+    if (usersResult.error) {
+      logger.error('Error fetching users', usersResult.error, { component: 'useTodoData' });
+    }
+
     if (todosResult.error) {
       logger.error('Error fetching todos', todosResult.error, { component: 'useTodoData' });
       setError('Failed to connect to database. Please check your Supabase configuration.');
@@ -330,6 +338,8 @@ export function useTodoData(currentUser: AuthUser) {
         has_subtasks: (subtasks?.length || 0) > 0,
         has_transcription: !!transcription,
       },
+    }).catch((err) => {
+      logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
     });
 
     // Send notification if task is assigned to someone else
@@ -342,6 +352,8 @@ export function useTodoData(currentUser: AuthUser) {
         dueDate: newTodo.due_date,
         priority: newTodo.priority,
         subtasks: newTodo.subtasks,
+      }).catch((err) => {
+        logger.error('Failed to send assignment notification', err instanceof Error ? err : new Error(String(err)));
       });
     }
 
@@ -365,11 +377,18 @@ export function useTodoData(currentUser: AuthUser) {
     // Create auto-reminders for tasks with due dates
     if (newTodo.due_date && newTodo.assigned_to) {
       // Get the user ID for the assignee to send push notifications
-      const { data: assigneeData } = await supabase
+      const { data: assigneeData, error: assigneeLookupError } = await supabase
         .from('users')
         .select('id')
         .eq('name', newTodo.assigned_to)
         .single();
+
+      if (assigneeLookupError) {
+        logger.error('Failed to look up assignee for reminders', assigneeLookupError, {
+          component: 'useTodoData',
+          assignedTo: newTodo.assigned_to,
+        });
+      }
 
       if (assigneeData?.id) {
         const reminderResult = await createAutoReminders(
@@ -438,11 +457,18 @@ export function useTodoData(currentUser: AuthUser) {
 
       if (assignedTo) {
         // Get user ID for the assignee
-        const { data: assigneeData } = await supabase
+        const { data: assigneeData, error: assigneeLookupError } = await supabase
           .from('users')
           .select('id')
           .eq('name', assignedTo)
           .single();
+
+        if (assigneeLookupError) {
+          logger.error('Failed to look up assignee for reminder update', assigneeLookupError, {
+            component: 'useTodoData',
+            assignedTo,
+          });
+        }
 
         if (assigneeData?.id) {
           const reminderResult = await updateAutoReminders(
@@ -492,6 +518,8 @@ export function useTodoData(currentUser: AuthUser) {
       userName,
       todoId: id,
       todoText: currentTodo.text,
+    }).catch((err) => {
+      logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
     });
 
     return true;
@@ -517,6 +545,8 @@ export function useTodoData(currentUser: AuthUser) {
         userName,
         todoId: id,
         todoText: todo.text,
+      }).catch((err) => {
+        logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
       });
     }
 

@@ -19,11 +19,11 @@ vi.mock('@/lib/supabaseClient', () => ({
 }));
 
 vi.mock('@/lib/activityLogger', () => ({
-  logActivity: vi.fn(),
+  logActivity: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/lib/taskNotifications', () => ({
-  sendTaskAssignmentNotification: vi.fn(),
+  sendTaskAssignmentNotification: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 vi.mock('@/lib/reminderService', () => ({

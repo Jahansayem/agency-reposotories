@@ -83,3 +83,10 @@ DerivedData/
 *.p8
 .mcp.json
 .worktrees/
+
+# Sensitive data - NEVER commit PII
+src/data/bealer-model/
+src/data/**/*.csv
+src/data/**/*.pdf
+!src/data/**/README.md
+!src/data/**/.gitkeep

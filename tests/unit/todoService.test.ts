@@ -199,7 +199,7 @@ describe('TodoService', () => {
       expect(dataChainable.eq).toHaveBeenCalledWith('assigned_to', 'Derrick');
     });
 
-    it('should return empty result with pagination metadata on error', async () => {
+    it('should throw on getTodos error', async () => {
       // Mock count query to fail
       const countChainable: any = {
         eq: vi.fn().mockReturnThis(),
@@ -224,11 +224,7 @@ describe('TodoService', () => {
         } as any;
       }) as any);
 
-      const result = await todoService.getTodos();
-
-      expect(result.data).toEqual([]);
-      expect(result.pagination.totalCount).toBe(0);
-      expect(result.pagination.hasNextPage).toBe(false);
+      await expect(todoService.getTodos()).rejects.toThrow();
     });
   });
 
@@ -258,7 +254,7 @@ describe('TodoService', () => {
   });
 
   describe('getTodo error handling', () => {
-    it('should return null on getTodo error', async () => {
+    it('should throw on getTodo error', async () => {
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
@@ -267,9 +263,7 @@ describe('TodoService', () => {
         }),
       } as any);
 
-      const result = await todoService.getTodo('todo-id');
-
-      expect(result).toBeNull();
+      await expect(todoService.getTodo('todo-id')).rejects.toThrow('Fetch failed');
     });
   });
 

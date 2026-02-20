@@ -281,10 +281,26 @@ async function validateSessionFromRequest(request: NextRequest): Promise<{
       .single();
 
     if (error || !session) {
-      // If the table doesn't exist yet (migration not run), allow through
-      // so that the API route wrappers can handle the fallback path
+      // SECURITY: Fail-closed on missing table (prevents auth bypass if migrations missing)
+      // In production, missing migrations are a deployment error that must be fixed
+      // In development, allow override via environment variable for flexibility
       if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
-        return { valid: true };
+        if (process.env.NODE_ENV !== 'production' && process.env.SKIP_MIGRATION_CHECK === 'true') {
+          logSecurityEvent('DEPRECATED: Skipping migration check in dev mode', {
+            code: error?.code,
+            message: 'This is insecure and will be removed. Run migrations.',
+          });
+          return { valid: true };
+        }
+        // PRODUCTION: Return 503 Service Unavailable for missing migrations
+        logSecurityEvent('CRITICAL: Auth table missing in production', {
+          code: error?.code,
+          message: 'user_sessions table does not exist. Migrations not applied.',
+        });
+        return {
+          valid: false,
+          error: 'Service temporarily unavailable: database migrations required',
+        };
       }
       return {
         valid: false,

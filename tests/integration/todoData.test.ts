@@ -143,7 +143,7 @@ vi.mock('@/lib/supabaseClient', () => ({
 
 // Mock activity logger
 vi.mock('@/lib/activityLogger', () => ({
-  logActivity: vi.fn(),
+  logActivity: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock welcome notification check
@@ -172,7 +172,7 @@ vi.mock('@/lib/logger', () => ({
 
 // Mock task notifications (added during multi-tenancy migration)
 vi.mock('@/lib/taskNotifications', () => ({
-  sendTaskAssignmentNotification: vi.fn(),
+  sendTaskAssignmentNotification: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 // Mock reminder service

@@ -345,6 +345,12 @@ export const PATCH = withAgencyAuth(
             `Invalid permission keys: ${invalidKeys.join(', ')}`
           );
         }
+        // Validate values are booleans
+        for (const [key, value] of Object.entries(permissionUpdates)) {
+          if (typeof value !== 'boolean') {
+            return apiErrorResponse('VALIDATION_ERROR', `Permission ${key} must be a boolean`);
+          }
+        }
       }
 
       // Get member to update - verify they belong to this agency
