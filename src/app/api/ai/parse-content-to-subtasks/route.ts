@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createHash } from 'crypto';
 import {
   validateAiRequest,
   callClaude,
@@ -147,7 +148,7 @@ async function handleParseContentToSubtasks(request: NextRequest) {
     logger.error('Failed to parse AI response', undefined, {
       component: 'ParseContentToSubtasksAPI',
       responseCharCount: aiResult.content.length,
-      responseHash: require('crypto').createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
+      responseHash: createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
     });
     return aiErrorResponse('Failed to parse AI response', 500);
   }

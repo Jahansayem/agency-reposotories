@@ -119,10 +119,10 @@ User: ${lastMessage.content}
 
 Respond conversationally and helpfully. You have access to search tasks, create tasks, search customers, view team workload, search team chat, and draft emails. Use these tools as needed to answer the user's question.`;
 
-    // Call Claude
+    // Call Claude with the full prompt that includes conversation history
     const response = await callClaude({
       systemPrompt,
-      userMessage: lastMessage.content,
+      userMessage: fullPrompt,
       maxTokens: 2000,
       model: modelId,
       component: 'ai-agent',

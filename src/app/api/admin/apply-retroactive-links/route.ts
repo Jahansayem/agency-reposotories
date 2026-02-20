@@ -17,7 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { withAgencyAdminAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -36,7 +36,7 @@ interface ApplyRequest {
   approvedMatches: ApprovedMatch[];
 }
 
-export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+export const POST = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
     const body: ApplyRequest = await request.json();

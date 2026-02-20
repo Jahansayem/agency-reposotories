@@ -306,10 +306,13 @@ describe('POST /api/ai/agent', () => {
 
       await POST(request, mockContext);
 
+      // The route now builds a fullPrompt that includes history and passes it as userMessage
       expect(callClaude).toHaveBeenCalledWith(
         expect.objectContaining({
-          userMessage: 'Second message',
+          userMessage: expect.stringContaining('Second message'),
           component: 'ai-agent',
+          maxTokens: 2000,
+          model: 'claude-3-5-sonnet-20241022',
         })
       );
     });

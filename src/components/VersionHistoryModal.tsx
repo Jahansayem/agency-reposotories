@@ -316,7 +316,7 @@ export function VersionHistoryModal({
                                       Subtasks ({version.subtasks.length}):
                                     </span>
                                     <ul className="mt-1 space-y-1">
-                                      {version.subtasks.map((subtask: any, i: number) => (
+                                      {version.subtasks.map((subtask: { text: string; completed: boolean }, i: number) => (
                                         <li
                                           key={i}
                                           className="text-sm text-[var(--foreground)] flex items-center gap-2"

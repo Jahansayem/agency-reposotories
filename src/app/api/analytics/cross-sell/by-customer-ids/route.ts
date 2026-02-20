@@ -41,6 +41,21 @@ export interface CustomerOpportunityResponse {
   };
 }
 
+interface OpportunityRow {
+  customer_name: string;
+  priority_tier: 'HOT' | 'HIGH' | 'MEDIUM' | 'LOW';
+  id: string;
+  recommended_product: string | null;
+  potential_premium_add: number | null;
+  talking_point_1: string | null;
+  talking_point_2: string | null;
+  talking_point_3: string | null;
+  current_products: string | null;
+  tenure_years: number | null;
+  current_premium: number | null;
+  days_until_renewal: number | null;
+}
+
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
@@ -117,30 +132,31 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     const result: CustomerOpportunityResponse[] = [];
     const processedCustomers = new Set<string>();
 
-    for (const opp of opportunities || []) {
-      const customerId = customerNameMap.get((opp as any).customer_name);
+    for (const oppRaw of opportunities || []) {
+      const opp = oppRaw as unknown as OpportunityRow;
+      const customerId = customerNameMap.get(opp.customer_name);
       if (!customerId || processedCustomers.has(customerId)) {
         continue;
       }
 
       const response: CustomerOpportunityResponse = {
         customerId,
-        priorityTier: (opp as any).priority_tier as 'HOT' | 'HIGH' | 'MEDIUM' | 'LOW',
+        priorityTier: opp.priority_tier,
       };
 
       if (includeDetails) {
         response.opportunity = {
-          id: (opp as any).id,
-          priorityTier: (opp as any).priority_tier,
-          recommendedProduct: (opp as any).recommended_product || '',
-          potentialPremiumAdd: (opp as any).potential_premium_add || 0,
-          talkingPoint1: (opp as any).talking_point_1 || '',
-          talkingPoint2: (opp as any).talking_point_2 || '',
-          talkingPoint3: (opp as any).talking_point_3 || '',
-          currentProducts: (opp as any).current_products || '',
-          tenureYears: (opp as any).tenure_years || 0,
-          currentPremium: (opp as any).current_premium || 0,
-          daysUntilRenewal: (opp as any).days_until_renewal || 0,
+          id: opp.id,
+          priorityTier: opp.priority_tier,
+          recommendedProduct: opp.recommended_product || '',
+          potentialPremiumAdd: opp.potential_premium_add || 0,
+          talkingPoint1: opp.talking_point_1 || '',
+          talkingPoint2: opp.talking_point_2 || '',
+          talkingPoint3: opp.talking_point_3 || '',
+          currentProducts: opp.current_products || '',
+          tenureYears: opp.tenure_years || 0,
+          currentPremium: opp.current_premium || 0,
+          daysUntilRenewal: opp.days_until_renewal || 0,
         };
       }
 

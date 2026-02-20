@@ -206,7 +206,7 @@ test.describe('Push Notifications', () => {
       await page.waitForLoadState('networkidle');
 
       // Check if enabled
-      let enabled = await bellButton.getAttribute('aria-checked');
+      const enabled = await bellButton.getAttribute('aria-checked');
 
       // Reload page
       await page.reload();

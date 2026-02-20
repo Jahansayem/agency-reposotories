@@ -267,7 +267,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
                       ${isDark ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-200'}
                     `}
                   >
-                    Don't show again
+                    Don&apos;t show again
                   </button>
                 )}
 

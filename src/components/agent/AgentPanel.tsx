@@ -119,7 +119,7 @@ export function AgentPanel({ isOpen, onClose, onMinimize }: AgentPanelProps) {
                 <div className="h-full flex items-center justify-center text-center">
                   <div className="space-y-2">
                     <p className="text-gray-500 text-sm">
-                      Hi! I'm your AI assistant. I can help you:
+                      Hi! I&apos;m your AI assistant. I can help you:
                     </p>
                     <ul className="text-gray-600 text-sm space-y-1 text-left max-w-xs mx-auto">
                       <li>• Create and manage tasks</li>

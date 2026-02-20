@@ -12,11 +12,19 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 const cspDirectives: Record<string, string[]> = {
   "default-src": ["'self'"],
-  // Turbopack's chunk loading on Vercel requires 'unsafe-eval' — without it,
-  // dynamically injected script chunks fail CSP checks causing registerChunk errors.
-  // TODO: Replace with nonce-based CSP + 'strict-dynamic' for stronger security.
-  "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-  "style-src": ["'self'", "'unsafe-inline'"], // Tailwind requires unsafe-inline
+  // SCRIPT CSP POLICY:
+  // - 'unsafe-inline': Required by Next.js App Router for inline scripts (hydration, navigation)
+  //   Removal requires Next.js 15+ with nonce support + refactoring all scripts
+  // - 'unsafe-eval': Removed in production for security
+  //   Dev mode: Required by Next.js Fast Refresh and HMR
+  //   Production: Uses webpack for chunk loading (no eval needed)
+  // TODO P2: Migrate to Next.js 15+ with nonce-based CSP when stable
+  "script-src": isProduction
+    ? ["'self'", "'unsafe-inline'"]
+    : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+  // Tailwind CSS requires 'unsafe-inline' for generated utility classes
+  // Alternative: Extract all CSS at build time (adds ~200KB to bundle)
+  "style-src": ["'self'", "'unsafe-inline'"],
   "img-src": ["'self'", "data:", "https:", "blob:"],
   "font-src": ["'self'", "data:"],
   "media-src": ["'self'", "data:", "blob:"], // Allow audio/video from data URLs and blobs
@@ -49,6 +57,7 @@ const cspString = Object.entries(cspDirectives)
 const baseConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  // Turbopack is dev-only; production uses webpack for CSP compliance
   turbopack: {},
   // Bundle optimization
   experimental: {
@@ -109,7 +118,7 @@ const baseConfig: NextConfig = {
             // Other vendor libraries
             lib: {
               test: /[\\/]node_modules[\\/]/,
-              name(module: any) {
+              name(module: { context: string }) {
                 const packageName = module.context.match(
                   /[\\/]node_modules[\\/](.*?)([\\/]|$)/
                 )?.[1];
@@ -202,20 +211,12 @@ export default withPWA({
   register: true,
   skipWaiting: true,
   // Runtime caching strategies for network requests
+  // SECURITY: Do NOT cache Supabase API responses (P1.9 security fix)
+  // Caching sensitive data (tasks, customers) creates security risks:
+  // - Data persists after logout
+  // - Multi-user/shared device scenarios expose data
+  // - PII compliance risk (data in browser cache)
   runtimeCaching: [
-    {
-      // Cache Supabase API requests with NetworkFirst strategy
-      urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'supabase-cache',
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24, // 24 hours
-        },
-        networkTimeoutSeconds: 10,
-      },
-    },
     {
       // Cache static assets with CacheFirst strategy
       urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
@@ -240,18 +241,6 @@ export default withPWA({
         },
       },
     },
-    {
-      // Cache API routes with NetworkFirst
-      urlPattern: /^https?:\/\/localhost:3000\/api\/.*/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'api-cache',
-        networkTimeoutSeconds: 10,
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 5, // 5 minutes
-        },
-      },
-    },
   ],
-})(baseConfig as any);
+  // @ts-expect-error - next-pwa type mismatch with Next.js 16 I18NConfig (readonly vs mutable)
+})(baseConfig);

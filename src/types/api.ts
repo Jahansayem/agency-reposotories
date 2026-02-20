@@ -160,7 +160,7 @@ export interface UserSingleResponse extends ApiSuccessResponse<User> {
 
 // ----- Authentication -----
 
-export interface LoginResponse extends ApiSuccessResponse<{
+export type LoginResponse = ApiSuccessResponse<{
   user: {
     id: string;
     name: string;
@@ -175,15 +175,15 @@ export interface LoginResponse extends ApiSuccessResponse<{
     role: string;
     is_default: boolean;
   }>;
-}> {}
+}>;
 
-export interface RegisterResponse extends ApiSuccessResponse<{
+export type RegisterResponse = ApiSuccessResponse<{
   user: {
     id: string;
     name: string;
     color: string;
   };
-}> {}
+}>;
 
 // ----- Agencies -----
 
@@ -203,7 +203,7 @@ export interface AgencyInvitationListResponse extends ApiSuccessResponse<AgencyI
   data: AgencyInvitation[];
 }
 
-export interface InvitationValidateResponse extends ApiSuccessResponse<{
+export type InvitationValidateResponse = ApiSuccessResponse<{
   valid: boolean;
   invitation?: {
     id: string;
@@ -211,7 +211,7 @@ export interface InvitationValidateResponse extends ApiSuccessResponse<{
     role: string;
     agency_name: string;
   };
-}> {}
+}>;
 
 export interface InvitationAcceptResponse extends ApiSuccessResponse<{
   membership: AgencyMember;

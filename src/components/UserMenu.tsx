@@ -131,8 +131,11 @@ export function UserMenu({
     setIsOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsOpen(false);
+    // Clear session storage and service worker caches
+    const { clearStoredSession } = await import('@/lib/auth');
+    await clearStoredSession();
     onUserChange(null); // Logout by setting user to null
   };
 

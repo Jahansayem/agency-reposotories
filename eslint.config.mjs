@@ -44,6 +44,31 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Relaxed rules for test files and scripts
+  {
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "**/test/**/*.ts",
+      "**/test/**/*.tsx",
+      "tests/**/*.ts",
+      "tests/**/*.tsx",
+      "scripts/**/*.ts",
+      "scripts/**/*.js",
+      "scripts/**/*.mjs",
+      "public/**/*.js",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unsafe-function-type": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "prefer-const": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

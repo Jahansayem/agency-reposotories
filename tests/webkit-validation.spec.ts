@@ -248,7 +248,7 @@ test.describe('WebKit Compatibility - Theme System', () => {
 
     // Check initial theme (should be dark by default)
     const htmlElement = page.locator('html');
-    let initialClasses = await htmlElement.getAttribute('class');
+    const initialClasses = await htmlElement.getAttribute('class');
     expect(initialClasses).toContain('dark');
 
     // Toggle theme if button exists

@@ -131,7 +131,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
   }
 
   // Strip agency_id from the nested todos to keep response clean
-  let reminders = (data || []).map(r => {
+  const reminders = (data || []).map(r => {
     if (r.todos && typeof r.todos === 'object') {
       const { agency_id: _aid, ...todoFields } = r.todos as Record<string, unknown>;
       return { ...r, todos: todoFields };

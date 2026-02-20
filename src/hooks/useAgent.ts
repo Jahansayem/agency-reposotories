@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useToast } from '@/components/ui/Toast';
 import { logger } from '@/lib/logger';
+import { fetchWithCsrf } from '@/lib/csrf';
 import type { AgentMessage, AgentUsage, AgentToolCall, ToolStatus } from '@/types/agent';
 
 // Simplified usage type for frontend state
@@ -36,25 +37,6 @@ export function useAgent(): UseAgentReturn {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const parseStreamChunk = (chunk: string): {
-    content?: string;
-    toolCall?: Partial<AgentToolCall>;
-    usage?: AgentUsageSummary;
-  } | null => {
-    try {
-      const lines = chunk.split('\n').filter(line => line.trim());
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = JSON.parse(line.slice(6));
-          return data;
-        }
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  };
-
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return;
 
@@ -84,86 +66,48 @@ export function useAgent(): UseAgentReturn {
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      const response = await fetch('/api/ai/agent', {
+      // Build message history from current state
+      const messageHistory = [...messages, userMessage].map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const response = await fetchWithCsrf('/api/ai/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: messages.map(m => ({
-            role: m.role,
-            content: m.content
-          }))
+          messages: messageHistory
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+      const data = await response.json();
 
-      if (!reader) {
-        throw new Error('No response body');
+      if (!data.success) {
+        throw new Error(data.message || data.error || 'AI request failed');
       }
 
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split('\n\n');
-        buffer = chunks.pop() || '';
-
-        for (const chunk of chunks) {
-          const parsed = parseStreamChunk(chunk);
-          if (!parsed) continue;
-
-          setMessages(prev => {
-            const updated = [...prev];
-            const lastMsg = updated[updated.length - 1];
-
-            if (lastMsg.role === 'assistant') {
-              if (parsed.content) {
-                lastMsg.content += parsed.content;
-              }
-
-              if (parsed.toolCall) {
-                const existingToolIndex = lastMsg.toolCalls?.findIndex(
-                  tc => tc.id === parsed.toolCall?.id
-                );
-
-                if (existingToolIndex !== undefined && existingToolIndex >= 0) {
-                  // Update existing tool call
-                  if (lastMsg.toolCalls) {
-                    lastMsg.toolCalls[existingToolIndex] = {
-                      ...lastMsg.toolCalls[existingToolIndex],
-                      ...parsed.toolCall,
-                    } as AgentToolCall;
-                  }
-                } else {
-                  // Add new tool call
-                  if (!lastMsg.toolCalls) lastMsg.toolCalls = [];
-                  lastMsg.toolCalls.push({
-                    id: parsed.toolCall.id || `tool-${Date.now()}`,
-                    name: parsed.toolCall.name || 'unknown',
-                    status: parsed.toolCall.status || 'running',
-                    input: parsed.toolCall.input || {},
-                    result: parsed.toolCall.result,
-                    error: parsed.toolCall.error,
-                  });
-                }
-              }
-
-              if (parsed.usage) {
-                setUsage(parsed.usage);
-              }
-            }
-
-            return updated;
-          });
+      // Update the assistant message with the response
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg.role === 'assistant') {
+          lastMsg.content = data.message || '';
         }
+        return updated;
+      });
+
+      // Update usage if provided (estimated tokens)
+      if (data.estimatedInputTokens && data.estimatedOutputTokens) {
+        setUsage(prevUsage => ({
+          inputTokens: prevUsage.inputTokens + (data.estimatedInputTokens || 0),
+          outputTokens: prevUsage.outputTokens + (data.estimatedOutputTokens || 0),
+          totalCost: prevUsage.totalCost, // Cost tracking would need backend support
+        }));
       }
 
       setIsLoading(false);
@@ -184,7 +128,7 @@ export function useAgent(): UseAgentReturn {
 
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [messages, isLoading, toast]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);

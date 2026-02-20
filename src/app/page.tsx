@@ -35,7 +35,7 @@ export default function Home() {
 
           try {
             const result = await Promise.race([queryPromise, timeoutPromise]);
-            const { data, error } = result as { data: AuthUser | null; error: any };
+            const { data, error } = result as { data: AuthUser | null; error: unknown };
 
             if (error) {
               console.error('Session verification error:', error);

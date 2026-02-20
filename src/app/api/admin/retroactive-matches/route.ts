@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { withAgencyAdminAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import {
   type TaskMatch,
   calculateMatchConfidence,
@@ -29,7 +29,7 @@ function getSupabaseClient() {
 const MIN_CONFIDENCE = 0.4;
 const MAX_TASKS = 1000;
 
-export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+export const GET = withAgencyAdminAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
 

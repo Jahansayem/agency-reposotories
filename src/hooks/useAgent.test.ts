@@ -164,22 +164,19 @@ describe('useAgent', () => {
     });
   });
 
-  describe('streaming response parsing', () => {
-    it('should parse content chunks and append to assistant message', async () => {
+  describe('JSON response handling', () => {
+    it('should handle JSON response and set assistant message', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode('data: {"content":"Hello "}\n\n'));
-            controller.enqueue(new TextEncoder().encode('data: {"content":"world!"}\n\n'));
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Hello world!',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Hi');
@@ -189,129 +186,53 @@ describe('useAgent', () => {
       expect(assistantMessage?.content).toBe('Hello world!');
     });
 
-    it('should parse tool call chunks', async () => {
-      const { result } = renderHook(() => useAgent());
-
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              new TextEncoder().encode(
-                'data: {"toolCall":{"id":"tool-1","name":"search_tasks","status":"running"}}\n\n'
-              )
-            );
-            controller.enqueue(
-              new TextEncoder().encode(
-                'data: {"toolCall":{"id":"tool-1","status":"success","result":{"count":5}}}\n\n'
-              )
-            );
-            controller.close();
-          },
-        }),
-        { status: 200 }
-      );
-
-      fetchMock.mockResolvedValue(mockResponse);
-
-      await act(async () => {
-        await result.current.sendMessage('Search tasks');
-      });
-
-      const assistantMessage = result.current.messages.find(m => m.role === 'assistant');
-      expect(assistantMessage?.toolCalls).toHaveLength(1);
-      expect(assistantMessage?.toolCalls?.[0].name).toBe('search_tasks');
-      expect(assistantMessage?.toolCalls?.[0].status).toBe('success');
-      expect(assistantMessage?.toolCalls?.[0].result).toEqual({ count: 5 });
+    // Tool calls and streaming features removed in current implementation
+    // Skip these tests until streaming is re-implemented
+    it.skip('should parse tool call chunks', async () => {
+      // TODO: Re-implement when streaming support is added back
     });
 
-    it('should update existing tool call when receiving updates', async () => {
-      const { result } = renderHook(() => useAgent());
-
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              new TextEncoder().encode(
-                'data: {"toolCall":{"id":"tool-1","name":"search_tasks","status":"running"}}\n\n'
-              )
-            );
-            controller.enqueue(
-              new TextEncoder().encode(
-                'data: {"toolCall":{"id":"tool-1","status":"success","result":[]}}\n\n'
-              )
-            );
-            controller.close();
-          },
-        }),
-        { status: 200 }
-      );
-
-      fetchMock.mockResolvedValue(mockResponse);
-
-      await act(async () => {
-        await result.current.sendMessage('Search');
-      });
-
-      const assistantMessage = result.current.messages.find(m => m.role === 'assistant');
-      expect(assistantMessage?.toolCalls).toHaveLength(1);
-      expect(assistantMessage?.toolCalls?.[0].id).toBe('tool-1');
-      expect(assistantMessage?.toolCalls?.[0].status).toBe('success');
+    it.skip('should update existing tool call when receiving updates', async () => {
+      // TODO: Re-implement when streaming support is added back
     });
 
-    it('should parse usage updates', async () => {
+    it('should update usage when response includes token counts', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode('data: {"content":"Done"}\n\n'));
-            controller.enqueue(
-              new TextEncoder().encode(
-                'data: {"usage":{"inputTokens":100,"outputTokens":50,"totalCost":0.005}}\n\n'
-              )
-            );
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Done',
+            estimatedInputTokens: 100,
+            estimatedOutputTokens: 50,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test');
       });
 
-      expect(result.current.usage).toEqual({
-        inputTokens: 100,
-        outputTokens: 50,
-        totalCost: 0.005,
-      });
+      expect(result.current.usage.inputTokens).toBe(100);
+      expect(result.current.usage.outputTokens).toBe(50);
     });
 
-    it('should handle malformed JSON gracefully', async () => {
+    it('should handle JSON parse errors gracefully', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode('data: {invalid json}\n\n'));
-            controller.enqueue(new TextEncoder().encode('data: {"content":"Valid"}\n\n'));
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response('Invalid JSON', { status: 200 })
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test');
       });
 
-      // Should skip invalid chunk and process valid one
+      // Should show error message
       const assistantMessage = result.current.messages.find(m => m.role === 'assistant');
-      expect(assistantMessage?.content).toBe('Valid');
+      expect(assistantMessage?.content).toContain('error');
     });
   });
 
@@ -320,14 +241,17 @@ describe('useAgent', () => {
       const { result } = renderHook(() => useAgent());
 
       fetchMock.mockResolvedValue(
-        new Response(null, { status: 500, statusText: 'Internal Server Error' })
+        new Response(
+          JSON.stringify({ error: 'Server error' }),
+          { status: 500, statusText: 'Internal Server Error' }
+        )
       );
 
       await act(async () => {
         await result.current.sendMessage('Test');
       });
 
-      expect(mockToastError).toHaveBeenCalledWith('HTTP 500: Internal Server Error');
+      expect(mockToastError).toHaveBeenCalledWith('Server error');
     });
 
     it('should show error toast on network error', async () => {
@@ -357,16 +281,21 @@ describe('useAgent', () => {
       );
     });
 
-    it('should handle missing response body', async () => {
+    it('should handle API error responses', async () => {
       const { result } = renderHook(() => useAgent());
 
-      fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({ success: false, error: 'API error message' }),
+          { status: 200 }
+        )
+      );
 
       await act(async () => {
         await result.current.sendMessage('Test');
       });
 
-      expect(mockToastError).toHaveBeenCalledWith('No response body');
+      expect(mockToastError).toHaveBeenCalledWith('API error message');
     });
 
     it('should stop loading on error', async () => {
@@ -386,17 +315,12 @@ describe('useAgent', () => {
     it('should reset messages to empty array', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode('data: {"content":"Response"}\n\n'));
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({ success: true, message: 'Response' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test');
@@ -414,21 +338,17 @@ describe('useAgent', () => {
     it('should reset usage to zero', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(
-              new TextEncoder().encode(
-                'data: {"usage":{"inputTokens":100,"outputTokens":50,"totalCost":0.01}}\n\n'
-              )
-            );
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            success: true,
+            message: 'Response',
+            estimatedInputTokens: 100,
+            estimatedOutputTokens: 50,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test');
@@ -452,17 +372,12 @@ describe('useAgent', () => {
     it('should create messages with correct structure', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode('data: {"content":"Hi"}\n\n'));
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({ success: true, message: 'Hi' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test');
@@ -481,16 +396,12 @@ describe('useAgent', () => {
     it('should set conversationId to "local" for frontend-only messages', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({ success: true, message: 'Response' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test');
@@ -502,16 +413,12 @@ describe('useAgent', () => {
     it('should initialize toolCalls as null', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({ success: true, message: 'Response' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test');
@@ -525,16 +432,12 @@ describe('useAgent', () => {
     it('should send POST request to /api/ai/agent with messages array', async () => {
       const { result } = renderHook(() => useAgent());
 
-      const mockResponse = new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.close();
-          },
-        }),
-        { status: 200 }
+      fetchMock.mockResolvedValue(
+        new Response(
+          JSON.stringify({ success: true, message: 'Response' }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
       );
-
-      fetchMock.mockResolvedValue(mockResponse);
 
       await act(async () => {
         await result.current.sendMessage('Test message');
@@ -544,10 +447,15 @@ describe('useAgent', () => {
         '/api/ai/agent',
         expect.objectContaining({
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: [] }),
+          body: expect.stringContaining('messages'),
         })
       );
+
+      const callArgs = fetchMock.mock.calls[0][1];
+      const body = JSON.parse(callArgs.body);
+      expect(body.messages).toEqual([
+        { role: 'user', content: 'Test message' }
+      ]);
     });
   });
 });

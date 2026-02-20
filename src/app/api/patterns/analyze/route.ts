@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
 import { withAgencyAdminAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
+import crypto from 'crypto';
 
 /**
  * POST /api/patterns/analyze
@@ -142,7 +143,7 @@ Group similar tasks together and extract common subtask patterns. Only include p
         component: 'patterns/analyze',
         metadata: {
           responseCharCount: responseText.length,
-          responseHash: require('crypto').createHash('sha256').update(responseText).digest('hex').substring(0, 16),
+          responseHash: crypto.createHash('sha256').update(responseText).digest('hex').substring(0, 16),
         },
       });
       return NextResponse.json(

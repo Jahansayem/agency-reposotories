@@ -910,7 +910,7 @@ function ForgotPinModal({ isOpen, onClose, userName }: { isOpen: boolean; onClos
           <h2 className="text-xl font-bold text-white mb-2">Forgot Your PIN?</h2>
           {userName && (
             <p className="text-sm text-white/60">
-              We'll send a reset link to the email associated with <strong>{userName}</strong>
+              We&apos;ll send a reset link to the email associated with <strong>{userName}</strong>
             </p>
           )}
         </div>
@@ -926,7 +926,7 @@ function ForgotPinModal({ isOpen, onClose, userName }: { isOpen: boolean; onClos
               <span>Check your email for a reset link!</span>
             </div>
             <p className="text-sm text-white/60 text-center">
-              If an account exists with that email, we've sent instructions to reset your PIN.
+              If an account exists with that email, we&apos;ve sent instructions to reset your PIN.
             </p>
             <button
               onClick={onClose}
@@ -951,7 +951,7 @@ function ForgotPinModal({ isOpen, onClose, userName }: { isOpen: boolean; onClos
                 className="w-full px-4 py-3 rounded-[var(--radius-lg)] border-2 border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--brand-sky)] transition-colors"
               />
               <p className="mt-2 text-xs text-white/40">
-                We'll send a secure link to reset your PIN.
+                We&apos;ll send a secure link to reset your PIN.
               </p>
             </div>
 

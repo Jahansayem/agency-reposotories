@@ -42,14 +42,46 @@ export const PRIORITY_ORDER: Record<string, number> = {
 };
 
 /**
+ * Parse date string to local Date object, handling both ISO timestamps and date-only strings.
+ *
+ * IMPORTANT: Date-only strings (YYYY-MM-DD) are interpreted as UTC midnight by default,
+ * which can cause timezone issues. We parse them manually to use local timezone.
+ */
+function parseDateToLocalTimezone(dueDate: string): Date | null {
+  // Check if it's a date-only string (YYYY-MM-DD)
+  const dateOnlyMatch = dueDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (dateOnlyMatch) {
+    // Parse manually to avoid UTC interpretation
+    const year = parseInt(dateOnlyMatch[1], 10);
+    const month = parseInt(dateOnlyMatch[2], 10) - 1; // JS months are 0-indexed
+    const day = parseInt(dateOnlyMatch[3], 10);
+    return new Date(year, month, day, 0, 0, 0, 0);
+  }
+
+  // It's a full ISO timestamp - parse normally
+  const parsed = new Date(dueDate);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
  * Check whether a task's due date is in the past (before today).
- * Compares date-only (no time component) to avoid timezone issues.
+ * Compares in user's local timezone to match user expectations.
+ *
+ * IMPORTANT: Uses the same logic as todoStore.ts isOverdue for consistency.
  */
 export function isTaskOverdue(dueDate: string | null | undefined): boolean {
   if (!dueDate) return false;
-  const dateOnly = dueDate.split('T')[0];
-  const todayStr = new Date().toISOString().split('T')[0];
-  return dateOnly < todayStr;
+
+  const parsedDate = parseDateToLocalTimezone(dueDate);
+  if (!parsedDate) return false;
+
+  // Get end of due date in local timezone (23:59:59.999)
+  const dueDateEndOfDay = new Date(parsedDate);
+  dueDateEndOfDay.setHours(23, 59, 59, 999);
+
+  // A task is overdue if the end of its due date has passed
+  return dueDateEndOfDay.getTime() < Date.now();
 }
 
 // ============================================

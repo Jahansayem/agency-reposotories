@@ -10,6 +10,8 @@ import {
 import { logger } from '@/lib/logger';
 import { verifyTodoAccess, extractTodoIdFromPath } from '@/lib/apiAuth';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
+import { validateFileContent } from '@/lib/fileValidator';
 
 // Create Supabase client lazily per-request to avoid module-scope auth context issues
 function getSupabaseClient() {
@@ -52,6 +54,20 @@ async function ensureBucketExists(supabase: ReturnType<typeof getSupabaseClient>
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
+
+    // Rate limiting for file uploads
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+    const rateLimitResult = await withRateLimit({
+      identifier: `${ip}:${ctx.userId}`,
+      limiter: rateLimiters.upload,
+    });
+
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult);
+    }
+
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -86,6 +102,24 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     if (file.size > MAX_ATTACHMENT_SIZE) {
       return NextResponse.json(
         { success: false, error: `File size exceeds ${MAX_ATTACHMENT_SIZE / (1024 * 1024)}MB limit` },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: Validate file content against claimed MIME type (magic bytes)
+    const validationResult = await validateFileContent(file, mimeType);
+    if (!validationResult.valid) {
+      logger.security('File upload rejected - MIME type validation failed', {
+        endpoint: '/api/attachments',
+        claimedType: mimeType,
+        detectedType: validationResult.detectedType,
+        error: validationResult.error,
+        todoId,
+        userName: ctx.userName,
+        ip,
+      });
+      return NextResponse.json(
+        { success: false, error: validationResult.error || 'Invalid file type' },
         { status: 400 }
       );
     }

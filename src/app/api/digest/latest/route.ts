@@ -98,7 +98,7 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     const supabase = getSupabaseClient();
 
     // Verify user exists and scope to agency
-    let userQuery = supabase
+    const userQuery = supabase
       .from('users')
       .select('id, name')
       .eq('name', ctx.userName);

@@ -30,11 +30,18 @@ export const rateLimiters = {
     prefix: 'ratelimit:login',
   }) : null,
 
-  // 10 AI requests per minute per user
+  // 30 cheap AI requests (text-only) per minute per user
   ai: redis ? new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(10, '1 m'),
+    limiter: Ratelimit.slidingWindow(30, '1 m'),
     prefix: 'ratelimit:ai',
+  }) : null,
+
+  // 5 expensive AI requests (vision, audio, large context) per minute per user
+  aiExpensive: redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(5, '1 m'),
+    prefix: 'ratelimit:ai:expensive',
   }) : null,
 
   // 100 API requests per minute per user
@@ -44,10 +51,10 @@ export const rateLimiters = {
     prefix: 'ratelimit:api',
   }) : null,
 
-  // 20 file uploads per hour per user
+  // 10 file uploads per minute per user
   upload: redis ? new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(20, '1 h'),
+    limiter: Ratelimit.slidingWindow(10, '1 m'),
     prefix: 'ratelimit:upload',
   }) : null,
 
@@ -120,11 +127,22 @@ export async function checkRateLimit(
 /**
  * Middleware wrapper for Next.js API routes
  * Usage: const rateLimitResult = await withRateLimit(request, rateLimiters.api);
+ *
+ * Can also be called with an options object for per-user rate limiting:
+ * const rateLimitResult = await withRateLimit({ identifier: `${ip}:${userId}`, limiter: rateLimiters.ai });
  */
 export async function withRateLimit(
-  request: NextRequest,
-  limiter: Ratelimit | null
+  requestOrOptions: NextRequest | { identifier: string; limiter: Ratelimit | null },
+  limiter?: Ratelimit | null
 ): Promise<RateLimitResult> {
+  // Handle both signatures
+  if ('identifier' in requestOrOptions) {
+    // Called with options object
+    return await checkRateLimit(requestOrOptions.identifier, requestOrOptions.limiter);
+  }
+
+  // Called with NextRequest
+  const request = requestOrOptions;
   // SECURITY: Use IP-based keying only. Do NOT trust x-user-id header
   // as it can be spoofed by an attacker to bypass per-user rate limits
   // or to exhaust another user's rate limit quota.
@@ -133,7 +151,7 @@ export async function withRateLimit(
 
   const identifier = ip;
 
-  return await checkRateLimit(identifier, limiter);
+  return await checkRateLimit(identifier, limiter || null);
 }
 
 /**

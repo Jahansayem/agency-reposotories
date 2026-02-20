@@ -62,8 +62,8 @@ export default function UserSwitcher({ currentUser, onUserChange }: UserSwitcher
     return () => clearInterval(interval);
   }, [lockoutSeconds]);
 
-  const handleLogout = () => {
-    clearStoredSession();
+  const handleLogout = async () => {
+    await clearStoredSession();
     onUserChange(null);
   };
 

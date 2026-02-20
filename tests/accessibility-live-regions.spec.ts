@@ -290,7 +290,7 @@ test.describe('Accessibility - AnnouncementProvider Context', () => {
     if (await tasksButton.isVisible()) {
       await tasksButton.click();
 
-      let liveRegions = await page.locator('[role="status"][aria-live]').count();
+      const liveRegions = await page.locator('[role="status"][aria-live]').count();
       expect(liveRegions).toBeGreaterThanOrEqual(1);
     }
 
@@ -299,7 +299,7 @@ test.describe('Accessibility - AnnouncementProvider Context', () => {
     if (await dashboardButton.isVisible()) {
       await dashboardButton.click();
 
-      let liveRegions = await page.locator('[role="status"][aria-live]').count();
+      const liveRegions = await page.locator('[role="status"][aria-live]').count();
       expect(liveRegions).toBeGreaterThanOrEqual(1);
     }
   });

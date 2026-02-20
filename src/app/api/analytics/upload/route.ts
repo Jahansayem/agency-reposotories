@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 import * as XLSX from 'xlsx';
 import {
   parseCSV,
@@ -150,6 +151,20 @@ function parseExcelFile(buffer: ArrayBuffer): AllstateBookOfBusinessRow[] {
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
+
+    // Rate limiting for file uploads
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+    const rateLimitResult = await withRateLimit({
+      identifier: `${ip}:${ctx.userId}`,
+      limiter: rateLimiters.upload,
+    });
+
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult);
+    }
+
     // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -169,6 +184,15 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       return NextResponse.json(
         { error: 'No file provided' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: File size validation BEFORE reading into memory
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (!file.size || file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'File too large. Maximum size is 10MB.' },
+        { status: 413 }
       );
     }
 
@@ -271,7 +295,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     // Process records and prepare for insertion
     const opportunities: Partial<CrossSellOpportunity>[] = [];
     let recordsCreated = 0;
-    let recordsUpdated = 0;
+    const recordsUpdated = 0;
     let recordsSkipped = 0;
     let recordsFailed = 0;
 

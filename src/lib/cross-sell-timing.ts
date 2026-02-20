@@ -909,7 +909,7 @@ export function calculateUpgradePathLtv(
   upgradePath: ProductType[]
 ): number {
   let totalLtv = 0;
-  let products = [...currentProducts];
+  const products = [...currentProducts];
 
   for (const nextProduct of upgradePath) {
     const productCount = products.length + 1;

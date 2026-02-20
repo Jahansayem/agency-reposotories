@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createHash } from 'crypto';
 import {
   validateAiRequest,
   callClaude,
@@ -11,6 +12,7 @@ import {
 } from '@/lib/aiApiHelper';
 import { logger } from '@/lib/logger';
 import { withSessionAuth } from '@/lib/agencyAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 interface EnhancedTask {
   text: string;
@@ -57,7 +59,20 @@ Examples:
 Respond with ONLY the JSON object, no other text.`;
 }
 
-async function handleEnhanceTask(request: NextRequest) {
+async function handleEnhanceTask(request: NextRequest, userId: string) {
+  // Rate limiting
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+  const rateLimitResult = await withRateLimit({
+    identifier: `${ip}:${userId}`,
+    limiter: rateLimiters.ai,
+  });
+
+  if (!rateLimitResult.success) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   // Validate request
   const validation = await validateAiRequest(request, {
     customValidator: (body) => {
@@ -104,7 +119,7 @@ async function handleEnhanceTask(request: NextRequest) {
     logger.error('Failed to parse AI response', undefined, {
       component: 'EnhanceTaskAPI',
       responseCharCount: aiResult.content.length,
-      responseHash: require('crypto').createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
+      responseHash: createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
     });
     return aiErrorResponse('Failed to parse AI response', 500);
   }
@@ -121,6 +136,6 @@ async function handleEnhanceTask(request: NextRequest) {
   return aiSuccessResponse({ enhanced: validatedResult });
 }
 
-export const POST = withAiErrorHandling('EnhanceTaskAPI', withSessionAuth(async (request) => {
-  return handleEnhanceTask(request);
+export const POST = withAiErrorHandling('EnhanceTaskAPI', withSessionAuth(async (request, userId, userName) => {
+  return handleEnhanceTask(request, userId);
 }));

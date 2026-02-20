@@ -86,11 +86,24 @@ export function setStoredSession(user: AuthUser): void {
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
-export function clearStoredSession(): void {
+export async function clearStoredSession(): Promise<void> {
   localStorage.removeItem(SESSION_KEY);
   // Also clear legacy key
   localStorage.removeItem('todoUserName');
   localStorage.removeItem('userName');
+
+  // SECURITY (P1.9): Clear all service worker caches on logout
+  // This ensures sensitive data doesn't persist after logout
+  if (typeof window !== 'undefined' && 'caches' in window) {
+    try {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map(cacheName => caches.delete(cacheName))
+      );
+    } catch (error) {
+      console.warn('Failed to clear service worker caches:', error);
+    }
+  }
 }
 
 // ============================================================================

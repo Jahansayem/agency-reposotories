@@ -21,7 +21,7 @@ export interface ToolCall {
   error?: string;
 }
 
-export interface AgentToolCall extends ToolCall {} // Alias for frontend compatibility
+export type AgentToolCall = ToolCall; // Alias for frontend compatibility
 
 // Database table types
 

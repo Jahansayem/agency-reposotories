@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logger } from '@/lib/secureLogger';
+import { logger } from '@/lib/logger';
 
 /**
  * CSP Violation Report Endpoint
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       lineNumber: oldReport?.['line-number'] || newReport?.lineNumber,
       columnNumber: oldReport?.['column-number'] || newReport?.columnNumber,
       userAgent: request.headers.get('user-agent'),
-      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
     };
 
     // Log the violation

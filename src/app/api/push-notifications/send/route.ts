@@ -108,7 +108,7 @@ async function handleSendPush(request: NextRequest, ctx: AgencyAuthContext) {
         .eq('agency_id', ctx.agencyId)
         .eq('status', 'active');
 
-      const allowedUserIds = new Set((agencyMembers || []).map((m: any) => m.user_id));
+      const allowedUserIds = new Set((agencyMembers || []).map((m: { user_id: string }) => m.user_id));
       const blockedIds = userIds.filter(uid => !allowedUserIds.has(uid));
 
       if (blockedIds.length > 0) {
@@ -192,12 +192,12 @@ async function handleSendPush(request: NextRequest, ctx: AgencyAuthContext) {
               .update({ last_used_at: new Date().toISOString() })
               .eq('id', sub.id);
 
-          } catch (error: any) {
+          } catch (error: unknown) {
             logger.error('Failed to send to subscription', error, { component: 'push-notifications/send', action: 'sendNotification', userId: uid, subscriptionId: sub.id });
             failedCount++;
 
             // If subscription is invalid/expired, mark as inactive
-            if (error.statusCode === 410 || error.statusCode === 404) {
+            if ((error as { statusCode?: number }).statusCode === 410 || (error as { statusCode?: number }).statusCode === 404) {
               await supabase
                 .from('push_subscriptions')
                 .update({ is_active: false })

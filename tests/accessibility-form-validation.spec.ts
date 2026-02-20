@@ -109,7 +109,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await page.waitForLoadState('networkidle');
 
       // Verify aria-invalid="true"
-      let ariaInvalid = await pinInputs.nth(0).getAttribute('aria-invalid');
+      const ariaInvalid = await pinInputs.nth(0).getAttribute('aria-invalid');
       expect(ariaInvalid).toBe('true');
 
       // Now enter correct PIN
@@ -362,7 +362,7 @@ test.describe('Accessibility - Form Validation ARIA Announcements', () => {
       await page.waitForLoadState('networkidle');
 
       // Error should be visible
-      let errorAlert = page.locator('[role="alert"]').first();
+      const errorAlert = page.locator('[role="alert"]').first();
       await expect(errorAlert).toBeVisible();
 
       // Enter correct PIN

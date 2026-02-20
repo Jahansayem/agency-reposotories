@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import {
@@ -375,7 +376,7 @@ async function handleDailyDigest(
     logger.error('Failed to parse AI response', undefined, {
       component: 'DailyDigestAPI',
       responseCharCount: aiResult.content.length,
-      responseHash: require('crypto').createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
+      responseHash: createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
     });
     return aiErrorResponse('Failed to parse AI response', 500);
   }

@@ -9,6 +9,8 @@ import { createClient } from '@supabase/supabase-js';
 import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
 import { verifyAgencyAccess } from '@/lib/agencyAuth';
 import { escapeLikePattern } from '@/lib/constants';
+import { decryptField } from '@/lib/fieldEncryption';
+import { sanitizeForPostgrestFilter } from '@/lib/sanitize';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -75,11 +77,30 @@ export async function GET(
 
     if (insight) {
       const segment = getCustomerSegment(insight.total_premium || 0, insight.total_policies || 0);
+
+      // Decrypt PII fields - use try-catch to handle decryption errors gracefully
+      let decryptedEmail: string | null = null;
+      let decryptedPhone: string | null = null;
+
+      try {
+        decryptedEmail = decryptField(insight.customer_email, 'customer_insights.customer_email');
+      } catch {
+        // Decryption failed - return null instead of encrypted ciphertext
+        decryptedEmail = null;
+      }
+
+      try {
+        decryptedPhone = decryptField(insight.customer_phone, 'customer_insights.customer_phone');
+      } catch {
+        // Decryption failed - return null instead of encrypted ciphertext
+        decryptedPhone = null;
+      }
+
       customer = {
         id: insight.id,
         name: insight.customer_name,
-        email: insight.customer_email,
-        phone: insight.customer_phone,
+        email: decryptedEmail,
+        phone: decryptedPhone,
         address: null,
         city: null,
         zipCode: null,
@@ -163,21 +184,39 @@ export async function GET(
         .from('todos')
         .select('id, text, completed, status, priority, due_date, assigned_to, created_at')
         .in('id', taskIds);
+
       if (agencyId) {
         linkedQuery = linkedQuery.eq('agency_id', agencyId);
       }
+
+      // Apply permission filtering based on user role
+      if (auth.context?.permissions && !auth.context.permissions.can_view_all_tasks) {
+        const safeUserName = sanitizeForPostgrestFilter(auth.context.userName);
+        linkedQuery = linkedQuery.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
+      }
+
       linkedTasksResult = await linkedQuery.order('created_at', { ascending: false });
     }
     const { data: linkedTasks } = linkedTasksResult;
 
     // Get tasks that mention this customer's name in the text (fuzzy link)
+    // Apply permission filtering: staff users can only see tasks they created or are assigned to
     let mentionedQuery = supabase
       .from('todos')
       .select('id, text, completed, status, priority, due_date, assigned_to, created_at')
       .ilike('text', `%${escapeLikePattern(customer.name)}%`);
+
     if (agencyId) {
       mentionedQuery = mentionedQuery.eq('agency_id', agencyId);
     }
+
+    // Apply permission filtering based on user role
+    // If user doesn't have can_view_all_tasks permission, only show their tasks
+    if (auth.context?.permissions && !auth.context.permissions.can_view_all_tasks) {
+      const safeUserName = sanitizeForPostgrestFilter(auth.context.userName);
+      mentionedQuery = mentionedQuery.or(`created_by.eq.${safeUserName},assigned_to.eq.${safeUserName}`);
+    }
+
     const { data: mentionedTasks } = await mentionedQuery
       .order('created_at', { ascending: false })
       .limit(10);

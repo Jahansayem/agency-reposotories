@@ -1,3 +1,4 @@
+import 'server-only'; // Enforce server-only boundary
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextRequest } from 'next/server';
 import { AUTH_CONFIG } from '@/lib/featureFlags';
@@ -96,15 +97,4 @@ export async function hasClerkSession(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/**
- * Hook to use in client components for checking auth status
- */
-export function useAuthMode() {
-  return {
-    clerkEnabled: AUTH_CONFIG.clerkEnabled,
-    pinEnabled: AUTH_CONFIG.pinEnabled,
-    isDualAuth: AUTH_CONFIG.isDualAuthMode,
-  };
 }

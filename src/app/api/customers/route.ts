@@ -100,7 +100,8 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     const { data: opportunities, error: oppError } = await opportunitiesQuery;
 
-    // Merge and deduplicate by customer name
+    // Merge and deduplicate by customer ID (primary key), NOT by name
+    // Using name as key causes collisions when two customers have the same name
     const customerMap = new Map<string, {
       id: string;
       name: string;
@@ -149,7 +150,8 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
           decryptedPhone = null;
         }
 
-        customerMap.set(customer.customer_name, {
+        // Use customer.id as the unique key to prevent name collisions
+        customerMap.set(customer.id, {
           id: customer.id,
           name: customer.customer_name,
           email: decryptedEmail,
@@ -177,11 +179,21 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     }
 
     // Process opportunities (add missing customers or update with opportunity info)
+    // Try to match opportunities to existing customer_insights by name (within same agency)
     if (opportunities && !oppError) {
       for (const opp of opportunities) {
-        const existing = customerMap.get(opp.customer_name);
-        if (existing) {
-          // Update with opportunity info
+        // Try to find existing customer by name (customer_insights has UNIQUE constraint on agency_id + customer_name)
+        let existingId: string | null = null;
+        for (const [id, customer] of customerMap.entries()) {
+          if (customer.name === opp.customer_name) {
+            existingId = id;
+            break;
+          }
+        }
+
+        if (existingId) {
+          // Update existing customer with opportunity info
+          const existing = customerMap.get(existingId)!;
           existing.hasOpportunity = true;
           existing.opportunityId = opp.id;
           existing.priorityTier = opp.priority_tier;
@@ -191,9 +203,9 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
           existing.potentialPremiumAdd = opp.potential_premium_add;
           existing.upcomingRenewal = opp.renewal_date;
         } else {
-          // Add new customer from opportunity
+          // Add new customer from opportunity (use opportunity ID as key)
           const segment = getCustomerSegment(opp.current_premium || 0, opp.policy_count || 1);
-          customerMap.set(opp.customer_name, {
+          customerMap.set(opp.id, {
             id: opp.id,
             name: opp.customer_name,
             email: opp.email,
