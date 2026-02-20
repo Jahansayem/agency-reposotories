@@ -129,6 +129,8 @@ interface ChatPanelProps {
   docked?: boolean;
   initialConversation?: ChatConversation | null;
   onConversationChange?: (conversation: ChatConversation | null, showList: boolean) => void;
+  /** Close/exit callback for docked mode (navigates back to previous view) */
+  onClose?: () => void;
 }
 
 export default function ChatPanel({
@@ -139,7 +141,8 @@ export default function ChatPanel({
   todosMap,
   docked = false,
   initialConversation,
-  onConversationChange
+  onConversationChange,
+  onClose,
 }: ChatPanelProps) {
   // Agency context for multi-tenancy
   const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
@@ -1013,6 +1016,7 @@ export default function ChatPanel({
             }));
           }
         }}
+        onClose={onClose}
       />
     );
   }

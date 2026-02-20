@@ -26,6 +26,7 @@ interface ChatViewProps {
 export default function ChatView({
   currentUser,
   users,
+  onBack,
   onTaskLinkClick,
 }: ChatViewProps) {
   const todos = useTodoStore((state) => state.todos);
@@ -67,6 +68,7 @@ export default function ChatView({
           todosMap={todosMap}
           docked={true}
           onTaskLinkClick={handleTaskLinkClick}
+          onClose={onBack}
         />
       </div>
     </div>
