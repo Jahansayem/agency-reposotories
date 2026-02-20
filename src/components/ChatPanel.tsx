@@ -979,10 +979,7 @@ export default function ChatPanel({
         onInputChange={setDockedInputValue}
         onSendMessage={sendMessage}
         onSelectConversation={selectConversation}
-        onShowConversationList={() => {
-          setShowConversationList(true);
-          setConversation(null);
-        }}
+        onShowConversationList={() => setShowConversationList(true)}
         onTyping={broadcastTyping}
         getUserColor={getUserColor}
         getInitials={getInitials}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, RefObject, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare, Users, ChevronLeft, X, Search, Pin, ChevronDown
+  MessageSquare, Users, ChevronLeft, ArrowLeft, X, Search, Pin, ChevronDown
 } from 'lucide-react';
 import { AuthUser, ChatConversation, ChatMessage, ChatAttachment, Todo, TapbackType, PresenceStatus } from '@/types/todo';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -120,6 +120,30 @@ export function DockedChatPanel({
   // Detect keyboard visibility on mobile
   const isKeyboardVisible = useKeyboardVisible();
 
+  // LOCAL view state: 'list' = conversation picker, 'chat' = message view
+  // This is the single source of truth for which screen is shown.
+  // Synced from parent's showConversationList prop, but also toggleable locally.
+  const [viewMode, setViewMode] = useState<'list' | 'chat'>(showConversationList ? 'list' : 'chat');
+
+  // Sync from parent prop when it changes (e.g., initial load)
+  useEffect(() => {
+    setViewMode(showConversationList ? 'list' : 'chat');
+  }, [showConversationList]);
+
+  // Back to conversation list handler
+  const handleBackToList = useCallback(() => {
+    setViewMode('list');
+    onShowConversationList();
+  }, [onShowConversationList]);
+
+  // Select conversation handler
+  const handleSelectConversation = useCallback((conv: ChatConversation) => {
+    setViewMode('chat');
+    onSelectConversation(conv);
+  }, [onSelectConversation]);
+
+  const showingList = viewMode === 'list';
+
   // Enhanced state for feature parity
   const [showSearch, setShowSearch] = useState(false);
   const [searchInput, setSearchInput] = useState('');
@@ -234,7 +258,7 @@ export function DockedChatPanel({
 
   // Mark messages as read when viewing
   useEffect(() => {
-    if (!showConversationList && conversation && filteredMessages.length > 0 && markMessagesAsRead) {
+    if (!showingList && conversation && filteredMessages.length > 0 && markMessagesAsRead) {
       const unreadIds = filteredMessages
         .filter(m => m.created_by !== currentUser.name && !(m.read_by || []).includes(currentUser.name))
         .map(m => m.id);
@@ -251,16 +275,21 @@ export function DockedChatPanel({
       {/* Enhanced Header */}
       <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
-          {!showConversationList && (
+          {!showingList && (
             <button
-              onClick={onShowConversationList}
-              className="p-1.5 -ml-1 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleBackToList();
+              }}
+              className="p-2 -ml-1 rounded-[var(--radius-lg)] hover:bg-white/10 active:bg-white/20 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[48px] min-h-[48px] flex items-center justify-center"
               aria-label="Back to conversations"
+              type="button"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          {showConversationList ? (
+          {showingList ? (
             <div className="w-8 h-8 rounded-[var(--radius-xl)] bg-[var(--accent)] flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
@@ -282,7 +311,7 @@ export function DockedChatPanel({
           )}
           <div>
             <h2 className="text-white font-semibold text-sm">
-              {showConversationList ? 'Messages' : getConversationTitle()}
+              {showingList ? 'Messages' : getConversationTitle()}
             </h2>
             <p className="text-white/50 text-xs">
               {connected ? 'Connected' : 'Connecting...'}
@@ -292,7 +321,7 @@ export function DockedChatPanel({
 
         {/* Header actions */}
         <div className="flex items-center gap-1">
-          {!showConversationList && (
+          {!showingList && (
             <>
               {/* Search toggle */}
               <button
@@ -336,7 +365,7 @@ export function DockedChatPanel({
 
       {/* Search bar */}
       <AnimatePresence>
-        {showSearch && !showConversationList && (
+        {showSearch && !showingList && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -378,7 +407,7 @@ export function DockedChatPanel({
 
       {/* Pinned messages */}
       <AnimatePresence>
-        {showPinnedMessages && !showConversationList && pinnedMessages.length > 0 && (
+        {showPinnedMessages && !showingList && pinnedMessages.length > 0 && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -431,14 +460,14 @@ export function DockedChatPanel({
 
       {/* Conversation List or Chat Content */}
       <div className="flex-1 overflow-hidden">
-        {showConversationList ? (
+        {showingList ? (
           <ChatConversationList
             conversations={sortedConversations}
             currentUserName={currentUser.name}
             unreadCounts={unreadCounts}
             mutedConversations={mutedConversations}
             userPresence={userPresence}
-            onSelectConversation={onSelectConversation}
+            onSelectConversation={handleSelectConversation}
             onToggleMute={onToggleMute}
             getUserColor={getUserColor}
             formatRelativeTime={formatRelativeTime}
