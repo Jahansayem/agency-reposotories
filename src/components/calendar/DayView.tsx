@@ -276,7 +276,7 @@ export default function DayView({
                           : STATUS_BORDER[todo.status] || '';
 
                         return (
-                          <div key={todo.id} className={`relative rounded-xl border border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)] transition-all group ${statusClass}`}>
+                          <div key={todo.id} className={`relative rounded-lg border border-[var(--border)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)] transition-all group ${statusClass}`}>
                             <button
                               onClick={() => onTaskClick(todo)}
                               className="w-full text-left p-4"
@@ -321,7 +321,7 @@ export default function DayView({
                                       </span>
                                     )}
                                     <span className="flex items-center gap-1">
-                                      <div className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[category]}`} />
+                                      <div className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[category]}`} />
                                       {CATEGORY_LABELS[category]}
                                     </span>
                                     {todo.assigned_to && (
@@ -379,15 +379,16 @@ export default function DayView({
                                   )}
                                 </div>
 
-                                <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
+                                <ChevronRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity flex-shrink-0 mt-1" />
                               </div>
                             </button>
 
                             {(onQuickComplete || onToggleWaiting) && (
-                              <div className="absolute top-2 right-8 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="absolute top-2 right-8 flex items-center gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                                 {onQuickComplete && !todo.completed && (
                                   <button
                                     onClick={(e) => { e.stopPropagation(); onQuickComplete(todo.id); }}
+                                    data-testid={`dayview-complete-${todo.id}`}
                                     className="p-1 rounded hover:bg-green-500/20 text-[var(--text-muted)] hover:text-green-500 transition-colors"
                                     title="Mark complete"
                                   >
@@ -397,6 +398,7 @@ export default function DayView({
                                 {onToggleWaiting && !todo.completed && (
                                   <button
                                     onClick={(e) => { e.stopPropagation(); onToggleWaiting(todo.id, !todo.waiting_for_response); }}
+                                    data-testid={`dayview-waiting-${todo.id}`}
                                     className={`p-1 rounded transition-colors ${todo.waiting_for_response ? 'text-amber-500 hover:bg-amber-500/20' : 'text-[var(--text-muted)] hover:bg-amber-500/20 hover:text-amber-500'}`}
                                     title={todo.waiting_for_response ? 'Stop waiting' : 'Mark waiting'}
                                   >
@@ -450,11 +452,13 @@ export default function DayView({
                   onBlur={() => { if (!quickAddText.trim()) { setShowQuickAdd(false); setQuickAddText(''); } }}
                   placeholder="Task name — press Enter to add"
                   aria-label={`Quick add task for ${format(currentDate, 'MMMM d')}`}
+                  data-testid="dayview-quickadd-input"
                   className="w-full px-3 py-2 text-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/50"
                 />
               ) : (
                 <button
                   onClick={() => setShowQuickAdd(true)}
+                  data-testid="dayview-quickadd-btn"
                   className="w-full px-3 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-hover)] rounded-lg border border-dashed border-[var(--border)] transition-colors"
                 >
                   + Quick add task

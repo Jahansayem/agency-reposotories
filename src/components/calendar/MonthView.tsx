@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragStartEvent,
@@ -71,9 +72,13 @@ export default function MonthView({
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Require 8px of drag distance before starting (prevents accidental drags on click)
+  // TouchSensor with 250ms delay prevents scroll/tap from triggering drag on mobile
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
     })
   );
 
@@ -254,7 +259,7 @@ export default function MonthView({
       </div>
 
       {/* Day Grid */}
-      <AnimatePresence mode="wait" custom={direction}>
+      <AnimatePresence mode="popLayout" custom={direction}>
         <motion.div
           key={format(currentMonth, 'yyyy-MM')}
           custom={direction}

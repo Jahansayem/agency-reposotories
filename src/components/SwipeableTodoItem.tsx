@@ -410,16 +410,5 @@ export default function SwipeableTodoItem({
   );
 }
 
-/**
- * Hook to detect if the current device supports touch
- * Can be used by parent components to conditionally enable swipe features
- */
-export function useIsTouchDevice(): boolean {
-  const [isTouchEnabled, setIsTouchEnabled] = useState(false);
-
-  useEffect(() => {
-    setIsTouchEnabled(isTouchDevice());
-  }, []);
-
-  return isTouchEnabled;
-}
+// Re-export from shared hook location for backward compatibility
+export { useIsTouchDevice } from '@/hooks/useIsTouchDevice';

@@ -46,8 +46,8 @@ async function login(page: Page) {
   // Wait for the actual app shell to load (sidebar on desktop, bottom nav on mobile)
   // Use Promise.race because .first() always picks the hidden <aside> on mobile viewports
   await Promise.race([
-    page.locator('aside[aria-label="Main navigation"]').waitFor({ state: 'visible', timeout: 20000 }),
-    page.locator('nav[aria-label="Main navigation"]').waitFor({ state: 'visible', timeout: 20000 }),
+    page.locator('aside[aria-label="Sidebar navigation"]').waitFor({ state: 'visible', timeout: 20000 }),
+    page.locator('nav[aria-label="Mobile navigation"]').waitFor({ state: 'visible', timeout: 20000 }),
   ]);
 
   // Let React finish hydration, data fetching, and initial render
@@ -91,7 +91,7 @@ async function clickCalendarButton(page: Page) {
       (el) => (el as HTMLElement).style.display = 'none'
     ).catch(() => {});
 
-    const moreBtn = page.locator('nav[aria-label="Main navigation"] button').filter({ hasText: 'More' });
+    const moreBtn = page.locator('nav[aria-label="Mobile navigation"] button').filter({ hasText: 'More' });
     await expect(moreBtn).toBeVisible({ timeout: 5000 });
     await moreBtn.click();
     await page.waitForTimeout(1000);
@@ -103,7 +103,7 @@ async function clickCalendarButton(page: Page) {
     await expect(calendarItem.first()).toBeVisible({ timeout: 5000 });
     await calendarItem.first().click();
   } else {
-    const calendarBtn = page.locator('aside[aria-label="Main navigation"] button').filter({ hasText: 'Calendar' });
+    const calendarBtn = page.locator('aside[aria-label="Sidebar navigation"] button').filter({ hasText: 'Calendar' });
     await expect(calendarBtn).toBeVisible({ timeout: 5000 });
     await calendarBtn.click();
   }
@@ -148,16 +148,15 @@ test.describe('Calendar view navigation', () => {
   test('1. Calendar appears in navigation and opens calendar view', async ({ page }) => {
     await navigateToCalendar(page);
 
-    // Should see the Calendar heading and subtitle
+    // Should see the Calendar heading
     await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('View tasks by due date')).toBeVisible();
   });
 
   test('2. Calendar is positioned after Tasks in sidebar', async ({ page }) => {
     const mobile = await isMobileViewport(page);
     test.skip(mobile, 'Sidebar ordering only applies to desktop viewports');
 
-    const sidebar = page.locator('aside[aria-label="Main navigation"]');
+    const sidebar = page.locator('aside[aria-label="Sidebar navigation"]');
     const navButtons = sidebar.locator('nav[aria-label="Primary"] button');
 
     const buttonTexts: string[] = [];
@@ -180,10 +179,10 @@ test.describe('Calendar view navigation', () => {
     const mobile = await isMobileViewport(page);
 
     if (mobile) {
-      const tasksTab = page.locator('nav[aria-label="Main navigation"] button').filter({ hasText: 'Tasks' });
+      const tasksTab = page.locator('nav[aria-label="Mobile navigation"] button').filter({ hasText: 'Tasks' });
       await tasksTab.click();
     } else {
-      const tasksBtn = page.locator('aside[aria-label="Main navigation"] button').filter({ hasText: 'Tasks' });
+      const tasksBtn = page.locator('aside[aria-label="Sidebar navigation"] button').filter({ hasText: 'Tasks' });
       await tasksBtn.click();
     }
     await page.waitForTimeout(500);
@@ -311,7 +310,7 @@ test.describe('Calendar sidebar active state', () => {
 
     await navigateToCalendar(page);
 
-    const calendarBtn = page.locator('aside[aria-label="Main navigation"] button').filter({ hasText: 'Calendar' });
+    const calendarBtn = page.locator('aside[aria-label="Sidebar navigation"] button').filter({ hasText: 'Calendar' });
     await expect(calendarBtn).toHaveAttribute('aria-current', 'page');
   });
 
@@ -321,7 +320,7 @@ test.describe('Calendar sidebar active state', () => {
 
     await navigateToCalendar(page);
 
-    const tasksBtn = page.locator('aside[aria-label="Main navigation"] button').filter({ hasText: 'Tasks' });
+    const tasksBtn = page.locator('aside[aria-label="Sidebar navigation"] button').filter({ hasText: 'Tasks' });
     await expect(tasksBtn).not.toHaveAttribute('aria-current', 'page');
   });
 });

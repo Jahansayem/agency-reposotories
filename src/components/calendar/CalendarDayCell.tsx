@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { GripVertical, Clock, AlertTriangle, Bell, CheckCircle2, X, Repeat } from 'lucide-react';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice';
 import { Todo } from '@/types/todo';
 import {
   CATEGORY_COLORS,
@@ -163,7 +164,7 @@ function DraggableTaskItem({
       </button>
       {/* Quick action buttons — visible on hover */}
       {(onQuickComplete || onToggleWaiting) && (
-        <div className="flex items-center gap-1 flex-shrink-0 mt-1 opacity-0 group-hover/task:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 flex-shrink-0 mt-1 opacity-0 group-hover/task:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
           {onQuickComplete && !todo.completed && (
             <button
               onClick={(e) => {
@@ -171,6 +172,7 @@ function DraggableTaskItem({
                 onQuickComplete(todo.id);
               }}
               className="text-[var(--text-muted)] hover:text-emerald-500 transition-colors"
+              data-testid={`quick-complete-${todo.id}`}
               aria-label="Mark complete"
               title="Mark complete"
             >
@@ -188,6 +190,7 @@ function DraggableTaskItem({
                   ? 'text-amber-500 hover:text-[var(--text-muted)]'
                   : 'text-[var(--text-muted)] hover:text-amber-500'
               }`}
+              data-testid={`quick-waiting-${todo.id}`}
               aria-label={todo.waiting_for_response ? 'Remove waiting status' : 'Mark as waiting'}
               title={todo.waiting_for_response ? 'Remove waiting status' : 'Mark as waiting'}
             >
@@ -224,6 +227,7 @@ export default function CalendarDayCell({
   const quickAddInputRef = useRef<HTMLInputElement>(null);
   const cellRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const isTouch = useIsTouchDevice();
 
   const dateKey = format(date, 'yyyy-MM-dd');
 
@@ -242,9 +246,14 @@ export default function CalendarDayCell({
   }${todos.length > 0 ? `, ${todos.length} task${todos.length !== 1 ? 's' : ''}` : ''}`;
 
   const handleCellClick = useCallback(() => {
-    // Always navigate to day view on click; popup is shown on hover
+    if (isTouch && todos.length > 0 && !showPopup) {
+      // Touch: first tap opens popup instead of navigating
+      setShowPopup(true);
+      return;
+    }
+    // Desktop: always navigate. Touch with popup open: navigate on second tap.
     onClick();
-  }, [onClick]);
+  }, [onClick, isTouch, todos.length, showPopup]);
 
   // Close popup when drag ends (isDragActive transitions from true to false)
   // Without this, the popup can get stuck open because onMouseLeave won't fire
@@ -274,6 +283,21 @@ export default function CalendarDayCell({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showPopup]);
 
+  // Close popup on outside tap (touch devices)
+  useEffect(() => {
+    if (!showPopup || !isTouch) return;
+
+    function handleTouchOutside(e: TouchEvent) {
+      const container = cellRef.current?.parentElement;
+      if (container && !container.contains(e.target as Node)) {
+        setShowPopup(false);
+      }
+    }
+
+    document.addEventListener('touchstart', handleTouchOutside, { passive: true });
+    return () => document.removeEventListener('touchstart', handleTouchOutside);
+  }, [showPopup, isTouch]);
+
   // Determine popup positioning based on cell position in grid
   const popupHorizontal = columnIndex !== undefined && columnIndex >= 5 ? 'right-0' : 'left-0';
   // Flip popup above the cell when in the bottom half of the grid
@@ -284,9 +308,9 @@ export default function CalendarDayCell({
   const heatmapClass =
     isCurrentMonth && !isOver && !isToday
       ? todos.length >= 7
-        ? 'bg-red-500/5'
+        ? 'bg-red-500/5 dark:bg-red-500/10'
         : todos.length >= 4
-          ? 'bg-amber-500/5'
+          ? 'bg-amber-500/5 dark:bg-amber-500/8'
           : ''
       : '';
 
@@ -338,10 +362,11 @@ export default function CalendarDayCell({
     <div
       ref={setDroppableRef}
       className="relative"
+      data-testid={`calendar-cell-${dateKey}`}
       data-cell-row={rowIndex}
       data-cell-col={columnIndex}
-      onMouseEnter={() => !isDragActive && !showPopup && todos.length > 0 && setShowPopup(true)}
-      onMouseLeave={() => !isDragActive && setShowPopup(false)}
+      onMouseEnter={() => !isTouch && !isDragActive && !showPopup && todos.length > 0 && setShowPopup(true)}
+      onMouseLeave={() => !isTouch && !isDragActive && setShowPopup(false)}
     >
       <motion.button
         ref={cellRef}
@@ -408,87 +433,111 @@ export default function CalendarDayCell({
             onClick={(e) => e.stopPropagation()}
             placeholder="Quick add..."
             aria-label={`Quick add task for ${format(date, 'MMMM d')}`}
+            data-testid="calendar-quickadd-input"
             className="w-full text-xs bg-transparent border-b border-[var(--border)] focus:border-[var(--accent)] outline-none text-[var(--foreground)] placeholder:text-[var(--text-muted)] py-0.5"
           />
         )}
 
-        {/* Task Previews */}
+        {/* Task Previews — full text on sm+, dots-only on mobile */}
         {todos.length > 0 && (
-          <div className="w-full flex-1 flex flex-col gap-0.5 min-h-0 overflow-hidden" aria-hidden="true">
-            {todos.slice(0, 3).map((todo) => {
-              const cat = todo.category || 'other';
-              const isOverdue = !todo.completed && isTaskOverdue(todo.due_date);
-              const isAtRisk = todo.renewal_status === 'at-risk';
-              const isWaiting = todo.waiting_for_response;
-              const waitingOverdue = isWaiting
-                ? isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours)
-                : false;
-              const hasIncompleteSubtasks = todo.subtasks?.some((s) => !s.completed);
-              const showSegmentDot =
-                todo.customer_segment === 'elite' || todo.customer_segment === 'premium';
-              return (
-                <div
-                  key={todo.id}
-                  className="flex items-center gap-1 px-1 py-0.5 rounded text-[10px] sm:text-xs truncate bg-[var(--surface)]/60"
-                >
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
+          <>
+            {/* Mobile: colored dots + count badge */}
+            <div className="w-full flex-1 flex flex-col gap-0.5 sm:hidden" aria-hidden="true">
+              <div className="flex items-center gap-1 flex-wrap">
+                {todos.slice(0, 6).map((todo) => {
+                  const cat = todo.category || 'other';
+                  const isOverdue = !todo.completed && isTaskOverdue(todo.due_date);
+                  return (
                     <div
-                      className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[cat]}`}
-                      title={CATEGORY_LABELS[cat]}
+                      key={todo.id}
+                      className={`w-2 h-2 rounded-full ${isOverdue ? 'bg-red-500' : CATEGORY_COLORS[cat]}`}
+                      title={todo.customer_name || todo.text}
                     />
-                    {showSegmentDot && (
+                  );
+                })}
+                {todos.length > 6 && (
+                  <span className="text-[9px] text-[var(--text-muted)]">+{todos.length - 6}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop (sm+): full text previews */}
+            <div className="w-full flex-1 flex-col gap-0.5 min-h-0 overflow-hidden hidden sm:flex" aria-hidden="true">
+              {todos.slice(0, 3).map((todo) => {
+                const cat = todo.category || 'other';
+                const isOverdue = !todo.completed && isTaskOverdue(todo.due_date);
+                const isAtRisk = todo.renewal_status === 'at-risk';
+                const isWaiting = todo.waiting_for_response;
+                const waitingOverdue = isWaiting
+                  ? isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours)
+                  : false;
+                const hasIncompleteSubtasks = todo.subtasks?.some((s) => !s.completed);
+                const showSegmentDot =
+                  todo.customer_segment === 'elite' || todo.customer_segment === 'premium';
+                return (
+                  <div
+                    key={todo.id}
+                    className="flex items-center gap-1 px-1 py-0.5 rounded text-xs truncate bg-[var(--surface)]/60"
+                  >
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
                       <div
-                        className={`w-1.5 h-1.5 rounded-full ${SEGMENT_COLORS[todo.customer_segment!]}`}
-                        title={SEGMENT_LABELS[todo.customer_segment!]}
+                        className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[cat]}`}
+                        title={CATEGORY_LABELS[cat]}
+                      />
+                      {showSegmentDot && (
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${SEGMENT_COLORS[todo.customer_segment!]}`}
+                          title={SEGMENT_LABELS[todo.customer_segment!]}
+                        />
+                      )}
+                    </div>
+                    {isWaiting && (
+                      <Clock
+                        className={`w-2.5 h-2.5 flex-shrink-0 ${waitingOverdue ? 'text-red-500' : 'text-amber-500'}`}
                       />
                     )}
-                  </div>
-                  {isWaiting && (
-                    <Clock
-                      className={`w-2.5 h-2.5 flex-shrink-0 ${waitingOverdue ? 'text-red-500' : 'text-amber-500'}`}
-                    />
-                  )}
-                  <span
-                    className={`truncate ${
-                      isOverdue
-                        ? 'text-red-500'
-                        : isAtRisk
-                          ? 'text-amber-500'
-                          : 'text-[var(--text-light)]'
-                    }`}
-                    title={todo.customer_name || todo.text}
-                  >
-                    {todo.customer_name || todo.text}
-                  </span>
-                  {hasIncompleteSubtasks && (
-                    <span className="text-[8px] text-[var(--text-muted)] flex-shrink-0" title="Has incomplete subtasks">●</span>
-                  )}
-                  {todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD && (
-                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium flex-shrink-0">
-                      {formatPremiumCompact(todo.premium_amount)}
+                    <span
+                      className={`truncate ${
+                        isOverdue
+                          ? 'text-red-500'
+                          : isAtRisk
+                            ? 'text-amber-500'
+                            : 'text-[var(--text-light)]'
+                      }`}
+                      title={todo.customer_name || todo.text}
+                    >
+                      {todo.customer_name || todo.text}
                     </span>
-                  )}
-                  {hasPendingReminders(todo.reminders, todo.reminder_at) && (
-                    <Bell className="w-2.5 h-2.5 text-[var(--text-muted)] flex-shrink-0" />
-                  )}
-                  {todo.recurrence && (
-                    <Repeat className="w-2.5 h-2.5 text-[var(--text-muted)] flex-shrink-0" aria-label={`Repeats ${todo.recurrence}`} />
-                  )}
-                </div>
-              );
-            })}
-            {todos.length > 3 && (
-              <span
-                className="text-[10px] text-[var(--accent)] font-medium px-1 cursor-pointer hover:underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPopup(true);
-                }}
-              >
-                +{todos.length - 3} more
-              </span>
-            )}
-          </div>
+                    {hasIncompleteSubtasks && (
+                      <span className="text-[8px] text-[var(--text-muted)] flex-shrink-0" title="Has incomplete subtasks">●</span>
+                    )}
+                    {todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD && (
+                      <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium flex-shrink-0">
+                        {formatPremiumCompact(todo.premium_amount)}
+                      </span>
+                    )}
+                    {hasPendingReminders(todo.reminders, todo.reminder_at) && (
+                      <Bell className="w-2.5 h-2.5 text-[var(--text-muted)] flex-shrink-0" />
+                    )}
+                    {todo.recurrence && (
+                      <Repeat className="w-2.5 h-2.5 text-[var(--text-muted)] flex-shrink-0" aria-label={`Repeats ${todo.recurrence}`} />
+                    )}
+                  </div>
+                );
+              })}
+              {todos.length > 3 && (
+                <span
+                  className="text-[10px] text-[var(--accent)] font-medium px-1 cursor-pointer hover:underline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPopup(true);
+                  }}
+                >
+                  +{todos.length - 3} more
+                </span>
+              )}
+            </div>
+          </>
         )}
       </motion.button>
 
@@ -503,6 +552,7 @@ export default function CalendarDayCell({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
             transition={{ duration: 0.15 }}
+            data-testid={`calendar-popup-${dateKey}`}
             className={`absolute z-[500] ${popupVertical} ${popupHorizontal} min-w-[220px] max-w-[280px] p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)]`}
             style={{ pointerEvents: 'auto' }}
             onMouseEnter={() => setShowPopup(true)}

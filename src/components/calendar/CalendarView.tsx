@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronRight,
@@ -34,6 +34,7 @@ import MonthView from './MonthView';
 import WeekView from './WeekView';
 import DayView from './DayView';
 import MiniCalendar from './MiniCalendar';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice';
 
 interface CalendarViewProps {
   todos: Todo[];
@@ -99,6 +100,7 @@ export default function CalendarView({
   onQuickAdd,
 }: CalendarViewProps) {
   const toast = useToast();
+  const isTouch = useIsTouchDevice();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [selectedCategories, setSelectedCategories] = useState<Set<DashboardTaskCategory>>(
@@ -137,6 +139,22 @@ export default function CalendarView({
     setCurrentDate(today);
   }, [currentDate]);
 
+  // Swipe navigation for touch devices (month/day views only, not week which has horizontal scroll)
+  const SWIPE_THRESHOLD = 50;
+  const SWIPE_VELOCITY = 300;
+  const handleSwipeEnd = useCallback((_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (viewMode === 'week') return; // Week has horizontal scroll, skip swipe nav
+    const { offset, velocity } = info;
+    const swipe = offset.x;
+    const isTriggered = Math.abs(swipe) > SWIPE_THRESHOLD || Math.abs(velocity.x) > SWIPE_VELOCITY;
+    if (!isTriggered) return;
+    if (swipe > 0) {
+      goToPrevious(); // Swipe right = go back
+    } else {
+      goToNext(); // Swipe left = go forward
+    }
+  }, [viewMode, goToPrevious, goToNext]);
+
   const handleMiniCalendarDateClick = useCallback((date: Date) => {
     setDirection(date > currentDate ? 'right' : 'left');
     setCurrentDate(date);
@@ -166,7 +184,14 @@ export default function CalendarView({
       // Only handle shortcuts when this component is in the DOM and visible
       if (!containerRef.current || containerRef.current.offsetParent === null) return;
 
-      // Skip when a modal/dialog is open
+      // Escape closes filter menu even when it's the open dialog
+      if (e.key === 'Escape' && showFilterMenu) {
+        setShowFilterMenu(false);
+        e.stopPropagation();
+        return;
+      }
+
+      // Skip when a modal/dialog is open (filter dropdown or otherwise)
       if (document.querySelector('[role="dialog"]')) return;
 
       // Skip when typing in inputs
@@ -181,12 +206,6 @@ export default function CalendarView({
       const isGridFocused = target.getAttribute('role') === 'grid';
 
       switch (e.key) {
-        case 'Escape':
-          if (showFilterMenu) {
-            setShowFilterMenu(false);
-            e.stopPropagation();
-          }
-          break;
         case 'd':
         case 'D':
           setViewMode('day');
@@ -411,6 +430,7 @@ export default function CalendarView({
     return (
       <button
         onClick={() => setShowFilterMenu(!showFilterMenu)}
+        data-testid="calendar-filter-btn"
         aria-expanded={showFilterMenu}
         aria-haspopup="true"
         className={`
@@ -442,6 +462,7 @@ export default function CalendarView({
           {/* Previous Button */}
           <button
             onClick={goToPrevious}
+            data-testid="calendar-prev"
             className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors print:hidden"
             aria-label={`Previous ${navLabel}`}
           >
@@ -451,6 +472,7 @@ export default function CalendarView({
           {/* Date Display */}
           <AnimatePresence mode="wait" custom={direction}>
             <motion.h2
+              data-testid="calendar-header"
               key={getHeaderKey(viewMode, currentDate)}
               custom={direction}
               variants={headerVariants}
@@ -467,6 +489,7 @@ export default function CalendarView({
           {/* Next Button */}
           <button
             onClick={goToNext}
+            data-testid="calendar-next"
             className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors print:hidden"
             aria-label={`Next ${navLabel}`}
           >
@@ -476,6 +499,7 @@ export default function CalendarView({
           {/* Today Button */}
           <button
             onClick={goToToday}
+            data-testid="calendar-today"
             aria-label="Go to today"
             className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors print:hidden ${!viewIncludesToday ? 'animate-pulse ring-2 ring-[var(--accent)]/50' : ''}`}
           >
@@ -520,7 +544,7 @@ export default function CalendarView({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] z-[100]"
+                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] z-[400] max-h-[400px] overflow-y-auto"
                   >
                     <div className="flex items-center gap-2 px-2 py-1.5 mb-2 border-b border-[var(--border)]">
                       <button
@@ -560,7 +584,7 @@ export default function CalendarView({
                             >
                               {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                             </div>
-                            <div className={`w-3 h-3 rounded-full ${CATEGORY_COLORS[category]}`} />
+                            <div className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[category]}`} />
                             <span className="flex-1 text-left text-sm text-[var(--foreground)]">
                               {CATEGORY_LABELS[category]}
                             </span>
@@ -613,8 +637,14 @@ export default function CalendarView({
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
-        {/* Main View */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Main View — swipe gesture on touch for month/day navigation */}
+        <motion.div
+          className="flex-1 flex flex-col overflow-hidden touch-pan-y"
+          drag={isTouch && viewMode !== 'week' ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.15}
+          onDragEnd={handleSwipeEnd}
+        >
           {viewMode === 'month' && (
             <MonthView
               currentMonth={currentDate}
@@ -654,7 +684,7 @@ export default function CalendarView({
               onQuickAdd={onQuickAdd}
             />
           )}
-        </div>
+        </motion.div>
 
         {/* Sidebar: Mini Calendar + Category Legend (visible on larger screens) */}
         <div className="hidden lg:flex flex-col w-56 border-l border-[var(--border)] bg-[var(--surface)] print:hidden">

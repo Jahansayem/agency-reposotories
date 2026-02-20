@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragStartEvent,
@@ -91,14 +92,15 @@ function DroppableDayColumn({
       ref={setNodeRef}
       role="region"
       aria-label={format(day, 'EEEE, MMMM d')}
+      data-is-today={today || undefined}
       className={`
-        flex flex-col sm:flex-col rounded-lg border overflow-hidden sm:min-h-[200px] transition-all
+        min-w-[160px] snap-start sm:min-w-0 flex flex-col sm:flex-col rounded-lg border overflow-hidden sm:min-h-[200px] transition-all
         ${isOver
           ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/20 border-[var(--accent)]'
           : today
             ? 'ring-2 ring-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/10'
             : isWeekend
-              ? 'border-[var(--border)] bg-[var(--surface)]/50 opacity-75'
+              ? 'border-[var(--border)] bg-[var(--surface)]/50'
               : 'border-[var(--border)] bg-[var(--surface-2)]'
         }
       `}
@@ -232,10 +234,23 @@ export default function WeekView({
   onToggleWaiting,
 }: WeekViewProps) {
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
+  const weekGridRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to today's column on mobile
+  useEffect(() => {
+    if (!weekGridRef.current) return;
+    const todayCol = weekGridRef.current.querySelector('[data-is-today="true"]');
+    if (todayCol) {
+      todayCol.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
+  }, [currentDate]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
     })
   );
 
@@ -286,6 +301,7 @@ export default function WeekView({
     <div className="flex-1 p-2 sm:p-4 overflow-auto" role="region" aria-label="Week view">
       <AnimatePresence mode="popLayout" custom={direction}>
         <motion.div
+          ref={weekGridRef}
           key={format(startOfWeek(currentDate), 'yyyy-MM-dd')}
           custom={direction}
           variants={weekVariants}
@@ -293,7 +309,7 @@ export default function WeekView({
           animate="center"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 h-full"
+          className="flex overflow-x-auto snap-x snap-mandatory gap-2 sm:grid sm:grid-cols-4 md:grid-cols-7 sm:overflow-visible h-full"
         >
           {weekDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');
