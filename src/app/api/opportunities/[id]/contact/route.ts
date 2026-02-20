@@ -152,15 +152,31 @@ export async function GET(
     }
 
     // Transform data to include user info at top level
-    const contactHistory: ContactHistoryRecord[] = (data || []).map((record: any) => ({
+    interface ContactHistoryRow {
+      id: string;
+      opportunity_id: string;
+      user_id: string;
+      contact_method: ContactMethod;
+      contact_outcome?: ContactOutcome;
+      notes?: string;
+      next_action?: string;
+      next_action_date?: string;
+      contacted_at: string;
+      created_at: string;
+      users?: {
+        name: string;
+        color: string;
+      };
+    }
+    const contactHistory: ContactHistoryRecord[] = ((data || []) as unknown as ContactHistoryRow[]).map((record) => ({
       id: record.id,
       opportunity_id: record.opportunity_id,
       user_id: record.user_id,
       contact_method: record.contact_method,
-      contact_outcome: record.contact_outcome,
-      notes: record.notes,
-      next_action: record.next_action,
-      next_action_date: record.next_action_date,
+      contact_outcome: record.contact_outcome || ('no_answer' as ContactOutcome),
+      notes: record.notes || null,
+      next_action: record.next_action || null,
+      next_action_date: record.next_action_date || null,
       contacted_at: record.contacted_at,
       created_at: record.created_at,
       user_name: record.users?.name,

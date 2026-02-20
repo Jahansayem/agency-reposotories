@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyAgencyAccess } from '@/lib/agencyAuth';
-import type { CustomerInteractionWithTask } from '@/types/interaction';
+import type { CustomerInteractionWithTask, InteractionType } from '@/types/interaction';
 
 // Create Supabase client lazily to avoid build-time env var access
 function getSupabaseClient() {
@@ -94,15 +94,28 @@ export async function GET(
     }
 
     // Collect task IDs for related task lookup
-    const taskIds = (interactions || [])
-      .filter((i: any) => i.task_id)
-      .map((i: any) => i.task_id as string);
+    interface InteractionRow {
+      task_id?: string;
+      id: string;
+      customer_id: string;
+      agency_id: string;
+      interaction_type: InteractionType;
+      summary: string;
+      details?: Record<string, any> | null; // eslint-disable-line @typescript-eslint/no-explicit-any
+      created_by: string;
+      created_at: string;
+      users?: { name: string };
+    }
+    const typedInteractions = (interactions || []) as unknown as InteractionRow[];
+    const taskIds = typedInteractions
+      .filter((i) => i.task_id)
+      .map((i) => i.task_id as string);
 
     // Dedupe task IDs
     const uniqueTaskIds = [...new Set(taskIds)];
 
     // Fetch related tasks if any
-    let tasksMap: Record<string, { id: string; text: string; completed: boolean }> = {};
+    const tasksMap: Record<string, { id: string; text: string; completed: boolean }> = {};
     if (uniqueTaskIds.length > 0) {
       let tasksQuery = supabase
         .from('todos')
@@ -127,14 +140,14 @@ export async function GET(
     }
 
     // Transform to camelCase response format
-    const formattedInteractions: CustomerInteractionWithTask[] = (interactions || []).map((interaction: any) => {
+    const formattedInteractions: CustomerInteractionWithTask[] = ((interactions || []) as unknown as InteractionRow[]).map((interaction) => {
       const result: CustomerInteractionWithTask = {
         id: interaction.id,
         customerId: interaction.customer_id,
         agencyId: interaction.agency_id,
         interactionType: interaction.interaction_type,
         summary: interaction.summary,
-        details: interaction.details,
+        details: interaction.details ?? null,
         taskId: interaction.task_id || undefined,
         createdBy: interaction.created_by,
         createdByName: interaction.users?.name || undefined,

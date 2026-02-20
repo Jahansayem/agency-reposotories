@@ -192,7 +192,11 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    const agencies = (data || []).map((m: any) => ({
+    const agencies = ((data || []) as unknown as Array<{
+      agencies: Agency;
+      role: string;
+      is_default_agency: boolean;
+    }>).map((m) => ({
       ...m.agencies,
       user_role: m.role,
       is_default: m.is_default_agency,

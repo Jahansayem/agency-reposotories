@@ -165,7 +165,7 @@ Respond with ONLY the JSON object, no other text.`;
       ...redactAIResponse({
         content: responseText,
         model: 'claude-sonnet-4-20250514',
-        stopReason: message.stop_reason,
+        stopReason: message.stop_reason || undefined,
         inputTokens: message.usage?.input_tokens,
         outputTokens: message.usage?.output_tokens,
         requestId,
