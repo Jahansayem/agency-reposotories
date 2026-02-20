@@ -182,41 +182,56 @@ export default function AppShell({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command palette: Cmd/Ctrl + K
+      // Check if user is typing in an input/textarea/contentEditable
+      const target = e.target as HTMLElement;
+      const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+      // Command palette: Cmd/Ctrl + K (allow even in inputs — standard pattern)
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandPaletteOpen(prev => !prev);
+        return;
       }
 
-      // Toggle sidebar: Cmd/Ctrl + B
+      // Toggle sidebar: Cmd/Ctrl + B — skip when in inputs (conflicts with bold)
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-        e.preventDefault();
-        setSidebarCollapsed(prev => !prev);
+        if (!isInInput) {
+          e.preventDefault();
+          setSidebarCollapsed(prev => !prev);
+        }
+        return;
       }
 
       // Keyboard shortcuts modal: ? key
       if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // Don't trigger if user is typing in an input/textarea
-        const target = e.target as HTMLElement;
-        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-
-        if (!isInputField) {
+        if (!isInInput) {
           e.preventDefault();
           setShowShortcuts(prev => !prev);
         }
+        return;
       }
 
       // Close panels on Escape
       if (e.key === 'Escape') {
+        // Always allow closing modals/overlays
         if (showShortcuts) {
           setShowShortcuts(false);
-        } else if (commandPaletteOpen) {
+          return;
+        }
+        if (commandPaletteOpen) {
           setCommandPaletteOpen(false);
-        } else if (rightPanel) {
+          return;
+        }
+        // Don't close the task detail panel if user is editing inside it
+        if (isInInput) return;
+        if (rightPanel) {
           setRightPanel(null);
-        } else if (mobileSheetOpen) {
+          return;
+        }
+        if (mobileSheetOpen) {
           setMobileSheetOpen(false);
           setMobileSheetContent(null);
+          return;
         }
       }
     };
