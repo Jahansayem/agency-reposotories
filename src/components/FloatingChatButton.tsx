@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { useAppShell } from './layout/AppShell';
 import { ChatPanelSkeleton } from './LoadingSkeletons';
 import { AuthUser, ChatConversation } from '@/types/todo';
-import { logger } from '@/lib/logger';
-import { useAgency } from '@/contexts/AgencyContext';
+import { useUnreadCount } from '@/contexts/UnreadCountContext';
 import { useTodoStore } from '@/store/todoStore';
 
 const CHAT_STATE_KEY = 'floating_chat_last_conversation';
@@ -53,11 +51,13 @@ export default function FloatingChatButton({
   onTaskLinkClick,
 }: FloatingChatButtonProps) {
   const { activeView } = useAppShell();
-  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
   const bulkBarVisible = useTodoStore((s) => s.bulkActions.selectedTodos.size > 0);
+  // Use shared unread count context instead of a separate Supabase subscription.
+  // This avoids a duplicate real-time channel and keeps the count consistent
+  // with NavigationSidebar and EnhancedBottomNav.
+  const { unreadCount } = useUnreadCount();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   // Restore last conversation from localStorage
   const [lastConversation, setLastConversation] = useState<ChatConversation | null>(() => {
@@ -93,120 +93,6 @@ export default function FloatingChatButton({
   // Don't show button when already on chat view
   const shouldShow = activeView !== 'chat';
 
-  // Fetch unread message count
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !currentUser.name) return;
-
-    const fetchUnreadCount = async () => {
-      try {
-        // Get messages not read by current user
-        // We need to fetch recipient and created_by to filter properly
-        let query = supabase
-          .from('messages')
-          .select('id, read_by, recipient, created_by')
-          .not('created_by', 'eq', currentUser.name)
-          .is('deleted_at', null);
-
-        if (isMultiTenancyEnabled && currentAgencyId) {
-          query = query.eq('agency_id', currentAgencyId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        // Determine what conversation will be shown when chat opens
-        // If we have a persisted conversation, don't count those messages as unread
-        const persistedConversationType = lastConversation?.type;
-        const persistedDmUser = persistedConversationType === 'dm' ? lastConversation?.userName : null;
-
-        // Get list of valid user names (users we can actually show conversations for)
-        const validUserNames = new Set(users.map(u => u.name));
-
-        // Count messages where:
-        // 1. Current user is not in read_by array
-        // 2. Message is either a team message (no recipient) OR a DM to the current user
-        // 3. Message is NOT from the persisted conversation (which will be shown immediately)
-        // 4. For DMs, the sender must be a valid user (so we can show their conversation)
-        const unread = data?.filter((msg) => {
-          // Skip if already read
-          if (msg.read_by?.includes(currentUser.name)) return false;
-
-          // Team message (no recipient)
-          if (!msg.recipient) {
-            // Skip if team chat is the persisted conversation
-            if (persistedConversationType === 'team') return false;
-            return true;
-          }
-
-          // DM to current user
-          if (msg.recipient === currentUser.name) {
-            // Skip if sender is not in the users list (e.g., "System" messages)
-            // These can't be viewed in the UI so shouldn't show as unread
-            if (!validUserNames.has(msg.created_by)) return false;
-            // Skip if this DM is from the persisted conversation user
-            if (persistedDmUser && msg.created_by === persistedDmUser) return false;
-            return true;
-          }
-
-          // DM between other users - don't count it
-          return false;
-        }).length || 0;
-
-        setUnreadCount(unread);
-      } catch (err) {
-        logger.error('Error fetching unread count', err as Error, { component: 'FloatingChatButton', action: 'fetchUnreadCount', userName: currentUser.name });
-      }
-    };
-
-    fetchUnreadCount();
-
-    const channelName = isMultiTenancyEnabled && currentAgencyId
-      ? `floating-chat-messages-${currentAgencyId}`
-      : 'floating-chat-messages';
-
-    const subscriptionConfig: {
-      event: '*';
-      schema: 'public';
-      table: 'messages';
-      filter?: string;
-    } = {
-      event: '*',
-      schema: 'public',
-      table: 'messages',
-    };
-
-    if (isMultiTenancyEnabled && currentAgencyId) {
-      subscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
-    }
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        subscriptionConfig,
-        () => {
-          fetchUnreadCount();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser.name, lastConversation, currentAgencyId, isMultiTenancyEnabled, users]);
-
-  // Clear unread count when opening chat
-  useEffect(() => {
-    if (isOpen) {
-      // Delay to allow chat to mark messages as read
-      const timer = setTimeout(() => {
-        setUnreadCount(0);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
   if (!shouldShow) return null;
 
   return (
@@ -228,30 +114,35 @@ export default function FloatingChatButton({
         aria-label={`Open chat${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <MessageCircle className="w-6 h-6 text-white" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
       </motion.button>
 
-      {/* Chat Popup - Google Chat style */}
+      {/* Chat Popup - Standard modal pattern: backdrop WRAPS popup.
+          Clicking backdrop closes chat. Popup stops propagation so
+          clicks inside it (including back button) never reach the backdrop. */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* Light backdrop - click to close */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-[200]"
-              onClick={() => setIsOpen(false)}
-            />
-
-            {/* Chat Popup Window - z-index MUST be above backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[200]"
+            onClick={() => setIsOpen(false)}
+          >
+            {/* Chat Popup Window — stops propagation so no click reaches backdrop */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+              onClick={(e) => e.stopPropagation()}
               className={`
-                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6 z-[201]
+                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6
                 w-[360px] sm:w-[400px] h-[500px] max-h-[70vh]
                 flex flex-col
                 rounded-[var(--radius-xl)] overflow-hidden
@@ -265,6 +156,7 @@ export default function FloatingChatButton({
                   currentUser={currentUser}
                   users={users}
                   docked={true}
+                  embedded={true}
                   initialConversation={lastConversation}
                   onConversationChange={handleConversationChange}
                   onClose={() => setIsOpen(false)}
@@ -275,7 +167,7 @@ export default function FloatingChatButton({
                 />
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </>

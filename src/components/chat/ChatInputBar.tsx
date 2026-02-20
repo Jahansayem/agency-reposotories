@@ -111,6 +111,9 @@ export const ChatInputBar = memo(function ChatInputBar({
   useEffect(() => {
     if (editingMessage) {
       setEditText(editingMessage.text);
+      // Close popups when entering edit mode
+      setShowEmojiPicker(false);
+      setShowMentions(false);
     } else {
       setEditText('');
     }
@@ -233,17 +236,21 @@ export const ChatInputBar = memo(function ChatInputBar({
     }
   }, [editingMessage, replyingTo, handleSend, handleSaveEditClick, onCancelReply, onCancelEdit]);
 
-  // Handle click outside emoji picker
+  // Handle click outside emoji picker and mention autocomplete
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
       }
+      // Also dismiss mentions if clicking outside the input area
+      if (showMentions && inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        setShowMentions(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showMentions]);
 
   // Get placeholder text based on conversation
   const getPlaceholder = () => {

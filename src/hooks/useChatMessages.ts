@@ -52,6 +52,10 @@ export function useChatMessages({
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  // Fetch version counter to prevent race conditions when switching conversations rapidly.
+  // Each fetchMessages call increments this; stale responses are discarded.
+  const fetchVersionRef = useRef(0);
+
   const messagesRef = useRef<ChatMessage[]>(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
@@ -63,6 +67,9 @@ export function useChatMessages({
     if (isMultiTenancyEnabled && agencyLoading) {
       return;
     }
+
+    // Increment fetch version to detect stale responses from rapid conversation switches
+    const thisVersion = ++fetchVersionRef.current;
 
     setLoading(true);
 
@@ -91,6 +98,9 @@ export function useChatMessages({
       .order('created_at', { ascending: false })
       .limit(MESSAGES_PER_PAGE);
 
+    // Discard result if a newer fetch was started while this one was in flight
+    if (fetchVersionRef.current !== thisVersion) return;
+
     if (error) {
       logger.error('Error fetching messages', error, { component: 'useChatMessages' });
     } else {
@@ -114,10 +124,11 @@ export function useChatMessages({
     setIsLoadingMore(true);
     const oldestMessage = currentMessages[0];
 
+    // Use composite cursor (created_at + id) to handle tie-breaking for same-timestamp messages
     let query = supabase
       .from('messages')
       .select('*')
-      .lt('created_at', oldestMessage.created_at);
+      .or(`created_at.lt.${oldestMessage.created_at},and(created_at.eq.${oldestMessage.created_at},id.lt.${oldestMessage.id})`);
 
     // Add agency filter if multi-tenancy is enabled
     if (isMultiTenancyEnabled && currentAgencyId) {
@@ -184,14 +195,14 @@ export function useChatMessages({
 
   // Group messages by sender and time
   const groupedMessages = useMemo(() => {
-    return filteredMessages.reduce((acc, msg, idx) => {
-      const prevMsg = filteredMessages[idx - 1];
-      const isGrouped = prevMsg && prevMsg.created_by === msg.created_by &&
+    return filteredMessages.map((msg, idx) => {
+      const prevMsg = idx > 0 ? filteredMessages[idx - 1] : null;
+      const isGrouped = !!(prevMsg && prevMsg.created_by === msg.created_by &&
         new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 60000 &&
-        !msg.reply_to_id;
+        !msg.reply_to_id);
 
-      return [...acc, { ...msg, isGrouped }];
-    }, [] as (ChatMessage & { isGrouped: boolean })[]);
+      return { ...msg, isGrouped };
+    });
   }, [filteredMessages]);
 
   // Handle new message from subscription
@@ -256,10 +267,16 @@ export function useChatMessages({
 
     if (error) {
       logger.error('Error updating reaction', error, { component: 'useChatMessages' });
-      // Rollback
-      setMessages(prev => prev.map(m =>
-        m.id === messageId ? { ...m, reactions: currentReactions } : m
-      ));
+      // Only rollback the current user's reaction, preserving concurrent changes by others
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        const reactions = (m.reactions || []).filter(r => r.user !== currentUser.name);
+        // Re-add the original reaction if the user had one before
+        if (existingReaction) {
+          reactions.push(existingReaction);
+        }
+        return { ...m, reactions };
+      }));
     }
   }, [currentUser.name]);
 
@@ -383,8 +400,7 @@ export function useChatMessages({
       return m;
     }));
 
-    // Batch update: fire all RPC calls in parallel in a single Promise.all
-    // instead of the old sequential test-first-then-remaining pattern
+    // Batch update: fire all RPC calls in parallel
     try {
       const results = await Promise.all(
         unreadIds.map(messageId =>
@@ -395,13 +411,19 @@ export function useChatMessages({
         )
       );
 
-      // Check if RPC is not available (first call failed)
-      const firstError = results[0]?.error;
-      if (firstError) {
-        // RPC not available — fall back to a single batched update per message
-        // using captured read_by arrays to avoid race conditions
+      // Collect indices of failed RPC calls to fall back for those specific messages
+      const failedIndices: number[] = [];
+      for (let i = 0; i < results.length; i++) {
+        if (results[i]?.error) {
+          failedIndices.push(i);
+        }
+      }
+
+      // Fall back to direct update only for messages whose RPC calls failed
+      if (failedIndices.length > 0) {
+        const failedEntries = failedIndices.map(i => unreadEntries[i]);
         await Promise.all(
-          unreadEntries.map(({ id, readBy }) =>
+          failedEntries.map(({ id, readBy }) =>
             supabase
               .from('messages')
               .update({ read_by: [...readBy, currentUser.name] })

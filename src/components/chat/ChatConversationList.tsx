@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Users, VolumeX, Volume2, Plus } from 'lucide-react';
+import { Users, VolumeX, Volume2 } from 'lucide-react';
 import { ChatConversation, ChatMessage, PresenceStatus } from '@/types/todo';
 
 // Presence status config
@@ -156,17 +156,9 @@ export function ChatConversationList({
           <p className="text-sm mt-2 text-[var(--chat-text-secondary)] max-w-[200px] mx-auto">
             Invite your team members to collaborate and chat in real-time
           </p>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="mt-5 px-5 py-2.5 rounded-[var(--radius-xl)] bg-[var(--accent)] text-[var(--text-inverse)] text-sm font-medium shadow-lg shadow-[var(--accent)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2"
-            aria-label="Invite team members"
-          >
-            <span className="flex items-center gap-2">
-              <Plus className="w-4 h-4" aria-hidden="true" />
-              Invite Team
-            </span>
-          </motion.button>
+          <p className="text-xs mt-3 text-[var(--chat-text-muted)]">
+            Use the team settings to invite members.
+          </p>
         </div>
       )}
     </nav>

@@ -47,6 +47,7 @@ export function useChatSubscription({
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lastTypingBroadcastRef = useRef<number>(0);
   const lastPresenceTimestamps = useRef<Map<string, number>>(new Map());
+  const lastPresenceStatuses = useRef<Map<string, PresenceStatus>>(new Map());
   const presenceIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track refs for callbacks to avoid stale closures
@@ -115,6 +116,9 @@ export function useChatSubscription({
 
       if (staleUsers.length > 0) {
         staleUsers.forEach(user => {
+          // Skip if already marked offline
+          if (lastPresenceStatuses.current.get(user) === 'offline') return;
+          lastPresenceStatuses.current.set(user, 'offline');
           onPresenceUpdateRef.current?.(user, 'offline');
         });
       }
@@ -210,8 +214,11 @@ export function useChatSubscription({
       .channel('presence-channel')
       .on('broadcast', { event: 'presence' }, ({ payload }) => {
         if (payload.user !== currentUserName) {
-          onPresenceUpdateRef.current?.(payload.user, payload.status);
           lastPresenceTimestamps.current.set(payload.user, payload.timestamp || Date.now());
+          // Skip update if status hasn't changed
+          if (lastPresenceStatuses.current.get(payload.user) === payload.status) return;
+          lastPresenceStatuses.current.set(payload.user, payload.status);
+          onPresenceUpdateRef.current?.(payload.user, payload.status);
         }
       })
       .subscribe((status) => {

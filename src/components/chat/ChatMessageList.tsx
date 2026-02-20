@@ -1,9 +1,9 @@
 'use client';
 
-import React, { memo, useCallback, useState, useRef } from 'react';
+import React, { memo, useCallback, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare, Check, CheckCheck, Reply, MoreHorizontal,
+  Check, CheckCheck, Reply, MoreHorizontal,
   Edit3, Trash2, Pin, Plus, ExternalLink, Sparkles, X, Smile, EyeOff
 } from 'lucide-react';
 import { ChatMessage, AuthUser, TapbackType, MessageReaction, ChatConversation, Todo, ChatAttachment } from '@/types/todo';
@@ -44,6 +44,7 @@ interface ChatMessageListProps {
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
   searchQuery?: string;
+  onClearSearch?: () => void;
 }
 
 // Helper to check if a message is a system notification
@@ -252,6 +253,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   isLoadingMore = false,
   onLoadMore,
   searchQuery = '',
+  onClearSearch,
 }: ChatMessageListProps) {
   const canPinMessages = usePermission('can_pin_messages');
   const canDeleteAnyMessage = usePermission('can_delete_any_message');
@@ -267,6 +269,23 @@ export const ChatMessageList = memo(function ChatMessageList({
   // Swipe-to-reply state (Issue #19)
   const [swipeOffsets, setSwipeOffsets] = useState<Map<string, number>>(new Map());
   const [swipingMessageId, setSwipingMessageId] = useState<string | null>(null);
+
+  // Close message menu and tapback menu when clicking outside
+  useEffect(() => {
+    if (!showMessageMenu && !tapbackMessageId) return;
+    const handleClickOutside = () => {
+      setShowMessageMenu(null);
+      setTapbackMessageId(null);
+    };
+    // Use a timeout so the current click event that opened the menu doesn't immediately close it
+    const timerId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(timerId);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showMessageMenu, tapbackMessageId]);
 
   const getUserColor = useCallback((userName: string) => {
     const user = users.find(u => u.name === userName);
@@ -300,8 +319,8 @@ export const ChatMessageList = memo(function ChatMessageList({
   const handleSwipeDragEnd = useCallback((messageId: string, message: ChatMessage, info: { offset: { x: number }, velocity: { x: number } }) => {
     const { offset, velocity } = info;
 
-    // Swipe right threshold: 50px or fast velocity
-    if (offset.x > 50 && velocity.x > 100) {
+    // Swipe right threshold: 50px distance or fast velocity
+    if (offset.x > 50 || (offset.x > 20 && velocity.x > 100)) {
       // Trigger reply
       onReply(message);
 
@@ -334,7 +353,7 @@ export const ChatMessageList = memo(function ChatMessageList({
            date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }, []);
 
-  // Render message text with mentions highlighted
+  // Render message text with mentions and search highlighting
   // NOTE: React automatically escapes text for XSS protection, so we don't need sanitizeHTML here.
   // Manual HTML escaping causes apostrophes to render as &#x27; instead of '
   const renderMessageText = useCallback((text: string) => {
@@ -363,10 +382,37 @@ export const ChatMessageList = memo(function ChatMessageList({
           );
         }
       }
+
+      // Highlight search matches within non-mention text segments
+      if (searchQuery && part) {
+        const escapedQuery = searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const searchRegex = new RegExp(`(${escapedQuery})`, 'gi');
+        const searchParts = part.split(searchRegex);
+        if (searchParts.length > 1) {
+          const lowerQuery = searchQuery.toLowerCase();
+          return (
+            <span key={i}>
+              {searchParts.map((sp, j) =>
+                sp.toLowerCase() === lowerQuery ? (
+                  <mark
+                    key={j}
+                    className="bg-[var(--warning)]/30 text-inherit rounded-sm px-0.5"
+                  >
+                    {sp}
+                  </mark>
+                ) : (
+                  sp
+                )
+              )}
+            </span>
+          );
+        }
+      }
+
       // React automatically escapes plain text for security
       return part;
     });
-  }, [users, currentUser.name]);
+  }, [users, currentUser.name, searchQuery]);
 
   // Loading state - Issue #27: Use skeleton loader instead of spinner
   if (loading) {
@@ -400,8 +446,9 @@ export const ChatMessageList = memo(function ChatMessageList({
             ? `Start a conversation with ${conversation.userName}`
             : 'Select a conversation to get started'}
         </p>
-        {searchQuery && (
+        {searchQuery && onClearSearch && (
           <motion.button
+            onClick={onClearSearch}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="mt-5 px-5 py-2.5 rounded-[var(--radius-xl)] bg-[var(--chat-surface)] hover:bg-[var(--chat-surface-hover)] text-[var(--foreground)] text-sm font-medium transition-colors"
@@ -449,7 +496,8 @@ export const ChatMessageList = memo(function ChatMessageList({
         const userColor = getUserColor(msg.created_by);
         const reactions = msg.reactions || [];
         const readBy = msg.read_by || [];
-        const isLastOwnMessage = isOwn && msgIndex === messages.length - 1;
+        // Show read receipt on the user's most recent message (not just the absolute last message)
+        const isLastOwnMessage = isOwn && !messages.slice(msgIndex + 1).some(m => m.created_by === currentUser.name);
         const showTapbackMenu = tapbackMessageId === msg.id;
         const isHovered = hoveredMessageId === msg.id;
         const isFirstUnread = msg.id === firstUnreadId;

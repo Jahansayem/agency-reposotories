@@ -21,6 +21,7 @@ import { logger } from '@/lib/logger';
 
 // Constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_ATTACHMENTS_PER_USER = 500; // Per-user attachment count limit as a storage guard
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 
 // Supported file types
@@ -161,6 +162,20 @@ export function useChatAttachments() {
         setError(validation.error!);
         return null;
       }
+
+      // Check user's total attachment count as a storage quota guard
+      // Note: For a proper implementation, query attachment sizes from the storage bucket
+      const { count, error: countError } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .not('attachments', 'is', null)
+        .eq('created_by', uploadedBy);
+
+      if (!countError && count !== null && count >= MAX_ATTACHMENTS_PER_USER) {
+        setError(`Storage limit reached (${MAX_ATTACHMENTS_PER_USER} attachments). Please delete some old attachments first.`);
+        return null;
+      }
+      // If quota check fails, allow upload (don't block on quota check failure)
 
       // Generate unique ID
       const attachmentId = uuidv4();

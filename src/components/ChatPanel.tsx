@@ -127,6 +127,9 @@ interface ChatPanelProps {
   onTaskLinkClick?: (todoId: string) => void;
   todosMap?: Map<string, Todo>;
   docked?: boolean;
+  /** When true, skip mobile/tablet overlay wrappers in DockedChatPanel.
+   *  Use when the panel is already inside a popup container (e.g., FloatingChatButton). */
+  embedded?: boolean;
   initialConversation?: ChatConversation | null;
   onConversationChange?: (conversation: ChatConversation | null, showList: boolean) => void;
   /** Close/exit callback for docked mode (navigates back to previous view) */
@@ -140,6 +143,7 @@ export default function ChatPanel({
   onTaskLinkClick,
   todosMap,
   docked = false,
+  embedded = false,
   initialConversation,
   onConversationChange,
   onClose,
@@ -226,6 +230,7 @@ export default function ChatPanel({
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lastPresenceTimestamps = useRef<Map<string, number>>(new Map());
+  const pendingMessageIds = useRef(new Set<string>());
 
   // Use the chat messages hook
   const {
@@ -399,14 +404,25 @@ export default function ChatPanel({
     });
   }, []);
 
+  // Reset transient UI state when switching conversations or going back to list
+  const resetTransientState = useCallback(() => {
+    setShowSearch(false);
+    setSearchInput('');
+    setSearchQuery('');
+    setShowPinnedMessages(false);
+    setReplyingTo(null);
+    setEditingMessage(null);
+  }, []);
+
   // Handle conversation selection
   const selectConversation = useCallback((conv: ChatConversation) => {
+    resetTransientState();
     setConversation(conv);
     setShowConversationList(false);
     const key = getConversationKey(conv);
     setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
     hasInitialScrolled.current = null;
-  }, [getConversationKey]);
+  }, [getConversationKey, resetTransientState]);
 
   // Handle scroll
   const handleScroll = useCallback(() => {
@@ -475,9 +491,15 @@ export default function ChatPanel({
       ...(isMultiTenancyEnabled && currentAgencyId && { agency_id: currentAgencyId }),
     };
 
+    pendingMessageIds.current.add(message.id);
     setMessages((prev) => [...prev, message]);
     setReplyingTo(null);
     scrollToBottom();
+
+    // Clear pending ID after 10 seconds to avoid memory leaks
+    setTimeout(() => {
+      pendingMessageIds.current.delete(message.id);
+    }, 10000);
 
     const { error } = await supabase.from('messages').insert([message]);
 
@@ -776,6 +798,13 @@ export default function ChatPanel({
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new as ChatMessage;
+
+            // Skip if this message was already added optimistically
+            if (pendingMessageIds.current.has(newMsg.id)) {
+              pendingMessageIds.current.delete(newMsg.id);
+              return;
+            }
+
             handleNewMessage(newMsg);
             setTypingUsers(prev => ({ ...prev, [newMsg.created_by]: false }));
 
@@ -833,14 +862,21 @@ export default function ChatPanel({
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED');
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          logger.error('Chat subscription failed', null, { component: 'ChatPanel', status });
+          logger.warn('Chat subscription error, attempting reconnect', { component: 'ChatPanel', status });
+          supabase.removeChannel(messagesChannel);
+          // Re-subscribe will happen on next effect cycle
         }
       });
 
     // Typing channel is managed in a separate conversation-scoped effect below
 
+    // Scope presence channel by agency for multi-tenancy isolation
+    const presenceChannelName = isMultiTenancyEnabled && currentAgencyId
+      ? `presence-channel-${currentAgencyId}`
+      : 'presence-channel';
+
     const presenceChannel = supabase
-      .channel('presence-channel')
+      .channel(presenceChannelName)
       .on('broadcast', { event: 'presence' }, ({ payload }) => {
         if (payload.user !== currentUser.name) {
           setUserPresence(prev => ({ ...prev, [payload.user]: payload.status }));
@@ -884,7 +920,9 @@ export default function ChatPanel({
     if (!isSupabaseConfigured() || !conversation) return;
 
     const convKey = getConversationKey(conversation);
-    const typingChannelName = `typing-channel-${convKey}`;
+    // Scope typing channel by agency for multi-tenancy isolation
+    const agencySuffix = isMultiTenancyEnabled && currentAgencyId ? `-${currentAgencyId}` : '';
+    const typingChannelName = `typing-channel-${convKey}${agencySuffix}`;
 
     // Clear typing state from previous conversation
     setTypingUsers({});
@@ -922,7 +960,7 @@ export default function ChatPanel({
       typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
       typingTimeoutsRef.current.clear();
     };
-  }, [conversation, getConversationKey, currentUser.name]);
+  }, [conversation, getConversationKey, currentUser.name, currentAgencyId, isMultiTenancyEnabled]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -979,7 +1017,7 @@ export default function ChatPanel({
         onInputChange={setDockedInputValue}
         onSendMessage={sendMessage}
         onSelectConversation={selectConversation}
-        onShowConversationList={() => setShowConversationList(true)}
+        onShowConversationList={() => { resetTransientState(); setShowConversationList(true); }}
         onTyping={broadcastTyping}
         getUserColor={getUserColor}
         getInitials={getInitials}
@@ -1017,6 +1055,7 @@ export default function ChatPanel({
           }
         }}
         onClose={onClose}
+        embedded={embedded}
       />
     );
   }
@@ -1108,7 +1147,7 @@ export default function ChatPanel({
                 searchInput={searchInput}
                 filteredMessagesCount={filteredMessages.length}
                 userPresence={userPresence}
-                onBack={() => setShowConversationList(true)}
+                onBack={() => { resetTransientState(); setShowConversationList(true); }}
                 onToggleSearch={() => setShowSearch(!showSearch)}
                 onTogglePinnedMessages={() => setShowPinnedMessages(!showPinnedMessages)}
                 onToggleDndMode={() => setIsDndMode(!isDndMode)}

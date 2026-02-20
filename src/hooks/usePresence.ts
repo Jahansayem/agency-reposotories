@@ -138,10 +138,10 @@ export function usePresence(currentUser?: { name: string; id: string; color: str
 
     updateLocation();
 
-    // Cleanup: prevent updates after unmount and reset tracking flag
+    // Cleanup: prevent updates after unmount
+    // Don't reset isTrackingRef here — let the finally block handle it
     return () => {
       isCancelled = true;
-      isTrackingRef.current = false;
     };
   }, [memoizedLocation, channel, currentUser?.id, currentUser?.name, currentUser?.color]);
 
