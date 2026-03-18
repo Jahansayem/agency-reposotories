@@ -174,7 +174,17 @@ export async function syncOfflineData(): Promise<void> {
 
         // If max retries reached, remove from queue (log error)
         if (item.retries >= MAX_RETRIES) {
-          logger.warn(`Max retries reached for sync item, removing from queue`, { component: 'offlineSync', action: 'syncOfflineData', itemId: item.id });
+          logger.error(`Offline sync item permanently failed after ${MAX_RETRIES} retries`, undefined, {
+            component: 'OfflineSync',
+            itemId: item.id,
+            action: item.type,
+          });
+          // Notify the user that their offline changes were lost
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('offline-sync-failed', {
+              detail: { action: item.type, itemId: item.id }
+            }));
+          }
           await removeFromSyncQueue(item.id);
         }
       }

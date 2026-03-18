@@ -57,7 +57,7 @@ export function ExitFocusModeButton() {
           exit={{ opacity: 0, scale: 0.8, y: 20 }}
           transition={{ duration: 0.2 }}
           onClick={() => setFocusMode(false)}
-          className={`fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg transition-all duration-200 ${
+          className={`fixed bottom-6 left-6 z-[100] flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg transition-all duration-200 ${
             'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}`}
           aria-label="Exit focus mode"
           title="Exit Focus Mode (Ctrl+Shift+F)"

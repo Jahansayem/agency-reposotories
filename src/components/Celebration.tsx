@@ -85,7 +85,7 @@ export function Celebration({ trigger, onComplete, intensity = 'medium' }: Celeb
   if (!trigger && particles.length === 0) return null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-[300]">
       {/* Confetti particles */}
       <AnimatePresence>
         {particles.map((particle) => (

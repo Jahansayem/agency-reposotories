@@ -27,26 +27,30 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { Todo, TodoStatus, TodoPriority, Subtask, type AuthUser, type QuickFilter, type ActivityLogEntry, type WaitingContactType } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
 import { logger } from '@/lib/logger';
+import { isFeatureEnabled } from '@/lib/featureFlags';
 import { useTodoStore, hydrateFocusMode } from '@/store/todoStore';
 import { setReorderingFlag } from '@/hooks';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DragEndEvent } from '@dnd-kit/core';
 import PullToRefresh from './PullToRefresh';
-import StatusLine from './StatusLine';
-import BottomTabs from './BottomTabs';
+
+
 import { ExitFocusModeButton } from './FocusModeToggle';
-import { LoadingState, ErrorState, ConnectionStatus, TodoHeader, TodoFiltersBar, TodoListContent, BulkActionBar } from './todo';
+import { LoadingState, ErrorState, TodoFiltersBar, TodoListContent, BulkActionBar } from './todo';
+import TodoListAppBarContent from './todo/TodoListAppBarContent';
 import { TaskDetailModal } from './task-detail';
 import { useShouldUseSections } from './TaskSections';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAgency } from '@/contexts/AgencyContext';
+import { useToast } from '@/components/ui/Toast';
 import { logActivity } from '@/lib/activityLogger';
-import LiveRegion from './LiveRegion';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskReassignmentNotification } from '@/lib/taskNotifications';
 import { ContextualErrorMessages } from '@/lib/errorMessages';
 import { TodoModals } from './todo';
 import { TodoMergeModal } from './todo/TodoMergeModal';
+import OpportunityMatchBanner from './todo/OpportunityMatchBanner';
+import type { CustomerSegment } from '@/types/customer';
 import {
   StrategicDashboardSkeleton,
   ActivityFeedSkeleton,
@@ -92,6 +96,7 @@ export default function TodoList({
 }: TodoListProps) {
   const userName = currentUser.name;
   const { currentAgencyId } = useAgency();
+  const toast = useToast();
   const canViewArchive = usePermission('can_view_archive');
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
   const canManageTemplates = usePermission('can_manage_templates');
@@ -108,6 +113,12 @@ export default function TodoList({
 
   // Detail modal state
   const [detailTodoId, setDetailTodoId] = useState<string | null>(null);
+
+  // Opportunity match banner state — set after a new task is created
+  const [pendingOpportunityCheck, setPendingOpportunityCheck] = useState<{
+    taskId: string;
+    taskText: string;
+  } | null>(null);
   const detailTodo = useMemo(() =>
     state.todos.find(t => t.id === detailTodoId) || null,
     [state.todos, detailTodoId]
@@ -160,7 +171,35 @@ export default function TodoList({
     clearSelection: state.clearSelection,
     selectAll: state.selectAll,
     openShortcuts: state.modalState.openShortcuts,
+    onToggleComplete: operations.toggleTodo,
+    showToast: (message: string) => toast.success(message),
   });
+
+  // Wrapped addTodo handler that captures the returned task ID and triggers
+  // the opportunity match banner when no customer is pre-linked.
+  const handleAddTodo = useCallback((
+    text: string,
+    priority: 'low' | 'medium' | 'high' | 'urgent',
+    dueDate?: string,
+    assignedTo?: string,
+    subtasks?: Subtask[],
+    transcription?: string,
+    sourceFile?: File,
+    reminderAt?: string,
+    notes?: string,
+    recurrence?: 'daily' | 'weekly' | 'monthly' | null,
+    customer?: import('@/types/customer').LinkedCustomer
+  ) => {
+    const result = operations.addTodo(text, priority, dueDate, assignedTo, subtasks, transcription, sourceFile, reminderAt, notes, recurrence, customer);
+    if (result && !customer?.id) {
+      result.then((newTaskId) => {
+        if (newTaskId) {
+          setPendingOpportunityCheck({ taskId: newTaskId, taskText: text });
+        }
+      }).catch(() => {/* ignore */});
+    }
+    return result;
+  }, [operations.addTodo]);
 
   // Determine if sections should be used
   const shouldUseSections = useShouldUseSections(state.sortOption);
@@ -201,7 +240,8 @@ export default function TodoList({
 
   // Additional task operations (not in extracted hook)
   const confirmDeleteTodo = useCallback(async (id: string) => {
-    const todo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const todo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!todo) return;
 
     const confirmed = confirm(`Delete task: "${todo.text}"?`);
@@ -209,10 +249,14 @@ export default function TodoList({
 
     state.deleteTodoFromStore(id);
 
-    const { error } = await supabase
+    let deleteQuery = supabase
       .from('todos')
       .delete()
       .eq('id', id);
+    if (currentAgencyId) {
+      deleteQuery = deleteQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await deleteQuery;
 
     if (error) {
       logger.error('Error deleting todo', error, { component: 'TodoList' });
@@ -228,18 +272,23 @@ export default function TodoList({
       });
       state.announce(`Task deleted: ${todo.text}`);
     }
-  }, [state.todos, state.deleteTodoFromStore, state.addTodoToStore, state.announce, userName]);
+  }, [state.deleteTodoFromStore, state.addTodoToStore, state.announce, userName, currentAgencyId]);
 
   const assignTodo = useCallback(async (id: string, assignedTo: string | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { assigned_to: assignedTo || undefined });
 
-    const { error } = await supabase
+    let assignQuery = supabase
       .from('todos')
       .update({ assigned_to: assignedTo })
       .eq('id', id);
+    if (currentAgencyId) {
+      assignQuery = assignQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await assignQuery;
 
     if (error) {
       logger.error('Error assigning todo', error, { component: 'TodoList' });
@@ -266,18 +315,23 @@ export default function TodoList({
         );
       }
     }
-  }, [state.todos, state.updateTodoInStore, state.announce, userName]);
+  }, [state.updateTodoInStore, state.announce, userName, currentAgencyId]);
 
   const setDueDate = useCallback(async (id: string, dueDate: string | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { due_date: dueDate || undefined });
 
-    const { error } = await supabase
+    let dueDateQuery = supabase
       .from('todos')
       .update({ due_date: dueDate })
       .eq('id', id);
+    if (currentAgencyId) {
+      dueDateQuery = dueDateQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await dueDateQuery;
 
     if (error) {
       logger.error('Error setting due date', error, { component: 'TodoList' });
@@ -291,27 +345,33 @@ export default function TodoList({
         details: { from: oldTodo.due_date, to: dueDate },
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName, currentAgencyId]);
 
   const setReminder = useCallback(async (id: string, reminderAt: string | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { reminder_at: reminderAt || undefined, reminder_sent: false });
 
-    const { error } = await supabase
+    let reminderQuery = supabase
       .from('todos')
       .update({ reminder_at: reminderAt, reminder_sent: false })
       .eq('id', id);
+    if (currentAgencyId) {
+      reminderQuery = reminderQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await reminderQuery;
 
     if (error) {
       logger.error('Error setting reminder', error, { component: 'TodoList' });
       state.updateTodoInStore(id, { reminder_at: oldTodo.reminder_at });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore, currentAgencyId]);
 
   const markWaiting = useCallback(async (id: string, contactType: WaitingContactType, followUpHours?: number) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, {
@@ -321,7 +381,7 @@ export default function TodoList({
       follow_up_after_hours: followUpHours || 48,
     });
 
-    const { error } = await supabase
+    let waitingQuery = supabase
       .from('todos')
       .update({
         waiting_for_response: true,
@@ -330,6 +390,10 @@ export default function TodoList({
         follow_up_after_hours: followUpHours || 48,
       })
       .eq('id', id);
+    if (currentAgencyId) {
+      waitingQuery = waitingQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await waitingQuery;
 
     if (error) {
       logger.error('Error marking waiting', error, { component: 'TodoList' });
@@ -340,10 +404,11 @@ export default function TodoList({
         follow_up_after_hours: oldTodo.follow_up_after_hours,
       });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore, currentAgencyId]);
 
   const clearWaiting = useCallback(async (id: string) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, {
@@ -352,7 +417,7 @@ export default function TodoList({
       waiting_contact_type: undefined,
     });
 
-    const { error } = await supabase
+    let clearWaitingQuery = supabase
       .from('todos')
       .update({
         waiting_for_response: false,
@@ -360,6 +425,10 @@ export default function TodoList({
         waiting_contact_type: null,
       })
       .eq('id', id);
+    if (currentAgencyId) {
+      clearWaitingQuery = clearWaitingQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await clearWaitingQuery;
 
     if (error) {
       logger.error('Error clearing waiting', error, { component: 'TodoList' });
@@ -369,18 +438,23 @@ export default function TodoList({
         waiting_contact_type: oldTodo.waiting_contact_type,
       });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore, currentAgencyId]);
 
   const setPriority = useCallback(async (id: string, priority: TodoPriority) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { priority });
 
-    const { error } = await supabase
+    let priorityQuery = supabase
       .from('todos')
       .update({ priority })
       .eq('id', id);
+    if (currentAgencyId) {
+      priorityQuery = priorityQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await priorityQuery;
 
     if (error) {
       logger.error('Error setting priority', error, { component: 'TodoList' });
@@ -394,7 +468,7 @@ export default function TodoList({
         details: { from: oldTodo.priority, to: priority },
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName, currentAgencyId]);
 
   const setPrivacy = useCallback(async (id: string, isPrivate: boolean) => {
     const oldTodo = state.todos.find(t => t.id === id);
@@ -423,15 +497,20 @@ export default function TodoList({
   }, [state.todos, state.updateTodoInStore, state.announce, userName]);
 
   const updateText = useCallback(async (id: string, text: string) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { text });
 
-    const { error } = await supabase
+    let textQuery = supabase
       .from('todos')
       .update({ text })
       .eq('id', id);
+    if (currentAgencyId) {
+      textQuery = textQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await textQuery;
 
     if (error) {
       logger.error('Error updating text', error, { component: 'TodoList' });
@@ -445,18 +524,23 @@ export default function TodoList({
         details: { field: 'text' },
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName, currentAgencyId]);
 
   const updateNotes = useCallback(async (id: string, notes: string) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { notes });
 
-    const { error } = await supabase
+    let notesQuery = supabase
       .from('todos')
       .update({ notes })
       .eq('id', id);
+    if (currentAgencyId) {
+      notesQuery = notesQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await notesQuery;
 
     if (error) {
       logger.error('Error updating notes', error, { component: 'TodoList' });
@@ -469,66 +553,77 @@ export default function TodoList({
         todoText: oldTodo.text,
       });
     }
-  }, [state.todos, state.updateTodoInStore, userName]);
+  }, [state.updateTodoInStore, userName, currentAgencyId]);
 
   const setRecurrence = useCallback(async (id: string, recurrence: 'daily' | 'weekly' | 'monthly' | null) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { recurrence: recurrence || undefined });
 
-    const { error } = await supabase
+    let recurrenceQuery = supabase
       .from('todos')
       .update({ recurrence })
       .eq('id', id);
+    if (currentAgencyId) {
+      recurrenceQuery = recurrenceQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await recurrenceQuery;
 
     if (error) {
       logger.error('Error setting recurrence', error, { component: 'TodoList' });
       state.updateTodoInStore(id, { recurrence: oldTodo.recurrence });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore, currentAgencyId]);
 
   const updateSubtasks = useCallback(async (id: string, subtasks: Subtask[]) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { subtasks });
 
-    const { error } = await supabase
-      .from('todos')
-      .update({ subtasks })
-      .eq('id', id);
+    const useNormalizedSchema = isFeatureEnabled('normalized_schema');
+    const { data, error } = await supabase.rpc('todo_update_with_sync', {
+      p_todo_id: id,
+      p_updates: { subtasks },
+      p_sync_normalized: useNormalizedSchema,
+    });
 
-    if (error) {
-      logger.error('Error updating subtasks', error, { component: 'TodoList' });
+    if (error || data?.error) {
+      logger.error('Error updating subtasks', error || new Error(data?.message), { component: 'TodoList' });
       state.updateTodoInStore(id, { subtasks: oldTodo.subtasks });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const updateAttachments = useCallback(async (id: string, attachments: any[]) => {
-    const oldTodo = state.todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!oldTodo) return;
 
     state.updateTodoInStore(id, { attachments });
 
-    const { error } = await supabase
-      .from('todos')
-      .update({ attachments })
-      .eq('id', id);
+    const useNormalizedSchema = isFeatureEnabled('normalized_schema');
+    const { data, error } = await supabase.rpc('todo_update_with_sync', {
+      p_todo_id: id,
+      p_updates: { attachments },
+      p_sync_normalized: useNormalizedSchema,
+    });
 
-    if (error) {
-      logger.error('Error updating attachments', error, { component: 'TodoList' });
+    if (error || data?.error) {
+      logger.error('Error updating attachments', error || new Error(data?.message), { component: 'TodoList' });
       state.updateTodoInStore(id, { attachments: oldTodo.attachments });
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore]);
 
   const handleOpenDetail = useCallback((todoId: string) => {
     setDetailTodoId(todoId);
   }, []);
 
   const handleDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
-    const previousTodo = state.todos.find(t => t.id === id);
-    if (!previousTodo) return;
+    const oldTodo = useTodoStore.getState().todos.find(t => t.id === id);
+    if (!oldTodo) return;
 
     const normalizedUpdates: Partial<Todo> = { ...updates };
     if (updates.completed !== undefined && updates.status === undefined) {
@@ -538,24 +633,28 @@ export default function TodoList({
     }
 
     const updated_at = new Date().toISOString();
-    state.updateTodoInStore(id, { ...normalizedUpdates, updated_at });
+    const updatesWithTimestamp = { ...normalizedUpdates, updated_at };
 
-    const { data, error } = await supabase
+    state.updateTodoInStore(id, updatesWithTimestamp);
+
+    let detailQuery = supabase
       .from('todos')
-      .update({ ...normalizedUpdates, updated_at })
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+      .update(updatesWithTimestamp)
+      .eq('id', id);
+    if (currentAgencyId) {
+      detailQuery = detailQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error } = await detailQuery;
 
-    if (error || !data) {
-      logger.error('Failed to persist task detail update', error ?? new Error('No rows updated'), {
+    if (error) {
+      logger.error('Error updating todo from detail modal', error, {
         component: 'TodoList',
         todoId: id,
         updates: normalizedUpdates,
       });
-      state.updateTodoInStore(id, previousTodo);
+      state.updateTodoInStore(id, oldTodo);
     }
-  }, [state.todos, state.updateTodoInStore]);
+  }, [state.updateTodoInStore, currentAgencyId]);
 
   // Save task as template
   const saveAsTemplate = useCallback(async (name: string, isShared: boolean) => {
@@ -684,7 +783,7 @@ export default function TodoList({
       due_date: finalDueDate,
     });
 
-    const { error: updateError } = await supabase
+    let mergeQuery = supabase
       .from('todos')
       .update({
         notes: combinedNotes,
@@ -693,6 +792,10 @@ export default function TodoList({
         due_date: finalDueDate,
       })
       .eq('id', existingTodoId);
+    if (currentAgencyId) {
+      mergeQuery = mergeQuery.eq('agency_id', currentAgencyId);
+    }
+    const { error: updateError } = await mergeQuery;
 
     if (updateError) {
       logger.error('Error updating existing todo', updateError, { component: 'TodoList' });
@@ -743,7 +846,7 @@ export default function TodoList({
     }
 
     state.modalState.clearDuplicateState();
-  }, [state.modalState.pendingTask, state.todos, state.updateTodoInStore, userName]);
+  }, [state.modalState.pendingTask, state.todos, state.updateTodoInStore, userName, currentAgencyId]);
 
   // Wrapper for mergeTodos to pass current state
   const handleMergeTodos = useCallback((primaryId: string) => {
@@ -762,36 +865,13 @@ export default function TodoList({
   return (
     <PullToRefresh onRefresh={state.refreshTodos}>
       <div className="min-h-screen transition-colors bg-[var(--background)]">
-        <LiveRegion message={state.announcement} />
-
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:px-4 focus:py-2 focus:rounded-[var(--radius-lg)] focus:z-50">
-          Skip to main content
-        </a>
-
-        <TodoHeader
-          currentUser={currentUser}
-          onUserChange={onUserChange}
+        <TodoListAppBarContent
           viewMode={state.viewMode}
           setViewMode={state.setViewMode}
-          onAddTask={() => state.setShowAddTaskModal(true)}
           searchQuery={state.searchQuery}
           setSearchQuery={state.setSearchQuery}
-          showAdvancedFilters={state.showAdvancedFilters}
-          setShowAdvancedFilters={state.setShowAdvancedFilters}
-          onResetFilters={() => {
-            state.setQuickFilter('all');
-            state.setShowCompleted(false);
-            state.setHighPriorityOnly(false);
-            state.setSearchQuery('');
-            state.setStatusFilter('all');
-            state.setAssignedToFilter('all');
-            state.setCustomerFilter('all');
-            state.setHasAttachmentsFilter(null);
-            state.setDateRangeFilter({ start: '', end: '' });
-          }}
         />
 
-        {!state.focusMode && <ConnectionStatus connected={state.connected} />}
         <ExitFocusModeButton />
 
         <div className="flex transition-all duration-300 ease-out min-h-[calc(100vh-72px)]">
@@ -804,20 +884,6 @@ export default function TodoList({
                 {state.quickFilter === 'overdue' && <span className="font-medium text-[var(--danger)]">Overdue</span>}
                 {state.quickFilter === 'all' && state.highPriorityOnly && <span className="font-medium text-[var(--danger)]">All Tasks</span>}
                 {state.highPriorityOnly && <span className="text-[var(--danger)]">• High Priority Only</span>}
-              </div>
-            )}
-
-            {!state.focusMode && (
-              <div className="mb-4">
-                <StatusLine
-                  stats={state.stats}
-                  quickFilter={state.quickFilter}
-                  highPriorityOnly={state.highPriorityOnly}
-                  showCompleted={state.showCompleted}
-                  onFilterAll={() => { state.setQuickFilter('all'); state.setShowCompleted(false); }}
-                  onFilterDueToday={() => state.setQuickFilter('due_today')}
-                  onFilterOverdue={() => state.setQuickFilter('overdue')}
-                />
               </div>
             )}
 
@@ -845,8 +911,6 @@ export default function TodoList({
                 setSortOption={state.setSortOption}
                 searchQuery={state.searchQuery}
                 setSearchQuery={state.setSearchQuery}
-                showMoreDropdown={state.showMoreDropdown}
-                setShowMoreDropdown={state.setShowMoreDropdown}
                 showTemplatePicker={state.showTemplatePicker}
                 setShowTemplatePicker={state.setShowTemplatePicker}
                 showBulkActions={state.showBulkActions}
@@ -972,7 +1036,7 @@ export default function TodoList({
           closeConfirmDialog={state.modalState.closeConfirmDialog}
           showAddTaskModal={state.showAddTaskModal}
           setShowAddTaskModal={state.setShowAddTaskModal}
-          onAddTodo={operations.addTodo}
+          onAddTodo={handleAddTodo}
           templateTodo={state.modalState.templateTodo}
           closeTemplateModal={state.modalState.closeTemplateModal}
           onSaveAsTemplate={saveAsTemplate}
@@ -1016,6 +1080,35 @@ export default function TodoList({
           onMerge={handleMergeTodos}
         />
 
+        {pendingOpportunityCheck && (
+          <OpportunityMatchBanner
+            taskId={pendingOpportunityCheck.taskId}
+            taskText={pendingOpportunityCheck.taskText}
+            agencyId={currentAgencyId ?? ''}
+            existingCustomerId={null}
+            onConfirm={async (customer) => {
+              state.updateTodoInStore(pendingOpportunityCheck.taskId, {
+                customer_id: customer.id,
+                customer_name: customer.name,
+                customer_segment: customer.segment as CustomerSegment,
+              });
+              let opportunityQuery = supabase
+                .from('todos')
+                .update({
+                  customer_id: customer.id,
+                  customer_name: customer.name,
+                  customer_segment: customer.segment,
+                })
+                .eq('id', pendingOpportunityCheck.taskId);
+              if (currentAgencyId) {
+                opportunityQuery = opportunityQuery.eq('agency_id', currentAgencyId);
+              }
+              await opportunityQuery;
+              setPendingOpportunityCheck(null);
+            }}
+          />
+        )}
+
         {state.showBulkActions && state.selectedTodos.size > 0 && (
           <BulkActionBar
             selectedCount={state.selectedTodos.size}
@@ -1031,17 +1124,7 @@ export default function TodoList({
           />
         )}
 
-        {!state.focusMode && (
-          <BottomTabs
-            stats={state.stats}
-            quickFilter={state.quickFilter}
-            showCompleted={state.showCompleted}
-            onFilterChange={state.setQuickFilter}
-            onShowCompletedChange={state.setShowCompleted}
-          />
-        )}
-
-        {!state.focusMode && <div className="h-16 md:hidden" />}
+        {!state.focusMode && <div className="h-16 lg:hidden" />}
       </div>
     </PullToRefresh>
   );

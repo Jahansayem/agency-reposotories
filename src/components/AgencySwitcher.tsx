@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, ChevronDown, Check, Plus, Briefcase, Crown, User, Users, AlertTriangle } from 'lucide-react';
 import { useAgency } from '@/contexts/AgencyContext';
+import { zClass } from '@/lib/z-index';
 import { useTodoStore } from '@/store/todoStore';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/Modal';
 import type { AgencyRole } from '@/types/agency';
@@ -86,16 +87,25 @@ export function AgencySwitcher({
   const [isOpen, setIsOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingAgencyId, setPendingAgencyId] = useState<string | null>(null);
+  const [activeDescendantId, setActiveDescendantId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Get bulk selection state to detect unsaved changes
   const selectedTodos = useTodoStore((state) => state.bulkActions.selectedTodos);
+
+  const closeAndRestoreFocus = useCallback(() => {
+    setIsOpen(false);
+    setActiveDescendantId(null);
+    triggerRef.current?.focus();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setActiveDescendantId(null);
       }
     };
 
@@ -103,17 +113,78 @@ export function AgencySwitcher({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Close dropdown on Escape key
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
+  // Arrow-key navigation for listbox options
+  const handleListboxKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const dropdown = dropdownRef.current;
+    if (!dropdown) return;
 
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, []);
+    const options = Array.from(dropdown.querySelectorAll<HTMLElement>('[role="option"]'));
+    if (options.length === 0) return;
+
+    const currentIndex = options.findIndex(opt => opt.id === activeDescendantId);
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault();
+        const next = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+        const nextId = options[next].id;
+        setActiveDescendantId(nextId);
+        options[next].focus();
+        break;
+      }
+      case 'ArrowUp': {
+        e.preventDefault();
+        const prev = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+        const prevId = options[prev].id;
+        setActiveDescendantId(prevId);
+        options[prev].focus();
+        break;
+      }
+      case 'Home': {
+        e.preventDefault();
+        setActiveDescendantId(options[0].id);
+        options[0].focus();
+        break;
+      }
+      case 'End': {
+        e.preventDefault();
+        const last = options[options.length - 1];
+        setActiveDescendantId(last.id);
+        last.focus();
+        break;
+      }
+      case 'Escape': {
+        e.preventDefault();
+        closeAndRestoreFocus();
+        break;
+      }
+      case 'Enter':
+      case ' ': {
+        if (document.activeElement && options.includes(document.activeElement as HTMLElement)) {
+          e.preventDefault();
+          (document.activeElement as HTMLElement).click();
+        }
+        break;
+      }
+    }
+  }, [activeDescendantId, closeAndRestoreFocus]);
+
+  // Focus first option when dropdown opens
+  useEffect(() => {
+    if (isOpen && agencies.length > 0) {
+      requestAnimationFrame(() => {
+        const dropdown = dropdownRef.current;
+        if (!dropdown) return;
+        const firstOption = dropdown.querySelector<HTMLElement>('[role="option"]');
+        if (firstOption) {
+          setActiveDescendantId(firstOption.id);
+          firstOption.focus();
+        }
+      });
+    } else if (!isOpen) {
+      setActiveDescendantId(null);
+    }
+  }, [isOpen, agencies.length]);
 
   // Don't render if multi-tenancy is disabled
   if (!isMultiTenancyEnabled) {
@@ -188,6 +259,7 @@ export function AgencySwitcher({
       <div ref={dropdownRef} className={`relative ${className}`}>
         {/* Trigger Button */}
         <button
+          ref={triggerRef}
           onClick={() => setIsOpen(!isOpen)}
           disabled={isLoading || isSwitchingAgency}
           className={`
@@ -242,14 +314,16 @@ export function AgencySwitcher({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
-              className="
-                absolute z-50 mt-1 w-72
+              className={`
+                absolute mt-1 w-72
                 bg-[var(--surface)]
                 border border-[var(--border)]
                 rounded-[var(--radius-lg)] shadow-lg
-                overflow-hidden
-              "
+                overflow-hidden ${zClass.dropdown}
+              `}
               role="listbox"
+              aria-activedescendant={activeDescendantId || undefined}
+              onKeyDown={handleListboxKeyDown}
             >
               {/* Header */}
               <div className="px-3 py-2 border-b border-[var(--border)]">
@@ -269,6 +343,7 @@ export function AgencySwitcher({
                   agencies.map((agency) => (
                     <button
                       key={agency.agency_id}
+                      id={`agency-option-${agency.agency_id}`}
                       onClick={() => handleSelectAgency(agency.agency_id)}
                       className={`
                         w-full flex items-center gap-3 px-3 py-2

@@ -10,6 +10,8 @@ import {
 import { logger } from '@/lib/logger';
 import { verifyTodoAccess, extractTodoIdFromPath } from '@/lib/apiAuth';
 import { withAgencyAuth, setAgencyContext, type AgencyAuthContext } from '@/lib/agencyAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
+import { validateFileContent } from '@/lib/fileValidator';
 
 // Create Supabase client lazily per-request to avoid module-scope auth context issues
 function getSupabaseClient() {
@@ -52,6 +54,20 @@ async function ensureBucketExists(supabase: ReturnType<typeof getSupabaseClient>
 export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
   try {
     const supabase = getSupabaseClient();
+
+    // Rate limiting for file uploads
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+    const rateLimitResult = await withRateLimit({
+      identifier: `${ip}:${ctx.userId}`,
+      limiter: rateLimiters.upload,
+    });
+
+    if (!rateLimitResult.success) {
+      return createRateLimitResponse(rateLimitResult);
+    }
+
     // Set RLS context for defense-in-depth
     await setAgencyContext(ctx.agencyId, ctx.userId, ctx.userName);
 
@@ -73,19 +89,6 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       );
     }
 
-    // Verify user has access to this todo before allowing upload
-    // Pass agencyId for cross-tenant protection
-    const { error: accessError } = await verifyTodoAccess(todoId, ctx.userName, ctx.agencyId || undefined);
-    if (accessError) {
-      logger.security('Attachment upload access denied', {
-        endpoint: '/api/attachments',
-        todoId,
-        userName: ctx.userName,
-        ip: request.headers.get('x-forwarded-for') || 'unknown',
-      });
-      return accessError;
-    }
-
     // Validate file type
     const mimeType = file.type;
     if (!(mimeType in ALLOWED_ATTACHMENT_TYPES)) {
@@ -103,11 +106,29 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       );
     }
 
-    // Check current attachment count for this todo
-    // Scope query to agency via parent todo's agency_id
+    // SECURITY: Validate file content against claimed MIME type (magic bytes)
+    const validationResult = await validateFileContent(file, mimeType);
+    if (!validationResult.valid) {
+      logger.security('File upload rejected - MIME type validation failed', {
+        endpoint: '/api/attachments',
+        claimedType: mimeType,
+        detectedType: validationResult.detectedType,
+        error: validationResult.error,
+        todoId,
+        userName: ctx.userName,
+        ip,
+      });
+      return NextResponse.json(
+        { success: false, error: validationResult.error || 'Invalid file type' },
+        { status: 400 }
+      );
+    }
+
+    // Fetch todo and verify access using service-role client (bypasses RLS)
+    // Previously used verifyTodoAccess which created an anon-key client subject to RLS
     let todoQuery = supabase
       .from('todos')
-      .select('attachments, text')
+      .select('attachments, text, created_by, assigned_to, updated_by')
       .eq('id', todoId);
 
     if (ctx.agencyId) {
@@ -116,11 +137,30 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
 
     const { data: todo, error: fetchError } = await todoQuery.single();
 
-    if (fetchError) {
+    if (fetchError || !todo) {
       logger.error('Error fetching todo', fetchError, { component: 'AttachmentsAPI' });
       return NextResponse.json(
         { success: false, error: 'Todo not found' },
         { status: 404 }
+      );
+    }
+
+    // Verify user has access to this todo
+    const hasAccess =
+      todo.created_by === ctx.userName ||
+      todo.assigned_to === ctx.userName ||
+      todo.updated_by === ctx.userName;
+
+    if (!hasAccess) {
+      logger.security('Attachment upload access denied', {
+        endpoint: '/api/attachments',
+        todoId,
+        userName: ctx.userName,
+        ip: request.headers.get('x-forwarded-for') || 'unknown',
+      });
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
       );
     }
 

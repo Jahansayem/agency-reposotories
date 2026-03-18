@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
@@ -313,7 +314,8 @@ Guidelines:
   if (!jsonMatch) {
     logger.error('Failed to parse AI response for user', undefined, {
       component: 'DigestGenerate',
-      responseText: responseText.substring(0, 500)
+      responseCharCount: responseText.length,
+      responseHash: createHash('sha256').update(responseText).digest('hex').substring(0, 16)
     });
     return null;
   }
@@ -324,7 +326,8 @@ Guidelines:
   } catch {
     logger.error('Failed to parse AI response JSON', undefined, {
       component: 'DigestGenerate',
-      responseText: responseText.substring(0, 500)
+      responseCharCount: responseText.length,
+      responseHash: createHash('sha256').update(responseText).digest('hex').substring(0, 16)
     });
     return null;
   }

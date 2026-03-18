@@ -47,7 +47,7 @@ function BulkActionBar({
   const hasAnyBulkPermission = canDelete || canEdit || canAssignTasks;
 
   return (
-    <div data-testid="bulk-action-bar" className="fixed bottom-0 left-0 right-0 z-40 animate-in slide-in-from-bottom duration-300">
+    <div data-testid="bulk-action-bar" className="fixed bottom-0 left-0 right-0 z-[200] animate-in slide-in-from-bottom duration-300">
       <div className="bg-[var(--surface)] border-t border-[var(--border)] shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
         <div className={`mx-auto px-4 sm:px-6 py-3 ${viewMode === 'kanban' ? 'max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px]' : 'max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl'}`}>
           <div className="flex items-center justify-between gap-4">

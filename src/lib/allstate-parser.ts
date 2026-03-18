@@ -906,7 +906,7 @@ export function generateTalkingPoints(
   const points: string[] = [];
 
   // Balance due alert (always first if applicable)
-  if (record.balance_due > 0) {
+  if (record.balance_due != null && !isNaN(record.balance_due) && record.balance_due > 0) {
     points.push(`⚠️ NOTE: $${record.balance_due.toFixed(2)} balance due - address first`);
   }
 

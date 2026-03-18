@@ -17,6 +17,7 @@ import {
   truncateText,
 } from '@/lib/chatUtils';
 import { fetchWithCsrf } from '@/lib/csrf';
+import { useToast } from '@/components/ui/Toast';
 import {
   ChatMessageList,
   ChatInputBar,
@@ -126,8 +127,13 @@ interface ChatPanelProps {
   onTaskLinkClick?: (todoId: string) => void;
   todosMap?: Map<string, Todo>;
   docked?: boolean;
+  /** When true, skip mobile/tablet overlay wrappers in DockedChatPanel.
+   *  Use when the panel is already inside a popup container (e.g., FloatingChatButton). */
+  embedded?: boolean;
   initialConversation?: ChatConversation | null;
   onConversationChange?: (conversation: ChatConversation | null, showList: boolean) => void;
+  /** Close/exit callback for docked mode (navigates back to previous view) */
+  onClose?: () => void;
 }
 
 export default function ChatPanel({
@@ -137,11 +143,14 @@ export default function ChatPanel({
   onTaskLinkClick,
   todosMap,
   docked = false,
+  embedded = false,
   initialConversation,
-  onConversationChange
+  onConversationChange,
+  onClose,
 }: ChatPanelProps) {
   // Agency context for multi-tenancy
   const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+  const toast = useToast();
 
   // Panel visibility state
   const [isOpen, setIsOpen] = useState(docked);
@@ -184,7 +193,7 @@ export default function ChatPanel({
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [showPinnedMessages, setShowPinnedMessages] = useState(false);
-  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
+  // firstUnreadId is now computed below via useMemo instead of state
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [taskFromMessage, setTaskFromMessage] = useState<ChatMessage | null>(null);
   const [rateLimitWarning, setRateLimitWarning] = useState<string | null>(null);
@@ -221,6 +230,7 @@ export default function ChatPanel({
   const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lastPresenceTimestamps = useRef<Map<string, number>>(new Map());
+  const pendingMessageIds = useRef(new Set<string>());
 
   // Use the chat messages hook
   const {
@@ -239,6 +249,7 @@ export default function ChatPanel({
     deleteMessage,
     togglePin,
     markMessagesAsRead,
+    markMessageAsUnread,
     handleNewMessage,
     handleMessageUpdate,
     handleMessageDelete,
@@ -315,6 +326,16 @@ export default function ChatPanel({
       .map(([user]) => user);
   }, [typingUsers, conversation, currentUser.name]);
 
+  // Compute firstUnreadId: the first message not created by the current user
+  // that the current user has not yet read
+  const firstUnreadId = useMemo(() => {
+    if (!conversation || filteredMessages.length === 0) return null;
+    const firstUnread = filteredMessages.find(
+      m => m.created_by !== currentUser.name && !(m.read_by || []).includes(currentUser.name)
+    );
+    return firstUnread?.id ?? null;
+  }, [filteredMessages, currentUser.name, conversation]);
+
   // Utility functions
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -383,14 +404,25 @@ export default function ChatPanel({
     });
   }, []);
 
+  // Reset transient UI state when switching conversations or going back to list
+  const resetTransientState = useCallback(() => {
+    setShowSearch(false);
+    setSearchInput('');
+    setSearchQuery('');
+    setShowPinnedMessages(false);
+    setReplyingTo(null);
+    setEditingMessage(null);
+  }, []);
+
   // Handle conversation selection
   const selectConversation = useCallback((conv: ChatConversation) => {
+    resetTransientState();
     setConversation(conv);
     setShowConversationList(false);
     const key = getConversationKey(conv);
     setUnreadCounts(prev => ({ ...prev, [key]: 0 }));
     hasInitialScrolled.current = null;
-  }, [getConversationKey]);
+  }, [getConversationKey, resetTransientState]);
 
   // Handle scroll
   const handleScroll = useCallback(() => {
@@ -454,20 +486,26 @@ export default function ChatPanel({
       reply_to_id: replyingTo?.id || null,
       reply_to_text: replyingTo ? truncateText(sanitizeHTML(replyingTo.text), 100) : null,
       reply_to_user: replyingTo?.created_by || null,
-      // Only include mentions/attachments if they have values to avoid Supabase 400 errors
-      // when these columns may not exist in older database schemas
       ...(mentions.length > 0 && { mentions }),
       ...(attachments && attachments.length > 0 && { attachments }),
+      ...(isMultiTenancyEnabled && currentAgencyId && { agency_id: currentAgencyId }),
     };
 
+    pendingMessageIds.current.add(message.id);
     setMessages((prev) => [...prev, message]);
     setReplyingTo(null);
     scrollToBottom();
+
+    // Clear pending ID after 10 seconds to avoid memory leaks
+    setTimeout(() => {
+      pendingMessageIds.current.delete(message.id);
+    }, 10000);
 
     const { error } = await supabase.from('messages').insert([message]);
 
     if (error) {
       logger.error('Error sending message', error, { component: 'ChatPanel' });
+      toast.error('Failed to send message. Please try again.');
       setMessages((prev) => prev.filter((m) => m.id !== message.id));
     } else {
       const recipientsToNotify: string[] = [];
@@ -502,7 +540,7 @@ export default function ChatPanel({
         });
       }
     }
-  }, [conversation, currentUser, users, replyingTo, setMessages, scrollToBottom]);
+  }, [conversation, currentUser, users, replyingTo, setMessages, scrollToBottom, isMultiTenancyEnabled, currentAgencyId]);
 
   // Handle save edit
   const handleSaveEdit = useCallback((text: string) => {
@@ -760,6 +798,13 @@ export default function ChatPanel({
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new as ChatMessage;
+
+            // Skip if this message was already added optimistically
+            if (pendingMessageIds.current.has(newMsg.id)) {
+              pendingMessageIds.current.delete(newMsg.id);
+              return;
+            }
+
             handleNewMessage(newMsg);
             setTypingUsers(prev => ({ ...prev, [newMsg.created_by]: false }));
 
@@ -817,13 +862,73 @@ export default function ChatPanel({
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED');
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          logger.error('Chat subscription failed', null, { component: 'ChatPanel', status });
+          logger.warn('Chat subscription error, attempting reconnect', { component: 'ChatPanel', status });
+          supabase.removeChannel(messagesChannel);
+          // Re-subscribe will happen on next effect cycle
         }
       });
 
-    // REACT-006: Track typing timeouts properly to prevent memory leaks
+    // Typing channel is managed in a separate conversation-scoped effect below
+
+    // Scope presence channel by agency for multi-tenancy isolation
+    const presenceChannelName = isMultiTenancyEnabled && currentAgencyId
+      ? `presence-channel-${currentAgencyId}`
+      : 'presence-channel';
+
+    const presenceChannel = supabase
+      .channel(presenceChannelName)
+      .on('broadcast', { event: 'presence' }, ({ payload }) => {
+        if (payload.user !== currentUser.name) {
+          setUserPresence(prev => ({ ...prev, [payload.user]: payload.status }));
+          lastPresenceTimestamps.current.set(payload.user, payload.timestamp || Date.now());
+        }
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          presenceChannelRef.current = presenceChannel;
+          presenceChannel.send({
+            type: 'broadcast',
+            event: 'presence',
+            payload: {
+              user: currentUser.name,
+              status: isDndModeRef.current ? 'dnd' : 'online',
+              timestamp: Date.now()
+            }
+          });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(presenceChannel);
+      presenceChannelRef.current = null;
+    };
+  // BUGFIX REACT-005: Removed fetchMessages from deps - using fetchMessagesRef instead
+  // to prevent subscription teardown on every conversation change
+  }, [currentUser.name, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentAgencyId, isMultiTenancyEnabled]);
+
+  // BUGFIX REACT-005: Separate effect to refetch messages when conversation changes
+  // This ensures messages are refetched without tearing down the realtime subscriptions
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !conversation) return;
+    fetchMessagesRef.current();
+  }, [conversation]);
+
+  // Conversation-scoped typing channel: subscribe/unsubscribe when conversation changes
+  // so typing indicators are only visible within the active conversation
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !conversation) return;
+
+    const convKey = getConversationKey(conversation);
+    // Scope typing channel by agency for multi-tenancy isolation
+    const agencySuffix = isMultiTenancyEnabled && currentAgencyId ? `-${currentAgencyId}` : '';
+    const typingChannelName = `typing-channel-${convKey}${agencySuffix}`;
+
+    // Clear typing state from previous conversation
+    setTypingUsers({});
+
     const typingChannel = supabase
-      .channel('typing-channel')
+      .channel(typingChannelName)
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (payload.user !== currentUser.name) {
           setTypingUsers(prev => ({ ...prev, [payload.user]: true }));
@@ -849,48 +954,13 @@ export default function ChatPanel({
         }
       });
 
-    const presenceChannel = supabase
-      .channel('presence-channel')
-      .on('broadcast', { event: 'presence' }, ({ payload }) => {
-        if (payload.user !== currentUser.name) {
-          setUserPresence(prev => ({ ...prev, [payload.user]: payload.status }));
-          lastPresenceTimestamps.current.set(payload.user, payload.timestamp || Date.now());
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          presenceChannelRef.current = presenceChannel;
-          presenceChannel.send({
-            type: 'broadcast',
-            event: 'presence',
-            payload: {
-              user: currentUser.name,
-              status: isDndModeRef.current ? 'dnd' : 'online',
-              timestamp: Date.now()
-            }
-          });
-        }
-      });
-
     return () => {
-      supabase.removeChannel(messagesChannel);
       supabase.removeChannel(typingChannel);
-      supabase.removeChannel(presenceChannel);
       typingChannelRef.current = null;
-      presenceChannelRef.current = null;
       typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
       typingTimeoutsRef.current.clear();
     };
-  // BUGFIX REACT-005: Removed fetchMessages from deps - using fetchMessagesRef instead
-  // to prevent subscription teardown on every conversation change
-  }, [currentUser.name, handleNewMessage, handleMessageUpdate, handleMessageDelete, currentAgencyId, isMultiTenancyEnabled]);
-
-  // BUGFIX REACT-005: Separate effect to refetch messages when conversation changes
-  // This ensures messages are refetched without tearing down the realtime subscriptions
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !conversation) return;
-    fetchMessagesRef.current();
-  }, [conversation]);
+  }, [conversation, getConversationKey, currentUser.name, currentAgencyId, isMultiTenancyEnabled]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -947,12 +1017,25 @@ export default function ChatPanel({
         onInputChange={setDockedInputValue}
         onSendMessage={sendMessage}
         onSelectConversation={selectConversation}
-        onShowConversationList={() => setShowConversationList(true)}
+        onShowConversationList={() => { resetTransientState(); setShowConversationList(true); }}
         onTyping={broadcastTyping}
         getUserColor={getUserColor}
         getInitials={getInitials}
         getConversationTitle={getConversationTitle}
         extractMentions={extractAndValidateMentions}
+        groupedMessages={groupedMessages}
+        pinnedMessages={pinnedMessages}
+        loading={loading}
+        hasMoreMessages={hasMoreMessages}
+        isLoadingMore={isLoadingMore}
+        loadMoreMessages={loadMoreMessages}
+        sortedConversations={sortedConversations}
+        unreadCounts={unreadCounts}
+        mutedConversations={mutedConversations}
+        userPresence={userPresence}
+        formatRelativeTime={formatRelativeTime}
+        onToggleMute={toggleMute}
+        firstUnreadId={firstUnreadId}
         addReaction={addReaction}
         editMessage={editMessage}
         deleteMessage={deleteMessage}
@@ -961,6 +1044,18 @@ export default function ChatPanel({
         onTaskLinkClick={onTaskLinkClick}
         todosMap={todosMap}
         markMessagesAsRead={markMessagesAsRead}
+        onMarkUnread={(messageId) => {
+          markMessageAsUnread(messageId);
+          if (conversation) {
+            const key = getConversationKey(conversation);
+            setUnreadCounts(prev => ({
+              ...prev,
+              [key]: (prev[key] || 0) + 1
+            }));
+          }
+        }}
+        onClose={onClose}
+        embedded={embedded}
       />
     );
   }
@@ -985,7 +1080,7 @@ export default function ChatPanel({
                 setShowConversationList(true);
               }
             }}
-            className="fixed bottom-6 right-6 z-50 group"
+            className="fixed bottom-6 right-6 z-[100] group"
             aria-label={`Open chat${totalUnreadCount > 0 ? `, ${totalUnreadCount} unread messages` : ''}`}
           >
             <div className="w-14 h-14 rounded-[var(--radius-2xl)] bg-[var(--accent)] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:bg-[var(--accent)]/90">
@@ -1013,7 +1108,7 @@ export default function ChatPanel({
             }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
             transition={{ duration: isResizing ? 0 : 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-6 right-6 z-50 max-w-[calc(100vw-2rem)] flex flex-col"
+            className="fixed bottom-6 right-6 z-[100] max-w-[calc(100vw-2rem)] flex flex-col"
             style={{ width: `${panelWidth}px` }}
             role="dialog"
             aria-label="Chat panel"
@@ -1052,7 +1147,7 @@ export default function ChatPanel({
                 searchInput={searchInput}
                 filteredMessagesCount={filteredMessages.length}
                 userPresence={userPresence}
-                onBack={() => setShowConversationList(true)}
+                onBack={() => { resetTransientState(); setShowConversationList(true); }}
                 onToggleSearch={() => setShowSearch(!showSearch)}
                 onTogglePinnedMessages={() => setShowPinnedMessages(!showPinnedMessages)}
                 onToggleDndMode={() => setIsDndMode(!isDndMode)}
@@ -1110,6 +1205,16 @@ export default function ChatPanel({
                               onDelete={handleDeleteMessageRequest}
                               onPin={togglePin}
                               onCreateTask={onCreateTask ? createTaskFromMessage : undefined}
+                              onMarkUnread={(messageId) => {
+                                markMessageAsUnread(messageId);
+                                if (conversation) {
+                                  const key = getConversationKey(conversation);
+                                  setUnreadCounts(prev => ({
+                                    ...prev,
+                                    [key]: (prev[key] || 0) + 1
+                                  }));
+                                }
+                              }}
                               onTaskLinkClick={onTaskLinkClick}
                               todosMap={todosMap}
                               firstUnreadId={firstUnreadId}
@@ -1178,7 +1283,7 @@ export default function ChatPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[400] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setShowCreateTaskModal(false)}
           >
             <motion.div

@@ -5,6 +5,7 @@ import { motion, useMotionValue, useTransform, animate, PanInfo } from 'framer-m
 import { Check, Pencil, Trash2, Flag, RotateCcw } from 'lucide-react';
 import TodoItem from './TodoItem';
 import type { Todo, TodoPriority, TodoStatus, RecurrencePattern, Subtask, Attachment } from '@/types/todo';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice';
 
 /**
  * SwipeableTodoItem - A touch-friendly wrapper for TodoItem with swipe gestures
@@ -49,12 +50,6 @@ const SWIPE_THRESHOLD = 80; // Minimum distance to trigger action
 const MAX_SWIPE_DISTANCE = 120; // Maximum visual feedback distance
 const VELOCITY_THRESHOLD = 500; // Fast swipe threshold (px/s)
 
-// Check if device supports touch
-const isTouchDevice = () => {
-  if (typeof window === 'undefined') return false;
-  return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-};
-
 export default function SwipeableTodoItem({
   todo,
   users,
@@ -80,7 +75,7 @@ export default function SwipeableTodoItem({
   children,
   disabled = false,
 }: SwipeableTodoItemProps) {
-  const [isTouchEnabled, setIsTouchEnabled] = useState(false);
+  const isTouchEnabled = useIsTouchDevice();
   const [showEditMenu, setShowEditMenu] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,11 +88,6 @@ export default function SwipeableTodoItem({
   const rightBgOpacity = useTransform(x, [0, MAX_SWIPE_DISTANCE], [0, 1]);
   const leftIconScale = useTransform(x, [-MAX_SWIPE_DISTANCE, -SWIPE_THRESHOLD, 0], [1.2, 1, 0.5]);
   const rightIconScale = useTransform(x, [0, SWIPE_THRESHOLD, MAX_SWIPE_DISTANCE], [0.5, 1, 1.2]);
-
-  // Check touch support on mount
-  useEffect(() => {
-    setIsTouchEnabled(isTouchDevice());
-  }, []);
 
   // Handle swipe end - determine if action should trigger
   const handleDragEnd = useCallback((_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -410,16 +400,5 @@ export default function SwipeableTodoItem({
   );
 }
 
-/**
- * Hook to detect if the current device supports touch
- * Can be used by parent components to conditionally enable swipe features
- */
-export function useIsTouchDevice(): boolean {
-  const [isTouchEnabled, setIsTouchEnabled] = useState(false);
-
-  useEffect(() => {
-    setIsTouchEnabled(isTouchDevice());
-  }, []);
-
-  return isTouchEnabled;
-}
+// Re-export from shared hook location for backward compatibility
+export { useIsTouchDevice } from '@/hooks/useIsTouchDevice';

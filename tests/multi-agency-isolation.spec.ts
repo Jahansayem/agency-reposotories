@@ -704,15 +704,15 @@ test.describe('Multi-Agency Data Isolation', () => {
     const taskBId = await createTask(page2, `Agency B Unique Task`);
 
     // Verify task A is in page1 but not page2
-    let isAInPage1 = await verifyTaskVisible(page1, taskAId);
-    let isBInPage2 = await verifyTaskVisible(page2, taskBId);
+    const isAInPage1 = await verifyTaskVisible(page1, taskAId);
+    const isBInPage2 = await verifyTaskVisible(page2, taskBId);
 
     expect(isAInPage1).toBe(true);
     expect(isBInPage2).toBe(true);
 
     // Verify cross-agency visibility is blocked
-    let isAInPage2 = await verifyTaskVisible(page2, taskAId);
-    let isBInPage1 = await verifyTaskVisible(page1, taskBId);
+    const isAInPage2 = await verifyTaskVisible(page2, taskAId);
+    const isBInPage1 = await verifyTaskVisible(page1, taskBId);
 
     expect(isAInPage2).toBe(false);
     expect(isBInPage1).toBe(false);
@@ -736,7 +736,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     const taskAId = await createTask(page, `API Test Task`);
 
     // The task should be visible
-    let isVisible = await verifyTaskVisible(page, taskAId);
+    const isVisible = await verifyTaskVisible(page, taskAId);
     expect(isVisible).toBe(true);
 
     // Simulate API calls by checking page source for agency context
@@ -760,7 +760,7 @@ test.describe('Multi-Agency Data Isolation', () => {
     const taskAId = await createTask(page, `Protected Task A`);
 
     // Verify it's visible
-    let isVisible = await verifyTaskVisible(page, taskAId);
+    const isVisible = await verifyTaskVisible(page, taskAId);
     expect(isVisible).toBe(true);
 
     // Try to complete the task (this should work in Agency A)
@@ -811,7 +811,7 @@ test.describe('Multi-Agency Isolation - Edge Cases', () => {
     const taskId = await createTask(page, `Pre-New-Agency Task`);
 
     // Verify task exists
-    let isVisible = await verifyTaskVisible(page, taskId);
+    const isVisible = await verifyTaskVisible(page, taskId);
     expect(isVisible).toBe(true);
 
     // If there's a way to create a new agency from the UI, do it

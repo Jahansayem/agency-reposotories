@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { fetchWithCsrf } from '@/lib/csrf';
 import {
   Users,
   MapPin,
@@ -215,7 +216,7 @@ const PremiumProgressBar = ({
   label: string;
   color?: string;
 }) => {
-  const percentage = Math.min((value / max) * 100, 100);
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   const colorMap: Record<string, string> = {
     sky: 'bg-sky-500',
     blue: 'bg-blue-500',
@@ -521,7 +522,7 @@ export function BookOfBusinessDashboard() {
 
     try {
       // Create task directly via todos API since these are static targets without opportunity IDs
-      const response = await fetch('/api/todos', {
+      const response = await fetchWithCsrf('/api/todos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -559,7 +560,7 @@ export function BookOfBusinessDashboard() {
     >
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+        <div className={`fixed top-4 right-4 z-[600] px-4 py-3 rounded-lg shadow-lg ${
           toastMessage.type === 'success'
             ? 'bg-green-600 text-white'
             : 'bg-red-600 text-white'

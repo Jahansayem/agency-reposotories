@@ -44,16 +44,21 @@ Xcode will automatically resolve Swift Package Manager dependencies (Supabase SD
 
 #### 2. Configure Secrets
 
+**IMPORTANT**: The `Secrets.plist` file contains sensitive credentials and is gitignored. Never commit it to the repository.
+
 Copy the example secrets file and fill in your credentials:
 
 ```bash
-cp SharedTodoList/Resources/Secrets.plist.example SharedTodoList/Resources/Secrets.plist
+cp SharedTodoList/Resources/Secrets.example.plist SharedTodoList/Resources/Secrets.plist
 ```
 
-Edit `Secrets.plist` with your values:
-- `SUPABASE_URL` - Your Supabase project URL
-- `SUPABASE_ANON_KEY` - Your Supabase anon/public key
-- `API_BASE_URL` - Your web app URL (for AI features)
+Edit `Secrets.plist` with your actual values:
+- `SUPABASE_URL` - Your Supabase project URL (e.g., `https://abc123.supabase.co`)
+- `SUPABASE_ANON_KEY` - Your Supabase anon/public key (safe to use in client apps)
+- `API_BASE_URL` - Your web app URL (e.g., `https://shared-todo-list-production.up.railway.app`)
+- `OUTLOOK_API_KEY` - (Optional) Your Outlook API key if using email integration
+
+See `/src/data/DATA_SECURITY.md` for more details on managing secrets.
 
 #### 3. Configure Xcode Signing
 

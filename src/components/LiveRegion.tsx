@@ -59,20 +59,17 @@ export default function LiveRegion({
   atomic = true,
   label = 'Notifications',
 }: LiveRegionProps) {
-  // Don't render if no message or announcements are disabled
-  if (!message || politeness === 'off') {
-    return null;
-  }
-
+  // Always render the div so screen readers can track the live region.
+  // Use empty content when there is no message or announcements are disabled.
   return (
     <div
       role="status"
-      aria-live={politeness}
+      aria-live={politeness === 'off' ? 'off' : politeness}
       aria-atomic={atomic}
       aria-label={label}
       className="sr-only"
     >
-      {message}
+      {politeness !== 'off' ? message : ''}
     </div>
   );
 }
@@ -99,7 +96,7 @@ export default function LiveRegion({
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-export function useAnnouncement(duration: number = 1000) {
+export function useAnnouncement(duration: number = 3000) {
   const [announcement, setAnnouncement] = useState('');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 

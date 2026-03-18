@@ -147,7 +147,7 @@ export default function WelcomeBackNotification({
           animate={{ opacity: 1, y: 0, x: 0 }}
           exit={{ opacity: 0, y: 20, x: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-4 right-4 z-50 w-full max-w-md cursor-pointer"
+          className="fixed bottom-4 right-4 z-[600] w-full max-w-md cursor-pointer"
           onClick={handleClick}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}

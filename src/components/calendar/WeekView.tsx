@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragStartEvent,
@@ -21,7 +22,7 @@ import {
 import { Todo } from '@/types/todo';
 import { DraggableTaskItem } from './CalendarDayCell';
 import { CATEGORY_COLORS, isTaskOverdue, STATUS_BORDER, SEGMENT_COLORS, SEGMENT_LABELS, getSubtaskProgress, isFollowUpOverdue, getInitials, formatPremiumCompact, hasPendingReminders, PREMIUM_DISPLAY_THRESHOLD } from './constants';
-import { Clock, AlertTriangle, Bell } from 'lucide-react';
+import { Clock, AlertTriangle, Bell, Repeat } from 'lucide-react';
 import CalendarDragOverlay from './CalendarDragOverlay';
 
 /** Task count thresholds for badge color coding */
@@ -89,14 +90,17 @@ function DroppableDayColumn({
   return (
     <div
       ref={setNodeRef}
+      role="region"
+      aria-label={format(day, 'EEEE, MMMM d')}
+      data-is-today={today || undefined}
       className={`
-        flex flex-col sm:flex-col rounded-lg border overflow-hidden sm:min-h-[200px] transition-all
+        min-w-[160px] snap-start sm:min-w-0 flex flex-col sm:flex-col rounded-lg border overflow-hidden sm:min-h-[200px] transition-all
         ${isOver
           ? 'ring-2 ring-[var(--accent)] bg-[var(--accent)]/20 border-[var(--accent)]'
           : today
             ? 'ring-2 ring-[var(--accent)] border-[var(--accent)]/30 bg-[var(--accent)]/10'
             : isWeekend
-              ? 'border-[var(--border)] bg-[var(--surface)]/50 opacity-75'
+              ? 'border-[var(--border)] bg-[var(--surface)]/50'
               : 'border-[var(--border)] bg-[var(--surface-2)]'
         }
       `}
@@ -104,14 +108,15 @@ function DroppableDayColumn({
       {/* Day Header */}
       <button
         onClick={() => onDateClick(day)}
+        aria-label={`${format(day, 'EEEE, MMMM d, yyyy')}${today ? ', today' : ''}${dayTodos.length > 0 ? `, ${dayTodos.length} task${dayTodos.length !== 1 ? 's' : ''}` : ''}`}
         className="flex items-center gap-2 px-3 py-2 border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors"
       >
-        {/* Mobile: show full day name; tablet+: abbreviated */}
+        {/* Mobile: show abbreviated day name to save space; desktop: full name */}
         <span className="text-xs font-semibold text-[var(--text-muted)] uppercase sm:hidden">
-          {format(day, 'EEEE')}
+          {format(day, 'EEE')}
         </span>
         <span className="text-xs font-semibold text-[var(--text-muted)] uppercase hidden sm:inline">
-          {format(day, 'EEE')}
+          {format(day, 'EEEE')}
         </span>
         <span
           className={`
@@ -158,8 +163,8 @@ function DroppableDayColumn({
                 </span>
               )}
               {/* Wave 1 + Wave 2 indicators */}
-              {(todo.waiting_for_response || todo.renewal_status === 'at-risk' || subtaskProgress || todo.customer_segment === 'elite' || todo.customer_segment === 'premium' || hasPendingReminders(todo.reminders, todo.reminder_at) || (todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD) || todo.assigned_to) && (
-                <div className="flex items-center gap-1 px-2 pb-1 text-[10px]">
+              {(todo.waiting_for_response || todo.renewal_status === 'at-risk' || subtaskProgress || todo.customer_segment === 'elite' || todo.customer_segment === 'premium' || hasPendingReminders(todo.reminders, todo.reminder_at) || todo.recurrence || (todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD) || todo.assigned_to) && (
+                <div className="flex items-center gap-1 px-2 pb-1 text-[10px]" aria-hidden="true">
                   {todo.waiting_for_response && (
                     <span className={`flex items-center gap-0.5 ${isFollowUpOverdue(todo.waiting_since, todo.follow_up_after_hours) ? 'text-red-500' : 'text-amber-500'}`} title="Waiting for customer">
                       <Clock className="w-3 h-3" />
@@ -183,6 +188,11 @@ function DroppableDayColumn({
                       <Bell className="w-3 h-3" />
                     </span>
                   )}
+                  {todo.recurrence && (
+                    <span className="flex items-center text-[var(--text-muted)]" title={`Repeats ${todo.recurrence}`}>
+                      <Repeat className="w-3 h-3" />
+                    </span>
+                  )}
                   {todo.premium_amount != null && todo.premium_amount >= PREMIUM_DISPLAY_THRESHOLD && (
                     <span className="text-emerald-600 dark:text-emerald-400 font-medium" title="Premium amount">
                       {formatPremiumCompact(todo.premium_amount)}
@@ -201,6 +211,7 @@ function DroppableDayColumn({
         {dayTodos.length === 0 && (
           <button
             onClick={() => (onAddTask || onDateClick)(day)}
+            aria-label={`Add task for ${format(day, 'EEEE, MMMM d')}`}
             className="w-full sm:h-full min-h-[40px] flex items-center justify-center text-xs text-[var(--text-muted)] hover:bg-[var(--surface-hover)] rounded-md transition-colors"
           >
             + Add task
@@ -223,10 +234,25 @@ export default function WeekView({
   onToggleWaiting,
 }: WeekViewProps) {
   const [activeTodo, setActiveTodo] = useState<Todo | null>(null);
+  const weekGridRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to today's column on mobile — only recompute when week changes
+  const currentWeekKey = useMemo(() => format(currentDate, 'yyyy-MM-dd'), [currentDate]);
+
+  useEffect(() => {
+    if (!weekGridRef.current) return;
+    const todayCol = weekGridRef.current.querySelector('[data-is-today="true"]');
+    if (todayCol) {
+      todayCol.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    }
+  }, [currentWeekKey]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
     })
   );
 
@@ -274,9 +300,10 @@ export default function WeekView({
   const isDragActive = activeTodo !== null;
 
   const content = (
-    <div className="flex-1 p-2 sm:p-4 overflow-auto">
+    <div className="flex-1 p-2 sm:p-4 overflow-auto" role="region" aria-label="Week view">
       <AnimatePresence mode="popLayout" custom={direction}>
         <motion.div
+          ref={weekGridRef}
           key={format(startOfWeek(currentDate), 'yyyy-MM-dd')}
           custom={direction}
           variants={weekVariants}
@@ -284,7 +311,7 @@ export default function WeekView({
           animate="center"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="grid grid-cols-1 sm:grid-cols-4 md:grid-cols-7 gap-2 h-full"
+          className="flex overflow-x-auto snap-x snap-mandatory gap-2 sm:grid sm:grid-cols-4 md:grid-cols-7 sm:overflow-visible h-full"
         >
           {weekDays.map((day) => {
             const dateKey = format(day, 'yyyy-MM-dd');

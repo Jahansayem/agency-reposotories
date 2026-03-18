@@ -6,9 +6,9 @@
 // Core Layout
 export { default as AppShell, useAppShell } from './AppShell';
 export type { ActiveView, RightPanelContent } from './AppShell';
+export { AppBarProvider, useAppBar } from './AppBarContext';
+export { default as UnifiedAppBar } from './UnifiedAppBar';
 export { default as AppLayout, ContentContainer, ViewTransition } from './AppLayout';
-export { default as AppHeader } from './AppHeader';
-
 // Navigation
 export { default as NavigationSidebar } from './NavigationSidebar';
 export { default as EnhancedBottomNav, QuickFilterPills } from './EnhancedBottomNav';

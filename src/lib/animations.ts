@@ -175,20 +175,14 @@ export const fadeOutVariants: Variants = {
 export const checkboxVariants: Variants = {
   unchecked: {
     scale: 1,
-    backgroundColor: 'transparent',
-    borderColor: 'var(--border)',
   },
   checked: {
     scale: [1, 1.2, 1],
-    backgroundColor: 'var(--success)',
-    borderColor: 'var(--success)',
     transition: {
       scale: {
         duration: DURATION.medium,
         times: [0, 0.4, 1],
       },
-      backgroundColor: { duration: DURATION.fast },
-      borderColor: { duration: DURATION.fast },
     },
   },
 };

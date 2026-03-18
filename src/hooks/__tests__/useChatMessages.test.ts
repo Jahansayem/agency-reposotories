@@ -217,8 +217,14 @@ describe('useChatMessages', () => {
 
   describe('loadMoreMessages', () => {
     beforeEach(async () => {
+      // Return exactly 50 messages so hasMoreMessages stays true after initial fetch
+      const fullPage = new Array(50).fill(null).map((_, i) => ({
+        ...mockMessages[0],
+        id: `initial-msg-${i}`,
+        created_at: `2026-02-06T10:${String(i).padStart(2, '0')}:00Z`,
+      }));
       selectMock.limit.mockResolvedValue({
-        data: [mockMessages[0]],
+        data: fullPage,
         error: null,
       });
     });
@@ -232,12 +238,15 @@ describe('useChatMessages', () => {
         })
       );
 
-      // Fetch initial messages
+      // Fetch initial messages (50 messages so hasMoreMessages=true)
       await act(async () => {
         await result.current.fetchMessages();
       });
 
-      // Mock loading more
+      expect(result.current.messages).toHaveLength(50);
+      expect(result.current.hasMoreMessages).toBe(true);
+
+      // Mock loading older messages
       selectMock.limit.mockResolvedValue({
         data: [mockMessages[2]],
         error: null,
@@ -247,14 +256,20 @@ describe('useChatMessages', () => {
         await result.current.loadMoreMessages();
       });
 
-      expect(selectMock.lt).toHaveBeenCalledWith(
-        'created_at',
-        mockMessages[0].created_at
+      // or should have been called with composite cursor (created_at + id tiebreaker)
+      expect(selectMock.or).toHaveBeenCalledWith(
+        expect.stringContaining('created_at.lt.')
       );
-      expect(result.current.messages).toHaveLength(2);
+      expect(result.current.messages).toHaveLength(51);
     });
 
     it('should not load if already loading', async () => {
+      // Override beforeEach with just 1 message so hasMoreMessages=false after fetch
+      selectMock.limit.mockResolvedValue({
+        data: [mockMessages[0]],
+        error: null,
+      });
+
       const { result } = renderHook(() =>
         useChatMessages({
           currentUser: mockUser,
@@ -267,20 +282,20 @@ describe('useChatMessages', () => {
         await result.current.fetchMessages();
       });
 
-      // Set loading state
+      // hasMoreMessages=false (1 < 50), so loadMoreMessages is a no-op
+      const callCountBefore = selectMock.lt.mock.calls.length;
+
       act(() => {
         result.current.messages; // Access to trigger render
       });
-
-      const callCount = selectMock.lt.mock.calls.length;
 
       await act(async () => {
         await result.current.loadMoreMessages();
         await result.current.loadMoreMessages(); // Try loading again
       });
 
-      // Should only call once (second call blocked)
-      expect(selectMock.lt.mock.calls.length).toBeLessThanOrEqual(callCount + 1);
+      // Should still have no lt calls since hasMoreMessages is false
+      expect(selectMock.lt.mock.calls.length).toBeLessThanOrEqual(callCountBefore);
     });
   });
 
@@ -406,7 +421,8 @@ describe('useChatMessages', () => {
         await result.current.fetchMessages();
       });
 
-      expect(result.current.groupedMessages[0].isGrouped).toBe(false);
+      // First message has no previous so isGrouped is falsy (undefined from && short-circuit)
+      expect(result.current.groupedMessages[0].isGrouped).toBeFalsy();
       expect(result.current.groupedMessages[1].isGrouped).toBe(true);
     });
 

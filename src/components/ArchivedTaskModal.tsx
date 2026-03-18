@@ -95,7 +95,7 @@ export default function ArchivedTaskModal({ todo, onClose }: ArchivedTaskModalPr
   const totalSubtasks = (todo.subtasks || []).length;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[400] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"

@@ -56,6 +56,16 @@ prisma/*.db
 screenshots/
 playwright.config.local.ts
 
+# playwright-mcp debug artifacts
+.playwright-mcp/console-*.log
+.playwright-mcp/page-*.png
+
+# debug/test screenshots at repo root (preserves public/ and test-assets/)
+/*.png
+debug-*.png
+review-*.png
+*-test-*.png
+
 # Sentry
 .sentryclirc
 
@@ -73,3 +83,11 @@ DerivedData/
 *.dSYM
 *.p8
 .mcp.json
+.worktrees/
+
+# Sensitive data - NEVER commit PII
+src/data/bealer-model/
+src/data/**/*.csv
+src/data/**/*.pdf
+!src/data/**/README.md
+!src/data/**/.gitkeep

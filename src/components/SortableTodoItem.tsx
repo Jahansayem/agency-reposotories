@@ -128,6 +128,7 @@ const SortableTodoItem = memo(function SortableTodoItem({
     transform,
     transition,
     isDragging,
+    isOver,
   } = useSortable({ id: todo.id, disabled: !effectiveDragEnabled });
 
   const style = {
@@ -146,26 +147,33 @@ const SortableTodoItem = memo(function SortableTodoItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group/sortable relative flex ${isDragging ? 'shadow-2xl rounded-[var(--radius-xl)]' : ''}`}
+      className={`
+        group/sortable relative flex
+        ${isDragging ? 'shadow-2xl rounded-[var(--radius-xl)]' : ''}
+        ${isOver ? 'ring-2 ring-[var(--accent)] ring-offset-2 bg-[var(--accent-light)]' : ''}
+        transition-all duration-150
+      `}
     >
-      {/* Drag handle - integrated into the card flow, not floating */}
-      <div
+      {/* Drag handle - integrated into the card flow, not floating, 44x44 touch target on mobile */}
+      <button
         {...attributes}
         {...listeners}
         className={`
-          flex-shrink-0 w-6 flex items-center justify-center
+          flex-shrink-0 w-11 sm:w-6 flex items-center justify-center
           cursor-grab active:cursor-grabbing
           text-[var(--text-muted)]
           opacity-40 hover:opacity-100 group-hover/sortable:opacity-60
           transition-opacity touch-manipulation
           rounded-l-[var(--radius-xl)]
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-inset
           ${isDragging ? 'opacity-100' : ''}
         `}
-        aria-label="Drag to reorder"
+        aria-label={`Drag to reorder task: ${todo.text || 'task'}`}
         title="Drag to reorder"
+        type="button"
       >
-        <GripVertical className="w-4 h-4" />
-      </div>
+        <GripVertical className="w-5 h-5 sm:w-4 sm:h-4" aria-hidden="true" />
+      </button>
 
       {/* TodoItem takes remaining space */}
       <div className="flex-1 min-w-0">

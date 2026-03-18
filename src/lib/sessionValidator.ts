@@ -140,27 +140,34 @@ export async function validateSession(
         .single();
 
       if (sessionError || !session) {
-        // If table doesn't exist (code 42P01), fall back to header-based auth
+        // SECURITY: Fail-closed on missing table (prevents auth bypass if migrations missing)
+        // In production, missing migrations are a deployment error that must be fixed
+        // In development, allow override via environment variable for flexibility
         if (sessionError?.code === '42P01' || sessionError?.message?.includes('does not exist')) {
-          logger.warn('[SESSION] DEPRECATED: user_sessions table does not exist, falling back to insecure header-based auth. This fallback will be removed in a future release. Please run migrations.', { component: 'SessionValidator' });
-          // DEPRECATED: Header-based auth is insecure and will be removed
-          const userName = request.headers.get('X-User-Name');
-          if (userName) {
-            // Get user from database to validate
-            const { data: user } = await supabaseAdmin
-              .from('users')
-              .select('id, name, role')
-              .eq('name', userName)
-              .single();
+          if (process.env.NODE_ENV !== 'production' && process.env.SKIP_MIGRATION_CHECK === 'true') {
+            logger.warn('[SESSION] DEPRECATED: user_sessions table does not exist, falling back to insecure header-based auth. This fallback will be removed in a future release. Please run migrations.', { component: 'SessionValidator' });
+            // DEPRECATED: Header-based auth is insecure and will be removed
+            const userName = request.headers.get('X-User-Name');
+            if (userName) {
+              // Get user from database to validate
+              const { data: user } = await supabaseAdmin
+                .from('users')
+                .select('id, name, role')
+                .eq('name', userName)
+                .single();
 
-            if (user) {
-              return {
-                valid: true,
-                userId: user.id,
-                userName: user.name,
-                userRole: user.role || 'staff',
-              };
+              if (user) {
+                return {
+                  valid: true,
+                  userId: user.id,
+                  userName: user.name,
+                  userRole: user.role || 'staff',
+                };
+              }
             }
+          } else {
+            // PRODUCTION: Fail-closed - reject all requests if migrations are missing
+            logger.error('[SESSION] CRITICAL: user_sessions table does not exist in production. Database migrations are required. Auth is BLOCKED until migrations are applied.', { component: 'SessionValidator' });
           }
         }
         return {

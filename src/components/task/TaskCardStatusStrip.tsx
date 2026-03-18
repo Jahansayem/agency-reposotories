@@ -7,6 +7,8 @@
 
 'use client';
 
+import { RADIUS } from '@/lib/design-tokens';
+
 interface TaskCardStatusStripProps {
   stripColor: string | null;
 }
@@ -16,7 +18,11 @@ export function TaskCardStatusStrip({ stripColor }: TaskCardStatusStripProps) {
 
   return (
     <div
-      className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${stripColor}`}
+      className={`absolute left-0 top-0 bottom-0 w-1 ${stripColor}`}
+      style={{
+        borderTopLeftRadius: RADIUS.lg,
+        borderBottomLeftRadius: RADIUS.lg,
+      }}
       aria-hidden="true"
     />
   );

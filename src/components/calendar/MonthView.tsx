@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragStartEvent,
@@ -71,9 +72,13 @@ export default function MonthView({
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Require 8px of drag distance before starting (prevents accidental drags on click)
+  // TouchSensor with 250ms delay prevents scroll/tap from triggering drag on mobile
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
     })
   );
 
@@ -134,6 +139,8 @@ export default function MonthView({
 
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         e.preventDefault();
+        // Stop React synthetic propagation so the global CalendarView
+        // arrow-key handler (which navigates months) does not also fire.
         e.stopPropagation();
         setFocusedCellIndex((prev) => {
           const current = prev || { row: 0, col: 0 };
@@ -169,7 +176,8 @@ export default function MonthView({
           }
           return { row, col };
         });
-      } else if (e.key === 'Enter') {
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
         if (focusedCellIndex) {
           const day = calendarWeeks[focusedCellIndex.row]?.[focusedCellIndex.col];
           if (day) {
@@ -221,10 +229,27 @@ export default function MonthView({
     }
   }, [focusedCellIndex]);
 
-  // Reset focused cell when month changes
+  // Reset focused cell when month changes — default to today or first day of month
   useEffect(() => {
+    // Find today's cell, or fall back to first day of current month
+    for (let row = 0; row < calendarWeeks.length; row++) {
+      for (let col = 0; col < calendarWeeks[row].length; col++) {
+        if (isToday(calendarWeeks[row][col])) {
+          setFocusedCellIndex({ row, col });
+          return;
+        }
+      }
+    }
+    for (let row = 0; row < calendarWeeks.length; row++) {
+      for (let col = 0; col < calendarWeeks[row].length; col++) {
+        if (isSameMonth(calendarWeeks[row][col], currentMonth)) {
+          setFocusedCellIndex({ row, col });
+          return;
+        }
+      }
+    }
     setFocusedCellIndex(null);
-  }, [currentMonth]);
+  }, [currentMonth, calendarWeeks]);
 
   const content = (
     <div
@@ -281,6 +306,7 @@ export default function MonthView({
                     isDragActive={isDragActive}
                     columnIndex={colIndex}
                     rowIndex={weekRowIndex}
+                    totalRows={calendarWeeks.length}
                     onQuickComplete={onQuickComplete}
                     onToggleWaiting={onToggleWaiting}
                     onQuickAdd={onQuickAdd}

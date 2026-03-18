@@ -35,38 +35,68 @@ const getTodayMidnight = (() => {
 })();
 
 // Helper functions — use the cached midnight value
-// Parse date string consistently to avoid timezone issues
-const parseDateToLocal = (dueDate: string): { year: number; month: number; day: number } | null => {
-  // Extract just the date part (YYYY-MM-DD) to avoid timezone parsing issues
-  const datePart = dueDate.split('T')[0];
-  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return null;
-  return {
-    year: parseInt(match[1], 10),
-    month: parseInt(match[2], 10) - 1, // JS months are 0-indexed
-    day: parseInt(match[3], 10),
-  };
+/**
+ * Parse date string to local Date object, handling both ISO timestamps and date-only strings.
+ *
+ * IMPORTANT: Date-only strings (YYYY-MM-DD) are interpreted as UTC midnight by default,
+ * which can cause timezone issues. We parse them manually to use local timezone.
+ *
+ * @param dueDate - ISO timestamp (2024-02-20T15:30:00Z) or date-only (2024-02-20)
+ * @returns Date object in local timezone, or null if invalid
+ */
+const parseDateToLocalTimezone = (dueDate: string): Date | null => {
+  // Check if it's a date-only string (YYYY-MM-DD)
+  const dateOnlyMatch = dueDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (dateOnlyMatch) {
+    // Parse manually to avoid UTC interpretation
+    const year = parseInt(dateOnlyMatch[1], 10);
+    const month = parseInt(dateOnlyMatch[2], 10) - 1; // JS months are 0-indexed
+    const day = parseInt(dateOnlyMatch[3], 10);
+    return new Date(year, month, day, 0, 0, 0, 0);
+  }
+
+  // It's a full ISO timestamp - parse normally
+  const parsed = new Date(dueDate);
+  return isNaN(parsed.getTime()) ? null : parsed;
 };
 
+/**
+ * Check if a due date is today in the user's local timezone
+ */
 const isDueToday = (dueDate?: string) => {
   if (!dueDate) return false;
-  const parsed = parseDateToLocal(dueDate);
-  if (!parsed) return false;
 
-  // Create date at midnight in local timezone for comparison
-  const dueDateMidnight = new Date(parsed.year, parsed.month, parsed.day, 0, 0, 0, 0);
-  return dueDateMidnight.getTime() === getTodayMidnight();
+  const parsedDate = parseDateToLocalTimezone(dueDate);
+  if (!parsedDate) return false;
+
+  // Get today at midnight in local timezone
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Get the due date at midnight in local timezone
+  const dueDay = new Date(parsedDate);
+  dueDay.setHours(0, 0, 0, 0);
+
+  // Compare timestamps
+  return dueDay.getTime() === today.getTime();
 };
 
+/**
+ * Check if a due date is in the past (overdue)
+ */
 const isOverdue = (dueDate?: string, completed?: boolean, status?: string) => {
   // Also check status to handle data inconsistencies where status='done' but completed=false
   if (!dueDate || completed || status === 'done') return false;
-  const parsed = parseDateToLocal(dueDate);
-  if (!parsed) return false;
+
+  const parsedDate = parseDateToLocalTimezone(dueDate);
+  if (!parsedDate) return false;
+
+  // Get end of due date in local timezone (23:59:59.999)
+  const dueDateEndOfDay = new Date(parsedDate);
+  dueDateEndOfDay.setHours(23, 59, 59, 999);
 
   // A task is overdue if the end of its due date has passed
-  // Create date at end of day (23:59:59.999) in local timezone
-  const dueDateEndOfDay = new Date(parsed.year, parsed.month, parsed.day, 23, 59, 59, 999);
   return dueDateEndOfDay.getTime() < Date.now();
 };
 

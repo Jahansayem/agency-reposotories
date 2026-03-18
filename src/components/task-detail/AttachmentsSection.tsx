@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Paperclip, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Attachment } from '@/types/todo';
@@ -32,6 +32,34 @@ export default function AttachmentsSection({
 }: AttachmentsSectionProps) {
   const [isOpen, setIsOpen] = useState(attachments.length > 0);
   const [showUpload, setShowUpload] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!canEdit) return;
+    setIsDragging(true);
+  }, [canEdit]);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (!canEdit) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      setDroppedFile(file);
+      setShowUpload(true);
+      if (!isOpen) setIsOpen(true);
+    }
+  }, [canEdit, isOpen]);
 
   const handleUploadComplete = (newAttachment: Attachment) => {
     const updated = [...attachments, newAttachment];
@@ -45,7 +73,12 @@ export default function AttachmentsSection({
   };
 
   return (
-    <div>
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={isDragging ? 'rounded-xl ring-2 ring-[var(--accent)] bg-[var(--accent-light)]' : ''}
+    >
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -131,9 +164,10 @@ export default function AttachmentsSection({
           todoId={todoId}
           userName={currentUserName}
           onUploadComplete={handleUploadComplete}
-          onClose={() => setShowUpload(false)}
+          onClose={() => { setShowUpload(false); setDroppedFile(null); }}
           currentAttachmentCount={attachments.length}
           maxAttachments={maxAttachments}
+          initialFile={droppedFile ?? undefined}
         />
       )}
     </div>

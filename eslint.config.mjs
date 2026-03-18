@@ -8,7 +8,7 @@ const eslintConfig = defineConfig([
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
-    ".next/**",
+    "**/.next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
@@ -16,6 +16,12 @@ const eslintConfig = defineConfig([
     "coverage/**",
     // Hosting/build output directories
     ".netlify/**",
+    // Local git worktrees can contain their own build outputs
+    ".worktrees/**",
+    // Local tooling outputs
+    ".playwright-mcp/**",
+    "playwright-report/**",
+    "test-results/**",
   ]),
   // Custom rules overrides
   {
@@ -58,6 +64,31 @@ const eslintConfig = defineConfig([
       "prefer-const": "off",
       // Playwright fixtures use a `use(...)` callback that trips the React hook rule.
       "react-hooks/rules-of-hooks": "off",
+    },
+  },
+  // Relaxed rules for test files and scripts
+  {
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "**/test/**/*.ts",
+      "**/test/**/*.tsx",
+      "tests/**/*.ts",
+      "tests/**/*.tsx",
+      "scripts/**/*.ts",
+      "scripts/**/*.js",
+      "scripts/**/*.mjs",
+      "public/**/*.js",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unsafe-function-type": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "prefer-const": "warn",
     },
   },
 ]);

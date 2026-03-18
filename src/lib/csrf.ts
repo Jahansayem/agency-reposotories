@@ -248,7 +248,7 @@ async function fetchCsrfTokenFromServer(): Promise<string | null> {
  * Get or fetch CSRF token for use in request headers.
  * Returns cached token if available, otherwise fetches from server.
  */
-async function ensureCsrfToken(): Promise<string | null> {
+export async function ensureCsrfToken(): Promise<string | null> {
   if (typeof document === 'undefined') return null;
 
   // Check if nonce cookie exists (set by middleware)

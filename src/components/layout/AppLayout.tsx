@@ -40,7 +40,7 @@ export default function AppLayout({ children, sidebar, header }: AppLayoutProps)
     >
       {/* Header - Full width, sticky */}
       {header && (
-        <div className="sticky top-0 z-40">
+        <div className="sticky top-0 z-[200]">
           {header}
         </div>
       )}

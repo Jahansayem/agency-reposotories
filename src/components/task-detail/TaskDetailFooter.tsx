@@ -81,14 +81,11 @@ export default function TaskDetailFooter({
       {/* Right side: primary action */}
       <button
         onClick={onToggleComplete}
-        disabled={!canEdit}
         className={`
           flex items-center gap-1.5 rounded-[var(--radius-lg)] px-5 py-2.5 text-sm font-medium transition-colors
-          ${!canEdit
-            ? 'opacity-60 cursor-not-allowed bg-[var(--surface-2)] text-[var(--foreground)] border border-[var(--border)]'
-            : completed
-              ? 'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface)] border border-[var(--border)] shadow-none'
-              : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white shadow-[var(--shadow-sm)]'
+          ${completed
+            ? 'bg-[var(--surface-2)] text-[var(--foreground)] hover:bg-[var(--surface)] border border-[var(--border)] shadow-none'
+            : 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white shadow-[var(--shadow-sm)]'
           }
         `}
       >

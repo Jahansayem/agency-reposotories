@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { withAiAuth } from '@/lib/agencyAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 // Audio file transcription endpoint using OpenAI Whisper + Claude for task parsing
 // Supports three modes:
@@ -30,7 +31,20 @@ const SUPPORTED_MIME_TYPES = [
 
 type ProcessingMode = 'transcribe' | 'tasks' | 'subtasks';
 
-async function handleTranscribe(request: NextRequest): Promise<NextResponse> {
+async function handleTranscribe(request: NextRequest, userId: string): Promise<NextResponse> {
+  // Rate limiting for expensive AI operations (audio transcription)
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+  const rateLimitResult = await withRateLimit({
+    identifier: `${ip}:${userId}`,
+    limiter: rateLimiters.aiExpensive,
+  });
+
+  if (!rateLimitResult.success) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   try {
     const formData = await request.formData();
     const audioFileRaw = formData.get('audio');
@@ -428,6 +442,6 @@ Rules:
 }
 
 // Export wrapped handler with session auth and AI-specific error handling
-export const POST = withAiAuth('TranscribeAPI', async (request) => {
-  return handleTranscribe(request);
+export const POST = withAiAuth('TranscribeAPI', async (request, userId, userName) => {
+  return handleTranscribe(request, userId);
 });

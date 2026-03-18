@@ -45,6 +45,42 @@ vi.mock('@/lib/activityLogger', () => ({
   logActivity: vi.fn(),
 }));
 
+// Mock retryWithBackoff to bypass retries in tests
+vi.mock('@/lib/retryWithBackoff', () => ({
+  retryWithBackoff: vi.fn(async (fn: () => Promise<any>) => fn()),
+}));
+
+// Mock Toast
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(() => 'toast-id'),
+    update: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}));
+
+// Mock haptics
+vi.mock('@/lib/haptics', () => ({
+  haptics: {
+    success: vi.fn(),
+    error: vi.fn(),
+    medium: vi.fn(),
+  },
+}));
+
+// Mock logger
+vi.mock('@/lib/logger', () => ({
+  logger: {
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 describe('Store + Hooks Integration', () => {
   beforeEach(() => {
     // Reset store state using the actual store API
@@ -304,16 +340,19 @@ describe('Store + Hooks Integration', () => {
     });
 
     it('selectTodoStats should calculate correctly', () => {
-      // Use full ISO timestamps for timezone consistency
+      // Use date-only strings (YYYY-MM-DD) since isDueToday/isOverdue parse the date part
+      // and compare against local midnight — avoids UTC vs local date mismatch
       const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
       const todos = [
         createMockTodo({ id: 'todo-1', completed: true, status: 'done' }),
         createMockTodo({ id: 'todo-2', completed: true, status: 'done' }),
-        createMockTodo({ id: 'todo-3', completed: false, due_date: today.toISOString() }),
-        createMockTodo({ id: 'todo-4', completed: false, due_date: yesterday.toISOString() }),
+        createMockTodo({ id: 'todo-3', completed: false, due_date: todayStr }),
+        createMockTodo({ id: 'todo-4', completed: false, due_date: yesterdayStr }),
         createMockTodo({ id: 'todo-5', completed: false }),
       ];
 

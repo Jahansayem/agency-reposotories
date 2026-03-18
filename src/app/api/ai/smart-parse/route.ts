@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { createHash } from 'crypto';
 import { logger } from '@/lib/logger';
 import {
   validateAiRequest,
@@ -12,6 +13,7 @@ import {
   ParsedSubtask,
 } from '@/lib/aiApiHelper';
 import { withSessionAuth } from '@/lib/agencyAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 export interface SmartParseResult {
   mainTask: {
@@ -154,7 +156,20 @@ Complex input: "Email from client: Hi, thanks for the presentation yesterday. Ca
 Respond with ONLY the JSON object, no other text.`;
 }
 
-async function handleSmartParse(request: NextRequest) {
+async function handleSmartParse(request: NextRequest, userId: string) {
+  // Rate limiting
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+  const rateLimitResult = await withRateLimit({
+    identifier: `${ip}:${userId}`,
+    limiter: rateLimiters.ai,
+  });
+
+  if (!rateLimitResult.success) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   // API-010: Input length limit to prevent excessive token usage
   const MAX_INPUT_LENGTH = 10000;
 
@@ -212,7 +227,8 @@ async function handleSmartParse(request: NextRequest) {
   if (!result) {
     logger.error('Failed to parse AI response', undefined, {
       component: 'SmartParseAPI',
-      responseText: aiResult.content,
+      responseCharCount: aiResult.content.length,
+      responseHash: createHash('sha256').update(aiResult.content).digest('hex').substring(0, 16),
     });
     return aiErrorResponse('Failed to parse AI response', 500);
   }
@@ -240,6 +256,6 @@ async function handleSmartParse(request: NextRequest) {
   return aiSuccessResponse({ result: validatedResult });
 }
 
-export const POST = withAiErrorHandling('SmartParseAPI', withSessionAuth(async (request) => {
-  return handleSmartParse(request);
+export const POST = withAiErrorHandling('SmartParseAPI', withSessionAuth(async (request, userId, userName) => {
+  return handleSmartParse(request, userId);
 }));

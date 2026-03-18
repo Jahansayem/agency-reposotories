@@ -42,7 +42,7 @@ export function AgencyOnboardingTooltip({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: -10 }}
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="absolute left-full ml-3 top-0 z-50 w-64"
+          className="absolute left-full ml-3 top-0 z-[700] w-64"
         >
           {/* Pointer triangle */}
           <div className="absolute -left-2 top-4 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-blue-500" />

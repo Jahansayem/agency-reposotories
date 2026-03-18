@@ -364,6 +364,69 @@ export default function ManagerDashboard({
     m => m.overdueTasks > 0 || m.workloadLevel === 'overloaded'
   );
 
+  const insuranceTasksContent = useMemo(() => {
+    const categories = [
+      { key: 'claim' as InsuranceTaskCategory, label: 'Claims', icon: FileText, color: 'text-red-500', bgColor: 'bg-red-500/10' },
+      { key: 'follow_up' as InsuranceTaskCategory, label: 'Follow-ups', icon: Phone, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+      { key: 'payment' as InsuranceTaskCategory, label: 'Payments', icon: DollarSign, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
+      { key: 'vehicle_add' as InsuranceTaskCategory, label: 'Vehicle Adds', icon: Car, color: 'text-[var(--accent)]', bgColor: 'bg-[var(--accent)]/10' },
+      { key: 'policy_review' as InsuranceTaskCategory, label: 'Policy Reviews', icon: Shield, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+    ];
+
+    // Show categories with overdue first, then by active count
+    const sortedCategories = [...categories].sort((a, b) => {
+      const aOverdue = insuranceWorkload[a.key].overdue;
+      const bOverdue = insuranceWorkload[b.key].overdue;
+      if (aOverdue !== bOverdue) return bOverdue - aOverdue;
+      return insuranceWorkload[b.key].active - insuranceWorkload[a.key].active;
+    });
+
+    const hasAnyWork = sortedCategories.some(c => insuranceWorkload[c.key].active > 0);
+
+    if (!hasAnyWork) {
+      return (
+        <div className={`text-center py-6 text-[var(--text-light)]`}>
+          <CheckCircle2 className="w-10 h-10 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">All insurance tasks completed</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {sortedCategories.map(({ key, label, icon: Icon, color, bgColor }) => {
+          const data = insuranceWorkload[key];
+          if (data.active === 0 && data.overdue === 0) return null;
+
+          return (
+            <div
+              key={key}
+              className={`flex items-center gap-3 p-3 rounded-[var(--radius-xl)] ${
+                data.overdue > 0
+                  ? 'bg-red-500/10 dark:bg-red-500/20 border border-red-500/20'
+                  : 'bg-[var(--surface-2)]'}`}
+            >
+              <div className={`w-10 h-10 rounded-[var(--radius-xl)] flex items-center justify-center ${bgColor}`}>
+                <Icon className={`w-5 h-5 ${color}`} />
+              </div>
+              <div className="flex-1">
+                <p className={`text-sm font-medium text-[var(--foreground)]`}>{label}</p>
+                <div className="flex items-center gap-2 text-xs">
+                  {data.overdue > 0 && (
+                    <span className="text-red-500 font-medium">{data.overdue} overdue</span>
+                  )}
+                  <span className={`text-[var(--text-light)]`}>
+                    {data.active} active
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }, [insuranceWorkload]);
+
   return (
     <>
       {/* Calendar View Modal/Overlay */}
@@ -373,7 +436,7 @@ export default function ManagerDashboard({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center p-4"
             onClick={() => setShowCalendar(false)}
           >
             <motion.div
@@ -673,68 +736,7 @@ export default function ManagerDashboard({
           <Card>
             <SectionTitle icon={Shield} title="Insurance Tasks" badge={insuranceWorkload.claim.overdue + insuranceWorkload.follow_up.overdue + insuranceWorkload.payment.overdue} />
 
-            {(() => {
-              const categories = [
-                { key: 'claim' as InsuranceTaskCategory, label: 'Claims', icon: FileText, color: 'text-red-500', bgColor: 'bg-red-500/10' },
-                { key: 'follow_up' as InsuranceTaskCategory, label: 'Follow-ups', icon: Phone, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-                { key: 'payment' as InsuranceTaskCategory, label: 'Payments', icon: DollarSign, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
-                { key: 'vehicle_add' as InsuranceTaskCategory, label: 'Vehicle Adds', icon: Car, color: 'text-[var(--accent)]', bgColor: 'bg-[var(--accent)]/10' },
-                { key: 'policy_review' as InsuranceTaskCategory, label: 'Policy Reviews', icon: Shield, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
-              ];
-
-              // Show categories with overdue first, then by active count
-              const sortedCategories = [...categories].sort((a, b) => {
-                const aOverdue = insuranceWorkload[a.key].overdue;
-                const bOverdue = insuranceWorkload[b.key].overdue;
-                if (aOverdue !== bOverdue) return bOverdue - aOverdue;
-                return insuranceWorkload[b.key].active - insuranceWorkload[a.key].active;
-              });
-
-              const hasAnyWork = sortedCategories.some(c => insuranceWorkload[c.key].active > 0);
-
-              if (!hasAnyWork) {
-                return (
-                  <div className={`text-center py-6 text-[var(--text-light)]`}>
-                    <CheckCircle2 className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">All insurance tasks completed</p>
-                  </div>
-                );
-              }
-
-              return (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {sortedCategories.map(({ key, label, icon: Icon, color, bgColor }) => {
-                    const data = insuranceWorkload[key];
-                    if (data.active === 0 && data.overdue === 0) return null;
-
-                    return (
-                      <div
-                        key={key}
-                        className={`flex items-center gap-3 p-3 rounded-[var(--radius-xl)] ${
-                          data.overdue > 0
-                            ? 'bg-red-500/10 dark:bg-red-500/20 border border-red-500/20'
-                            : 'bg-[var(--surface-2)]'}`}
-                      >
-                        <div className={`w-10 h-10 rounded-[var(--radius-xl)] flex items-center justify-center ${bgColor}`}>
-                          <Icon className={`w-5 h-5 ${color}`} />
-                        </div>
-                        <div className="flex-1">
-                          <p className={`text-sm font-medium text-[var(--foreground)]`}>{label}</p>
-                          <div className="flex items-center gap-2 text-xs">
-                            {data.overdue > 0 && (
-                              <span className="text-red-500 font-medium">{data.overdue} overdue</span>
-                            )}
-                            <span className={`text-[var(--text-light)]`}>
-                              {data.active} active
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+            {insuranceTasksContent}
           </Card>
         </div>
 

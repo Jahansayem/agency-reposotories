@@ -17,7 +17,7 @@ export function ChatPanelSkeleton(_props: SkeletonProps) {
   const pulseClass = 'bg-slate-200';
 
   return (
-    <div className={`fixed bottom-4 right-4 w-80 h-96 ${bgClass} rounded-[var(--radius-xl)] shadow-2xl border ${borderClass} flex flex-col overflow-hidden z-50`}>
+    <div className={`fixed bottom-4 right-4 w-80 h-96 ${bgClass} rounded-[var(--radius-xl)] shadow-2xl border ${borderClass} flex flex-col overflow-hidden z-[300]`}>
       {/* Header skeleton */}
       <div className={`p-3 border-b ${borderClass} flex items-center gap-3`}>
         <div className={`w-8 h-8 rounded-full ${pulseClass} animate-pulse`} />
@@ -60,7 +60,7 @@ export function StrategicDashboardSkeleton(_props: SkeletonProps) {
   const pulseClass = 'bg-slate-200';
 
   return (
-    <div className={`fixed inset-0 ${bgClass} z-50 flex flex-col`}>
+    <div className={`fixed inset-0 ${bgClass} z-[300] flex flex-col`}>
       {/* Header skeleton */}
       <div className={`${cardClass} p-4 border-b ${'border-slate-200'}`}>
         <div className="max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px] mx-auto flex items-center justify-between">
@@ -145,7 +145,7 @@ export function WeeklyProgressChartSkeleton(_props: SkeletonProps) {
   const pulseClass = 'bg-slate-200';
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[300]">
       <div className={`${bgClass} rounded-[var(--radius-xl)] p-6 w-full max-w-lg mx-4`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

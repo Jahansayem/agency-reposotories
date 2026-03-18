@@ -5,10 +5,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, AlertTriangle, Calendar, CalendarClock, CalendarX } from 'lucide-react';
 import { Todo, TodoPriority, Subtask, Attachment, RecurrencePattern, WaitingContactType } from '@/types/todo';
 import { prefersReducedMotion, DURATION } from '@/lib/animations';
-import { isToday, isPast, isFuture, parseISO, startOfDay } from 'date-fns';
-
 // Section types for grouping
 export type TaskSection = 'overdue' | 'today' | 'upcoming' | 'no_date';
+
+/**
+ * Parse a YYYY-MM-DD date string as local midnight.
+ * Using parseISO or new Date() on date-only strings treats them as UTC,
+ * which shifts the date back a day for users west of UTC (e.g. US timezones).
+ */
+function parseDateLocal(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
 
 interface TaskSectionData {
   id: TaskSection;
@@ -51,25 +59,34 @@ interface TaskSectionsProps {
 // Check if a date is today
 function checkIsToday(dateStr?: string): boolean {
   if (!dateStr) return false;
-  const date = parseISO(dateStr);
-  return isToday(date);
+  const date = parseDateLocal(dateStr);
+  const today = new Date();
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
 }
 
 // Check if a date is overdue (past and not today)
 // Also checks status to handle data inconsistencies where status='done' but completed=false
 function checkIsOverdue(dateStr?: string, completed?: boolean, status?: string): boolean {
   if (!dateStr || completed || status === 'done') return false;
-  const date = startOfDay(parseISO(dateStr));
-  const today = startOfDay(new Date());
+  const date = parseDateLocal(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   return date < today;
 }
 
 // Check if a date is upcoming (future, not today)
 function checkIsUpcoming(dateStr?: string): boolean {
   if (!dateStr) return false;
-  const date = startOfDay(parseISO(dateStr));
-  const today = startOfDay(new Date());
-  return date > today;
+  const date = parseDateLocal(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return date >= tomorrow;
 }
 
 /**

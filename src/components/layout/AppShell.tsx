@@ -2,6 +2,19 @@
 
 import { useState, useCallback, useEffect, createContext, useContext, ReactNode, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  CheckSquare,
+  Calendar,
+  MessageCircle,
+  Flame,
+  Inbox,
+  LayoutDashboard,
+  BarChart2,
+  Users,
+  Target,
+  Archive,
+} from 'lucide-react';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AuthUser } from '@/types/todo';
 import { usePermission } from '@/hooks/usePermission';
@@ -10,6 +23,10 @@ import NavigationSidebar from './NavigationSidebar';
 import CommandPalette from './CommandPalette';
 import EnhancedBottomNav from './EnhancedBottomNav';
 import FloatingChatButton from '../FloatingChatButton';
+import { AppBarProvider } from './AppBarContext';
+import UnifiedAppBar from './UnifiedAppBar';
+import { AgentPanel, AgentToggleButton } from '@/components/agent';
+import { useAgent } from '@/hooks/useAgent';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // APP SHELL - CORE LAYOUT ARCHITECTURE
@@ -103,9 +120,14 @@ export default function AppShell({
   onUserChange
 }: AppShellProps) {
   const { theme } = useTheme();
-  
+  const prefersReducedMotion = useReducedMotion();
+
   // Get users from store for FloatingChatButton
   const users = useTodoStore((state) => state.usersWithColors);
+
+  // Agent panel state and hook
+  const { usage: agentUsage } = useAgent();
+  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false);
 
   // Navigation state
   const [activeView, setActiveView] = useState<ActiveView>('tasks');
@@ -160,41 +182,56 @@ export default function AppShell({
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command palette: Cmd/Ctrl + K
+      // Check if user is typing in an input/textarea/contentEditable
+      const target = e.target as HTMLElement;
+      const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+
+      // Command palette: Cmd/Ctrl + K (allow even in inputs — standard pattern)
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandPaletteOpen(prev => !prev);
+        return;
       }
 
-      // Toggle sidebar: Cmd/Ctrl + B
+      // Toggle sidebar: Cmd/Ctrl + B — skip when in inputs (conflicts with bold)
       if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-        e.preventDefault();
-        setSidebarCollapsed(prev => !prev);
+        if (!isInInput) {
+          e.preventDefault();
+          setSidebarCollapsed(prev => !prev);
+        }
+        return;
       }
 
       // Keyboard shortcuts modal: ? key
       if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        // Don't trigger if user is typing in an input/textarea
-        const target = e.target as HTMLElement;
-        const isInputField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-
-        if (!isInputField) {
+        if (!isInInput) {
           e.preventDefault();
           setShowShortcuts(prev => !prev);
         }
+        return;
       }
 
       // Close panels on Escape
       if (e.key === 'Escape') {
+        // Always allow closing modals/overlays
         if (showShortcuts) {
           setShowShortcuts(false);
-        } else if (commandPaletteOpen) {
+          return;
+        }
+        if (commandPaletteOpen) {
           setCommandPaletteOpen(false);
-        } else if (rightPanel) {
+          return;
+        }
+        // Don't close the task detail panel if user is editing inside it
+        if (isInInput) return;
+        if (rightPanel) {
           setRightPanel(null);
-        } else if (mobileSheetOpen) {
+          return;
+        }
+        if (mobileSheetOpen) {
           setMobileSheetOpen(false);
           setMobileSheetContent(null);
+          return;
         }
       }
     };
@@ -307,6 +344,7 @@ export default function AppShell({
   };
 
   return (
+    <AppBarProvider>
     <AppShellContext.Provider value={contextValue}>
       <div
         className={`
@@ -323,11 +361,16 @@ export default function AppShell({
           Skip to main content
         </a>
 
+        {/* ═══ UNIFIED APP BAR ═══ */}
+        <UnifiedAppBar
+          currentUser={currentUser}
+          onUserChange={onUserChange}
+        />
+
         <div className="flex-1 flex overflow-hidden">
           {/* ═══ LEFT SIDEBAR ═══ */}
           <NavigationSidebar
             currentUser={currentUser}
-            onUserChange={onUserChange}
             onShowWeeklyChart={openWeeklyChart}
             onShowShortcuts={openShortcuts}
           />
@@ -348,10 +391,10 @@ export default function AppShell({
           <AnimatePresence mode="wait">
             {rightPanel && rightPanelContent && (
               <motion.aside
-                initial={{ width: 0, opacity: 0 }}
+                initial={prefersReducedMotion ? false : { width: 0, opacity: 0 }}
                 animate={{ width: 380, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { width: 0, opacity: 0 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                 className={`
                   hidden lg:flex flex-col overflow-hidden
                   border-l flex-shrink-0
@@ -375,6 +418,19 @@ export default function AppShell({
           onTaskLinkClick={handleTaskLinkClick}
         />
 
+        {/* ═══ AI AGENT TOGGLE BUTTON ═══ */}
+        <AgentToggleButton
+          onClick={() => setIsAgentPanelOpen(true)}
+          usage={agentUsage}
+        />
+
+        {/* ═══ AI AGENT PANEL ═══ */}
+        <AgentPanel
+          isOpen={isAgentPanelOpen}
+          onClose={() => setIsAgentPanelOpen(false)}
+          onMinimize={() => setIsAgentPanelOpen(false)}
+        />
+
         {/* ═══ COMMAND PALETTE ═══ */}
         <CommandPalette
           isOpen={commandPaletteOpen}
@@ -388,21 +444,21 @@ export default function AppShell({
             <>
               {/* Backdrop */}
               <motion.div
-                initial={{ opacity: 0 }}
+                initial={prefersReducedMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={closeMobileSheet}
-                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden"
+                className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm lg:hidden"
               />
 
               {/* Sheet */}
               <motion.div
-                initial={{ y: '100%' }}
+                initial={prefersReducedMotion ? false : { y: '100%' }}
                 animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { y: '100%' }}
+                transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 300 }}
                 className={`
-                  fixed inset-x-0 bottom-0 z-50 lg:hidden
+                  fixed inset-x-0 bottom-0 z-[400] lg:hidden
                   max-h-[85vh] rounded-t-3xl overflow-hidden
                   ${'bg-[var(--surface)]'}
                 `}
@@ -437,6 +493,7 @@ export default function AppShell({
         </AnimatePresence>
       </div>
     </AppShellContext.Provider>
+    </AppBarProvider>
   );
 }
 
@@ -445,56 +502,83 @@ export default function AppShell({
 // ═══════════════════════════════════════════════════════════════════════════
 
 function MobileMenuContent({ onClose }: { onClose: () => void }) {
-  const { theme } = useTheme();
-  const { setActiveView, currentUser } = useAppShell();
+  const { setActiveView, activeView } = useAppShell();
   const canViewStrategicGoals = usePermission('can_view_strategic_goals');
+  const canViewArchive = usePermission('can_view_archive');
 
-  const menuItems = [
-    { id: 'tasks', label: 'Tasks', icon: '📋' },
-    { id: 'calendar', label: 'Calendar', icon: '📅' },
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'chat', label: 'Messages', icon: '💬' },
+  const primaryItems: { id: ActiveView; label: string; icon: typeof CheckSquare }[] = [
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+    { id: 'calendar', label: 'Calendar', icon: Calendar },
+    { id: 'chat', label: 'Messages', icon: MessageCircle },
+    { id: 'opportunities', label: 'Opportunities', icon: Flame },
+    { id: 'ai_inbox', label: 'AI Inbox', icon: Inbox },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
   ];
 
-  const handleItemClick = (viewId: string) => {
-    setActiveView(viewId as ActiveView);
+  const secondaryItems: { id: ActiveView; label: string; icon: typeof CheckSquare; show: boolean }[] = [
+    { id: 'customers', label: 'Customers', icon: Users, show: true },
+    { id: 'goals', label: 'Strategic Goals', icon: Target, show: canViewStrategicGoals },
+    { id: 'archive', label: 'Archive', icon: Archive, show: canViewArchive },
+  ];
+
+  const handleItemClick = (viewId: ActiveView) => {
+    setActiveView(viewId);
     onClose();
   };
 
   return (
-    <div className="space-y-2 pb-4">
-      <h2 className={`text-lg font-semibold mb-4 ${'text-[var(--foreground)]'}`}>
+    <div className="space-y-1 pb-4">
+      <h2 className="text-lg font-semibold mb-4 text-[var(--foreground)]">
         Navigation
       </h2>
-      {menuItems.map(item => (
-        <button
-          key={item.id}
-          onClick={() => handleItemClick(item.id)}
-          className={`
-            w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
-            transition-colors
-            ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
-          `}
-        >
-          <span className="text-xl">{item.icon}</span>
-          <span className="font-medium">{item.label}</span>
-        </button>
-      ))}
-
-      {canViewStrategicGoals && (
-        <>
-          <div className={`border-t my-4 ${'border-[var(--border)]'}`} />
+      {primaryItems.map(item => {
+        const Icon = item.icon;
+        const isActive = activeView === item.id;
+        return (
           <button
-            onClick={() => handleItemClick('goals')}
+            key={item.id}
+            onClick={() => handleItemClick(item.id)}
             className={`
               w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
               transition-colors
-              ${'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
+              ${isActive
+                ? 'bg-[var(--accent-light)] text-[var(--accent)] font-semibold'
+                : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
             `}
           >
-            <span className="text-xl">🎯</span>
-            <span className="font-medium">Strategic Goals</span>
+            <Icon className="w-5 h-5" aria-hidden="true" />
+            <span className="font-medium">{item.label}</span>
           </button>
+        );
+      })}
+
+      {secondaryItems.some(i => i.show) && (
+        <>
+          <div className="border-t my-3 border-[var(--border)]" />
+          <p className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[var(--text-light)]">
+            More
+          </p>
+          {secondaryItems.filter(i => i.show).map(item => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleItemClick(item.id)}
+                className={`
+                  w-full flex items-center gap-3 px-4 py-3 rounded-[var(--radius-xl)] text-left
+                  transition-colors
+                  ${isActive
+                    ? 'bg-[var(--accent-light)] text-[var(--accent)] font-semibold'
+                    : 'text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
+                `}
+              >
+                <Icon className="w-5 h-5" aria-hidden="true" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            );
+          })}
         </>
       )}
     </div>
@@ -502,14 +586,12 @@ function MobileMenuContent({ onClose }: { onClose: () => void }) {
 }
 
 function MobileFiltersContent({ onClose }: { onClose: () => void }) {
-  const { theme } = useTheme();
-
   return (
     <div className="space-y-4 pb-4">
-      <h2 className={`text-lg font-semibold ${'text-[var(--foreground)]'}`}>
+      <h2 className="text-lg font-semibold text-[var(--foreground)]">
         Filters
       </h2>
-      <p className={`text-sm ${'text-[var(--text-muted)]'}`}>
+      <p className="text-sm text-[var(--text-muted)]">
         Filter controls will be rendered here
       </p>
     </div>

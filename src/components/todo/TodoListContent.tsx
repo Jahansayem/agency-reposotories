@@ -9,6 +9,7 @@ import SortableTodoItem from '../SortableTodoItem';
 import TaskSections from '../TaskSections';
 import EmptyState from '../EmptyState';
 import { SkeletonKanbanBoard } from '../SkeletonLoader';
+import { SPACING } from '@/lib/design-tokens';
 
 // Lazy load KanbanBoard (979 lines) - only needed when switching to kanban view
 const KanbanBoard = dynamic(() => import('../KanbanBoard'), {
@@ -307,7 +308,14 @@ function TodoListContent({
                 />
               ) : (
                 /* Flat list view (original behavior) */
-                <div className="space-y-2" role="list" aria-label="Task list">
+                <div
+                  role="list"
+                  aria-label="Task list"
+                  className="flex flex-col"
+                  style={{
+                    gap: SPACING.sm,
+                  }}
+                >
                   <AnimatePresence initial={false}>
                     {todos.length === 0 ? (
                       renderEmptyState()
@@ -322,12 +330,27 @@ function TodoListContent({
                 containers in TaskSections so tasks can be dragged upward across sections */}
             <DragOverlay dropAnimation={null}>
               {activeDragTodo ? (
-                <div className="bg-[var(--surface)] border-2 border-[var(--accent)] rounded-[var(--radius-xl)] shadow-2xl px-4 py-3 max-w-md">
-                  <p className="text-sm font-medium text-[var(--foreground)] truncate">
+                <div
+                  className="bg-[var(--surface)] border-2 border-[var(--accent)] shadow-2xl w-[85vw] max-w-md"
+                  style={{
+                    borderRadius: 'var(--radius-xl)',
+                    padding: `${SPACING.sm} ${SPACING.md}`,
+                  }}
+                >
+                  <p
+                    className="font-medium text-[var(--foreground)] truncate"
+                    style={{ fontSize: '13px' }}
+                  >
                     {activeDragTodo.text}
                   </p>
                   {activeDragTodo.assigned_to && (
-                    <p className="text-xs text-[var(--text-muted)] mt-1 truncate">
+                    <p
+                      className="text-[var(--text-muted)] truncate"
+                      style={{
+                        fontSize: '11px',
+                        marginTop: SPACING.xs,
+                      }}
+                    >
                       {activeDragTodo.assigned_to}
                     </p>
                   )}

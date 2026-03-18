@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ToastProvider } from "@/components/ui";
@@ -16,12 +15,6 @@ export const viewport: Viewport = {
   userScalable: true,
   viewportFit: "cover",
 };
-
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-});
 
 export const metadata: Metadata = {
   title: "Wavezly - Task Management",
@@ -47,7 +40,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body
-        className={`${plusJakarta.variable} font-sans antialiased`}
+        className="font-sans antialiased"
       >
         <ClerkProviderWrapper>
           <ServiceWorkerRegistration />

@@ -85,9 +85,11 @@ function TodoItemComponent({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editingText, setEditingText] = useState(false);
   const [text, setText] = useState(todo.text);
+  const [isSaving, setIsSaving] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savingTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [longPressTriggered, setLongPressTriggered] = useState(false);
 
   const priority = todo.priority || 'medium';
@@ -99,10 +101,11 @@ function TodoItemComponent({
   const completedSubtasks = subtasks.filter(s => s.completed).length;
   const subtaskProgress = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
 
-  // Cleanup long-press timer on unmount
+  // Cleanup long-press timer and saving timeout on unmount
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      if (savingTimeoutRef.current) clearTimeout(savingTimeoutRef.current);
     };
   }, []);
 
@@ -136,12 +139,60 @@ function TodoItemComponent({
     }, 100);
   }, []);
 
-  const handleToggle = () => {
-    if (!todo.completed) {
+  const handleToggle = async () => {
+    const isCompleting = !todo.completed;
+    if (isCompleting) {
       setCelebrating(true);
-      haptics.success();
     }
-    onToggle(todo.id, !todo.completed);
+    setIsSaving(true);
+    try {
+      await onToggle(todo.id, !todo.completed);
+    } finally {
+      savingTimeoutRef.current = setTimeout(() => setIsSaving(false), 500);
+    }
+    // After completing a task, move focus to the next task's completion button
+    if (isCompleting) {
+      const currentItem = document.getElementById(`todo-${todo.id}`);
+      if (!currentItem) return;
+      const container = currentItem.parentElement;
+      if (!container) return;
+      const allItems = Array.from(container.querySelectorAll('[data-testid="todo-item"]'));
+      const currentIndex = allItems.indexOf(currentItem);
+
+      // Wait for exit animation, then use double rAF for React re-render
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const remainingItems = container.querySelectorAll('[data-testid="todo-item"]');
+            const nextItem = remainingItems.length > 0
+              ? remainingItems[Math.min(currentIndex, remainingItems.length - 1)]
+              : null;
+            const nextCheckbox = nextItem?.querySelector<HTMLButtonElement>('button[data-completion-checkbox]');
+
+            if (nextCheckbox) {
+              nextCheckbox.focus();
+            } else {
+              // Fallback chain: "New Task" button, main heading, then container
+              const newTaskButton = document.querySelector<HTMLElement>('button[data-new-task]');
+              if (newTaskButton) {
+                newTaskButton.focus();
+                return;
+              }
+              const mainHeading = document.querySelector<HTMLElement>('h1, [role="heading"]');
+              if (mainHeading) {
+                mainHeading.setAttribute('tabindex', '-1');
+                mainHeading.focus();
+                return;
+              }
+              if (container instanceof HTMLElement) {
+                container.setAttribute('tabindex', '-1');
+                container.focus();
+              }
+            }
+          });
+        });
+      }, 200);
+    }
   };
 
   const handleSaveText = () => {
@@ -215,7 +266,7 @@ function TodoItemComponent({
       return `bg-[var(--surface)] border-[var(--border-subtle)] opacity-75 ${priorityBorder}`;
     }
     if (selected) {
-      return `border-[var(--accent)] bg-[var(--accent-light)] ${priorityBorder}`;
+      return `border-[var(--accent)] bg-[var(--accent-light)] ring-2 ring-[var(--accent)] ring-offset-1 shadow-lg ${priorityBorder}`;
     }
     if (dueDateStatus === 'overdue') {
       const isUrgentPriority = priority === 'urgent';
@@ -239,11 +290,17 @@ function TodoItemComponent({
       id={`todo-${todo.id}`}
       data-testid="todo-item"
       role="listitem"
-      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${longPressTriggered ? 'ring-2 ring-[var(--accent)]/50' : ''}`}
+      className={`group relative rounded-[var(--radius-xl)] border transition-all duration-200 ${getCardStyle()} ${longPressTriggered ? 'ring-2 ring-[var(--accent)]/50' : ''} focus-within:ring-2 focus-within:ring-[var(--accent)] focus-within:ring-offset-2 ${isSaving ? 'opacity-60 pointer-events-none' : ''}`}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
     >
+      {/* Optimistic saving indicator */}
+      {isSaving && (
+        <div className="absolute top-2 right-2 z-10">
+          <div className="w-5 h-5 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
       <Celebration trigger={celebrating} onComplete={() => setCelebrating(false)} />
       <div className="flex items-center gap-3 px-4 py-3">
         {/* Selection checkbox (for bulk actions) */}
@@ -270,21 +327,19 @@ function TodoItemComponent({
         {/* Completion checkbox with animation */}
         <motion.button
           onClick={handleToggle}
-          disabled={!canEdit}
-          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${canEdit ? '' : 'opacity-50 cursor-not-allowed'}`}
+          className={`relative w-11 h-11 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0`}
           style={{ touchAction: 'manipulation' }}
-          title={!canEdit ? 'You do not have permission to modify this task' : todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
-          whileHover={canEdit ? { scale: 1.1 } : undefined}
-          whileTap={canEdit ? { scale: 0.95 } : undefined}
+          title={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
           transition={{ duration: DURATION.fast }}
+          data-completion-checkbox
         >
           <motion.span
             className={`w-8 h-8 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center ${
               todo.completed
                 ? 'bg-[var(--success)] border-[var(--success)] shadow-sm'
-                : canEdit
-                  ? 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
-                  : 'border-[var(--border)]'
+                : 'border-[var(--border)] group-hover:border-[var(--success)] group-hover:bg-[var(--success)]/10 group-hover:shadow-md'
             }`}
             initial={false}
             animate={todo.completed ? 'checked' : 'unchecked'}
@@ -308,7 +363,7 @@ function TodoItemComponent({
 
         {/* Content area - clickable to expand/open detail */}
         <div
-          className="flex-1 min-w-0 cursor-pointer text-left"
+          className="flex-1 min-w-0 cursor-pointer text-left rounded-[var(--radius-md)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-1"
           onClick={() => {
             if (onOpenDetail) {
               onOpenDetail(todo.id);

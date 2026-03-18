@@ -198,12 +198,12 @@ export default function TemplatePicker({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-[300]" onClick={() => setIsOpen(false)} />
 
           {/* Dropdown */}
           <div
             data-testid="template-picker-dropdown"
-            className={`absolute left-0 top-full mt-2 w-80 rounded-[var(--radius-xl)] shadow-xl border z-50 overflow-hidden ${
+            className={`absolute left-0 top-full mt-2 w-80 rounded-[var(--radius-xl)] shadow-xl border z-[100] overflow-hidden ${
               'bg-[var(--surface)] border-[var(--border)]'}`}
           >
             {/* Header */}

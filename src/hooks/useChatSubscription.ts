@@ -5,6 +5,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { ChatMessage, PresenceStatus } from '@/types/todo';
 import { logger } from '@/lib/logger';
 import { parseChatMessage } from '@/lib/validators';
+import { useAgency } from '@/contexts/AgencyContext';
 
 interface UseChatSubscriptionOptions {
   currentUserName: string;
@@ -36,6 +37,8 @@ export function useChatSubscription({
   onTypingUpdate,
   onPresenceUpdate,
 }: UseChatSubscriptionOptions): UseChatSubscriptionReturn {
+  const { currentAgencyId, isMultiTenancyEnabled } = useAgency();
+
   const [connected, setConnected] = useState(false);
   const [tableExists, setTableExists] = useState(true);
 
@@ -44,6 +47,7 @@ export function useChatSubscription({
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lastTypingBroadcastRef = useRef<number>(0);
   const lastPresenceTimestamps = useRef<Map<string, number>>(new Map());
+  const lastPresenceStatuses = useRef<Map<string, PresenceStatus>>(new Map());
   const presenceIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track refs for callbacks to avoid stale closures
@@ -112,6 +116,9 @@ export function useChatSubscription({
 
       if (staleUsers.length > 0) {
         staleUsers.forEach(user => {
+          // Skip if already marked offline
+          if (lastPresenceStatuses.current.get(user) === 'offline') return;
+          lastPresenceStatuses.current.set(user, 'offline');
           onPresenceUpdateRef.current?.(user, 'offline');
         });
       }
@@ -128,11 +135,30 @@ export function useChatSubscription({
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
+    const messagesChannelName = isMultiTenancyEnabled && currentAgencyId
+      ? `messages-channel-${currentAgencyId}`
+      : 'messages-channel';
+
+    const messagesSubscriptionConfig: {
+      event: '*';
+      schema: 'public';
+      table: 'messages';
+      filter?: string;
+    } = {
+      event: '*',
+      schema: 'public',
+      table: 'messages',
+    };
+
+    if (isMultiTenancyEnabled && currentAgencyId) {
+      messagesSubscriptionConfig.filter = `agency_id=eq.${currentAgencyId}`;
+    }
+
     const messagesChannel = supabase
-      .channel('messages-channel')
+      .channel(messagesChannelName)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
+        messagesSubscriptionConfig,
         (payload) => {
           if (payload.eventType === 'INSERT') {
             // BUGFIX TYPE-002: Validate payload instead of dangerous cast
@@ -188,8 +214,11 @@ export function useChatSubscription({
       .channel('presence-channel')
       .on('broadcast', { event: 'presence' }, ({ payload }) => {
         if (payload.user !== currentUserName) {
-          onPresenceUpdateRef.current?.(payload.user, payload.status);
           lastPresenceTimestamps.current.set(payload.user, payload.timestamp || Date.now());
+          // Skip update if status hasn't changed
+          if (lastPresenceStatuses.current.get(payload.user) === payload.status) return;
+          lastPresenceStatuses.current.set(payload.user, payload.status);
+          onPresenceUpdateRef.current?.(payload.user, payload.status);
         }
       })
       .subscribe((status) => {
@@ -218,7 +247,7 @@ export function useChatSubscription({
       typingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
       typingTimeoutsRef.current.clear();
     };
-  }, [currentUserName, isDndMode]);
+  }, [currentUserName, isDndMode, currentAgencyId, isMultiTenancyEnabled]);
 
   return {
     connected,

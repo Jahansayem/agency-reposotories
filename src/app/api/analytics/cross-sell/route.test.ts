@@ -422,7 +422,7 @@ describe('/api/analytics/cross-sell', () => {
 
     it('should scope update to agency_id', async () => {
       const builder = chainBuilder({
-        data: { id: 'opp1', priority_tier: 'HIGH' },
+        data: { id: 'opp1', notes: 'Updated notes' },
         error: null,
       });
       mockFrom.mockReturnValue(builder);
@@ -431,7 +431,8 @@ describe('/api/analytics/cross-sell', () => {
       const req = createMockRequest({
         method: 'PATCH',
         url: 'http://localhost:3000/api/analytics/cross-sell',
-        body: { id: 'opp1', priority_tier: 'HIGH' },
+        // Use an allowed field (notes is in the ALLOWED_FIELDS whitelist)
+        body: { id: 'opp1', notes: 'Updated notes' },
       });
 
       await patchHandler(req, ctx);

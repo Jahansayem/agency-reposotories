@@ -143,7 +143,7 @@ vi.mock('@/lib/supabaseClient', () => ({
 
 // Mock activity logger
 vi.mock('@/lib/activityLogger', () => ({
-  logActivity: vi.fn(),
+  logActivity: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock welcome notification check
@@ -172,7 +172,7 @@ vi.mock('@/lib/logger', () => ({
 
 // Mock task notifications (added during multi-tenancy migration)
 vi.mock('@/lib/taskNotifications', () => ({
-  sendTaskAssignmentNotification: vi.fn(),
+  sendTaskAssignmentNotification: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 // Mock reminder service
@@ -181,14 +181,21 @@ vi.mock('@/lib/reminderService', () => ({
   updateAutoReminders: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-// Mock toast hook (useTodoData requires ToastProvider at runtime)
+// Mock Toast (useTodoData now uses useToast)
 vi.mock('@/components/ui/Toast', () => ({
   useToast: () => ({
-    warning: vi.fn(),
-    info: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(() => 'toast-id'),
+    update: vi.fn(),
+    dismiss: vi.fn(),
   }),
+}));
+
+// Mock retryWithBackoff to bypass retries in tests
+vi.mock('@/lib/retryWithBackoff', () => ({
+  retryWithBackoff: vi.fn(async (fn: () => Promise<any>) => fn()),
 }));
 
 // Import after mocking

@@ -58,7 +58,7 @@ describe('ConnectionStatus', () => {
     const wrapper = container.firstChild;
     expect(wrapper).toHaveClass('fixed');
     expect(wrapper).toHaveClass('bottom-6');
-    expect(wrapper).toHaveClass('right-6');
+    expect(wrapper).toHaveClass('right-24');
   });
 
   it('should have high z-index', () => {

@@ -26,6 +26,7 @@ export interface ActionsDropdownMenuProps {
   menuRef: RefObject<HTMLDivElement | null>;
 }
 
+
 export default function ActionsDropdownMenu({
   todo,
   canEdit,
@@ -61,6 +62,149 @@ export default function ActionsDropdownMenu({
     onSetDueDate(todo.id, getSnoozeDate(days));
     setShowSnoozeMenu(false);
   };
+
+  // Build menu items array dynamically based on available actions
+  const getMenuItems = useCallback(() => {
+    const items: React.ReactNode[] = [];
+    let menuItemIndex = 0;
+
+    // Edit
+    if (onUpdateText && canEdit) {
+      items.push(
+        <button
+          key="edit"
+          ref={(el) => { if (el) menuItemsRef.current[menuItemIndex++] = el; }}
+          role="menuitem"
+          onClick={() => { setEditingText(true); setExpanded(true); setShowActionsMenu(false); }}
+          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+        >
+          <Pencil className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+          Edit
+        </button>
+      );
+    }
+
+    // Duplicate
+    if (onDuplicate) {
+      items.push(
+        <button
+          key="duplicate"
+          ref={(el) => { if (el) menuItemsRef.current[menuItemIndex++] = el; }}
+          role="menuitem"
+          onClick={() => { onDuplicate(todo); setShowActionsMenu(false); }}
+          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+        >
+          <Copy className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+          Duplicate
+        </button>
+      );
+    }
+
+    // Snooze submenu
+    if (!todo.completed) {
+      items.push(
+        <div key="snooze" className="relative group/snooze" role="none">
+          <button
+            ref={(el) => { if (el) menuItemsRef.current[menuItemIndex++] = el; }}
+            role="menuitem"
+            aria-haspopup="true"
+            aria-expanded={showSnoozeMenu}
+            onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
+            className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+          >
+            <Clock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+            Snooze
+            <ChevronDown className="w-3 h-3 ml-auto text-[var(--text-muted)]" aria-hidden="true" />
+          </button>
+          {showSnoozeMenu && (
+            <div className="pl-6 py-1 border-t border-[var(--border)]" role="menu" aria-label="Snooze options">
+              <button role="menuitem" onClick={() => { handleSnooze(1); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Tomorrow</button>
+              <button role="menuitem" onClick={() => { handleSnooze(2); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">In 2 Days</button>
+              <button role="menuitem" onClick={() => { handleSnooze(7); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Next Week</button>
+              <button role="menuitem" onClick={() => { handleSnooze(30); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Next Month</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (onSetPrivacy && canEdit) {
+      items.push(
+        <button
+          key="privacy"
+          ref={(el) => { if (el) menuItemsRef.current[menuItemIndex++] = el; }}
+          role="menuitem"
+          onClick={() => {
+            onSetPrivacy(todo.id, !todo.is_private);
+            setShowActionsMenu(false);
+            setShowSnoozeMenu(false);
+          }}
+          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+        >
+          {todo.is_private ? (
+            <Lock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+          ) : (
+            <Unlock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+          )}
+          {todo.is_private ? 'Make Public' : 'Make Private'}
+        </button>
+      );
+    }
+
+    items.push(<div key="sep1" className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />);
+
+    // Save as Template
+    if (onSaveAsTemplate) {
+      items.push(
+        <button
+          key="template"
+          ref={(el) => { if (el) menuItemsRef.current[menuItemIndex++] = el; }}
+          role="menuitem"
+          onClick={() => { onSaveAsTemplate(todo); setShowActionsMenu(false); }}
+          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+        >
+          <FileText className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+          Save as Template
+        </button>
+      );
+    }
+
+    // Email Customer
+    if (onEmailCustomer) {
+      items.push(
+        <button
+          key="email"
+          ref={(el) => { if (el) menuItemsRef.current[menuItemIndex++] = el; }}
+          role="menuitem"
+          onClick={() => { onEmailCustomer(todo); setShowActionsMenu(false); }}
+          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
+        >
+          <Mail className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+          Email Summary
+        </button>
+      );
+    }
+
+    items.push(<div key="sep2" className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />);
+
+    // Delete
+    if (canDeleteTasks) {
+      items.push(
+        <button
+          key="delete"
+          ref={(el) => { if (el) menuItemsRef.current[menuItemIndex++] = el; }}
+          role="menuitem"
+          onClick={() => { setShowDeleteConfirm(true); setShowActionsMenu(false); }}
+          className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] focus:bg-[var(--danger-light)] focus:outline-none text-[var(--danger)] flex items-center gap-2"
+        >
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
+          Delete
+        </button>
+      );
+    }
+
+    return items;
+  }, [todo, canEdit, canDeleteTasks, showSnoozeMenu, onUpdateText, onDuplicate, onSaveAsTemplate, onEmailCustomer, menuItemsRef, setEditingText, setExpanded, setShowActionsMenu, setShowSnoozeMenu, setShowDeleteConfirm, handleSnooze]);
 
   // Calculate dropdown position when menu opens
   useEffect(() => {
@@ -151,13 +295,19 @@ export default function ActionsDropdownMenu({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showActionsMenu, setShowActionsMenu]);
 
-  // Focus first menu item when menu opens
+  // Clear menu items ref and focus first menu item when menu opens
   useEffect(() => {
-    if (showActionsMenu && menuItemsRef.current[0]) {
+    if (showActionsMenu) {
+      // Clear ref array on open to prepare for new menu items
+      menuItemsRef.current = [];
+
+      // Focus first menu item after render
       if (menuFocusTimerRef.current) clearTimeout(menuFocusTimerRef.current);
       menuFocusTimerRef.current = setTimeout(() => {
-        menuItemsRef.current[0]?.focus();
-        setFocusedMenuIndex(0);
+        if (menuItemsRef.current[0]) {
+          menuItemsRef.current[0].focus();
+          setFocusedMenuIndex(0);
+        }
       }, 10);
     }
   }, [showActionsMenu]);
@@ -178,141 +328,20 @@ export default function ActionsDropdownMenu({
 
       {/* Dropdown rendered via Portal to escape stacking context */}
       {showActionsMenu && dropdownPosition && typeof document !== 'undefined' && createPortal(
-        (() => {
-          menuItemsRef.current = [];
-          let menuItemIndex = 0;
-
-          return (
-            <div
-              id={`todo-dropdown-${todo.id}`}
-              role="menu"
-              aria-label="Task actions menu"
-              className="fixed bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl py-1 min-w-[180px]"
-              style={{
-                top: dropdownPosition.top,
-                left: dropdownPosition.left,
-                zIndex: 99999,
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Edit */}
-              {onUpdateText && canEdit && (
-                <button
-                  ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                  role="menuitem"
-                  onClick={() => { setEditingText(true); setExpanded(true); setShowActionsMenu(false); }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
-                >
-                  <Pencil className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-                  Edit
-                </button>
-              )}
-
-              {/* Duplicate */}
-              {onDuplicate && (
-                <button
-                  ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                  role="menuitem"
-                  onClick={() => { onDuplicate(todo); setShowActionsMenu(false); }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
-                >
-                  <Copy className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-                  Duplicate
-                </button>
-              )}
-
-              {/* Snooze submenu */}
-              {!todo.completed && (
-                <div className="relative group/snooze" role="none">
-                  <button
-                    ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                    role="menuitem"
-                    aria-haspopup="true"
-                    aria-expanded={showSnoozeMenu}
-                    onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
-                    className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
-                  >
-                    <Clock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-                    Snooze
-                    <ChevronDown className="w-3 h-3 ml-auto text-[var(--text-muted)]" aria-hidden="true" />
-                  </button>
-                  {showSnoozeMenu && (
-                    <div className="pl-6 py-1 border-t border-[var(--border)]" role="menu" aria-label="Snooze options">
-                      <button role="menuitem" onClick={() => { handleSnooze(1); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Tomorrow</button>
-                      <button role="menuitem" onClick={() => { handleSnooze(2); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">In 2 Days</button>
-                      <button role="menuitem" onClick={() => { handleSnooze(7); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Next Week</button>
-                      <button role="menuitem" onClick={() => { handleSnooze(30); setShowActionsMenu(false); }} className="w-full px-3 py-1.5 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--text-muted)]">Next Month</button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Privacy toggle */}
-              {onSetPrivacy && canEdit && (
-                <button
-                  ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                  role="menuitem"
-                  onClick={() => {
-                    onSetPrivacy(todo.id, !todo.is_private);
-                    setShowActionsMenu(false);
-                    setShowSnoozeMenu(false);
-                  }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
-                >
-                  {todo.is_private ? (
-                    <Lock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-                  ) : (
-                    <Unlock className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-                  )}
-                  {todo.is_private ? 'Make Public' : 'Make Private'}
-                </button>
-              )}
-
-              <div className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />
-
-              {/* Save as Template */}
-              {onSaveAsTemplate && (
-                <button
-                  ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                  role="menuitem"
-                  onClick={() => { onSaveAsTemplate(todo); setShowActionsMenu(false); }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-                  Save as Template
-                </button>
-              )}
-
-              {/* Email Customer */}
-              {onEmailCustomer && (
-                <button
-                  ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                  role="menuitem"
-                  onClick={() => { onEmailCustomer(todo); setShowActionsMenu(false); }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--surface-2)] focus:bg-[var(--surface-2)] focus:outline-none text-[var(--foreground)] flex items-center gap-2"
-                >
-                  <Mail className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
-                  Email Summary
-                </button>
-              )}
-
-              <div className="h-px bg-[var(--border)] my-1" role="separator" aria-hidden="true" />
-
-              {/* Delete */}
-              {canDeleteTasks && (
-                <button
-                  ref={(el) => { menuItemsRef.current[menuItemIndex++] = el; }}
-                  role="menuitem"
-                  onClick={() => { setShowDeleteConfirm(true); setShowActionsMenu(false); }}
-                  className="w-full px-3 py-2 text-sm text-left hover:bg-[var(--danger-light)] focus:bg-[var(--danger-light)] focus:outline-none text-[var(--danger)] flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" aria-hidden="true" />
-                  Delete
-                </button>
-              )}
-            </div>
-          );
-        })(),
+        <div
+          id={`todo-dropdown-${todo.id}`}
+          role="menu"
+          aria-label="Task actions menu"
+          className="fixed bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-xl py-1 min-w-[180px]"
+          style={{
+            top: dropdownPosition.top,
+            left: dropdownPosition.left,
+            zIndex: 99999,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {getMenuItems()}
+        </div>,
         document.body
       )}
     </div>

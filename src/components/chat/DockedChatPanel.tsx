@@ -1,18 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, RefObject, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, RefObject, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare, Users, ChevronLeft, X, Search, Bell,
-  BellOff, Moon, Pin, ChevronDown
+  MessageSquare, Users, ArrowLeft, X, Search, Pin, ChevronDown
 } from 'lucide-react';
-import { AuthUser, ChatConversation, ChatMessage, Todo, TapbackType } from '@/types/todo';
+import { AuthUser, ChatConversation, ChatMessage, ChatAttachment, Todo, TapbackType, PresenceStatus } from '@/types/todo';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible';
 import { ChatMessageList } from './ChatMessageList';
 import { ChatInputBar } from './ChatInputBar';
 import { ChatConversationList } from './ChatConversationList';
-import { useChatMessages } from '@/hooks/useChatMessages';
+
+interface ConversationListItem {
+  conv: ChatConversation;
+  lastMessage: ChatMessage | null;
+  lastActivity: number;
+}
 
 interface DockedChatPanelProps {
   currentUser: AuthUser;
@@ -24,7 +28,7 @@ interface DockedChatPanelProps {
   messagesContainerRef: RefObject<HTMLDivElement | null>;
   inputValue: string;
   onInputChange: (value: string) => void;
-  onSendMessage: (text: string, mentions: string[]) => void;
+  onSendMessage: (text: string, mentions: string[], attachments?: ChatAttachment[]) => void;
   onSelectConversation: (conv: ChatConversation) => void;
   onShowConversationList: () => void;
   onTyping: () => void;
@@ -32,6 +36,25 @@ interface DockedChatPanelProps {
   getInitials: (name: string) => string;
   getConversationTitle: () => string;
   extractMentions: (text: string, userNames: string[]) => string[];
+
+  // Data from parent's useChatMessages hook (eliminates duplicate subscription)
+  groupedMessages: (ChatMessage & { isGrouped: boolean })[];
+  pinnedMessages: ChatMessage[];
+  loading: boolean;
+  hasMoreMessages: boolean;
+  isLoadingMore: boolean;
+  loadMoreMessages: () => void;
+
+  // Conversation list data from parent
+  sortedConversations: ConversationListItem[];
+  unreadCounts: Record<string, number>;
+  mutedConversations: Set<string>;
+  userPresence: Record<string, PresenceStatus>;
+  formatRelativeTime: (dateString: string) => string;
+  onToggleMute: (convKey: string) => void;
+
+  // First unread message id from parent
+  firstUnreadId: string | null;
 
   // Additional props for feature parity with floating mode
   addReaction?: (messageId: string, reaction: TapbackType) => void;
@@ -42,9 +65,14 @@ interface DockedChatPanelProps {
   onTaskLinkClick?: (todoId: string) => void;
   todosMap?: Map<string, Todo>;
   markMessagesAsRead?: (messageIds: string[]) => void;
+  onMarkUnread?: (messageId: string) => void;
 
   /** Callback to close the chat panel (used in mobile/tablet overlay modes) */
   onClose?: () => void;
+
+  /** When true, skip mobile/tablet overlay wrappers (e.g., when already inside a popup container).
+   *  This prevents position:fixed elements from escaping the popup and landing behind the backdrop. */
+  embedded?: boolean;
 }
 
 export function DockedChatPanel({
@@ -65,6 +93,19 @@ export function DockedChatPanel({
   getInitials,
   getConversationTitle,
   extractMentions,
+  groupedMessages,
+  pinnedMessages,
+  loading,
+  hasMoreMessages,
+  isLoadingMore,
+  loadMoreMessages,
+  sortedConversations,
+  unreadCounts,
+  mutedConversations,
+  userPresence,
+  formatRelativeTime,
+  onToggleMute,
+  firstUnreadId,
   addReaction,
   editMessage,
   deleteMessage,
@@ -73,7 +114,9 @@ export function DockedChatPanel({
   onTaskLinkClick,
   todosMap,
   markMessagesAsRead,
+  onMarkUnread,
   onClose,
+  embedded = false,
 }: DockedChatPanelProps) {
   // Responsive breakpoints: mobile (<640px), tablet (640-1024px), desktop (>1024px)
   const isMobile = useIsMobile(640);
@@ -82,45 +125,94 @@ export function DockedChatPanel({
   // Detect keyboard visibility on mobile
   const isKeyboardVisible = useKeyboardVisible();
 
+  // LOCAL view state: 'list' = conversation picker, 'chat' = message view
+  // This is the single source of truth for which screen is shown.
+  // Synced from parent's showConversationList prop, but also toggleable locally.
+  const [viewMode, setViewMode] = useState<'list' | 'chat'>(showConversationList ? 'list' : 'chat');
+
+  // Sync from parent prop when it changes (e.g., initial load)
+  useEffect(() => {
+    setViewMode(showConversationList ? 'list' : 'chat');
+  }, [showConversationList]);
+
+  // Reset transient UI state (search, pinned panel, reply, edit, delete confirm)
+  const resetTransientState = useCallback(() => {
+    setShowSearch(false);
+    setSearchInput('');
+    setSearchQuery('');
+    setShowPinnedMessages(false);
+    setReplyingTo(null);
+    setEditingMessage(null);
+    setDeleteConfirm(null);
+  }, []);
+
+  // Back to conversation list handler
+  const handleBackToList = useCallback(() => {
+    resetTransientState();
+    setViewMode('list');
+    onShowConversationList();
+  }, [onShowConversationList, resetTransientState]);
+
+  // Select conversation handler
+  const handleSelectConversation = useCallback((conv: ChatConversation) => {
+    resetTransientState();
+    setViewMode('chat');
+    onSelectConversation(conv);
+  }, [onSelectConversation, resetTransientState]);
+
+  const showingList = viewMode === 'list';
+
   // Enhanced state for feature parity
   const [showSearch, setShowSearch] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showPinnedMessages, setShowPinnedMessages] = useState(false);
-  // TODO: notificationsEnabled and isDndMode are local-only toggles. They are not
-  // wired to the parent ChatPanel's notification/DND state because DockedChatPanel
-  // does not receive these as props. To fully wire them, add callback props
-  // (e.g. onToggleNotifications, onToggleDnd) and state props from the parent.
-  // For now these toggles only affect the visual indicator within this panel.
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [isDndMode, setIsDndMode] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  // Inline delete confirmation state (replaces window.confirm)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ messageId: string; messageText: string } | null>(null);
 
-  // Use chat messages hook for advanced features
-  const {
-    groupedMessages,
-    pinnedMessages,
-    loading,
-    hasMoreMessages,
-    isLoadingMore,
-    loadMoreMessages,
-  } = useChatMessages({
-    currentUser,
-    conversation,
-    searchQuery,
-  });
+  // Apply local search filtering to messages from parent
+  // The parent's filteredMessages are already filtered by conversation but not by
+  // the docked panel's local search query, so we filter here.
+  const localFilteredMessages = useMemo(() => {
+    if (!searchQuery.trim()) return filteredMessages;
+    const query = searchQuery.toLowerCase();
+    return filteredMessages.filter(m =>
+      m.text.toLowerCase().includes(query) ||
+      m.created_by.toLowerCase().includes(query)
+    );
+  }, [filteredMessages, searchQuery]);
 
-  // Lock body scroll when mobile overlay is open
+  const localGroupedMessages = useMemo(() => {
+    if (!searchQuery.trim()) return groupedMessages;
+    // Recompute grouping for the locally filtered set
+    return localFilteredMessages.reduce((acc, msg, idx) => {
+      const prevMsg = localFilteredMessages[idx - 1];
+      const isGrouped = prevMsg && prevMsg.created_by === msg.created_by &&
+        new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 60000 &&
+        !msg.reply_to_id;
+      return [...acc, { ...msg, isGrouped }];
+    }, [] as (ChatMessage & { isGrouped: boolean })[]);
+  }, [localFilteredMessages, groupedMessages, searchQuery]);
+
+  // Track previous message count for auto-scroll
+  const prevMessageCountRef = useRef(localFilteredMessages.length);
+
+  // Lock body scroll only when mobile overlay is open and NOT embedded in a popup
   useEffect(() => {
-    if (isMobile) {
+    if (isMobile && !embedded) {
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = '';
       };
     }
-  }, [isMobile]);
+    // Ensure scroll is restored when switching away from mobile
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, embedded]);
 
   // Debounce search input
   useEffect(() => {
@@ -150,6 +242,20 @@ export function DockedChatPanel({
     });
   }, [messagesContainerRef]);
 
+  // Auto-scroll to bottom when new messages arrive (only if user was near bottom)
+  useEffect(() => {
+    const currentCount = localFilteredMessages.length;
+    const prevCount = prevMessageCountRef.current;
+    prevMessageCountRef.current = currentCount;
+
+    if (currentCount > prevCount && isAtBottom) {
+      // Small delay to let DOM update before scrolling
+      requestAnimationFrame(() => {
+        scrollToBottom('smooth');
+      });
+    }
+  }, [localFilteredMessages.length, isAtBottom, scrollToBottom]);
+
   // Handle message actions
   const handleReply = useCallback((message: ChatMessage) => {
     setReplyingTo(message);
@@ -170,11 +276,21 @@ export function DockedChatPanel({
     setEditingMessage(null);
   }, []);
 
+  // Inline delete confirmation instead of window.confirm
   const handleDelete = useCallback((messageId: string, messageText: string) => {
-    if (deleteMessage && confirm(`Delete message: "${messageText}"?`)) {
-      deleteMessage(messageId);
+    setDeleteConfirm({ messageId, messageText });
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteConfirm && deleteMessage) {
+      deleteMessage(deleteConfirm.messageId);
     }
-  }, [deleteMessage]);
+    setDeleteConfirm(null);
+  }, [deleteConfirm, deleteMessage]);
+
+  const handleCancelDelete = useCallback(() => {
+    setDeleteConfirm(null);
+  }, []);
 
   const createTaskFromMessage = useCallback((message: ChatMessage) => {
     if (onCreateTask) {
@@ -183,8 +299,10 @@ export function DockedChatPanel({
   }, [onCreateTask]);
 
   // Mark messages as read when viewing
+  // BUGFIX: Use viewMode (local state) in dependency array, not showConversationList (parent prop),
+  // since the condition checks showingList which derives from viewMode
   useEffect(() => {
-    if (!showConversationList && conversation && filteredMessages.length > 0 && markMessagesAsRead) {
+    if (!showingList && conversation && filteredMessages.length > 0 && markMessagesAsRead) {
       const unreadIds = filteredMessages
         .filter(m => m.created_by !== currentUser.name && !(m.read_by || []).includes(currentUser.name))
         .map(m => m.id);
@@ -193,7 +311,7 @@ export function DockedChatPanel({
         markMessagesAsRead(unreadIds);
       }
     }
-  }, [showConversationList, conversation, filteredMessages, currentUser.name, markMessagesAsRead]);
+  }, [viewMode, conversation, filteredMessages, currentUser.name, markMessagesAsRead]);
 
   // The inner chat content is shared across all viewport sizes
   const chatContent = (
@@ -201,16 +319,21 @@ export function DockedChatPanel({
       {/* Enhanced Header */}
       <div className="relative flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
-          {!showConversationList && (
+          {!showingList && (
             <button
-              onClick={onShowConversationList}
-              className="p-1.5 -ml-1 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                handleBackToList();
+              }}
+              className="p-2 -ml-1 rounded-[var(--radius-lg)] hover:bg-white/10 active:bg-white/20 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[48px] min-h-[48px] flex items-center justify-center"
               aria-label="Back to conversations"
+              type="button"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          {showConversationList ? (
+          {showingList ? (
             <div className="w-8 h-8 rounded-[var(--radius-xl)] bg-[var(--accent)] flex items-center justify-center">
               <MessageSquare className="w-4 h-4 text-white" strokeWidth={2.5} />
             </div>
@@ -232,7 +355,7 @@ export function DockedChatPanel({
           )}
           <div>
             <h2 className="text-white font-semibold text-sm">
-              {showConversationList ? 'Messages' : getConversationTitle()}
+              {showingList ? 'Messages' : getConversationTitle()}
             </h2>
             <p className="text-white/50 text-xs">
               {connected ? 'Connected' : 'Connecting...'}
@@ -242,7 +365,7 @@ export function DockedChatPanel({
 
         {/* Header actions */}
         <div className="flex items-center gap-1">
-          {!showConversationList && (
+          {!showingList && (
             <>
               {/* Search toggle */}
               <button
@@ -268,31 +391,11 @@ export function DockedChatPanel({
                   <span className="ml-1 text-xs">{pinnedMessages.length}</span>
                 </button>
               )}
-
-              {/* Notifications toggle */}
-              <button
-                onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                className="p-2 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
-                aria-label={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
-              >
-                {notificationsEnabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
-              </button>
-
-              {/* DND toggle */}
-              <button
-                onClick={() => setIsDndMode(!isDndMode)}
-                className={`p-2 rounded-[var(--radius-lg)] transition-colors touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center ${
-                  isDndMode ? 'bg-white/10 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-                aria-label={isDndMode ? 'Disable do not disturb' : 'Enable do not disturb'}
-              >
-                <Moon className="w-4 h-4" />
-              </button>
             </>
           )}
 
-          {/* Close button for mobile/tablet overlay */}
-          {(isMobile || (isTablet && !isMobile)) && onClose && (
+          {/* Close button — shown whenever onClose is provided (floating popup, mobile/tablet overlay) */}
+          {onClose && (
             <button
               onClick={onClose}
               className="p-2 rounded-[var(--radius-lg)] hover:bg-white/10 transition-colors text-white/70 hover:text-white touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -306,7 +409,7 @@ export function DockedChatPanel({
 
       {/* Search bar */}
       <AnimatePresence>
-        {showSearch && !showConversationList && (
+        {showSearch && !showingList && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -338,7 +441,7 @@ export function DockedChatPanel({
               </div>
               {searchQuery && (
                 <p className="text-xs text-white/50 mt-2">
-                  {filteredMessages.length} {filteredMessages.length === 1 ? 'message' : 'messages'} found
+                  {localFilteredMessages.length} {localFilteredMessages.length === 1 ? 'message' : 'messages'} found
                 </p>
               )}
             </div>
@@ -348,7 +451,7 @@ export function DockedChatPanel({
 
       {/* Pinned messages */}
       <AnimatePresence>
-        {showPinnedMessages && !showConversationList && pinnedMessages.length > 0 && (
+        {showPinnedMessages && !showingList && pinnedMessages.length > 0 && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -367,28 +470,51 @@ export function DockedChatPanel({
         )}
       </AnimatePresence>
 
+      {/* Inline delete confirmation */}
+      <AnimatePresence>
+        {deleteConfirm && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b border-white/10 overflow-hidden"
+          >
+            <div className="p-3 bg-red-500/10">
+              <p className="text-sm text-white mb-2">
+                Delete message: &ldquo;{deleteConfirm.messageText.length > 60 ? deleteConfirm.messageText.slice(0, 60) + '...' : deleteConfirm.messageText}&rdquo;?
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleConfirmDelete}
+                  className="px-3 py-1.5 rounded-[var(--radius-lg)] bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors"
+                >
+                  Yes, delete
+                </button>
+                <button
+                  onClick={handleCancelDelete}
+                  className="px-3 py-1.5 rounded-[var(--radius-lg)] border border-white/10 text-white/70 text-xs font-medium hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Conversation List or Chat Content */}
       <div className="flex-1 overflow-hidden">
-        {showConversationList ? (
+        {showingList ? (
           <ChatConversationList
-            conversations={[
-              { conv: { type: 'team' }, lastMessage: null, lastActivity: 0 },
-              ...users
-                .filter(u => u.name !== currentUser.name)
-                .map(u => ({
-                  conv: { type: 'dm' as const, userName: u.name },
-                  lastMessage: null,
-                  lastActivity: 0
-                }))
-            ]}
+            conversations={sortedConversations}
             currentUserName={currentUser.name}
-            unreadCounts={{}}
-            mutedConversations={new Set()}
-            userPresence={{}}
-            onSelectConversation={onSelectConversation}
-            onToggleMute={() => {}}
+            unreadCounts={unreadCounts}
+            mutedConversations={mutedConversations}
+            userPresence={userPresence}
+            onSelectConversation={handleSelectConversation}
+            onToggleMute={onToggleMute}
             getUserColor={getUserColor}
-            formatRelativeTime={() => 'now'}
+            formatRelativeTime={formatRelativeTime}
             getInitials={getInitials}
           />
         ) : (
@@ -403,7 +529,7 @@ export function DockedChatPanel({
                 <div className="flex items-center justify-center h-full">
                   <div className="animate-spin w-8 h-8 border-2 border-[var(--accent)] border-t-transparent rounded-full" />
                 </div>
-              ) : filteredMessages.length === 0 ? (
+              ) : localFilteredMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <motion.div
                     className="w-14 h-14 rounded-[var(--radius-2xl)] bg-white/[0.06] border border-white/[0.1] flex items-center justify-center mb-4"
@@ -412,12 +538,16 @@ export function DockedChatPanel({
                   >
                     <MessageSquare className="w-7 h-7 text-white/30" />
                   </motion.div>
-                  <p className="font-medium text-white/70 text-sm">No messages yet</p>
-                  <p className="text-xs mt-1.5 text-white/40">Start the conversation below</p>
+                  <p className="font-medium text-white/70 text-sm">
+                    {searchQuery ? 'No messages found' : 'No messages yet'}
+                  </p>
+                  <p className="text-xs mt-1.5 text-white/40">
+                    {searchQuery ? 'Try a different search term' : 'Start the conversation below'}
+                  </p>
                 </div>
               ) : (
                 <ChatMessageList
-                  messages={groupedMessages}
+                  messages={localGroupedMessages}
                   currentUser={currentUser}
                   users={users}
                   conversation={conversation}
@@ -427,21 +557,27 @@ export function DockedChatPanel({
                   onDelete={handleDelete}
                   onPin={togglePin || (() => {})}
                   onCreateTask={onCreateTask ? createTaskFromMessage : undefined}
+                  onMarkUnread={onMarkUnread}
                   onTaskLinkClick={onTaskLinkClick}
                   todosMap={todosMap}
-                  firstUnreadId={null}
+                  firstUnreadId={firstUnreadId}
                   loading={loading}
                   hasMoreMessages={hasMoreMessages}
                   isLoadingMore={isLoadingMore}
                   onLoadMore={loadMoreMessages}
                   searchQuery={searchQuery}
+                  onClearSearch={() => {
+                    setSearchInput('');
+                    setSearchQuery('');
+                    setShowSearch(false);
+                  }}
                 />
               )}
             </div>
 
             {/* Scroll to bottom button */}
             <AnimatePresence>
-              {!isAtBottom && filteredMessages.length > 0 && (
+              {!isAtBottom && localFilteredMessages.length > 0 && (
                 <motion.button
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -485,6 +621,13 @@ export function DockedChatPanel({
       </div>
     </div>
   );
+
+  // When embedded inside a popup container (e.g., FloatingChatButton), always render
+  // chatContent directly. The popup container handles positioning, overflow, and backdrop.
+  // Using position:fixed mobile/tablet wrappers would escape the popup and break click handling.
+  if (embedded) {
+    return chatContent;
+  }
 
   // Mobile (<640px): Full-screen overlay
   if (isMobile) {

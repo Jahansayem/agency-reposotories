@@ -1,8 +1,15 @@
 /**
- * Centralized Logging System
+ * Unified Centralized Logging System
  *
- * Provides structured logging with different severity levels
- * and automatic error tracking integration with Sentry.
+ * Provides structured logging with different severity levels,
+ * automatic PII redaction, and error tracking integration with Sentry.
+ *
+ * Features:
+ * - Automatic sensitive data sanitization
+ * - Sentry integration for errors and breadcrumbs
+ * - Structured JSON logging in production
+ * - Log level filtering via LOG_LEVEL environment variable
+ * - Performance tracking utilities
  */
 
 import * as Sentry from '@sentry/nextjs';
@@ -14,11 +21,41 @@ export enum LogLevel {
   ERROR = 'error',
 }
 
+// Log level hierarchy for filtering
+const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
+  [LogLevel.DEBUG]: 0,
+  [LogLevel.INFO]: 1,
+  [LogLevel.WARN]: 2,
+  [LogLevel.ERROR]: 3,
+};
+
+/**
+ * Get current log level from environment
+ * Defaults to 'info' in production, 'debug' in development
+ */
+function getCurrentLogLevel(): LogLevel {
+  const envLevel = process.env.LOG_LEVEL?.toLowerCase() as LogLevel;
+  if (envLevel && envLevel in LOG_LEVEL_PRIORITY) {
+    return envLevel;
+  }
+  return process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG;
+}
+
+/**
+ * Check if a log level should be emitted based on current threshold
+ */
+function shouldLog(level: LogLevel): boolean {
+  const current = getCurrentLogLevel();
+  return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[current];
+}
+
 export interface LogContext {
   userId?: string;
   action?: string;
   component?: string;
   duration?: number;
+  ip?: string;
+  endpoint?: string;
   metadata?: Record<string, unknown>;
   // Allow any additional fields for flexibility
   [key: string]: unknown;
@@ -54,8 +91,14 @@ const SENSITIVE_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
 
 /**
  * Sanitize sensitive data from log messages and context
+ * Includes depth limiting to prevent infinite recursion
  */
-function sanitizeSensitiveData(input: unknown): unknown {
+function sanitizeSensitiveData(input: unknown, depth = 0): unknown {
+  // Prevent infinite recursion
+  if (depth > 10) {
+    return '[MAX_DEPTH]';
+  }
+
   if (input === null || input === undefined) {
     return input;
   }
@@ -65,11 +108,29 @@ function sanitizeSensitiveData(input: unknown): unknown {
     for (const { pattern, replacement } of SENSITIVE_PATTERNS) {
       sanitized = sanitized.replace(pattern, replacement);
     }
+    // Truncate very long strings
+    if (sanitized.length > 1000) {
+      return sanitized.substring(0, 1000) + '...[TRUNCATED]';
+    }
     return sanitized;
   }
 
+  if (typeof input === 'number' || typeof input === 'boolean') {
+    return input;
+  }
+
+  if (input instanceof Error) {
+    return {
+      name: input.name,
+      message: sanitizeSensitiveData(input.message, depth + 1),
+      // Only include stack in development
+      ...(process.env.NODE_ENV !== 'production' && { stack: input.stack }),
+    };
+  }
+
   if (Array.isArray(input)) {
-    return input.map(sanitizeSensitiveData);
+    // Limit array size to prevent huge logs
+    return input.slice(0, 100).map(item => sanitizeSensitiveData(item, depth + 1));
   }
 
   if (typeof input === 'object') {
@@ -79,18 +140,26 @@ function sanitizeSensitiveData(input: unknown): unknown {
       const lowerKey = key.toLowerCase();
       if (
         lowerKey.includes('password') ||
-        lowerKey.includes('pin_hash') ||
+        lowerKey.includes('pin') || // Catches pin, pin_hash, etc.
         lowerKey.includes('secret') ||
         (lowerKey.includes('token') && !lowerKey.includes('csrf')) ||
         lowerKey.includes('api_key') ||
         lowerKey.includes('apikey') ||
         lowerKey === 'ssn' ||
         lowerKey === 'creditcard' ||
-        lowerKey === 'cardnumber'
+        lowerKey === 'cardnumber' ||
+        lowerKey === 'authorization' ||
+        lowerKey === 'auth' ||
+        lowerKey === 'credentials' ||
+        lowerKey === 'credit_card' ||
+        lowerKey === 'social_security' ||
+        lowerKey === 'cookie' ||
+        lowerKey === 'private_key' ||
+        lowerKey === 'secret_key'
       ) {
         sanitized[key] = '[REDACTED]';
       } else {
-        sanitized[key] = sanitizeSensitiveData(value);
+        sanitized[key] = sanitizeSensitiveData(value, depth + 1);
       }
     }
     return sanitized;
@@ -99,17 +168,45 @@ function sanitizeSensitiveData(input: unknown): unknown {
   return input;
 }
 
+/**
+ * Format log entry for output
+ * JSON in production for log aggregation, human-readable in development
+ */
+function formatLogOutput(level: LogLevel, message: string, context?: LogContext): string {
+  const sanitizedMessage = sanitizeSensitiveData(message) as string;
+  const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
+
+  if (process.env.NODE_ENV === 'production') {
+    // JSON format for production (better for log aggregation)
+    const logEntry = {
+      level,
+      message: sanitizedMessage,
+      timestamp: new Date().toISOString(),
+      ...sanitizedContext,
+    };
+    return JSON.stringify(logEntry);
+  } else {
+    // Human-readable format for development
+    const prefix = `[${level.toUpperCase()}]`;
+    const extras = sanitizedContext && Object.keys(sanitizedContext).length > 0
+      ? '\n' + JSON.stringify(sanitizedContext, null, 2)
+      : '';
+    return `${prefix} ${sanitizedMessage}${extras}`;
+  }
+}
+
 class Logger {
   /**
    * Debug level logging - only in development
    * Automatically sanitizes sensitive data
    */
   debug(message: string, context?: LogContext): void {
-    if (process.env.NODE_ENV === 'development') {
-      const sanitizedMessage = sanitizeSensitiveData(message) as string;
-      const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
-      console.debug(`[DEBUG] ${sanitizedMessage}`, sanitizedContext);
+    if (!shouldLog(LogLevel.DEBUG)) {
+      return;
     }
+
+    const formatted = formatLogOutput(LogLevel.DEBUG, message, context);
+    console.debug(formatted);
   }
 
   /**
@@ -117,24 +214,29 @@ class Logger {
    * Automatically sanitizes sensitive data
    */
   info(message: string, context?: LogContext): void {
-    const sanitizedMessage = sanitizeSensitiveData(message) as string;
-    const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
-    console.info(`[INFO] ${sanitizedMessage}`, sanitizedContext);
-
-    // Send to analytics if needed
-    if (process.env.NODE_ENV === 'production') {
-      // Could send to analytics service here
+    if (!shouldLog(LogLevel.INFO)) {
+      return;
     }
+
+    const formatted = formatLogOutput(LogLevel.INFO, message, context);
+    console.info(formatted);
   }
 
   /**
    * Warning level logging - potential issues
    * Automatically sanitizes sensitive data
+   * Sends breadcrumb to Sentry
    */
   warn(message: string, context?: LogContext): void {
+    if (!shouldLog(LogLevel.WARN)) {
+      return;
+    }
+
     const sanitizedMessage = sanitizeSensitiveData(message) as string;
     const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
-    console.warn(`[WARN] ${sanitizedMessage}`, sanitizedContext);
+
+    const formatted = formatLogOutput(LogLevel.WARN, message, context);
+    console.warn(formatted);
 
     // Send to Sentry as breadcrumb
     Sentry.addBreadcrumb({
@@ -149,8 +251,13 @@ class Logger {
    * Error level logging - critical issues
    * Accepts Error object or any unknown error value
    * Automatically sanitizes sensitive data
+   * Sends exception to Sentry
    */
   error(message: string, error?: Error | unknown, context?: LogContext): void {
+    if (!shouldLog(LogLevel.ERROR)) {
+      return;
+    }
+
     const sanitizedMessage = sanitizeSensitiveData(message) as string;
     const sanitizedContext = sanitizeSensitiveData(context) as LogContext | undefined;
 
@@ -160,7 +267,11 @@ class Logger {
     const sanitizedError = new Error(sanitizedErrorMessage);
     sanitizedError.stack = errorObj.stack;
 
-    console.error(`[ERROR] ${sanitizedMessage}`, sanitizedError, sanitizedContext);
+    const formatted = formatLogOutput(LogLevel.ERROR, message, {
+      ...context,
+      error: sanitizedError.message
+    });
+    console.error(formatted);
 
     // Send to Sentry
     Sentry.captureException(sanitizedError, {
@@ -210,6 +321,47 @@ class Logger {
   startTimer(): () => number {
     const start = performance.now();
     return () => performance.now() - start;
+  }
+
+  /**
+   * Log an API request (sanitized)
+   * Useful for tracking API usage patterns
+   */
+  apiRequest(
+    method: string,
+    path: string,
+    data?: {
+      userId?: string;
+      ip?: string;
+      userAgent?: string;
+      statusCode?: number;
+      duration?: number;
+    }
+  ): void {
+    this.info(`${method} ${path}`, {
+      type: 'api_request',
+      ...data,
+    });
+  }
+
+  /**
+   * Log an AI API call
+   * Useful for tracking AI service usage and costs
+   */
+  aiCall(
+    endpoint: string,
+    data?: {
+      userId?: string;
+      model?: string;
+      inputTokens?: number;
+      outputTokens?: number;
+      duration?: number;
+    }
+  ): void {
+    this.info(`AI Call: ${endpoint}`, {
+      type: 'ai_call',
+      ...data,
+    });
   }
 }
 

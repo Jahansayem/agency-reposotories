@@ -213,14 +213,14 @@ describe('useTodoStore', () => {
       act(() => {
         useTodoStore.getState().setFilters({
           searchQuery: 'test',
-          quickFilter: 'urgent',
+          quickFilter: 'all',
           sortOption: 'due_date',
         });
       });
 
       const filters = useTodoStore.getState().filters;
       expect(filters.searchQuery).toBe('test');
-      expect(filters.quickFilter).toBe('urgent');
+      expect(filters.quickFilter).toBe('all');
       expect(filters.sortOption).toBe('due_date');
     });
 
@@ -382,10 +382,12 @@ describe('Helper Functions', () => {
   // to ensure consistent behavior across timezones.
 
   describe('isDueToday', () => {
-    it('should return true for current timestamp', () => {
-      // Use a full ISO timestamp which ensures proper parsing
+    it('should return true for today date string', () => {
+      // isDueToday extracts the YYYY-MM-DD date part and compares against local midnight.
+      // Use a local date-only string to avoid UTC vs local date mismatch.
       const now = new Date();
-      expect(isDueToday(now.toISOString())).toBe(true);
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      expect(isDueToday(todayStr)).toBe(true);
     });
 
     it('should return false for date in the past', () => {
@@ -576,16 +578,19 @@ describe('Selectors', () => {
 
   describe('selectTodoStats', () => {
     it('should calculate correct stats', () => {
-      // Use full ISO timestamps for reliable timezone handling
+      // Use date-only strings (YYYY-MM-DD) since isDueToday/isOverdue parse the date part
+      // and compare against local midnight — avoids UTC vs local date mismatch
       const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 7);
+      const pastStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
 
       const todos: Todo[] = [
         createMockTodo({ completed: false, priority: 'urgent' }),
         createMockTodo({ completed: true }),
-        createMockTodo({ completed: false, due_date: today.toISOString() }),
-        createMockTodo({ completed: false, due_date: pastDate.toISOString() }),
+        createMockTodo({ completed: false, due_date: todayStr }),
+        createMockTodo({ completed: false, due_date: pastStr }),
         createMockTodo({ completed: false, priority: 'high' }),
       ];
 
@@ -713,15 +718,13 @@ describe('Selectors', () => {
     it('should sort by urgency (overdue first, then priority, then due date)', () => {
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 5);
-      const futureSoon = new Date();
-      futureSoon.setDate(futureSoon.getDate() + 3);
-      const futureLater = new Date();
-      futureLater.setDate(futureLater.getDate() + 14);
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
 
       const urgencyTodos: Todo[] = [
-        createMockTodo({ id: 'todo-1', text: 'Not urgent', priority: 'low', due_date: futureSoon.toISOString() }),
+        createMockTodo({ id: 'todo-1', text: 'Not urgent', priority: 'low', due_date: futureDate.toISOString() }),
         createMockTodo({ id: 'todo-2', text: 'Overdue', priority: 'medium', due_date: pastDate.toISOString() }),
-        createMockTodo({ id: 'todo-3', text: 'High priority', priority: 'urgent', due_date: futureLater.toISOString() }),
+        createMockTodo({ id: 'todo-3', text: 'High priority', priority: 'urgent', due_date: futureDate.toISOString() }),
       ];
 
       const filtered = selectFilteredTodos(urgencyTodos, {

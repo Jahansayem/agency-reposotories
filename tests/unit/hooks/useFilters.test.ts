@@ -99,14 +99,17 @@ describe('useFilters', () => {
     });
 
     it('should filter by quick filter - due_today', () => {
-      // Use full ISO timestamps for reliable timezone handling
+      // Use date-only strings (YYYY-MM-DD) since isDueToday extracts the date part
+      // and compares against local midnight — avoids UTC vs local date mismatch
       const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7);
+      const futureStr = `${futureDate.getFullYear()}-${String(futureDate.getMonth() + 1).padStart(2, '0')}-${String(futureDate.getDate()).padStart(2, '0')}`;
 
       const todos = [
-        createMockTodo({ text: 'Due today', due_date: today.toISOString() }),
-        createMockTodo({ text: 'Due future', due_date: futureDate.toISOString() }),
+        createMockTodo({ text: 'Due today', due_date: todayStr }),
+        createMockTodo({ text: 'Due future', due_date: futureStr }),
         createMockTodo({ text: 'No due date' }),
       ];
 
@@ -125,16 +128,18 @@ describe('useFilters', () => {
     });
 
     it('should filter by quick filter - overdue', () => {
-      // Use full ISO timestamps for reliable timezone handling
+      // Use date-only strings (YYYY-MM-DD) since isOverdue parses the date part
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 7);
+      const pastStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
       const futureDate = new Date();
       futureDate.setDate(futureDate.getDate() + 7);
+      const futureStr = `${futureDate.getFullYear()}-${String(futureDate.getMonth() + 1).padStart(2, '0')}-${String(futureDate.getDate()).padStart(2, '0')}`;
 
       const todos = [
-        createMockTodo({ text: 'Overdue', due_date: pastDate.toISOString() }),
-        createMockTodo({ text: 'Future', due_date: futureDate.toISOString() }),
-        createMockTodo({ text: 'Completed overdue', due_date: pastDate.toISOString(), completed: true }),
+        createMockTodo({ text: 'Overdue', due_date: pastStr }),
+        createMockTodo({ text: 'Future', due_date: futureStr }),
+        createMockTodo({ text: 'Completed overdue', due_date: pastStr, completed: true }),
       ];
 
       act(() => {
@@ -267,17 +272,19 @@ describe('useFilters', () => {
 
   describe('Filter Counts', () => {
     it('should calculate correct filter counts', () => {
-      // Use full ISO timestamps for reliable timezone handling
+      // Use date-only strings (YYYY-MM-DD) since isDueToday/isOverdue parse the date part
       const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const pastDate = new Date();
       pastDate.setDate(pastDate.getDate() - 7);
+      const pastStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
 
       const todos = [
         createMockTodo({ text: 'Active 1', completed: false, assigned_to: 'TestUser', created_by: 'OtherUser' }),
         createMockTodo({ text: 'Active 2', completed: false, created_by: 'TestUser' }),
         createMockTodo({ text: 'Completed', completed: true, created_by: 'OtherUser' }),
-        createMockTodo({ text: 'Due today', due_date: today.toISOString(), completed: false, created_by: 'OtherUser' }),
-        createMockTodo({ text: 'Overdue', due_date: pastDate.toISOString(), completed: false, created_by: 'OtherUser' }),
+        createMockTodo({ text: 'Due today', due_date: todayStr, completed: false, created_by: 'OtherUser' }),
+        createMockTodo({ text: 'Overdue', due_date: pastStr, completed: false, created_by: 'OtherUser' }),
         createMockTodo({ text: 'Urgent', priority: 'urgent', completed: false, created_by: 'OtherUser' }),
       ];
 

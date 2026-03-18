@@ -191,7 +191,7 @@ export class TodoService {
         action: 'getTodo',
         todoId: id,
       });
-      return null;
+      throw error; // Don't mask database errors as "not found"
     }
   }
 
@@ -278,17 +278,7 @@ export class TodoService {
         component: 'TodoService',
         action: 'getTodos',
       });
-      return {
-        data: [],
-        pagination: {
-          page,
-          pageSize,
-          totalCount: 0,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPrevPage: false,
-        },
-      };
+      throw error; // Don't show "no tasks" during DB outage
     }
   }
 
@@ -332,11 +322,19 @@ export class TodoService {
   private async enrichTodoFromNormalizedSchema(todo: Todo): Promise<Todo> {
     try {
       // Fetch subtasks
-      const { data: subtasks } = await supabase
+      const { data: subtasks, error: subtasksError } = await supabase
         .from('subtasks_v2')
         .select('*')
         .eq('todo_id', todo.id)
         .order('display_order');
+
+      if (subtasksError) {
+        logger.error('Failed to fetch subtasks from normalized schema', subtasksError, {
+          component: 'TodoService',
+          action: 'enrichTodoFromNormalizedSchema',
+          todoId: todo.id,
+        });
+      }
 
       if (subtasks && subtasks.length > 0) {
         todo.subtasks = subtasks.map(st => ({
@@ -349,10 +347,18 @@ export class TodoService {
       }
 
       // Fetch attachments
-      const { data: attachments } = await supabase
+      const { data: attachments, error: attachmentsError } = await supabase
         .from('attachments_v2')
         .select('*')
         .eq('todo_id', todo.id);
+
+      if (attachmentsError) {
+        logger.error('Failed to fetch attachments from normalized schema', attachmentsError, {
+          component: 'TodoService',
+          action: 'enrichTodoFromNormalizedSchema',
+          todoId: todo.id,
+        });
+      }
 
       if (attachments && attachments.length > 0) {
         todo.attachments = attachments.map(att => ({

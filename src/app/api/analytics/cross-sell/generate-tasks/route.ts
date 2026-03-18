@@ -16,7 +16,7 @@ import type {
   DEFAULT_CROSS_SELL_PRIORITY_MAPPING,
   DEFAULT_CROSS_SELL_SUBTASKS,
 } from '@/types/allstate-analytics';
-import type { Todo, Subtask, TodoPriority } from '@/types/todo';
+import type { Todo, Subtask, TodoPriority, ActivityAction } from '@/types/todo';
 import { safeLogActivity } from '@/lib/safeActivityLog';
 
 function getSupabaseClient() {
@@ -226,7 +226,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     const createdTasks: Array<{ task_id: string; opportunity_id: string }> = [];
     const opportunityUpdates: Array<{ id: string; task_id: string }> = [];
     const activityLogs: Array<{
-      action: string;
+      action: ActivityAction;
       todo_id: string;
       todo_text: string;
       user_name: string;
@@ -249,7 +249,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
       });
 
       activityLogs.push({
-        action: 'task_created',
+        action: 'task_created' as const,
         todo_id: taskId,
         todo_text: taskData.taskText,
         user_name: body.created_by,
@@ -290,7 +290,7 @@ export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthC
     // Safe activity logging - will not fail if individual logs have issues
     // Use Promise.allSettled to log all entries in parallel without blocking
     await Promise.allSettled(
-      activityLogs.map(log => safeLogActivity(supabase, log as any))
+      activityLogs.map(log => safeLogActivity(supabase, log))
     );
 
     return NextResponse.json({

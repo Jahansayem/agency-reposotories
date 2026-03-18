@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell, HelpCircle } from 'lucide-react';
+import { Plus, Calendar, Flag, User, Sparkles, Loader2, Mic, MicOff, Upload, X, Bell, HelpCircle, Paperclip } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import SmartParseModal from './SmartParseModal';
 import ReminderPicker from './ReminderPicker';
@@ -10,9 +10,10 @@ import VoiceRecordingIndicator from './VoiceRecordingIndicator';
 import FileImporter from './FileImporter';
 import { QuickTaskButtons, useTaskPatterns } from './QuickTaskButtons';
 import { CategoryConfidenceIndicator } from './CategoryConfidenceIndicator';
-import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate } from '@/types/todo';
-import type { LinkedCustomer } from '@/types/customer';
+import { TodoPriority, Subtask, PRIORITY_CONFIG, QuickTaskTemplate, ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE } from '@/types/todo';
+import type { LinkedCustomer, Customer } from '@/types/customer';
 import { CustomerSearchInput } from './customer/CustomerSearchInput';
+import { useAiCustomerSuggest } from '@/hooks/useCustomers';
 import { getUserPreferences, updateLastTaskDefaults } from '@/lib/userPreferences';
 import { analyzeTaskPattern } from '@/lib/insurancePatterns';
 import { logger } from '@/lib/logger';
@@ -106,6 +107,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
   // Customer linking state
   const [linkedCustomer, setLinkedCustomer] = useState<LinkedCustomer | null>(null);
 
+  // AI customer auto-suggest from task text
+  const aiSuggest = useAiCustomerSuggest({ agencyId });
+  const aiSuggestDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   // Fetch smart defaults based on user patterns
   const { suggestions, isLoading: suggestionsLoading } = useSuggestedDefaults(currentUserId);
 
@@ -149,6 +154,10 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
 
   // File importer state
   const [showFileImporter, setShowFileImporter] = useState(false);
+
+  // Simple file attachment state (no AI processing)
+  const [pendingAttachment, setPendingAttachment] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Template picker state (Phase 2.2)
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -346,7 +355,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
         }))
       : undefined as unknown as Subtask[];
 
-    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, undefined, reminderAt || undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
+    onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, subtasks || undefined, undefined, pendingAttachment || undefined, reminderAt || undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
     // Save preferences for next time
     if (currentUserId) {
       updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -426,7 +435,59 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
     setTemplateSubtasks([]); // Clear template subtasks (Phase 2.2)
     setPatternDismissed(false); // Reset so new pattern can be detected on next input
     setLinkedCustomer(null); // Clear linked customer
+    setPendingAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    aiSuggest.clear();
   };
+
+  // Stable object URL for image thumbnail preview
+  const attachmentPreviewUrl = useMemo(() => {
+    if (pendingAttachment?.type.startsWith('image/')) {
+      return URL.createObjectURL(pendingAttachment);
+    }
+    return null;
+  }, [pendingAttachment]);
+
+  // Revoke object URL on cleanup
+  useEffect(() => {
+    return () => {
+      if (attachmentPreviewUrl) URL.revokeObjectURL(attachmentPreviewUrl);
+    };
+  }, [attachmentPreviewUrl]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      toast.error('File too large', { description: 'Maximum size is 25MB' });
+      return;
+    }
+    if (!(file.type in ALLOWED_ATTACHMENT_TYPES)) {
+      toast.error('Unsupported file type', { description: 'Try PDF, images, audio, or documents' });
+      return;
+    }
+    setPendingAttachment(file);
+  };
+
+  // Auto-suggest customer from task text (debounced)
+  useEffect(() => {
+    if (aiSuggestDebounceRef.current) {
+      clearTimeout(aiSuggestDebounceRef.current);
+    }
+
+    if (canUseAiFeatures && text.trim().length >= 10 && !linkedCustomer) {
+      aiSuggestDebounceRef.current = setTimeout(() => {
+        aiSuggest.suggest(text);
+      }, 1500); // Longer debounce to avoid excessive API calls while typing
+    } else {
+      aiSuggest.clear();
+    }
+
+    return () => {
+      if (aiSuggestDebounceRef.current) clearTimeout(aiSuggestDebounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, linkedCustomer, canUseAiFeatures]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Cmd/Ctrl + Enter - Submit with AI enhancement
@@ -442,7 +503,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
     if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       if (text.trim() && !isProcessing) {
-        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
+        onAdd(text.trim(), priority, dueDate || undefined, assignedTo || undefined, undefined, undefined, pendingAttachment || undefined, undefined, notes || undefined, recurrence || null, linkedCustomer || undefined);
         // Save preferences for next time
         if (currentUserId) {
           updateLastTaskDefaults(currentUserId, priority, assignedTo || undefined);
@@ -647,9 +708,57 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
               )}
             </div>
 
+            {/* Pending attachment preview */}
+            {pendingAttachment && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-sm">
+                <Paperclip className="w-3.5 h-3.5 text-[var(--accent)] flex-shrink-0" />
+                {attachmentPreviewUrl && (
+                  <img
+                    src={attachmentPreviewUrl}
+                    alt=""
+                    className="w-6 h-6 rounded object-cover flex-shrink-0"
+                  />
+                )}
+                <span className="text-[var(--foreground)] truncate max-w-[200px]">{pendingAttachment.name}</span>
+                <span className="text-[var(--text-muted)] text-xs flex-shrink-0">
+                  {(pendingAttachment.size / 1024).toFixed(0)}KB
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingAttachment(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="p-0.5 rounded-full hover:bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--foreground)] transition-colors flex-shrink-0"
+                  aria-label="Remove attachment"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Action buttons - grouped dock style */}
             <div className="flex gap-3 flex-shrink-0 items-center justify-between">
               <div className="flex gap-2 items-center">
+                {/* Simple file attach (no AI processing) */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept={Object.keys(ALLOWED_ATTACHMENT_TYPES).join(',')}
+                  onChange={handleFileSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isProcessing || !!pendingAttachment}
+                  className="p-2.5 rounded-full transition-all duration-200 min-h-[44px] min-w-[44px] flex items-center justify-center touch-manipulation text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Attach file"
+                  title="Attach a file (no AI processing)"
+                >
+                  <Paperclip className="w-4.5 h-4.5" />
+                </button>
+
                 {/* AI Features Menu - consolidates Upload, Voice, and AI Parse */}
                 {canUseAiFeatures && (
                   <AIFeaturesMenu
@@ -729,6 +838,50 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
                 </span>
               </div>
             )}
+            {/* Customer Link - prominent position for eAgent integration */}
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5 uppercase tracking-wider">
+                Customer
+              </label>
+              <CustomerSearchInput
+                value={linkedCustomer}
+                onChange={(c) => { setLinkedCustomer(c); if (c) aiSuggest.clear(); }}
+                placeholder="Search book of business..."
+                agencyId={agencyId}
+              />
+              {/* AI-suggested customers from task text */}
+              {canUseAiFeatures && !linkedCustomer && aiSuggest.suggestions.length > 0 && (
+                <div className="mt-2 rounded-lg border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-2">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--accent)] mb-1.5">
+                    <Sparkles className="w-3 h-3" />
+                    AI Suggested
+                  </div>
+                  <div className="space-y-1">
+                    {aiSuggest.suggestions.slice(0, 3).map((c: Customer) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setLinkedCustomer({ id: c.id, name: c.name, segment: c.segment, phone: c.phone || undefined, email: c.email || undefined });
+                          aiSuggest.clear();
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 text-sm rounded-md hover:bg-[var(--surface)] transition-colors flex items-center justify-between"
+                      >
+                        <span className="font-medium text-[var(--foreground)]">{c.name}</span>
+                        <span className="text-xs text-[var(--text-muted)]">${c.totalPremium.toLocaleString()}/yr</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {canUseAiFeatures && aiSuggest.loading && !linkedCustomer && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Finding matching customers...
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-4">
               {/* Priority - improved pill proportions */}
               <div
@@ -825,20 +978,6 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
                 dueDate={dueDate || undefined}
                 onChange={(time) => setReminderAt(time)}
                 compact
-              />
-            </div>
-
-            {/* Customer Link - Link task to customer from book of business */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">
-                Link to Customer (optional)
-              </label>
-              <CustomerSearchInput
-                value={linkedCustomer}
-                onChange={setLinkedCustomer}
-                placeholder="Search customers by name..."
-                agencyId={agencyId}
-                className="max-w-md"
               />
             </div>
 
@@ -952,7 +1091,7 @@ export default function AddTodo({ onAdd, users, currentUserId, autoFocus, agency
 
       {/* Loading modal with brand personality */}
       {showModal && !parsedResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Processing">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Processing">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <div className="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] p-8 bg-[var(--surface)] min-w-[280px]">
             <div className="text-center space-y-4">

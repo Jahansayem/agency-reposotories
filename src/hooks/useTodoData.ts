@@ -17,7 +17,6 @@ import { shouldShowWelcomeNotification } from '@/components/WelcomeBackNotificat
 import { logger } from '@/lib/logger';
 import { fetchWithCsrf } from '@/lib/csrf';
 import { sendTaskAssignmentNotification } from '@/lib/taskNotifications';
-import { createAutoReminders, updateAutoReminders } from '@/lib/reminderService';
 import { useAgency } from '@/contexts/AgencyContext';
 import { parseTodo } from '@/lib/validators';
 import { useToast } from '@/components/ui/Toast';
@@ -104,6 +103,14 @@ export function useTodoData(currentUser: AuthUser) {
       todosQuery,
       supabase.from('users').select('name, color').order('name'),
     ]);
+
+    if (countResult.error) {
+      logger.error('Error fetching todo count', countResult.error, { component: 'useTodoData' });
+    }
+
+    if (usersResult.error) {
+      logger.error('Error fetching users', usersResult.error, { component: 'useTodoData' });
+    }
 
     if (todosResult.error) {
       logger.error('Error fetching todos', todosResult.error, { component: 'useTodoData' });
@@ -336,6 +343,8 @@ export function useTodoData(currentUser: AuthUser) {
         has_subtasks: (subtasks?.length || 0) > 0,
         has_transcription: !!transcription,
       },
+    }).catch((err) => {
+      logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
     });
 
     // Send notification if task is assigned to someone else
@@ -348,6 +357,8 @@ export function useTodoData(currentUser: AuthUser) {
         dueDate: newTodo.due_date,
         priority: newTodo.priority,
         subtasks: newTodo.subtasks,
+      }).catch((err) => {
+        logger.error('Failed to send assignment notification', err instanceof Error ? err : new Error(String(err)));
       });
     }
 
@@ -370,31 +381,37 @@ export function useTodoData(currentUser: AuthUser) {
 
     // Create auto-reminders for tasks with due dates
     if (newTodo.due_date && newTodo.assigned_to) {
-      // Get the user ID for the assignee to send push notifications
-      const { data: assigneeData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('name', newTodo.assigned_to)
-        .single();
+      try {
+        const response = await fetchWithCsrf('/api/reminders/auto', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            todoId: newTodo.id,
+            dueDate: newTodo.due_date,
+            assignedTo: newTodo.assigned_to,
+          }),
+        });
 
-      if (assigneeData?.id) {
-        const reminderResult = await createAutoReminders(
-          newTodo.id,
-          newTodo.due_date,
-          assigneeData.id,
-          userName
-        );
-        if (!reminderResult.success) {
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
           logger.warn('Failed to create auto-reminders', {
             component: 'useTodoData',
-            error: reminderResult.error,
+            error: errorData.error,
+            status: response.status,
           });
-        } else if (reminderResult.created > 0) {
-          logger.info(`Created ${reminderResult.created} auto-reminders for task`, {
-            component: 'useTodoData',
-            taskId: newTodo.id,
-          });
+        } else {
+          const result = await response.json();
+          if (result.created > 0) {
+            logger.info(`Created ${result.created} auto-reminders for task`, {
+              component: 'useTodoData',
+              taskId: newTodo.id,
+            });
+          }
         }
+      } catch (err) {
+        logger.error('Error creating auto-reminders', err instanceof Error ? err : new Error(String(err)), {
+          component: 'useTodoData',
+        });
       }
     }
 
@@ -445,26 +462,29 @@ export function useTodoData(currentUser: AuthUser) {
       const newDueDate = updates.due_date ?? currentTodo.due_date;
 
       if (assignedTo) {
-        // Get user ID for the assignee
-        const { data: assigneeData } = await supabase
-          .from('users')
-          .select('id')
-          .eq('name', assignedTo)
-          .single();
+        try {
+          const response = await fetchWithCsrf('/api/reminders/auto', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              todoId: id,
+              dueDate: newDueDate || null,
+              assignedTo,
+            }),
+          });
 
-        if (assigneeData?.id) {
-          const reminderResult = await updateAutoReminders(
-            id,
-            newDueDate || null,
-            assigneeData.id,
-            userName
-          );
-          if (!reminderResult.success) {
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
             logger.warn('Failed to update auto-reminders', {
               component: 'useTodoData',
-              error: reminderResult.error,
+              error: errorData.error,
+              status: response.status,
             });
           }
+        } catch (err) {
+          logger.error('Error updating auto-reminders', err instanceof Error ? err : new Error(String(err)), {
+            component: 'useTodoData',
+          });
         }
       }
     }
@@ -500,6 +520,8 @@ export function useTodoData(currentUser: AuthUser) {
       userName,
       todoId: id,
       todoText: currentTodo.text,
+    }).catch((err) => {
+      logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
     });
 
     return true;
@@ -525,6 +547,8 @@ export function useTodoData(currentUser: AuthUser) {
         userName,
         todoId: id,
         todoText: todo.text,
+      }).catch((err) => {
+        logger.error('Failed to log activity', err instanceof Error ? err : new Error(String(err)));
       });
     }
 

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Loader2, AlertCircle } from 'lucide-react';
 import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_SIZE } from '@/types/todo';
-import { fetchWithCsrf } from '@/lib/csrf';
+import { ensureCsrfToken } from '@/lib/csrf';
 import { ContextualErrorMessages } from '@/lib/errorMessages';
 
 interface AttachmentUploadProps {
@@ -13,6 +13,8 @@ interface AttachmentUploadProps {
   onClose: () => void;
   currentAttachmentCount: number;
   maxAttachments: number;
+  /** If provided, auto-upload this file immediately on mount */
+  initialFile?: File;
 }
 
 export default function AttachmentUpload({
@@ -22,6 +24,7 @@ export default function AttachmentUpload({
   onClose,
   currentAttachmentCount,
   maxAttachments,
+  initialFile,
 }: AttachmentUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -79,6 +82,9 @@ export default function AttachmentUpload({
       formData.append('todoId', todoId);
       formData.append('userName', userName);
 
+      // Get CSRF token before starting XHR (uses cookie-based CSRF system)
+      const csrfToken = await ensureCsrfToken();
+
       // UX-005: Use XMLHttpRequest to track actual upload progress
       const result = await new Promise<{ success: boolean; attachment?: import('@/types/todo').Attachment; error?: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -129,9 +135,6 @@ export default function AttachmentUpload({
         });
 
         xhr.open('POST', '/api/attachments');
-        // Note: fetchWithCsrf adds CSRF token, we need to add it manually here
-        // The CSRF token is fetched from cookies or a meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (csrfToken) {
           xhr.setRequestHeader('X-CSRF-Token', csrfToken);
         }
@@ -173,6 +176,15 @@ export default function AttachmentUpload({
     uploadFile(files[0]);
   }, [remainingSlots, maxAttachments, uploadFile]);
 
+  // Auto-upload dropped file on mount
+  const initialFileProcessed = useRef(false);
+  useEffect(() => {
+    if (initialFile && !initialFileProcessed.current) {
+      initialFileProcessed.current = true;
+      uploadFile(initialFile);
+    }
+  }, [initialFile, uploadFile]);
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -201,7 +213,7 @@ export default function AttachmentUpload({
     .join(',');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Upload attachment">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Upload attachment">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full max-w-md rounded-[var(--radius-2xl)] shadow-[var(--shadow-xl)] bg-[var(--surface)] border border-[var(--border)] overflow-hidden">

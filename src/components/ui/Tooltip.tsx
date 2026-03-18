@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { prefersReducedMotion, DURATION } from '@/lib/animations';
+import { zClass } from '@/lib/z-index';
 
 /**
  * Tooltip position options
@@ -333,6 +334,8 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
     }, [hideDelay, isControlled, onOpenChange]);
 
     // Ref callback to merge our ref with child's ref
+    // NOTE: This useCallback MUST be called before the early return below
+    // to satisfy the Rules of Hooks (hooks must be called unconditionally).
     const mergeRefs = useCallback((node: HTMLElement | null) => {
       (triggerRef as React.MutableRefObject<HTMLElement | null>).current = node;
       // Handle existing child ref if any
@@ -405,7 +408,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(
             exit={reducedMotion ? { opacity: 0 } : animation.exit}
             transition={{ duration: reducedMotion ? 0 : DURATION.fast, ease: [0.4, 0, 0.2, 1] }}
             className={`
-              fixed z-[100] pointer-events-none
+              fixed ${zClass.tooltip} pointer-events-none
               px-3 py-2
               bg-[var(--foreground)] text-[var(--background)]
               text-xs font-medium

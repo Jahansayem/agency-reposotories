@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   checkRateLimit,
@@ -72,15 +72,14 @@ describe('Rate Limiting', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should fail open when Redis is down', async () => {
+    it('should fail closed when Redis is down', async () => {
       const mockLimiter = {
         limit: vi.fn().mockRejectedValue(new Error('Redis connection failed')),
       } as any;
 
       const result = await checkRateLimit('user-123', mockLimiter);
 
-      // SECURITY: fail-closed to prevent bypass during Redis outages
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(false); // Fail closed for security
     });
   });
 
@@ -120,7 +119,7 @@ describe('Rate Limiting', () => {
   });
 
   describe('withRateLimit', () => {
-    it('should use IP as identifier even when user ID header is present', async () => {
+    it('should use IP address as identifier (not x-user-id header)', async () => {
       const mockLimiter = {
         limit: vi.fn().mockResolvedValue({
           success: true,
@@ -142,6 +141,8 @@ describe('Rate Limiting', () => {
 
       await withRateLimit(mockRequest, mockLimiter);
 
+      // SECURITY: withRateLimit uses IP-based keying only.
+      // x-user-id header is intentionally ignored to prevent spoofing.
       expect(mockLimiter.limit).toHaveBeenCalledWith('1.2.3.4');
     });
 

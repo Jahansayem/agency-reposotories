@@ -40,13 +40,14 @@ export function TaskCardMetadata({ todo, density = 'comfortable' }: TaskCardMeta
           key="due"
           className="font-medium"
           style={{ color: statusStyle.dueDateColor }}
+          aria-label={`Due date: ${formattedDate}`}
         >
           {formattedDate}
         </span>
       );
     } else if (!todo.completed) {
       items.push(
-        <span key="no-due" className="text-[var(--text-muted)]">
+        <span key="no-due" className="text-[var(--text-muted)]" aria-label="No due date set">
           No due date
         </span>
       );
@@ -55,7 +56,7 @@ export function TaskCardMetadata({ todo, density = 'comfortable' }: TaskCardMeta
     // Assignee
     if (todo.assigned_to) {
       items.push(
-        <span key="assignee" className="text-[var(--text-secondary)]">
+        <span key="assignee" className="text-[var(--text-secondary)]" aria-label={`Assigned to: ${todo.assigned_to}`}>
           {todo.assigned_to}
         </span>
       );
@@ -71,7 +72,7 @@ export function TaskCardMetadata({ todo, density = 'comfortable' }: TaskCardMeta
             : 'var(--text-muted)';
 
       items.push(
-        <span key="priority" style={{ color: priorityColor }}>
+        <span key="priority" style={{ color: priorityColor }} aria-label={`Priority: ${PRIORITY_LABELS[todo.priority]}`}>
           {PRIORITY_LABELS[todo.priority]}
         </span>
       );
@@ -82,19 +83,22 @@ export function TaskCardMetadata({ todo, density = 'comfortable' }: TaskCardMeta
 
   if (parts.length === 0) return null;
 
-  const fontSize = density === 'compact' ? '12px' : TYPOGRAPHY.metadata.size;
+  const fontSize = density === 'compact' ? TYPOGRAPHY.caption.size : TYPOGRAPHY.metadata.size;
 
   return (
     <div
-      className="flex items-center gap-2 flex-wrap"
+      className="flex items-center flex-wrap"
       style={{
         fontSize,
         lineHeight: TYPOGRAPHY.metadata.lineHeight,
+        gap: '8px',
       }}
+      role="group"
+      aria-label="Task metadata"
     >
       {parts.map((part, index) => (
         <span key={index}>
-          {index > 0 && <span className="text-[var(--border)] mx-1">•</span>}
+          {index > 0 && <span style={{ color: 'var(--border)', margin: '0 4px' }} aria-hidden="true">•</span>}
           {part}
         </span>
       ))}

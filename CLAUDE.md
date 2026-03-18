@@ -57,6 +57,13 @@ npm run migrate:dry-run  # Preview migrations
 - Real-time: collaborative editing, typing indicators, presence
 - Push notifications, version history, chat with attachments
 
+## Deployment
+- **Production**: Railway (Docker) — NOT Vercel
+- Push to `main` triggers automatic Railway deployment
+- Environment variables configured in Railway dashboard
+- See `DEPLOYMENT_GUIDE.md` for full setup
+- CSP requires `'unsafe-eval'` for Turbopack chunk loading in production
+
 ## Conventions
 - All API routes use auth wrappers (`withAgencyAuth`, `withSessionAuth`)
 - Segmentation logic lives in `src/lib/segmentation.ts` — single source of truth

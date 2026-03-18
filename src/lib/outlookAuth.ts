@@ -126,25 +126,18 @@ export function createOutlookCorsPreflightResponse(request: NextRequest, methods
  * 3. Request body `agencyId` field (POST only — body must be pre-parsed)
  *
  * When agencyId is found, fetches agency details from DB to build context.
- * Returns a synthetic AgencyAuthContext with owner-level permissions since the
- * API key represents a trusted service-to-service call.
+ * Returns a synthetic AgencyAuthContext with staff-level permissions.
+ *
+ * SECURITY: agencyId is now REQUIRED. API key calls without agency scoping are rejected.
  */
 async function resolveApiKeyAgencyContext(
-  agencyId: string | null | undefined,
-  createdBy?: string
+  agencyId: string | null | undefined
 ): Promise<AgencyAuthContext | null> {
   if (!agencyId) {
-    // No agency specified — return a minimal context (single-tenant / backward compat)
-    return {
-      userId: 'outlook-addon',
-      userName: createdBy || 'Outlook Add-in',
-      userRole: 'staff',
-      agencyId: '',
-      agencySlug: '',
-      agencyName: '',
-      agencyRole: 'staff',
-      permissions: DEFAULT_PERMISSIONS.staff,
-    };
+    logger.security('Outlook API key auth rejected: missing agency_id', {
+      component: 'OutlookAuth',
+    });
+    return null;
   }
 
   try {
@@ -158,7 +151,7 @@ async function resolveApiKeyAgencyContext(
       .single();
 
     if (error || !agency) {
-      logger.warn('Outlook API key auth: agency not found', {
+      logger.warn('Outlook API key auth: agency not found or inactive', {
         component: 'OutlookAuth',
         agencyId,
       });
@@ -167,7 +160,7 @@ async function resolveApiKeyAgencyContext(
 
     return {
       userId: 'outlook-addon',
-      userName: createdBy || 'Outlook Add-in',
+      userName: 'Outlook Add-in',
       userRole: 'staff',
       agencyId: agency.id,
       agencySlug: agency.slug,
@@ -236,10 +229,9 @@ export function withOutlookAuth(
       request.headers.get('X-Agency-Id') ||
       request.nextUrl.searchParams.get('agencyId');
 
-    let createdBy: string | undefined;
-
-    // For POST/PUT/PATCH, try to read agencyId and createdBy from body.
+    // For POST/PUT/PATCH, try to read agencyId from body.
     // We clone the request so the handler can still read the body.
+    // SECURITY: We do NOT accept createdBy from the client — it is fixed to "Outlook Add-in"
     if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
       try {
         const cloned = request.clone();
@@ -247,19 +239,19 @@ export function withOutlookAuth(
         if (!agencyId && body.agencyId) {
           agencyId = body.agencyId;
         }
-        if (body.createdBy) {
-          createdBy = body.createdBy;
-        }
       } catch {
         // Body might not be JSON or might be empty — that's fine
       }
     }
 
-    const context = await resolveApiKeyAgencyContext(agencyId, createdBy);
+    const context = await resolveApiKeyAgencyContext(agencyId);
 
     if (!context) {
       return NextResponse.json(
-        { error: 'Bad Request', message: 'Invalid or inactive agency ID' },
+        {
+          error: 'Bad Request',
+          message: 'Missing or invalid agency_id. API key authentication requires X-Agency-Id header or agencyId in request body/query params.'
+        },
         { status: 400 }
       );
     }

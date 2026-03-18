@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '@/lib/logger';
 import { withAiAuth } from '@/lib/agencyAuth';
+import { withRateLimit, rateLimiters, createRateLimitResponse } from '@/lib/rateLimit';
 
 function getAnthropicClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -10,7 +11,20 @@ function getAnthropicClient(): Anthropic {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 }
 
-async function handleParseFile(request: NextRequest): Promise<NextResponse> {
+async function handleParseFile(request: NextRequest, userId: string): Promise<NextResponse> {
+  // Rate limiting for expensive AI operations (vision/PDF parsing)
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : (request.headers.get('x-real-ip') || 'unknown');
+
+  const rateLimitResult = await withRateLimit({
+    identifier: `${ip}:${userId}`,
+    limiter: rateLimiters.aiExpensive,
+  });
+
+  if (!rateLimitResult.success) {
+    return createRateLimitResponse(rateLimitResult);
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -164,7 +178,10 @@ Respond with ONLY the JSON object, no other text.`,
       }
       result = JSON.parse(jsonText.trim());
     } catch {
-      logger.error('Failed to parse AI response', undefined, { component: 'ParseFileAPI', responseText: textContent.text });
+      logger.error('Failed to parse AI response', undefined, {
+        component: 'ParseFileAPI',
+        responseCharCount: textContent.text.length,
+      });
       throw new Error('Failed to parse AI response as JSON');
     }
 
@@ -188,6 +205,6 @@ Respond with ONLY the JSON object, no other text.`,
 }
 
 // Export wrapped handler with session auth and AI-specific error handling
-export const POST = withAiAuth('ParseFileAPI', async (request) => {
-  return handleParseFile(request);
+export const POST = withAiAuth('ParseFileAPI', async (request, userId, userName) => {
+  return handleParseFile(request, userId);
 });

@@ -8,7 +8,7 @@ import { sanitizePromptInput, quickSanitize, isInputSafe, maskSensitiveData, wra
 import { validateFileContent, isValidFileType, extensionMatchesMime, isSvgSafe } from '../src/lib/fileValidator';
 import { hashPinWithSalt, verifyPinWithSalt, generateSessionToken as generateSecureToken, generateSalt, createSaltedHash, verifyPin, isValidPin, isValidUsername } from '../src/lib/secureAuth';
 import { generateCsrfToken } from '../src/lib/csrf';
-import { logger } from '../src/lib/secureLogger';
+import { logger } from '../src/lib/logger';
 import { createHash, randomBytes } from 'crypto';
 
 // Color codes for console output

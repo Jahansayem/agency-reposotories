@@ -73,7 +73,7 @@ export function VersionHistoryModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
@@ -316,7 +316,7 @@ export function VersionHistoryModal({
                                       Subtasks ({version.subtasks.length}):
                                     </span>
                                     <ul className="mt-1 space-y-1">
-                                      {version.subtasks.map((subtask: any, i: number) => (
+                                      {version.subtasks.map((subtask: { text: string; completed: boolean }, i: number) => (
                                         <li
                                           key={i}
                                           className="text-sm text-[var(--foreground)] flex items-center gap-2"

@@ -250,15 +250,16 @@ describe('usePermissions', () => {
         role: 'owner',
       });
 
+      // Use permissions that actually exist in DEFAULT_PERMISSIONS for owner
       const { result } = renderHook(() =>
-        usePermissions(['can_create_tasks', 'can_delete_all_tasks', 'can_manage_members'])
+        usePermissions(['can_create_tasks', 'can_delete_all_tasks', 'can_manage_team'])
       );
 
       // Owners have all permissions
       expect(result.current).toEqual({
         can_create_tasks: true,
         can_delete_all_tasks: true,
-        can_manage_members: true,
+        can_manage_team: true,
       });
     });
 
@@ -277,7 +278,7 @@ describe('usePermissions', () => {
           'can_create_tasks',
           'can_edit_all_tasks',
           'can_delete_all_tasks',
-          'can_manage_members',
+          'can_manage_team',
         ])
       );
 
@@ -285,7 +286,7 @@ describe('usePermissions', () => {
         can_create_tasks: true,
         can_edit_all_tasks: false,
         can_delete_all_tasks: false,
-        can_manage_members: false,
+        can_manage_team: false,
       });
     });
 
@@ -338,14 +339,15 @@ describe('usePermissions', () => {
         role: 'owner',
       });
 
+      // Use permissions that exist in DEFAULT_PERMISSIONS for owner (all true)
       const { result } = renderHook(() =>
         usePermissions([
           'can_view_all_tasks',
           'can_create_tasks',
           'can_edit_all_tasks',
           'can_delete_all_tasks',
-          'can_manage_members',
-          'can_view_analytics',
+          'can_manage_team',
+          'can_view_team_stats',
         ])
       );
 
@@ -365,14 +367,15 @@ describe('usePermissions', () => {
         role: 'manager',
       });
 
+      // Use permissions that exist in DEFAULT_PERMISSIONS
       const { result } = renderHook(() =>
         usePermissions([
           'can_view_all_tasks',
           'can_create_tasks',
           'can_edit_all_tasks',
           'can_delete_all_tasks',
-          'can_manage_members',
-          'can_view_analytics',
+          'can_manage_team',
+          'can_view_team_stats',
         ])
       );
 
@@ -381,8 +384,8 @@ describe('usePermissions', () => {
       expect(result.current.can_create_tasks).toBe(true);
       expect(result.current.can_edit_all_tasks).toBe(true);
       expect(result.current.can_delete_all_tasks).toBe(false); // Manager cannot delete all
-      expect(result.current.can_manage_members).toBe(false); // Manager cannot manage members
-      expect(result.current.can_view_analytics).toBe(true);
+      expect(result.current.can_manage_team).toBe(false); // Manager cannot manage team
+      expect(result.current.can_view_team_stats).toBe(true);
     });
 
     it('should correctly handle staff permissions', () => {
@@ -401,7 +404,7 @@ describe('usePermissions', () => {
           'can_create_tasks',
           'can_edit_all_tasks',
           'can_delete_all_tasks',
-          'can_manage_members',
+          'can_manage_team',
         ])
       );
 
@@ -410,7 +413,7 @@ describe('usePermissions', () => {
       expect(result.current.can_create_tasks).toBe(true);
       expect(result.current.can_edit_all_tasks).toBe(false);
       expect(result.current.can_delete_all_tasks).toBe(false);
-      expect(result.current.can_manage_members).toBe(false);
+      expect(result.current.can_manage_team).toBe(false);
     });
   });
 });

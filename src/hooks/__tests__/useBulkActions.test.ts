@@ -17,6 +17,30 @@ vi.mock('@/lib/activityLogger', () => ({
   logActivity: vi.fn(),
 }));
 
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(() => 'toast-id'),
+    update: vi.fn(),
+    dismiss: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/haptics', () => ({
+  haptics: {
+    success: vi.fn(),
+    error: vi.fn(),
+    medium: vi.fn(),
+  },
+}));
+
+// Mock retryWithBackoff to just call the function directly (no delays in tests)
+vi.mock('@/lib/retryWithBackoff', () => ({
+  retryWithBackoff: vi.fn(async (fn: () => Promise<any>) => fn()),
+}));
+
 const mockTodos: Todo[] = [
   {
     id: 'todo-1',
@@ -60,6 +84,8 @@ describe('useBulkActions', () => {
   let inMock: any;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
     // Reset store
     useTodoStore.setState({
       todos: mockTodos,
@@ -85,8 +111,6 @@ describe('useBulkActions', () => {
       ...deleteMock,
       eq: vi.fn().mockResolvedValue({ data: null, error: null }),
     });
-
-    vi.clearAllMocks();
   });
 
   describe('selection management', () => {
@@ -328,6 +352,108 @@ describe('useBulkActions', () => {
       const todo1 = state.todos.find(t => t.id === 'todo-1');
       expect(todo1?.completed).toBe(false);
       expect(todo1?.status).toBe('todo');
+    });
+  });
+
+  describe('bulkComplete large batch (>5 tasks) with chunked processing', () => {
+    const largeMockTodos: Todo[] = Array.from({ length: 8 }, (_, i) => ({
+      id: `todo-${i + 1}`,
+      text: `Task ${i + 1}`,
+      completed: false,
+      status: 'todo' as const,
+      priority: 'medium' as const,
+      created_at: `2026-01-0${(i % 9) + 1}T00:00:00Z`,
+      created_by: 'Derrick',
+      subtasks: [],
+      attachments: [],
+    }));
+
+    beforeEach(() => {
+      useTodoStore.setState({
+        todos: largeMockTodos,
+        bulkActions: {
+          selectedTodos: new Set(largeMockTodos.map(t => t.id)),
+          showBulkActions: true,
+        },
+      });
+    });
+
+    it('should complete all tasks in a large batch using chunked processing', async () => {
+      const { result } = renderHook(() => useBulkActions('Derrick'));
+
+      await act(async () => {
+        await result.current.bulkComplete();
+      });
+
+      // All 8 tasks should be marked as completed in the store
+      const state = useTodoStore.getState();
+      const allCompleted = state.todos.every(t => t.completed === true && t.status === 'done');
+      expect(allCompleted).toBe(true);
+
+      // Should have logged activity for all 8 tasks
+      expect(activityLogger.logActivity).toHaveBeenCalledTimes(8);
+    });
+
+    it('should handle partial failure in chunked processing', async () => {
+      let callCount = 0;
+      // First chunk succeeds, second chunk fails
+      inMock.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // First chunk (tasks 1-8 in one batch since chunkSize=10, but let's simulate two chunks)
+          return Promise.resolve({ data: null, error: null });
+        }
+        return Promise.resolve({ data: null, error: { message: 'Chunk failed' } });
+      });
+
+      // Use 12 tasks so we get two chunks (10 + 2)
+      const twelveTaskTodos: Todo[] = Array.from({ length: 12 }, (_, i) => ({
+        id: `todo-${i + 1}`,
+        text: `Task ${i + 1}`,
+        completed: false,
+        status: 'todo' as const,
+        priority: 'medium' as const,
+        created_at: '2026-01-01T00:00:00Z',
+        created_by: 'Derrick',
+        subtasks: [],
+        attachments: [],
+      }));
+
+      useTodoStore.setState({
+        todos: twelveTaskTodos,
+        bulkActions: {
+          selectedTodos: new Set(twelveTaskTodos.map(t => t.id)),
+          showBulkActions: true,
+        },
+      });
+
+      const { result } = renderHook(() => useBulkActions('Derrick'));
+
+      await act(async () => {
+        await result.current.bulkComplete();
+      });
+
+      const state = useTodoStore.getState();
+
+      // First chunk (10 tasks) should have succeeded and stayed completed
+      const firstChunk = state.todos.filter(t => {
+        const idx = parseInt(t.id.replace('todo-', ''));
+        return idx <= 10;
+      });
+      firstChunk.forEach(t => {
+        expect(t.completed).toBe(true);
+        expect(t.status).toBe('done');
+      });
+
+      // Second chunk (2 tasks) should have been rolled back
+      const secondChunk = state.todos.filter(t => {
+        const idx = parseInt(t.id.replace('todo-', ''));
+        return idx > 10;
+      });
+      secondChunk.forEach(t => {
+        expect(t.completed).toBe(false);
+        expect(t.status).toBe('todo');
+      });
     });
   });
 
@@ -625,6 +751,159 @@ describe('useBulkActions', () => {
       const { result } = renderHook(() => useBulkActions('Derrick'));
 
       expect(result.current.selectedCount).toBe(3);
+    });
+  });
+
+  describe('bulkComplete chunked path (>5 tasks)', () => {
+    const manyTodos: Todo[] = Array.from({ length: 8 }, (_, i) => ({
+      id: `todo-${i + 1}`,
+      text: `Task ${i + 1}`,
+      completed: false,
+      status: 'todo' as const,
+      priority: 'medium' as const,
+      created_at: '2026-01-01T00:00:00Z',
+      created_by: 'Derrick',
+      subtasks: [],
+      attachments: [],
+    }));
+
+    beforeEach(() => {
+      useTodoStore.setState({
+        todos: manyTodos,
+        bulkActions: {
+          selectedTodos: new Set(manyTodos.map(t => t.id)),
+          showBulkActions: true,
+        },
+      });
+    });
+
+    it('should use chunked path for >5 tasks', async () => {
+      let callCount = 0;
+      (supabase.from as any).mockImplementation(() => {
+        callCount++;
+        return {
+          update: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: null, error: null }),
+        };
+      });
+
+      const { result } = renderHook(() => useBulkActions('Derrick'));
+
+      await act(async () => {
+        await result.current.bulkComplete();
+      });
+
+      // 8 tasks should be split into 1 chunk of 8 (chunkSize=10)
+      // so supabase.from should be called once
+      expect(callCount).toBeGreaterThanOrEqual(1);
+
+      // All tasks should be completed in store
+      const state = useTodoStore.getState();
+      state.todos.forEach(t => {
+        expect(t.completed).toBe(true);
+        expect(t.status).toBe('done');
+      });
+    });
+
+    it('should rollback only failed chunk on partial failure', async () => {
+      let callIndex = 0;
+      (supabase.from as any).mockImplementation(() => ({
+        update: vi.fn().mockReturnThis(),
+        in: vi.fn().mockImplementation((col: string, ids: string[]) => {
+          callIndex++;
+          // Fail on first call (the only chunk since 8 < 10)
+          if (callIndex === 1) {
+            return Promise.resolve({ data: null, error: { message: 'Chunk failed' } });
+          }
+          return Promise.resolve({ data: null, error: null });
+        }),
+      }));
+
+      const { result } = renderHook(() => useBulkActions('Derrick'));
+
+      await act(async () => {
+        await result.current.bulkComplete();
+      });
+
+      // All tasks should be rolled back since the single chunk failed
+      const state = useTodoStore.getState();
+      state.todos.forEach(t => {
+        expect(t.completed).toBe(false);
+      });
+    });
+
+    it('should clear selection before DB operations start', async () => {
+      let selectionAtDbCall: number | undefined;
+      (supabase.from as any).mockImplementation(() => ({
+        update: vi.fn().mockReturnThis(),
+        in: vi.fn().mockImplementation(() => {
+          selectionAtDbCall = useTodoStore.getState().bulkActions.selectedTodos.size;
+          return Promise.resolve({ data: null, error: null });
+        }),
+      }));
+
+      const { result } = renderHook(() => useBulkActions('Derrick'));
+
+      await act(async () => {
+        await result.current.bulkComplete();
+      });
+
+      // Selection should have been cleared before the DB call
+      expect(selectionAtDbCall).toBe(0);
+    });
+  });
+
+  describe('bulkComplete small batch path (<=5 tasks)', () => {
+    beforeEach(() => {
+      useTodoStore.setState({
+        todos: mockTodos,
+        bulkActions: {
+          selectedTodos: new Set(['todo-1', 'todo-2']),
+          showBulkActions: true,
+        },
+      });
+    });
+
+    it('should use single-query path for <=5 tasks', async () => {
+      const { result } = renderHook(() => useBulkActions('Derrick'));
+
+      await act(async () => {
+        await result.current.bulkComplete();
+      });
+
+      // Should have called update with all IDs in one query
+      expect(updateMock.update).toHaveBeenCalledWith({
+        completed: true,
+        status: 'done',
+      });
+      expect(inMock).toHaveBeenCalledWith('id', ['todo-1', 'todo-2']);
+
+      // Should only have been called once (single query, not chunked)
+      expect(supabase.from).toHaveBeenCalledTimes(1);
+    });
+
+    it('should skip activity logging for already-completed tasks', async () => {
+      // todo-3 is already completed
+      useTodoStore.setState({
+        bulkActions: {
+          selectedTodos: new Set(['todo-1', 'todo-3']),
+          showBulkActions: true,
+        },
+      });
+
+      const { result } = renderHook(() => useBulkActions('Derrick'));
+
+      await act(async () => {
+        await result.current.bulkComplete();
+      });
+
+      // Should only log activity for todo-1 (not already completed)
+      const logCalls = (activityLogger.logActivity as any).mock.calls;
+      const completedLogs = logCalls.filter(
+        (call: any) => call[0].action === 'task_completed'
+      );
+      expect(completedLogs).toHaveLength(1);
+      expect(completedLogs[0][0].todoId).toBe('todo-1');
     });
   });
 });

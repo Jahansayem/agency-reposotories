@@ -236,7 +236,7 @@ export function LogSaleModal({ isOpen, onClose, onSaleLogged }: LogSaleModalProp
           animate="visible"
           exit="exit"
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4"
           onClick={handleBackdropClick}
         >
           {/* Backdrop */}

@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { fetchWithCsrf } from '@/lib/csrf';
 import type {
   CrossSellOpportunity,
   CrossSellPriorityTier,
@@ -134,7 +135,7 @@ export function useCrossSellData(options: UseCrossSellDataOptions = {}) {
   const markContacted = useCallback(
     async (id: string, contactedBy: string, notes?: string) => {
       try {
-        const response = await fetch('/api/analytics/cross-sell', {
+        const response = await fetchWithCsrf('/api/analytics/cross-sell', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -165,7 +166,7 @@ export function useCrossSellData(options: UseCrossSellDataOptions = {}) {
   const markConverted = useCallback(
     async (id: string, premium: number, notes?: string) => {
       try {
-        const response = await fetch('/api/analytics/cross-sell', {
+        const response = await fetchWithCsrf('/api/analytics/cross-sell', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -199,7 +200,7 @@ export function useCrossSellData(options: UseCrossSellDataOptions = {}) {
       const params = new URLSearchParams({ id });
       if (reason) params.set('reason', reason);
 
-      const response = await fetch(`/api/analytics/cross-sell?${params.toString()}`, {
+      const response = await fetchWithCsrf(`/api/analytics/cross-sell?${params.toString()}`, {
         method: 'DELETE',
       });
 
@@ -220,7 +221,7 @@ export function useCrossSellData(options: UseCrossSellDataOptions = {}) {
       notes?: string
     ) => {
       try {
-        const response = await fetch('/api/analytics/cross-sell', {
+        const response = await fetchWithCsrf('/api/analytics/cross-sell', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -256,7 +257,7 @@ export function useCrossSellData(options: UseCrossSellDataOptions = {}) {
       }
     ) => {
       try {
-        const response = await fetch('/api/analytics/cross-sell/generate-tasks', {
+        const response = await fetchWithCsrf('/api/analytics/cross-sell/generate-tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

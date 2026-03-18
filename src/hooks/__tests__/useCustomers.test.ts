@@ -12,6 +12,11 @@ import type { Customer, CustomerDetail, CustomerSearchResult, CustomerDetailResu
 // Mock fetch
 global.fetch = vi.fn();
 
+// Mock fetchWithCsrf to call global.fetch directly so tests can intercept it
+vi.mock('@/lib/csrf', () => ({
+  fetchWithCsrf: (url: string, options?: RequestInit) => global.fetch(url, options),
+}));
+
 const mockCustomer: Customer = {
   id: 'customer-1',
   name: 'John Smith',
@@ -92,13 +97,13 @@ describe('useCustomerSearch', () => {
 
     expect(global.fetch).not.toHaveBeenCalled();
 
-    act(() => {
+    // Advance remaining time and flush promises
+    await act(async () => {
       vi.advanceTimersByTime(150);
+      await vi.runAllTimersAsync();
     });
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(1);
-    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('should search when query meets minimum characters', async () => {
@@ -117,18 +122,15 @@ describe('useCustomerSearch', () => {
       json: async () => mockSearchResult,
     });
 
-    const { result } = renderHook(() => useCustomerSearch({ minChars: 2 }));
+    const { result } = renderHook(() => useCustomerSearch({ minChars: 2, aiPowered: false }));
 
     act(() => {
       result.current.setQuery('John');
     });
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(300);
-    });
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
+      await vi.runAllTimersAsync();
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
@@ -144,22 +146,21 @@ describe('useCustomerSearch', () => {
     });
 
     const { result } = renderHook(() =>
-      useCustomerSearch({ agencyId: 'agency-123' })
+      useCustomerSearch({ agencyId: 'agency-123', aiPowered: false })
     );
 
     act(() => {
       result.current.setQuery('John Smith');
     });
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(300);
+      await vi.runAllTimersAsync();
     });
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('agency_id=agency-123')
-      );
-    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('agency_id=agency-123')
+    );
   });
 
   it('should handle search errors', async () => {
@@ -174,14 +175,12 @@ describe('useCustomerSearch', () => {
       result.current.setQuery('John');
     });
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(300);
+      await vi.runAllTimersAsync();
     });
 
-    await waitFor(() => {
-      expect(result.current.error).toBeTruthy();
-    });
-
+    expect(result.current.error).toBeTruthy();
     expect(result.current.error?.message).toBe('Failed to search customers');
     expect(result.current.customers).toEqual([]);
   });
@@ -208,21 +207,20 @@ describe('useCustomerSearch', () => {
       json: async () => ({ customers: [] }),
     });
 
-    const { result } = renderHook(() => useCustomerSearch({ limit: 25 }));
+    const { result } = renderHook(() => useCustomerSearch({ limit: 25, aiPowered: false }));
 
     act(() => {
       result.current.setQuery('Smith');
     });
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(300);
+      await vi.runAllTimersAsync();
     });
 
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('limit=25')
-      );
-    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('limit=25')
+    );
   });
 });
 
@@ -396,39 +394,51 @@ describe('useCreateTaskFromOpportunity', () => {
 
     const { result } = renderHook(() => useCreateTaskFromOpportunity());
 
-    await expect(async () => {
-      await act(async () => {
+    let thrownError: Error | null = null;
+    await act(async () => {
+      try {
         await result.current.createTask({
           opportunityId: 'opp-1',
           assignedTo: 'Derrick',
           createdBy: 'Manager',
         });
-      });
-    }).rejects.toThrow('Failed to create task');
+      } catch (err) {
+        thrownError = err as Error;
+      }
+    });
 
+    expect(thrownError?.message).toBe('Failed to create task');
     expect(result.current.error?.message).toBe('Failed to create task');
   });
 
   it('should manage loading state', async () => {
+    let resolvePromise: (value: any) => void;
     (global.fetch as any).mockImplementation(() =>
-      new Promise(resolve =>
-        setTimeout(() => resolve({ ok: true, json: async () => ({ taskId: 'task-123' }) }), 100)
-      )
+      new Promise(resolve => {
+        resolvePromise = resolve;
+      })
     );
 
     const { result } = renderHook(() => useCreateTaskFromOpportunity());
 
-    const createPromise = act(async () => {
-      return result.current.createTask({
-        opportunityId: 'opp-1',
-        assignedTo: 'Derrick',
-        createdBy: 'Manager',
-      });
-    });
+    // Start the async operation without awaiting
+    let createError: Error | null = null;
+    const createPromise = result.current.createTask({
+      opportunityId: 'opp-1',
+      assignedTo: 'Derrick',
+      createdBy: 'Manager',
+    }).catch((e: Error) => { createError = e; });
+
+    // Yield to allow the state update from setLoading(true) to propagate
+    await act(async () => {});
 
     expect(result.current.loading).toBe(true);
 
-    await createPromise;
+    // Resolve the fetch
+    await act(async () => {
+      resolvePromise({ ok: true, json: async () => ({ taskId: 'task-123' }) });
+      await createPromise;
+    });
 
     expect(result.current.loading).toBe(false);
   });
@@ -474,12 +484,16 @@ describe('useDismissOpportunity', () => {
 
     const { result } = renderHook(() => useDismissOpportunity());
 
-    await expect(async () => {
-      await act(async () => {
+    let thrownError: Error | null = null;
+    await act(async () => {
+      try {
         await result.current.dismissOpportunity({ opportunityId: 'opp-1' });
-      });
-    }).rejects.toThrow('Failed to dismiss opportunity');
+      } catch (err) {
+        thrownError = err as Error;
+      }
+    });
 
+    expect(thrownError?.message).toBe('Failed to dismiss opportunity');
     expect(result.current.error?.message).toBe('Failed to dismiss opportunity');
   });
 });

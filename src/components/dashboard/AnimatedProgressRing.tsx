@@ -107,7 +107,7 @@ export default function AnimatedProgressRing({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-3 pointer-events-none"
+            className="absolute z-[700] top-full left-1/2 -translate-x-1/2 mt-3 pointer-events-none"
           >
             <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl shadow-xl p-4 min-w-[240px] text-sm">
               {tooltip}

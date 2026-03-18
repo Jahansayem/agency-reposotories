@@ -9,6 +9,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { logger } from '@/lib/logger';
 import { AgencyProvider } from '@/contexts/AgencyContext';
 import { UserProvider } from '@/contexts/UserContext';
+import { UnreadCountProvider } from '@/contexts/UnreadCountContext';
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -34,7 +35,12 @@ export default function Home() {
 
           try {
             const result = await Promise.race([queryPromise, timeoutPromise]);
-            const { data } = result as { data: AuthUser | null };
+            const { data, error } = result as { data: AuthUser | null; error: unknown };
+
+            if (error) {
+              console.error('Session verification error:', error);
+              // Don't silently log out — show error or retry
+            }
 
             if (data) {
               // Default role to 'staff' if not set
@@ -111,7 +117,9 @@ export default function Home() {
   return (
     <UserProvider currentUser={currentUser}>
       <AgencyProvider userId={currentUser.id}>
-        <MainApp currentUser={currentUser} onUserChange={handleUserChange} />
+        <UnreadCountProvider currentUserName={currentUser.name}>
+          <MainApp currentUser={currentUser} onUserChange={handleUserChange} />
+        </UnreadCountProvider>
       </AgencyProvider>
     </UserProvider>
   );

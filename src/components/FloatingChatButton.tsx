@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient';
 import { useAppShell } from './layout/AppShell';
 import { ChatPanelSkeleton } from './LoadingSkeletons';
 import { AuthUser, ChatConversation } from '@/types/todo';
-import { logger } from '@/lib/logger';
+import { useUnreadCount } from '@/contexts/UnreadCountContext';
+import { useTodoStore } from '@/store/todoStore';
 
 const CHAT_STATE_KEY = 'floating_chat_last_conversation';
 
@@ -51,9 +51,13 @@ export default function FloatingChatButton({
   onTaskLinkClick,
 }: FloatingChatButtonProps) {
   const { activeView } = useAppShell();
+  const bulkBarVisible = useTodoStore((s) => s.bulkActions.selectedTodos.size > 0);
+  // Use shared unread count context instead of a separate Supabase subscription.
+  // This avoids a duplicate real-time channel and keeps the count consistent
+  // with NavigationSidebar and EnhancedBottomNav.
+  const { unreadCount } = useUnreadCount();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   // Restore last conversation from localStorage
   const [lastConversation, setLastConversation] = useState<ChatConversation | null>(() => {
@@ -89,101 +93,6 @@ export default function FloatingChatButton({
   // Don't show button when already on chat view
   const shouldShow = activeView !== 'chat';
 
-  // Fetch unread message count
-  useEffect(() => {
-    if (!isSupabaseConfigured() || !currentUser.name) return;
-
-    const fetchUnreadCount = async () => {
-      try {
-        // Get messages not read by current user
-        // We need to fetch recipient and created_by to filter properly
-        const { data, error } = await supabase
-          .from('messages')
-          .select('id, read_by, recipient, created_by')
-          .not('created_by', 'eq', currentUser.name)
-          .is('deleted_at', null);
-
-        if (error) throw error;
-
-        // Determine what conversation will be shown when chat opens
-        // If we have a persisted conversation, don't count those messages as unread
-        const persistedConversationType = lastConversation?.type;
-        const persistedDmUser = persistedConversationType === 'dm' ? lastConversation?.userName : null;
-
-        // Get list of valid user names (users we can actually show conversations for)
-        const validUserNames = new Set(users.map(u => u.name));
-
-        // Count messages where:
-        // 1. Current user is not in read_by array
-        // 2. Message is either a team message (no recipient) OR a DM to the current user
-        // 3. Message is NOT from the persisted conversation (which will be shown immediately)
-        // 4. For DMs, the sender must be a valid user (so we can show their conversation)
-        const unread = data?.filter((msg) => {
-          // Skip if already read
-          if (msg.read_by?.includes(currentUser.name)) return false;
-
-          // Team message (no recipient)
-          if (!msg.recipient) {
-            // Skip if team chat is the persisted conversation
-            if (persistedConversationType === 'team') return false;
-            return true;
-          }
-
-          // DM to current user
-          if (msg.recipient === currentUser.name) {
-            // Skip if sender is not in the users list (e.g., "System" messages)
-            // These can't be viewed in the UI so shouldn't show as unread
-            if (!validUserNames.has(msg.created_by)) return false;
-            // Skip if this DM is from the persisted conversation user
-            if (persistedDmUser && msg.created_by === persistedDmUser) return false;
-            return true;
-          }
-
-          // DM between other users - don't count it
-          return false;
-        }).length || 0;
-
-        setUnreadCount(unread);
-      } catch (err) {
-        logger.error('Error fetching unread count', err as Error, { component: 'FloatingChatButton', action: 'fetchUnreadCount', userName: currentUser.name });
-      }
-    };
-
-    fetchUnreadCount();
-
-    // Subscribe to new messages
-    // TODO: This subscription listens to ALL messages across all agencies.
-    // There is no agencyId available in this component's props or context.
-    // To filter by agency, either pass agencyId as a prop from the parent,
-    // or use the AgencyContext here and add a filter like:
-    //   { event: '*', schema: 'public', table: 'messages', filter: `agency_id=eq.${agencyId}` }
-    const channel = supabase
-      .channel('floating-chat-messages')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        () => {
-          fetchUnreadCount();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser.name, lastConversation]);
-
-  // Clear unread count when opening chat
-  useEffect(() => {
-    if (isOpen) {
-      // Delay to allow chat to mark messages as read
-      const timer = setTimeout(() => {
-        setUnreadCount(0);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
   if (!shouldShow) return null;
 
   return (
@@ -192,88 +101,65 @@ export default function FloatingChatButton({
       <motion.button
         onClick={() => setIsOpen(true)}
         className={`
-          fixed bottom-6 right-6 z-40
+          fixed right-6 z-[100]
           w-14 h-14 rounded-full
           flex items-center justify-center
           shadow-lg hover:shadow-xl
-          transition-shadow duration-200
-          ${'bg-[var(--accent)] hover:bg-[var(--accent)]/90'}
+          transition-[bottom] duration-200
+          bg-[var(--accent)] hover:bg-[var(--accent)]/90
+          ${bulkBarVisible ? 'bottom-20' : 'bottom-6'}
         `}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         aria-label={`Open chat${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <MessageCircle className="w-6 h-6 text-white" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
       </motion.button>
 
-      {/* Chat Popup - Google Chat style */}
+      {/* Chat Popup - Standard modal pattern: backdrop WRAPS popup.
+          Clicking backdrop closes chat. Popup stops propagation so
+          clicks inside it (including back button) never reach the backdrop. */}
       <AnimatePresence>
         {isOpen && (
-          <>
-            {/* Light backdrop - click to close */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-40"
-              onClick={() => setIsOpen(false)}
-            />
-
-            {/* Chat Popup Window - positioned above the FAB */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-[200]"
+            onClick={() => setIsOpen(false)}
+          >
+            {/* Chat Popup Window — stops propagation so no click reaches backdrop */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 400 }}
+              onClick={(e) => e.stopPropagation()}
               className={`
-                fixed bottom-24 right-6 z-50
+                fixed ${bulkBarVisible ? 'bottom-32' : 'bottom-24'} right-6
                 w-[360px] sm:w-[400px] h-[500px] max-h-[70vh]
                 flex flex-col
                 rounded-[var(--radius-xl)] overflow-hidden
-                ${'bg-[var(--surface)] border border-[var(--border)]'}
+                bg-[var(--surface-dark)]
                 shadow-2xl
               `}
             >
-              {/* Header with close button */}
-              <div
-                className={`
-                  flex items-center justify-between
-                  px-4 py-2.5 border-b
-                  ${'border-[var(--border)] bg-[var(--surface)]'}
-                `}
-              >
-                <div className="flex items-center gap-2">
-                  <MessageCircle className={`w-4 h-4 ${'text-[var(--accent)]'}`} />
-                  <h2
-                    className={`
-                      font-medium text-sm
-                      ${'text-[var(--foreground)]'}
-                    `}
-                  >
-                    Team Chat
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className={`
-                    p-1.5 rounded-[var(--radius-md)] transition-colors
-                    ${'text-[var(--text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--surface-2)]'}
-                  `}
-                  aria-label="Close chat"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Chat Panel */}
+              {/* DockedChatPanel provides its own header with back, title, search, and close */}
               <div className="flex-1 overflow-hidden">
                 <ChatPanel
                   currentUser={currentUser}
                   users={users}
                   docked={true}
+                  embedded={true}
                   initialConversation={lastConversation}
                   onConversationChange={handleConversationChange}
+                  onClose={() => setIsOpen(false)}
                   onTaskLinkClick={(taskId) => {
                     onTaskLinkClick?.(taskId);
                     setIsOpen(false);
@@ -281,7 +167,7 @@ export default function FloatingChatButton({
                 />
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </>

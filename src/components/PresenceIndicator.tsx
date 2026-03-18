@@ -105,7 +105,7 @@ export function PresenceIndicator({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className="absolute top-full left-0 mt-2 w-64 p-3 bg-[var(--surface)] rounded-lg shadow-xl border border-[var(--border)] z-50"
+            className="absolute top-full left-0 mt-2 w-64 p-3 bg-[var(--surface)] rounded-lg shadow-xl border border-[var(--border)] z-[500]"
           >
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--border)]">
               <Users className="w-4 h-4 text-[var(--text-muted)]" />

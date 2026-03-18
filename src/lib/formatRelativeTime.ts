@@ -1,0 +1,39 @@
+/**
+ * Format Relative Time
+ *
+ * Converts a timestamp string to a human-readable relative time format.
+ * Used by the interaction timeline and similar components.
+ */
+
+export function formatRelativeTime(timestamp: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const rawDiffMs = now.getTime() - date.getTime();
+  const isFuture = rawDiffMs < 0;
+  const diffMs = Math.abs(rawDiffMs);
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (isFuture) {
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `In ${diffMins}m`;
+    if (diffHours < 24) return `In ${diffHours}h`;
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+    });
+  }
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+  });
+}

@@ -57,10 +57,10 @@ describe('Reminder Service', () => {
       expect(result).toEqual(new Date('2026-01-18T15:00:00Z'));
     });
 
-    it('should calculate morning_of (9 AM on due date)', () => {
+    it('should calculate morning_of (9 AM UTC on due date)', () => {
       const dueDate = new Date('2026-01-19T15:00:00Z');
       const result = calculateReminderTime('morning_of', dueDate);
-      // Note: This sets to 9 AM UTC (see reminderService implementation)
+      // Note: This sets to 9 AM UTC (uses setUTCHours internally)
       expect(result?.getUTCHours()).toBe(9);
       expect(result?.getUTCMinutes()).toBe(0);
     });

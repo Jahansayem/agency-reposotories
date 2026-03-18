@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
@@ -130,6 +130,22 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show]);
 
+  const getMotivationIcon = (): { Icon: LucideIcon; color: string } => {
+    if (stats.completedToday === 0) return { Icon: Dumbbell, color: 'var(--accent)' };
+    if (stats.completedToday < 3) return { Icon: Star, color: 'var(--warning)' };
+    if (stats.completedToday < 5) return { Icon: Flame, color: '#EF4444' };
+    return { Icon: Trophy, color: 'var(--success)' };
+  };
+
+  const motivationIcon = useMemo(() => {
+    const { Icon, color } = getMotivationIcon();
+    return (
+      <div className="w-10 h-10 rounded-[var(--radius-xl)] mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+        <Icon className="w-6 h-6" style={{ color }} />
+      </div>
+    );
+  }, [stats.completedToday]);
+
   const getMessage = () => {
     if (stats.completedToday === 0) {
       return "Ready to tackle some tasks? You've got this!";
@@ -142,13 +158,6 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
     }
   };
 
-  const getMotivationIcon = (): { Icon: LucideIcon; color: string } => {
-    if (stats.completedToday === 0) return { Icon: Dumbbell, color: 'var(--accent)' };
-    if (stats.completedToday < 3) return { Icon: Star, color: 'var(--warning)' };
-    if (stats.completedToday < 5) return { Icon: Flame, color: '#EF4444' };
-    return { Icon: Trophy, color: 'var(--success)' };
-  };
-
   return (
     <AnimatePresence>
       {show && (
@@ -156,7 +165,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         >
           <motion.div
@@ -330,14 +339,7 @@ export default function ProgressSummary({ show, onClose, todos, currentUser, onU
                 transition={{ delay: 0.5 }}
                 className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 text-center border border-[var(--border-subtle)]"
               >
-                {(() => {
-                  const { Icon, color } = getMotivationIcon();
-                  return (
-                    <div className="w-10 h-10 rounded-[var(--radius-xl)] mx-auto mb-2 flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
-                      <Icon className="w-6 h-6" style={{ color }} />
-                    </div>
-                  );
-                })()}
+                {motivationIcon}
                 <p className="text-[var(--foreground)] font-medium">
                   {getMessage()}
                 </p>

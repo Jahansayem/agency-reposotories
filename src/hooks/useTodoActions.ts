@@ -25,6 +25,7 @@ import type { Todo, TodoPriority, Subtask, AuthUser } from '@/types/todo';
 import type { LinkedCustomer } from '@/types/customer';
 import { v4 as uuidv4 } from 'uuid';
 import { useAgency } from '@/contexts/AgencyContext';
+import { haptics } from '@/lib/haptics';
 
 interface CreateTodoOptions {
   text: string;
@@ -234,7 +235,8 @@ export function useTodoActions({
    * Enhanced toggleComplete with recurrence and celebrations
    */
   const toggleComplete = useCallback(async (id: string): Promise<boolean> => {
-    const todo = todos.find(t => t.id === id);
+    // Use store.getState() to avoid stale closure over todos
+    const todo = useTodoStore.getState().todos.find(t => t.id === id);
     if (!todo) return false;
 
     const wasCompleted = todo.completed;
@@ -243,6 +245,9 @@ export function useTodoActions({
     const success = await baseToggleComplete(id);
 
     if (success && !wasCompleted) {
+      // Haptic success feedback on task completion
+      haptics.success();
+
       // Task was just completed
       const allSubtasksComplete = todo.subtasks?.every(st => st.completed) ?? true;
 
@@ -256,10 +261,13 @@ export function useTodoActions({
       if (todo.recurrence) {
         await createNextRecurrence(todo);
       }
+    } else if (!success) {
+      // Haptic error feedback on failure
+      haptics.error();
     }
 
     return success;
-  }, [todos, baseToggleComplete, onCelebration, onEnhancedCelebration, createNextRecurrence]);
+  }, [baseToggleComplete, onCelebration, onEnhancedCelebration, createNextRecurrence]);
 
   /**
    * Enhanced updateTodo with announcements

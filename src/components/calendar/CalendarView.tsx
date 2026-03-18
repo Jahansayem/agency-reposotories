@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import {
   ChevronLeft,
   ChevronRight,
@@ -34,6 +34,7 @@ import MonthView from './MonthView';
 import WeekView from './WeekView';
 import DayView from './DayView';
 import MiniCalendar from './MiniCalendar';
+import { useIsTouchDevice } from '@/hooks/useIsTouchDevice';
 
 interface CalendarViewProps {
   todos: Todo[];
@@ -99,6 +100,7 @@ export default function CalendarView({
   onQuickAdd,
 }: CalendarViewProps) {
   const toast = useToast();
+  const isTouch = useIsTouchDevice();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
   const [selectedCategories, setSelectedCategories] = useState<Set<DashboardTaskCategory>>(
@@ -107,6 +109,10 @@ export default function CalendarView({
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set()); // empty = show all
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [direction, setDirection] = useState<'left' | 'right'>('right');
+
+  // Ref to avoid stale closure in goToToday
+  const currentDateRef = useRef(currentDate);
+  currentDateRef.current = currentDate;
 
   // Navigation
   const goToPrevious = useCallback(() => {
@@ -133,9 +139,25 @@ export default function CalendarView({
 
   const goToToday = useCallback(() => {
     const today = new Date();
-    setDirection(startOfDay(today) > startOfDay(currentDate) ? 'right' : 'left');
+    setDirection(startOfDay(today) > startOfDay(currentDateRef.current) ? 'right' : 'left');
     setCurrentDate(today);
-  }, [currentDate]);
+  }, []);
+
+  // Swipe navigation for touch devices (month/day views only, not week which has horizontal scroll)
+  const SWIPE_THRESHOLD = 50;
+  const SWIPE_VELOCITY = 300;
+  const handleSwipeEnd = useCallback((_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (viewMode === 'week') return; // Week has horizontal scroll, skip swipe nav
+    const { offset, velocity } = info;
+    const swipe = offset.x;
+    const isTriggered = Math.abs(swipe) > SWIPE_THRESHOLD || Math.abs(velocity.x) > SWIPE_VELOCITY;
+    if (!isTriggered) return;
+    if (swipe > 0) {
+      goToPrevious(); // Swipe right = go back
+    } else {
+      goToNext(); // Swipe left = go forward
+    }
+  }, [viewMode, goToPrevious, goToNext]);
 
   const handleMiniCalendarDateClick = useCallback((date: Date) => {
     setDirection(date > currentDate ? 'right' : 'left');
@@ -166,7 +188,14 @@ export default function CalendarView({
       // Only handle shortcuts when this component is in the DOM and visible
       if (!containerRef.current || containerRef.current.offsetParent === null) return;
 
-      // Skip when a modal/dialog is open
+      // Escape closes filter menu even when it's the open dialog
+      if (e.key === 'Escape' && showFilterMenu) {
+        setShowFilterMenu(false);
+        e.stopPropagation();
+        return;
+      }
+
+      // Skip when a modal/dialog is open (filter dropdown or otherwise)
       if (document.querySelector('[role="dialog"]')) return;
 
       // Skip when typing in inputs
@@ -174,13 +203,13 @@ export default function CalendarView({
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       if ((e.target as HTMLElement).isContentEditable) return;
 
+      // Skip arrow keys when the month grid has keyboard focus — the grid's own
+      // handler navigates between cells and calls stopImmediatePropagation, but
+      // as a safety net we also check here.
+      const target = e.target as HTMLElement;
+      const isGridFocused = target.getAttribute('role') === 'grid';
+
       switch (e.key) {
-        case 'Escape':
-          if (showFilterMenu) {
-            setShowFilterMenu(false);
-            e.stopPropagation();
-          }
-          break;
         case 'd':
         case 'D':
           setViewMode('day');
@@ -197,20 +226,28 @@ export default function CalendarView({
         case 'T':
           goToToday();
           break;
+        case 'n':
+        case 'N':
+          onDateClick(currentDate);
+          break;
         case 'ArrowLeft':
-          e.preventDefault();
-          goToPrevious();
+          if (!isGridFocused) {
+            e.preventDefault();
+            goToPrevious();
+          }
           break;
         case 'ArrowRight':
-          e.preventDefault();
-          goToNext();
+          if (!isGridFocused) {
+            e.preventDefault();
+            goToNext();
+          }
           break;
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrevious, goToNext, goToToday, showFilterMenu]);
+  }, [goToPrevious, goToNext, goToToday, showFilterMenu, onDateClick, currentDate]);
 
   // Category filtering
   const toggleCategory = useCallback((category: DashboardTaskCategory) => {
@@ -294,6 +331,9 @@ export default function CalendarView({
     return filtered;
   }, [allTodosByDate, selectedCategories, selectedUsers]);
 
+  // Extract month key to avoid recomputing on every currentDate change within the same month
+  const currentMonthKey = useMemo(() => format(currentDate, 'yyyy-MM'), [currentDate]);
+
   // Category counts for current month
   // Uses string-based month extraction to avoid timezone issues with new Date()
   const categoryCounts = useMemo(() => {
@@ -301,17 +341,17 @@ export default function CalendarView({
       quote: 0, renewal: 0, claim: 0, service: 0,
       'follow-up': 0, prospecting: 0, other: 0,
     };
-    const currentYearMonth = format(currentDate, 'yyyy-MM');
     todos.forEach((todo) => {
       if (!todo.due_date) return;
+      if (todo.completed || todo.status === 'done') return;
       // Extract YYYY-MM directly from the date string to avoid timezone shift
       const dueDateYearMonth = todo.due_date.substring(0, 7);
-      if (dueDateYearMonth !== currentYearMonth) return;
+      if (dueDateYearMonth !== currentMonthKey) return;
       const category = todo.category || 'other';
       counts[category]++;
     });
     return counts;
-  }, [todos, currentDate]);
+  }, [todos, currentMonthKey]);
 
   const uniqueAssignees = useMemo(() => {
     const users = new Set<string>();
@@ -378,6 +418,43 @@ export default function CalendarView({
   // Accessible navigation announcement
   const headerLabel = getHeaderLabel(viewMode, currentDate);
 
+  // Memoize filter button to avoid IIFE pattern
+  const filterButton = useMemo(() => {
+    const filtersActive = selectedCategories.size < ALL_CATEGORIES.length || selectedUsers.size > 0;
+    const menuOpen = showFilterMenu;
+    let btnClass = 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)] border-transparent';
+    if (menuOpen && filtersActive) {
+      // Both: accent background + prominent border
+      btnClass = 'bg-[var(--accent)]/15 text-[var(--accent)] border-2 border-[var(--accent)]';
+    } else if (menuOpen) {
+      // Menu open only: border highlight, no accent fill
+      btnClass = 'bg-[var(--surface)] text-[var(--foreground)] border-2 border-[var(--accent)]';
+    } else if (filtersActive) {
+      // Filters active, menu closed: subtle accent tint
+      btnClass = 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30';
+    }
+    return (
+      <button
+        onClick={() => setShowFilterMenu(!showFilterMenu)}
+        data-testid="calendar-filter-btn"
+        aria-expanded={showFilterMenu}
+        aria-haspopup="true"
+        className={`
+          flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border
+          ${btnClass}
+        `}
+      >
+        <Filter className="w-4 h-4" />
+        <span className="hidden sm:inline">Filter</span>
+        {filtersActive && (
+          <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-semibold">
+            {(ALL_CATEGORIES.length - selectedCategories.size) + selectedUsers.size}
+          </span>
+        )}
+      </button>
+    );
+  }, [selectedCategories, selectedUsers, showFilterMenu, setShowFilterMenu]);
+
   return (
     <div ref={containerRef} className="flex flex-col h-full bg-[var(--surface-2)] rounded-xl border border-[var(--border)] overflow-hidden print:border-0 print:shadow-none print:rounded-none">
       {/* Screen reader announcement for navigation changes */}
@@ -391,6 +468,7 @@ export default function CalendarView({
           {/* Previous Button */}
           <button
             onClick={goToPrevious}
+            data-testid="calendar-prev"
             className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors print:hidden"
             aria-label={`Previous ${navLabel}`}
           >
@@ -400,6 +478,7 @@ export default function CalendarView({
           {/* Date Display */}
           <AnimatePresence mode="wait" custom={direction}>
             <motion.h2
+              data-testid="calendar-header"
               key={getHeaderKey(viewMode, currentDate)}
               custom={direction}
               variants={headerVariants}
@@ -416,6 +495,7 @@ export default function CalendarView({
           {/* Next Button */}
           <button
             onClick={goToNext}
+            data-testid="calendar-next"
             className="p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors print:hidden"
             aria-label={`Next ${navLabel}`}
           >
@@ -425,6 +505,7 @@ export default function CalendarView({
           {/* Today Button */}
           <button
             onClick={goToToday}
+            data-testid="calendar-today"
             aria-label="Go to today"
             className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors print:hidden ${!viewIncludesToday ? 'animate-pulse ring-2 ring-[var(--accent)]/50' : ''}`}
           >
@@ -451,55 +532,25 @@ export default function CalendarView({
 
           {/* Filter Button */}
           <div className="relative print:hidden">
-            {(() => {
-              const filtersActive = selectedCategories.size < ALL_CATEGORIES.length || selectedUsers.size > 0;
-              const menuOpen = showFilterMenu;
-              let btnClass = 'bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--surface-hover)] border-transparent';
-              if (menuOpen && filtersActive) {
-                // Both: accent background + prominent border
-                btnClass = 'bg-[var(--accent)]/15 text-[var(--accent)] border-2 border-[var(--accent)]';
-              } else if (menuOpen) {
-                // Menu open only: border highlight, no accent fill
-                btnClass = 'bg-[var(--surface)] text-[var(--foreground)] border-2 border-[var(--accent)]';
-              } else if (filtersActive) {
-                // Filters active, menu closed: subtle accent tint
-                btnClass = 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30';
-              }
-              return (
-                <button
-                  onClick={() => setShowFilterMenu(!showFilterMenu)}
-                  aria-expanded={showFilterMenu}
-                  aria-haspopup="true"
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border
-                    ${btnClass}
-                  `}
-                >
-                  <Filter className="w-4 h-4" />
-                  <span className="hidden sm:inline">Filter</span>
-                  {filtersActive && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] text-xs font-semibold">
-                      {(selectedCategories.size < ALL_CATEGORIES.length ? 1 : 0) + (selectedUsers.size > 0 ? 1 : 0)}
-                    </span>
-                  )}
-                </button>
-              );
-            })()}
+            {filterButton}
 
             {/* Filter Dropdown */}
             <AnimatePresence>
               {showFilterMenu && (
                 <>
                   <div
-                    className="fixed inset-0 z-40"
+                    className="fixed inset-0 z-[300]"
+                    aria-hidden="true"
                     onClick={() => setShowFilterMenu(false)}
                   />
                   <motion.div
+                    role="dialog"
+                    aria-label="Filter options"
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] z-50"
+                    className="absolute right-0 top-full mt-2 w-56 p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] shadow-lg dark:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.4)] z-[400] max-h-[400px] overflow-y-auto"
                   >
                     <div className="flex items-center gap-2 px-2 py-1.5 mb-2 border-b border-[var(--border)]">
                       <button
@@ -523,6 +574,8 @@ export default function CalendarView({
                         return (
                           <button
                             key={category}
+                            role="checkbox"
+                            aria-checked={isSelected}
                             onClick={() => toggleCategory(category)}
                             className={`
                               w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors
@@ -537,7 +590,7 @@ export default function CalendarView({
                             >
                               {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                             </div>
-                            <div className={`w-3 h-3 rounded-full ${CATEGORY_COLORS[category]}`} />
+                            <div className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[category]}`} />
                             <span className="flex-1 text-left text-sm text-[var(--foreground)]">
                               {CATEGORY_LABELS[category]}
                             </span>
@@ -564,6 +617,8 @@ export default function CalendarView({
                               return (
                                 <button
                                   key={user}
+                                  role="checkbox"
+                                  aria-checked={isSelected}
                                   onClick={() => toggleUser(user)}
                                   className={`w-full flex items-center gap-3 px-2 py-1.5 rounded-lg transition-colors ${isSelected ? 'bg-[var(--accent)]/10' : 'hover:bg-[var(--surface-hover)]'}`}
                                 >
@@ -588,8 +643,14 @@ export default function CalendarView({
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
-        {/* Main View */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Main View — swipe gesture on touch for month/day navigation */}
+        <motion.div
+          className="flex-1 flex flex-col overflow-hidden touch-pan-y"
+          drag={isTouch && viewMode !== 'week' ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.15}
+          onDragEnd={handleSwipeEnd}
+        >
           {viewMode === 'month' && (
             <MonthView
               currentMonth={currentDate}
@@ -629,7 +690,7 @@ export default function CalendarView({
               onQuickAdd={onQuickAdd}
             />
           )}
-        </div>
+        </motion.div>
 
         {/* Sidebar: Mini Calendar + Category Legend (visible on larger screens) */}
         <div className="hidden lg:flex flex-col w-56 border-l border-[var(--border)] bg-[var(--surface)] print:hidden">
@@ -637,7 +698,7 @@ export default function CalendarView({
           <div className="p-3 border-b border-[var(--border)]">
             <MiniCalendar
               currentDate={currentDate}
-              todosByDate={todosByDate}
+              todosByDate={allTodosByDate}
               onDateClick={handleMiniCalendarDateClick}
             />
           </div>
@@ -706,6 +767,8 @@ export default function CalendarView({
                 return (
                   <button
                     key={category}
+                    role="checkbox"
+                    aria-checked={isSelected}
                     onClick={() => toggleCategory(category)}
                     className={`
                       w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors
@@ -725,16 +788,25 @@ export default function CalendarView({
 
           {/* Person Filter */}
           {uniqueAssignees.length > 0 && (
-            <div className="p-4 border-t border-[var(--border)]">
-              <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
-                Team Members
-              </h3>
+            <div className="flex-shrink-0 p-4 border-t border-[var(--border)]">
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                  Assigned To
+                </h3>
+                {selectedUsers.size > 0 && (
+                  <button onClick={clearUserFilter} className="ml-auto text-xs text-[var(--accent)] hover:underline">
+                    Clear
+                  </button>
+                )}
+              </div>
               <div className="space-y-1">
                 {uniqueAssignees.map((user) => {
                   const isSelected = selectedUsers.has(user);
                   return (
                     <button
                       key={user}
+                      role="checkbox"
+                      aria-checked={isSelected}
                       onClick={() => toggleUser(user)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${isSelected ? 'bg-[var(--accent)]/10 shadow-sm' : selectedUsers.size > 0 ? 'opacity-50 hover:opacity-75' : 'hover:bg-[var(--surface-hover)]'}`}
                     >
@@ -745,11 +817,6 @@ export default function CalendarView({
                     </button>
                   );
                 })}
-                {selectedUsers.size > 0 && (
-                  <button onClick={clearUserFilter} className="text-xs text-[var(--accent)] hover:underline px-2 py-1">
-                    Show all
-                  </button>
-                )}
               </div>
             </div>
           )}

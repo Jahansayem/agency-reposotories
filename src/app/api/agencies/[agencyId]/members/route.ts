@@ -128,7 +128,22 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     if (error) throw error;
 
-    const members = (data || []).map((m: any) => ({
+    interface MemberRow {
+      id: string;
+      user_id: string;
+      users: {
+        name: string;
+        color: string;
+        global_role: string;
+      };
+      role: AgencyRole;
+      status: string;
+      permissions: AgencyPermissions;
+      is_default_agency: boolean;
+      created_at: string;
+    }
+
+    const members = ((data || []) as unknown as MemberRow[]).map((m) => ({
       id: m.id,
       user_id: m.user_id,
       user_name: m.users.name,
@@ -345,6 +360,12 @@ export const PATCH = withAgencyAuth(
             `Invalid permission keys: ${invalidKeys.join(', ')}`
           );
         }
+        // Validate values are booleans
+        for (const [key, value] of Object.entries(permissionUpdates)) {
+          if (typeof value !== 'boolean') {
+            return apiErrorResponse('VALIDATION_ERROR', `Permission ${key} must be a boolean`);
+          }
+        }
       }
 
       // Get member to update - verify they belong to this agency
@@ -359,7 +380,7 @@ export const PATCH = withAgencyAuth(
         return apiErrorResponse('NOT_FOUND', 'Member not found in this agency', 404);
       }
 
-      const memberUserName = (memberToUpdate as any).users.name;
+      const memberUserName = (memberToUpdate as unknown as { users: { name: string } }).users.name;
       const currentPermissions = memberToUpdate.permissions as AgencyPermissions;
       const currentRole = memberToUpdate.role as AgencyRole;
 
@@ -588,7 +609,14 @@ export const DELETE = withAgencyAuth(
         .select('role, user_id, users!inner(name)')
         .eq('id', memberId)
         .eq('agency_id', agencyId)
-        .single();
+        .single() as {
+          data: {
+            role: AgencyRole;
+            user_id: string;
+            users: { name: string };
+          } | null;
+          error?: unknown;
+        };
 
       if (!memberToRemove) {
         return apiErrorResponse('NOT_FOUND', 'Member not found in this agency', 404);
@@ -626,7 +654,7 @@ export const DELETE = withAgencyAuth(
         }
       }
 
-      const removedUserName = (memberToRemove as any).users.name;
+      const removedUserName = memberToRemove.users.name;
 
       // Delete the membership
       const { error: deleteError } = await supabase

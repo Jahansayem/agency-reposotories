@@ -386,7 +386,7 @@ export default function ContentToSubtasksImporter({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[300] p-4">
       <div className="bg-[var(--surface)] rounded-[var(--radius-2xl)] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-4 border-b border-slate-200 flex items-center justify-between flex-shrink-0">

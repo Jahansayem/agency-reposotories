@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// Unmock the module so we test the real implementation rather than the
+// global setup stub (which only exposes `supabase` with no named exports).
+vi.unmock('@/lib/supabaseClient');
+
 // Store original env vars
 const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const originalKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

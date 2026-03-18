@@ -352,7 +352,7 @@ export function CustomerSegmentationDashboard({ onSegmentClick }: CustomerSegmen
                 <div className="p-2 rounded-lg bg-white/5">
                   <p className="text-xs text-white/50">LTV:CAC</p>
                   <p className={`font-bold font-mono ${config.text}`}>
-                    {(segment.avgLtv / config.targetCac).toFixed(1)}x
+                    {config.targetCac > 0 ? (segment.avgLtv / config.targetCac).toFixed(1) : '0.0'}x
                   </p>
                 </div>
               </div>

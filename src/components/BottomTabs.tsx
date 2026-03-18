@@ -95,7 +95,7 @@ export default function BottomTabs({
 
   return (
     <nav
-      className={`fixed bottom-0 left-0 right-0 z-40 md:hidden border-t safe-area-inset-bottom ${
+      className={`fixed bottom-0 left-0 right-0 z-[200] md:hidden border-t safe-area-inset-bottom ${
         'bg-white/95 backdrop-blur-lg border-[var(--border)]'}`}
       role="tablist"
       aria-label="Task filters"

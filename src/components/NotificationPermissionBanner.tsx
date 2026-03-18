@@ -97,7 +97,7 @@ export default function NotificationPermissionBanner({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 50, scale: 0.95 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50"
+          className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:w-96 z-[600]"
         >
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-2xl)] p-4 shadow-xl">
             <div className="flex items-start gap-3">

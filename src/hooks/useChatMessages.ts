@@ -28,6 +28,7 @@ interface UseChatMessagesReturn {
   deleteMessage: (messageId: string) => Promise<void>;
   togglePin: (message: ChatMessage) => Promise<void>;
   markMessagesAsRead: (messageIds: string[]) => Promise<void>;
+  markMessageAsUnread: (messageId: string) => Promise<void>;
   handleNewMessage: (message: ChatMessage) => void;
   handleMessageUpdate: (message: ChatMessage) => void;
   handleMessageDelete: (messageId: string) => void;
@@ -51,6 +52,10 @@ export function useChatMessages({
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  // Fetch version counter to prevent race conditions when switching conversations rapidly.
+  // Each fetchMessages call increments this; stale responses are discarded.
+  const fetchVersionRef = useRef(0);
+
   const messagesRef = useRef<ChatMessage[]>(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
@@ -62,6 +67,9 @@ export function useChatMessages({
     if (isMultiTenancyEnabled && agencyLoading) {
       return;
     }
+
+    // Increment fetch version to detect stale responses from rapid conversation switches
+    const thisVersion = ++fetchVersionRef.current;
 
     setLoading(true);
 
@@ -90,6 +98,9 @@ export function useChatMessages({
       .order('created_at', { ascending: false })
       .limit(MESSAGES_PER_PAGE);
 
+    // Discard result if a newer fetch was started while this one was in flight
+    if (fetchVersionRef.current !== thisVersion) return;
+
     if (error) {
       logger.error('Error fetching messages', error, { component: 'useChatMessages' });
     } else {
@@ -113,10 +124,11 @@ export function useChatMessages({
     setIsLoadingMore(true);
     const oldestMessage = currentMessages[0];
 
+    // Use composite cursor (created_at + id) to handle tie-breaking for same-timestamp messages
     let query = supabase
       .from('messages')
       .select('*')
-      .lt('created_at', oldestMessage.created_at);
+      .or(`created_at.lt.${oldestMessage.created_at},and(created_at.eq.${oldestMessage.created_at},id.lt.${oldestMessage.id})`);
 
     // Add agency filter if multi-tenancy is enabled
     if (isMultiTenancyEnabled && currentAgencyId) {
@@ -183,14 +195,14 @@ export function useChatMessages({
 
   // Group messages by sender and time
   const groupedMessages = useMemo(() => {
-    return filteredMessages.reduce((acc, msg, idx) => {
-      const prevMsg = filteredMessages[idx - 1];
-      const isGrouped = prevMsg && prevMsg.created_by === msg.created_by &&
+    return filteredMessages.map((msg, idx) => {
+      const prevMsg = idx > 0 ? filteredMessages[idx - 1] : null;
+      const isGrouped = !!(prevMsg && prevMsg.created_by === msg.created_by &&
         new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() < 60000 &&
-        !msg.reply_to_id;
+        !msg.reply_to_id);
 
-      return [...acc, { ...msg, isGrouped }];
-    }, [] as (ChatMessage & { isGrouped: boolean })[]);
+      return { ...msg, isGrouped };
+    });
   }, [filteredMessages]);
 
   // Handle new message from subscription
@@ -255,10 +267,16 @@ export function useChatMessages({
 
     if (error) {
       logger.error('Error updating reaction', error, { component: 'useChatMessages' });
-      // Rollback
-      setMessages(prev => prev.map(m =>
-        m.id === messageId ? { ...m, reactions: currentReactions } : m
-      ));
+      // Only rollback the current user's reaction, preserving concurrent changes by others
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        const reactions = (m.reactions || []).filter(r => r.user !== currentUser.name);
+        // Re-add the original reaction if the user had one before
+        if (existingReaction) {
+          reactions.push(existingReaction);
+        }
+        return { ...m, reactions };
+      }));
     }
   }, [currentUser.name]);
 
@@ -354,12 +372,12 @@ export function useChatMessages({
     }
   }, [currentUser.name]);
 
-  // Mark messages as read (batched)
+  // Mark messages as read (batched into a single parallel operation)
   const markMessagesAsRead = useCallback(async (messageIds: string[]) => {
     if (messageIds.length === 0) return;
 
     // Filter to only unread messages not created by current user
-    // Capture read_by arrays at filter time to avoid race conditions in fallback loop
+    // Capture read_by arrays at filter time to avoid race conditions in fallback path
     const unreadEntries = messageIds.map(id => {
       const msg = messagesRef.current.find(m => m.id === id);
       if (!msg || msg.created_by === currentUser.name || (msg.read_by || []).includes(currentUser.name)) {
@@ -382,39 +400,69 @@ export function useChatMessages({
       return m;
     }));
 
-    // Batch update in database using RPC first, then fallback
+    // Batch update: fire all RPC calls in parallel
     try {
-      // Try RPC for each message (most reliable for array_append)
-      const { error: rpcError } = await supabase.rpc('mark_message_read', {
-        p_message_id: unreadIds[0],
-        p_user_name: currentUser.name
-      });
+      const results = await Promise.all(
+        unreadIds.map(messageId =>
+          supabase.rpc('mark_message_read', {
+            p_message_id: messageId,
+            p_user_name: currentUser.name
+          })
+        )
+      );
 
-      if (rpcError) {
-        // RPC not available - use batched fallback for all messages at once
-        // Use read_by captured at filter time to avoid race conditions
+      // Collect indices of failed RPC calls to fall back for those specific messages
+      const failedIndices: number[] = [];
+      for (let i = 0; i < results.length; i++) {
+        if (results[i]?.error) {
+          failedIndices.push(i);
+        }
+      }
+
+      // Fall back to direct update only for messages whose RPC calls failed
+      if (failedIndices.length > 0) {
+        const failedEntries = failedIndices.map(i => unreadEntries[i]);
         await Promise.all(
-          unreadEntries.map(({ id, readBy }) =>
+          failedEntries.map(({ id, readBy }) =>
             supabase
               .from('messages')
               .update({ read_by: [...readBy, currentUser.name] })
               .eq('id', id)
           )
         );
-      } else if (unreadIds.length > 1) {
-        // RPC works - use it for remaining messages
-        const remainingIds = unreadIds.slice(1);
-        await Promise.all(
-          remainingIds.map(messageId =>
-            supabase.rpc('mark_message_read', {
-              p_message_id: messageId,
-              p_user_name: currentUser.name
-            })
-          )
-        );
       }
     } catch (err) {
       logger.error('Error in markMessagesAsRead', err, { component: 'useChatMessages' });
+    }
+  }, [currentUser.name]);
+
+  // Mark a single message as unread (remove current user from read_by)
+  const markMessageAsUnread = useCallback(async (messageId: string) => {
+    const message = messagesRef.current.find(m => m.id === messageId);
+    if (!message) return;
+
+    const currentReadBy = message.read_by || [];
+    if (!currentReadBy.includes(currentUser.name)) return; // Already unread
+
+    const newReadBy = currentReadBy.filter(name => name !== currentUser.name);
+
+    // Optimistic update
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, read_by: newReadBy } : m
+    ));
+
+    // Database update
+    const { error } = await supabase
+      .from('messages')
+      .update({ read_by: newReadBy })
+      .eq('id', messageId);
+
+    if (error) {
+      logger.error('Error marking message as unread', error, { component: 'useChatMessages' });
+      // Rollback
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, read_by: currentReadBy } : m
+      ));
     }
   }, [currentUser.name]);
 
@@ -434,6 +482,7 @@ export function useChatMessages({
     deleteMessage,
     togglePin,
     markMessagesAsRead,
+    markMessageAsUnread,
     handleNewMessage,
     handleMessageUpdate,
     handleMessageDelete,

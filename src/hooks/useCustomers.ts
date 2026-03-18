@@ -29,6 +29,8 @@ interface UseCustomerSearchOptions {
   minChars?: number;
   limit?: number;
   agencyId?: string;
+  /** Use AI-powered search (fuzzy names, natural language). Falls back to plain ILIKE if AI unavailable. */
+  aiPowered?: boolean;
 }
 
 export function useCustomerSearch(options: UseCustomerSearchOptions = {}) {
@@ -37,6 +39,7 @@ export function useCustomerSearch(options: UseCustomerSearchOptions = {}) {
     minChars = 2,
     limit = 10,
     agencyId,
+    aiPowered = true,
   } = options;
 
   const [query, setQuery] = useState('');
@@ -56,21 +59,46 @@ export function useCustomerSearch(options: UseCustomerSearchOptions = {}) {
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        q: searchQuery,
-        limit: String(limit),
-      });
+      let data: CustomerSearchResult;
 
-      if (agencyId) {
-        params.append('agency_id', agencyId);
+      if (aiPowered) {
+        // Try AI-powered search first
+        try {
+          const aiResponse = await fetchWithCsrf('/api/ai/customer-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: searchQuery, mode: 'search' }),
+          });
+
+          if (aiResponse.ok) {
+            data = await aiResponse.json();
+          } else {
+            throw new Error('AI search unavailable');
+          }
+        } catch {
+          // Fallback to plain search
+          const params = new URLSearchParams({
+            q: searchQuery,
+            limit: String(limit),
+          });
+          if (agencyId) params.append('agency_id', agencyId);
+
+          const response = await fetch(`/api/customers?${params}`);
+          if (!response.ok) throw new Error('Failed to search customers');
+          data = await response.json();
+        }
+      } else {
+        const params = new URLSearchParams({
+          q: searchQuery,
+          limit: String(limit),
+        });
+        if (agencyId) params.append('agency_id', agencyId);
+
+        const response = await fetch(`/api/customers?${params}`);
+        if (!response.ok) throw new Error('Failed to search customers');
+        data = await response.json();
       }
 
-      const response = await fetch(`/api/customers?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to search customers');
-      }
-
-      const data: CustomerSearchResult = await response.json();
       setCustomers(data.customers);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Search failed'));
@@ -78,7 +106,7 @@ export function useCustomerSearch(options: UseCustomerSearchOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [minChars, limit, agencyId]);
+  }, [minChars, limit, agencyId, aiPowered]);
 
   // Debounced search on query change
   useEffect(() => {
@@ -114,6 +142,63 @@ export function useCustomerSearch(options: UseCustomerSearchOptions = {}) {
     loading,
     error,
     search,
+    clear,
+  };
+}
+
+// ============================================
+// AI Customer Suggest Hook (from task text)
+// ============================================
+
+interface UseAiCustomerSuggestOptions {
+  agencyId?: string;
+}
+
+export function useAiCustomerSuggest(options: UseAiCustomerSuggestOptions = {}) {
+  const [suggestions, setSuggestions] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const suggest = useCallback(async (taskText: string) => {
+    if (!taskText || taskText.trim().length < 5) {
+      setSuggestions([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetchWithCsrf('/api/ai/customer-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: '', mode: 'suggest', taskText: taskText.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Suggest failed');
+      }
+
+      const data = await response.json();
+      setSuggestions(data.customers || []);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Suggest failed'));
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const clear = useCallback(() => {
+    setSuggestions([]);
+    setError(null);
+  }, []);
+
+  return {
+    suggestions,
+    loading,
+    error,
+    suggest,
     clear,
   };
 }

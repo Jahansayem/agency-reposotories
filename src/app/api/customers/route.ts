@@ -18,7 +18,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { decryptField } from '@/lib/fieldEncryption';
+import { decryptField, encryptField } from '@/lib/fieldEncryption';
 import { getCustomerSegment, SEGMENT_CONFIGS, type SegmentTier } from '@/lib/segmentation';
 import { withAgencyAuth, type AgencyAuthContext } from '@/lib/agencyAuth';
 import { VALIDATION_LIMITS, escapeLikePattern } from '@/lib/constants';
@@ -100,7 +100,8 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
 
     const { data: opportunities, error: oppError } = await opportunitiesQuery;
 
-    // Merge and deduplicate by customer name
+    // Merge and deduplicate by customer ID (primary key), NOT by name
+    // Using name as key causes collisions when two customers have the same name
     const customerMap = new Map<string, {
       id: string;
       name: string;
@@ -149,7 +150,8 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
           decryptedPhone = null;
         }
 
-        customerMap.set(customer.customer_name, {
+        // Use customer.id as the unique key to prevent name collisions
+        customerMap.set(customer.id, {
           id: customer.id,
           name: customer.customer_name,
           email: decryptedEmail,
@@ -177,11 +179,21 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     }
 
     // Process opportunities (add missing customers or update with opportunity info)
+    // Try to match opportunities to existing customer_insights by name (within same agency)
     if (opportunities && !oppError) {
       for (const opp of opportunities) {
-        const existing = customerMap.get(opp.customer_name);
-        if (existing) {
-          // Update with opportunity info
+        // Try to find existing customer by name (customer_insights has UNIQUE constraint on agency_id + customer_name)
+        let existingId: string | null = null;
+        for (const [id, customer] of customerMap.entries()) {
+          if (customer.name === opp.customer_name) {
+            existingId = id;
+            break;
+          }
+        }
+
+        if (existingId) {
+          // Update existing customer with opportunity info
+          const existing = customerMap.get(existingId)!;
           existing.hasOpportunity = true;
           existing.opportunityId = opp.id;
           existing.priorityTier = opp.priority_tier;
@@ -191,9 +203,9 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
           existing.potentialPremiumAdd = opp.potential_premium_add;
           existing.upcomingRenewal = opp.renewal_date;
         } else {
-          // Add new customer from opportunity
+          // Add new customer from opportunity (use opportunity ID as key)
           const segment = getCustomerSegment(opp.current_premium || 0, opp.policy_count || 1);
-          customerMap.set(opp.customer_name, {
+          customerMap.set(opp.id, {
             id: opp.id,
             name: opp.customer_name,
             email: opp.email,
@@ -312,6 +324,125 @@ export const GET = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthCo
     console.error('Error fetching customers:', error);
     return NextResponse.json(
       { error: 'Failed to fetch customers' },
+      { status: 500 }
+    );
+  }
+});
+
+/**
+ * POST /api/customers - Quick-add a new customer
+ *
+ * Body:
+ * - customer_name: string (required)
+ * - phone?: string (optional, will be encrypted)
+ * - policy_type?: string (optional: auto, home, life, umbrella, commercial)
+ *
+ * Creates a new record in customer_insights with the agency_id from auth context.
+ * Returns the new customer record (with segment derived from defaults).
+ */
+export const POST = withAgencyAuth(async (request: NextRequest, ctx: AgencyAuthContext) => {
+  try {
+    const supabase = getSupabaseClient();
+    const body = await request.json();
+
+    const customerName = body.customer_name?.trim();
+    if (!customerName) {
+      return NextResponse.json(
+        { error: 'customer_name is required' },
+        { status: 400 }
+      );
+    }
+
+    if (customerName.length > VALIDATION_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+      return NextResponse.json(
+        { error: 'Customer name is too long' },
+        { status: 400 }
+      );
+    }
+
+    const phone = body.phone?.trim() || null;
+    const policyType = body.policy_type?.trim() || null;
+
+    // Validate policy type if provided
+    const validPolicyTypes = ['auto', 'home', 'life', 'umbrella', 'commercial'];
+    if (policyType && !validPolicyTypes.includes(policyType)) {
+      return NextResponse.json(
+        { error: `Invalid policy_type. Must be one of: ${validPolicyTypes.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Encrypt phone if provided (PII field)
+    const encryptedPhone = phone ? encryptField(phone, 'customer_insights.customer_phone') : null;
+
+    // Build the insert record
+    const insertRecord: Record<string, unknown> = {
+      customer_name: customerName,
+      customer_phone: encryptedPhone,
+      total_premium: 0,
+      total_policies: policyType ? 1 : 0,
+      products_held: policyType ? [policyType] : [],
+      tenure_years: 0,
+      retention_risk: 'low',
+    };
+
+    if (ctx.agencyId) {
+      insertRecord.agency_id = ctx.agencyId;
+    }
+
+    const { data, error } = await supabase
+      .from('customer_insights')
+      .insert(insertRecord)
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Error creating customer:', error);
+      return NextResponse.json(
+        { error: 'Failed to create customer' },
+        { status: 500 }
+      );
+    }
+
+    // Derive segment for the response
+    const segment = getCustomerSegment(data.total_premium || 0, data.total_policies || 0);
+
+    // Decrypt phone for the response
+    let decryptedPhone: string | null = null;
+    try {
+      decryptedPhone = decryptField(data.customer_phone, 'customer_insights.customer_phone');
+    } catch {
+      decryptedPhone = null;
+    }
+
+    return NextResponse.json({
+      success: true,
+      customer: {
+        id: data.id,
+        name: data.customer_name,
+        email: null,
+        phone: decryptedPhone,
+        segment,
+        segmentConfig: SEGMENT_CONFIGS[segment as SegmentTier],
+        totalPremium: data.total_premium || 0,
+        policyCount: data.total_policies || 0,
+        products: data.products_held || [],
+        tenureYears: 0,
+        retentionRisk: 'low',
+        hasOpportunity: false,
+        opportunityId: null,
+        priorityTier: null,
+        priorityScore: null,
+        recommendedProduct: null,
+        opportunityType: null,
+        potentialPremiumAdd: null,
+        upcomingRenewal: null,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating customer:', error);
+    return NextResponse.json(
+      { error: 'Failed to create customer' },
       { status: 500 }
     );
   }

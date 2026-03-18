@@ -20,6 +20,7 @@ import SkipLink from './SkipLink';
 import { OnboardingModal } from './AIOnboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { AIPreferencesModal } from './AIPreferences';
+import { CustomerLinkPrompt } from './customer/CustomerLinkPrompt';
 
 // Lazy load TodoList - large component with subtasks, kanban, etc.
 const TodoList = dynamic(() => import('./TodoList'), {
@@ -44,6 +45,8 @@ const DashboardPage = dynamic(() => import('./views/DashboardPage'), {
   ssr: false,
   loading: () => <DashboardModalSkeleton />,
 });
+
+import { prefetchTodayOpportunities } from '@/components/analytics/hooks/useTodayOpportunities';
 
 // Lazy load TodayOpportunitiesPanel for the standalone opportunities view
 const TodayOpportunitiesPanel = dynamic(() => import('./analytics').then(mod => ({ default: mod.TodayOpportunitiesPanel })), {
@@ -233,10 +236,28 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (taskLinkScrollTimerRef.current) clearTimeout(taskLinkScrollTimerRef.current);
-      if (taskLinkHighlightTimerRef.current) clearTimeout(taskLinkHighlightTimerRef.current);
+      if (taskLinkScrollTimerRef.current) {
+        clearTimeout(taskLinkScrollTimerRef.current);
+        taskLinkScrollTimerRef.current = null;
+      }
+      if (taskLinkHighlightTimerRef.current) {
+        clearTimeout(taskLinkHighlightTimerRef.current);
+        taskLinkHighlightTimerRef.current = null;
+      }
     };
   }, []);
+
+  // Prefetch opportunities in the background so the tab renders instantly
+  useEffect(() => {
+    const run = () => prefetchTodayOpportunities(10);
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = (window as Window & typeof globalThis & { requestIdleCallback: (cb: () => void, opts?: object) => number }).requestIdleCallback(run, { timeout: 3000 });
+      return () => (window as Window & typeof globalThis & { cancelIdleCallback: (id: number) => void }).cancelIdleCallback(id);
+    } else {
+      const t = setTimeout(run, 2000);
+      return () => clearTimeout(t);
+    }
+  }, []); // run once on mount
 
   // Handle task link click from chat/dashboard/notifications (navigate to tasks view and open task)
   const handleTaskLinkClick = useCallback((taskId: string) => {
@@ -310,19 +331,46 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
   const handleRestoreTask = useCallback(async (taskId: string) => {
     if (!isSupabaseConfigured()) return;
 
+    const updated_at = new Date().toISOString();
+
+    // Capture original state for rollback before optimistic update
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === taskId);
+
+    // Optimistic update: immediately mark task as active in the store
+    // so the UI reflects the change without waiting for real-time sync.
+    updateTodoInStore(taskId, {
+      completed: false,
+      status: 'todo' as Todo['status'],
+      updated_at,
+    });
+
     try {
-      // Restore task by marking it as not completed and resetting status
-      const { error } = await supabase
+      // Build query with agency scoping for defense-in-depth
+      let query = supabase
         .from('todos')
         .update({
           completed: false,
           status: 'todo',
-          updated_at: new Date().toISOString(),
+          updated_at,
         })
         .eq('id', taskId);
 
+      if (currentAgencyId) {
+        query = query.eq('agency_id', currentAgencyId);
+      }
+
+      const { error } = await query;
+
       if (error) {
         logger.error('Failed to restore task', error, { component: 'MainApp', taskId });
+        // Rollback optimistic update on failure using original state
+        if (originalTodo) {
+          updateTodoInStore(taskId, {
+            completed: originalTodo.completed,
+            status: originalTodo.status as Todo['status'],
+            updated_at: originalTodo.updated_at,
+          });
+        }
         throw error;
       }
 
@@ -340,27 +388,38 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       logger.error('Failed to restore task', error, { component: 'MainApp', taskId });
       throw error;
     }
-  }, [currentUser.name]);
+  }, [currentUser.name, updateTodoInStore, currentAgencyId]);
 
   // Handle permanently deleting an archived task
   const handleDeleteTask = useCallback(async (taskId: string) => {
     if (!isSupabaseConfigured()) return;
 
-    try {
-      // Get task info for logging before deletion
-      const { data: taskData } = await supabase
-        .from('todos')
-        .select('text')
-        .eq('id', taskId)
-        .single();
+    // Capture current todo for rollback before optimistic delete
+    const currentTodo = useTodoStore.getState().todos.find(t => t.id === taskId);
+    const taskText = currentTodo?.text;
 
-      const { error } = await supabase
+    // Optimistic delete: immediately remove from the store
+    useTodoStore.getState().deleteTodo(taskId);
+
+    try {
+      // Build query with agency scoping for defense-in-depth
+      let query = supabase
         .from('todos')
         .delete()
         .eq('id', taskId);
 
+      if (currentAgencyId) {
+        query = query.eq('agency_id', currentAgencyId);
+      }
+
+      const { error } = await query;
+
       if (error) {
         logger.error('Failed to delete task', error, { component: 'MainApp', taskId });
+        // Rollback optimistic delete on failure
+        if (currentTodo) {
+          useTodoStore.getState().addTodo(currentTodo);
+        }
         throw error;
       }
 
@@ -370,7 +429,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         entity_type: 'todo',
         entity_id: taskId,
         user_name: currentUser.name,
-        details: { task_text: taskData?.text, deleted_from: 'archive' },
+        details: { task_text: taskText, deleted_from: 'archive' },
       });
 
       logger.info('Task permanently deleted from archive', { component: 'MainApp', taskId });
@@ -378,7 +437,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
       logger.error('Failed to delete task', error, { component: 'MainApp', taskId });
       throw error;
     }
-  }, [currentUser.name]);
+  }, [currentUser.name, currentAgencyId]);
 
   // Register the new task trigger callback with AppShell
   useEffect(() => {
@@ -420,6 +479,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // Calendar task detail: update handler (writes to store + DB)
   const handleCalendarDetailUpdate = useCallback(async (id: string, updates: Partial<Todo>) => {
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === id);
     const updated_at = new Date().toISOString();
     updateTodoInStore(id, { ...updates, updated_at });
     if (isSupabaseConfigured()) {
@@ -429,12 +489,17 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         .eq('id', id);
       if (error) {
         logger.error('Calendar detail update failed', error, { component: 'MainApp' });
+        // Rollback optimistic update on failure
+        if (originalTodo) {
+          updateTodoInStore(id, originalTodo);
+        }
       }
     }
   }, [updateTodoInStore]);
 
   // Calendar task detail: toggle complete
   const handleCalendarDetailComplete = useCallback(async (id: string, completed: boolean) => {
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === id);
     const updated_at = new Date().toISOString();
     const newStatus = completed ? 'done' : 'todo';
     updateTodoInStore(id, { completed, status: newStatus as Todo['status'], updated_at });
@@ -445,6 +510,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         .eq('id', id);
       if (error) {
         logger.error('Calendar detail toggle failed', error, { component: 'MainApp' });
+        // Rollback optimistic update on failure
+        if (originalTodo) {
+          updateTodoInStore(id, {
+            completed: originalTodo.completed,
+            status: originalTodo.status as Todo['status'],
+            updated_at: originalTodo.updated_at,
+          });
+        }
       }
     }
   }, [updateTodoInStore]);
@@ -466,6 +539,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
   // Calendar: quick complete from popup
   const handleCalendarQuickComplete = useCallback(async (todoId: string) => {
+    const originalTodo = useTodoStore.getState().todos.find(t => t.id === todoId);
     const updated_at = new Date().toISOString();
     updateTodoInStore(todoId, { completed: true, status: 'done' as Todo['status'], updated_at });
     if (isSupabaseConfigured()) {
@@ -475,6 +549,14 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         .eq('id', todoId);
       if (error) {
         logger.error('Calendar quick complete failed', error, { component: 'MainApp' });
+        // Rollback optimistic update on failure
+        if (originalTodo) {
+          updateTodoInStore(todoId, {
+            completed: originalTodo.completed,
+            status: originalTodo.status as Todo['status'],
+            updated_at: originalTodo.updated_at,
+          });
+        }
       }
     }
   }, [updateTodoInStore]);
@@ -740,10 +822,6 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
         return (
           <ErrorBoundary>
             <div className="flex flex-col h-full bg-[var(--background)]">
-              <div className="flex-shrink-0 px-4 sm:px-6 py-4 border-b border-[var(--border)] bg-[var(--surface)]">
-                <h1 className="text-xl font-semibold text-[var(--foreground)]">Calendar</h1>
-                <p className="text-sm text-[var(--text-muted)]">View tasks by due date</p>
-              </div>
               <div className="flex-1 min-h-0">
                 <CalendarView
                   key={agencyKey}
@@ -900,7 +978,7 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm"
             role="alert"
             aria-live="polite"
             aria-label="Switching agency"
@@ -933,6 +1011,9 @@ function MainAppContent({ currentUser, onUserChange }: MainAppProps) {
 
       {/* Push notification permission banner */}
       <NotificationPermissionBanner currentUser={currentUser} />
+
+      {/* Customer link prompt — appears after completing a non-customer task */}
+      <CustomerLinkPrompt userName={currentUser.name} />
 
       {/* Weekly Progress Chart Modal - accessible from any view via sidebar */}
       {showWeeklyChart && (
